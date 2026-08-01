@@ -1175,6 +1175,77 @@ const local = {
   },
 };
 
+
+async function callTeacherDataEntryTokens(action, payload = {}) {
+  const response = await fetch(
+    '/.netlify/functions/teacher-data-entry-tokens',
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        action,
+        ...payload,
+      }),
+    }
+  );
+
+  const result = await response
+    .json()
+    .catch(() => ({
+      ok: false,
+      error: `HTTP ${response.status}`,
+    }));
+
+  if (!response.ok || !result.ok) {
+    const error = new Error(
+      result.error ||
+      'Data-entry token request failed'
+    );
+
+    error.status = response.status;
+    throw error;
+  }
+
+  return result;
+}
+
+async function callPublicDataEntryAccess(token) {
+  const response = await fetch(
+    '/.netlify/functions/data-entry-access' +
+    `?token=${encodeURIComponent(token)}`,
+    {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'application/json',
+      },
+    }
+  );
+
+  const result = await response
+    .json()
+    .catch(() => ({
+      ok: false,
+      error: `HTTP ${response.status}`,
+    }));
+
+  if (!response.ok || !result.ok) {
+    const error = new Error(
+      result.error ||
+      'Data-entry link validation failed'
+    );
+
+    error.status = response.status;
+    throw error;
+  }
+
+  return result;
+}
+
 const remote = {
   async listStudents() {
     const supabase = await getSupabase();
@@ -2715,117 +2786,63 @@ const remote = {
   },
 
   // ============================================================================
-  // Data Entry Tokens: Token Management (Remote)
+  // Data Entry Tokens: Server-backed token management
   // ============================================================================
 
-  /**
-   * Create a data entry token
-   * @param {Object} params - {studentCode, goalCode, dataCollector, dataCollectorEmail}
-   * @returns {Object} Token object with token string
-   */
-  async createDataEntryToken({ studentCode, goalCode, dataCollector, dataCollectorEmail }) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-
-    // Check if token already exists for this student+goal combo
-    const { data: existing, error: checkError } = await supabase
-      .from('data_entry_tokens')
-      .select('*')
-      .eq('student_code', studentCode)
-      .eq('goal_code', goalCode)
-      .eq('revoked', false)
-      .maybeSingle();
-
-    if (checkError && checkError.code !== 'PGRST116') throw checkError;
-    if (existing) return existing;
-
-    // Generate random 32-char hex token
-    const tokenArray = new Uint8Array(16);
-    crypto.getRandomValues(tokenArray);
-    const token = Array.from(tokenArray, byte => byte.toString(16).padStart(2, '0')).join('');
-
-    const { data, error } = await supabase
-      .from('data_entry_tokens')
-      .insert({
-        token,
+  async createDataEntryToken({
+    studentCode,
+    goalCode,
+    dataCollector,
+    dataCollectorEmail
+  }) {
+    const result = await callTeacherDataEntryTokens(
+      'create',
+      {
         student_code: studentCode,
         goal_code: goalCode,
         data_collector: dataCollector,
-        data_collector_email: dataCollectorEmail
-      })
-      .select()
-      .single();
+        data_collector_email: dataCollectorEmail,
+      }
+    );
 
-    if (error) throw error;
-    return data;
+    return result.token;
   },
 
-  /**
-   * Get token details by token string
-   * @param {string} token - Token string
-   * @returns {Object|null} Token object or null if invalid/revoked/expired
-   */
   async getDataEntryToken(token) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    try {
+      const result =
+        await callPublicDataEntryAccess(token);
 
-    const { data, error } = await supabase
-      .from('data_entry_tokens')
-      .select('*')
-      .eq('token', token)
-      .eq('revoked', false)
-      .maybeSingle();
+      return result.token || null;
+    } catch (error) {
+      if (error.status === 404) {
+        return null;
+      }
 
-    if (error && error.code !== 'PGRST116') throw error;
-    if (!data) return null;
-
-    // Check expiration
-    if (data.expires_at) {
-      const expiresAt = new Date(data.expires_at);
-      if (expiresAt < new Date()) return null;
+      throw error;
     }
-
-    return data;
   },
 
-  /**
-   * List all active tokens for a student
-   * @param {string} studentCode - Student code
-   * @returns {Array} Active tokens
-   */
   async listDataEntryTokens(studentCode) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    const result = await callTeacherDataEntryTokens(
+      'list',
+      {
+        student_code: studentCode,
+      }
+    );
 
-    const { data, error } = await supabase
-      .from('data_entry_tokens')
-      .select('*')
-      .eq('student_code', studentCode)
-      .eq('revoked', false);
-
-    if (error) throw error;
-
-    // Filter out expired tokens
-    const now = new Date();
-    return (data || []).filter(t => !t.expires_at || new Date(t.expires_at) > now);
+    return result.tokens || [];
   },
 
-  /**
-   * Revoke a data entry token
-   * @param {string} tokenId - Token ID (UUID)
-   * @returns {boolean} Success
-   */
   async revokeDataEntryToken(tokenId) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    const result = await callTeacherDataEntryTokens(
+      'revoke',
+      {
+        token_id: tokenId,
+      }
+    );
 
-    const { error } = await supabase
-      .from('data_entry_tokens')
-      .update({ revoked: true })
-      .eq('id', tokenId);
-
-    if (error) throw error;
-    return true;
+    return result.revoked === true;
   },
 
   // App config (key-value store for cross-device settings like home config)

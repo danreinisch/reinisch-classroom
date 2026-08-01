@@ -1,29 +1,32 @@
 /**
- * Data Entry Module (Standalone)
- * External IEP goal progress data entry for other teachers
- * Token-based access, no authentication required
+ * Standalone external IEP goal progress data entry.
+ *
+ * The URL token is sent only to the server-backed data-entry endpoint.
+ * The browser never reads or writes Supabase tables directly.
  */
 
 (async () => {
   "use strict";
 
-  console.log('[data-entry] Initializing external data entry module');
+  const {
+    getCurrentQuarter,
+    getQuarterDateRange,
+  } =
+    await import(
+      '/web/quarter-utils.js'
+    );
 
-  // Import Supabase client (vendored library)
-  const { getSupabase } = await import('/web/supabase-client.js');
-
-  // Import shared quarter utilities
-  const { getCurrentQuarter, getQuarterDateRange } = await import('/web/quarter-utils.js');
-
-  // State
+  let tokenValue = '';
   let tokenData = null;
   let goalData = null;
   let studentData = null;
   let progressEntries = [];
   let currentQuarter = null;
 
-  // DOM elements
-  const $ = (id) => document.getElementById(id);
+  const $ =
+    id =>
+      document.getElementById(id);
+
   const deLoading = $('deLoading');
   const deContent = $('deContent');
   const deAlert = $('deAlert');
@@ -31,398 +34,638 @@
   const deStudentCode = $('deStudentCode');
   const deGoalCode = $('deGoalCode');
   const deGoalArea = $('deGoalArea');
-  const deMeasurementType = $('deMeasurementType');
+  const deMeasurementType =
+    $('deMeasurementType');
   const deGoalDesc = $('deGoalDesc');
-  const deDataCollector = $('deDataCollector');
+  const deDataCollector =
+    $('deDataCollector');
   const deDate = $('deDate');
   const dePercent = $('dePercent');
-  const dePercentGroup = $('dePercentGroup');
+  const dePercentGroup =
+    $('dePercentGroup');
   const deXofYGroup = $('deXofYGroup');
   const deXofYNum = $('deXofYNum');
   const deXofYDenom = $('deXofYDenom');
   const deNotes = $('deNotes');
   const deSubmitBtn = $('deSubmitBtn');
-  const deProgressList = $('deProgressList');
-  const deProgressSummary = $('deProgressSummary');
+  const deProgressList =
+    $('deProgressList');
+  const deProgressSummary =
+    $('deProgressSummary');
   const deAvgValue = $('deAvgValue');
   const deTrend = $('deTrend');
 
-  /**
-   * Show alert message
-   */
-  function showAlert(message, type = 'info') {
+  function showAlert(
+    message,
+    type = 'info',
+  ) {
     deAlert.textContent = message;
-    deAlert.className = `de-alert ${type}`;
+    deAlert.className =
+      `de-alert ${type}`;
     deAlert.style.display = 'block';
 
-    // Auto-hide success messages after 5 seconds
     if (type === 'success') {
-      setTimeout(() => {
-        deAlert.style.display = 'none';
-      }, 5000);
+      setTimeout(
+        () => {
+          deAlert.style.display =
+            'none';
+        },
+        5000,
+      );
     }
   }
 
-  /**
-   * Hide alert
-   */
   function hideAlert() {
     deAlert.style.display = 'none';
   }
 
-  /**
-   * Format date as MM/DD/YYYY
-   */
   function formatDate(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+    const date =
+      new Date(
+        `${dateStr}T12:00:00`,
+      );
+
+    return date.toLocaleDateString(
+      'en-US',
+      {
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
+      },
+    );
   }
 
-  /**
-   * Format date as YYYY-MM-DD in local timezone
-   */
-  function formatDateYYYYMMDD(date = new Date()) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+  function formatDateYYYYMMDD(
+    date = new Date(),
+  ) {
+    const year =
+      date.getFullYear();
+
+    const month =
+      String(
+        date.getMonth() + 1,
+      ).padStart(2, '0');
+
+    const day =
+      String(
+        date.getDate(),
+      ).padStart(2, '0');
+
     return `${year}-${month}-${day}`;
   }
 
-  /**
-   * Get token from URL query parameter
-   */
   function getTokenFromURL() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('token');
+    const params =
+      new URLSearchParams(
+        window.location.search,
+      );
+
+    return params.get('token') || '';
   }
 
-  /**
-   * Initialize and validate token
-   */
-  async function initToken() {
-    const token = getTokenFromURL();
-    
-    if (!token) {
-      showAlert('No token provided. Please use the link sent to you by Dan Reinisch.', 'error');
-      return false;
+  function buildLoadUrl() {
+    const params =
+      new URLSearchParams({
+        token: tokenValue,
+      });
+
+    if (
+      currentQuarter?.startDate &&
+      currentQuarter?.endDate
+    ) {
+      params.set(
+        'start_date',
+        formatDateYYYYMMDD(
+          currentQuarter.startDate,
+        ),
+      );
+
+      params.set(
+        'end_date',
+        formatDateYYYYMMDD(
+          currentQuarter.endDate,
+        ),
+      );
     }
 
-    const supabase = await getSupabase();
-    if (!supabase) {
-      showAlert('Unable to connect to database. Please check your internet connection.', 'error');
-      return false;
-    }
-
-    try {
-      // Query token (using anon access - RLS policy allows reading valid tokens)
-      const { data, error } = await supabase
-        .from('data_entry_tokens')
-        .select('*')
-        .eq('token', token)
-        .eq('revoked', false)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (!data) {
-        showAlert('This link is no longer valid. Please contact Dan Reinisch for a new link.', 'error');
-        return false;
-      }
-
-      // Check expiration
-      if (data.expires_at && new Date(data.expires_at) < new Date()) {
-        showAlert('This link has expired. Please contact Dan Reinisch for a new link.', 'error');
-        return false;
-      }
-
-      tokenData = data;
-      console.log('[data-entry] Token validated:', tokenData);
-      return true;
-
-    } catch (err) {
-      console.error('[data-entry] Error validating token:', err);
-      showAlert('Error validating link. Please try again or contact Dan Reinisch.', 'error');
-      return false;
-    }
+    return (
+      '/.netlify/functions/' +
+      'data-entry-access?' +
+      params.toString()
+    );
   }
 
-  /**
-   * Load goal and student data
-   */
-  async function loadGoalData() {
-    const supabase = await getSupabase();
-    if (!supabase || !tokenData) return false;
+  async function loadContext() {
+    const response =
+      await fetch(
+        buildLoadUrl(),
+        {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: {
+            Accept:
+              'application/json',
+          },
+        },
+      );
 
-    try {
-      // Get student by code
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('id, code, name')
-        .eq('code', tokenData.student_code)
-        .single();
+    const result =
+      await response
+        .json()
+        .catch(() => ({
+          ok: false,
+        }));
 
-      if (studentError) throw studentError;
-      studentData = student;
+    if (
+      !response.ok ||
+      !result.ok
+    ) {
+      const error =
+        new Error(
+          result.error ||
+          'This link is unavailable',
+        );
 
-      // Get goal by code
-      const { data: goal, error: goalError } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('code', tokenData.goal_code)
-        .eq('student_id', student.id)
-        .single();
+      error.status =
+        response.status;
 
-      if (goalError) throw goalError;
-      goalData = goal;
-
-      console.log('[data-entry] Goal data loaded:', goalData);
-      return true;
-
-    } catch (err) {
-      console.error('[data-entry] Error loading goal data:', err);
-      showAlert('Error loading goal information. Please try again.', 'error');
-      return false;
+      throw error;
     }
+
+    tokenData =
+      result.token || null;
+
+    studentData =
+      result.student || null;
+
+    goalData =
+      result.goal || null;
+
+    progressEntries =
+      Array.isArray(result.progress)
+        ? result.progress
+        : [];
+
+    return Boolean(
+      tokenData &&
+      studentData &&
+      goalData,
+    );
   }
 
-  /**
-   * Load progress entries for current quarter
-   */
-  async function loadProgressEntries() {
-    const supabase = await getSupabase();
-    if (!supabase || !goalData || !studentData) return;
-
-    const quarter = getCurrentQuarter();
-    const range = getQuarterDateRange(quarter);
-    currentQuarter = { quarter, startDate: range ? range.start : null, endDate: range ? range.end : null };
-
-    try {
-      // Get progress entries for this goal in current quarter
-      const { data, error } = await supabase
-        .from('goal_progress')
-        .select('*')
-        .eq('goal_id', goalData.id)
-        .eq('student_id', studentData.id)
-        .gte('date', currentQuarter.startDate.toISOString().split('T')[0])
-        .lte('date', currentQuarter.endDate.toISOString().split('T')[0])
-        .order('date', { ascending: false });
-
-      if (error) throw error;
-
-      progressEntries = data || [];
-      console.log('[data-entry] Progress entries loaded:', progressEntries.length);
-
-    } catch (err) {
-      console.error('[data-entry] Error loading progress entries:', err);
-      // Non-fatal error - just show empty list
-      progressEntries = [];
-    }
-  }
-
-  /**
-   * Render the UI
-   */
   function render() {
-    // Populate student and goal info
-    deStudentCode.textContent = tokenData.student_code;
-    deGoalCode.textContent = tokenData.goal_code;
-    deGoalArea.textContent = goalData.goal_area || 'Uncategorized';
-    deMeasurementType.textContent = goalData.measurement_type === 'x_of_y' ? 'X out of Y' : 'Percent';
-    deGoalDesc.textContent = goalData.desc || 'No description available';
-    deDataCollector.textContent = tokenData.data_collector || 'Unknown';
+    deStudentCode.textContent =
+      tokenData.student_code;
 
-    // Show appropriate input fields based on measurement type
-    if (goalData.measurement_type === 'x_of_y') {
-      dePercentGroup.style.display = 'none';
-      deXofYGroup.style.display = 'block';
-      dePercent.removeAttribute('required');
-      deXofYNum.setAttribute('required', 'required');
-      deXofYDenom.setAttribute('required', 'required');
+    deGoalCode.textContent =
+      tokenData.goal_code;
+
+    deGoalArea.textContent =
+      goalData.goal_area ||
+      'Uncategorized';
+
+    deMeasurementType.textContent =
+      goalData.measurement_type ===
+      'x_of_y'
+        ? 'X out of Y'
+        : 'Percent';
+
+    deGoalDesc.textContent =
+      goalData.desc ||
+      'No description available';
+
+    deDataCollector.textContent =
+      tokenData.data_collector ||
+      'Unknown';
+
+    if (
+      goalData.measurement_type ===
+      'x_of_y'
+    ) {
+      dePercentGroup.style.display =
+        'none';
+
+      deXofYGroup.style.display =
+        'block';
+
+      dePercent.removeAttribute(
+        'required',
+      );
+
+      deXofYNum.setAttribute(
+        'required',
+        'required',
+      );
+
+      deXofYDenom.setAttribute(
+        'required',
+        'required',
+      );
     } else {
-      dePercentGroup.style.display = 'block';
-      deXofYGroup.style.display = 'none';
-      dePercent.setAttribute('required', 'required');
-      deXofYNum.removeAttribute('required');
-      deXofYDenom.removeAttribute('required');
+      dePercentGroup.style.display =
+        'block';
+
+      deXofYGroup.style.display =
+        'none';
+
+      dePercent.setAttribute(
+        'required',
+        'required',
+      );
+
+      deXofYNum.removeAttribute(
+        'required',
+      );
+
+      deXofYDenom.removeAttribute(
+        'required',
+      );
     }
 
-    // Set default date to today (local timezone)
-    deDate.value = formatDateYYYYMMDD();
+    deDate.value =
+      formatDateYYYYMMDD();
 
-    // Render progress entries
     renderProgressEntries();
   }
 
-  /**
-   * Render progress entries list
-   */
   function renderProgressEntries() {
-    if (progressEntries.length === 0) {
-      deProgressList.innerHTML = '<li class="de-empty">No entries yet this quarter.</li>';
-      deProgressSummary.style.display = 'none';
+    deProgressList.textContent = '';
+
+    if (
+      progressEntries.length === 0
+    ) {
+      const empty =
+        document.createElement('li');
+
+      empty.className = 'de-empty';
+      empty.textContent =
+        'No entries yet this quarter.';
+
+      deProgressList.appendChild(
+        empty,
+      );
+
+      deProgressSummary.style.display =
+        'none';
+
       return;
     }
 
-    // Build list HTML
-    const html = progressEntries.map(entry => {
-      const date = formatDate(entry.date);
-      const value = parseFloat(entry.value).toFixed(0);
-      const collectedBy = entry.collected_by || tokenData.data_collector || 'Unknown';
-      
-      return `
-        <li class="de-progress-item">
-          <span class="de-progress-date">${date}:</span>
-          <span>
-            <span class="de-progress-value">${value}%</span>
-            <span class="de-progress-by">(by ${collectedBy})</span>
-          </span>
-        </li>
-      `;
-    }).join('');
+    for (
+      const entry
+      of progressEntries
+    ) {
+      const item =
+        document.createElement('li');
 
-    deProgressList.innerHTML = html;
+      item.className =
+        'de-progress-item';
 
-    // Calculate and display rolling average
-    const sum = progressEntries.reduce((acc, e) => acc + parseFloat(e.value), 0);
-    const avg = (sum / progressEntries.length).toFixed(0);
-    deAvgValue.textContent = avg;
+      const date =
+        document.createElement('span');
 
-    // Calculate trend
-    let trend = '→';
-    if (progressEntries.length >= 2) {
-      const sorted = [...progressEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
-      const firstHalf = sorted.slice(0, Math.floor(sorted.length / 2));
-      const secondHalf = sorted.slice(Math.floor(sorted.length / 2));
-      const firstAvg = firstHalf.reduce((acc, e) => acc + parseFloat(e.value), 0) / firstHalf.length;
-      const secondAvg = secondHalf.reduce((acc, e) => acc + parseFloat(e.value), 0) / secondHalf.length;
-      
-      if (secondAvg > firstAvg + 5) trend = '↗';
-      else if (secondAvg < firstAvg - 5) trend = '↘';
+      date.className =
+        'de-progress-date';
+
+      date.textContent =
+        `${formatDate(entry.date)}:`;
+
+      const details =
+        document.createElement('span');
+
+      const value =
+        document.createElement('span');
+
+      value.className =
+        'de-progress-value';
+
+      value.textContent =
+        `${Number(entry.value).toFixed(0)}%`;
+
+      const collector =
+        document.createElement('span');
+
+      collector.className =
+        'de-progress-by';
+
+      collector.textContent =
+        ` (by ${
+          entry.collected_by ||
+          tokenData.data_collector ||
+          'Unknown'
+        })`;
+
+      details.append(
+        value,
+        collector,
+      );
+
+      item.append(
+        date,
+        details,
+      );
+
+      deProgressList.appendChild(
+        item,
+      );
     }
-    deTrend.textContent = trend;
 
-    deProgressSummary.style.display = 'flex';
+    const sum =
+      progressEntries.reduce(
+        (total, entry) =>
+          total +
+          Number(entry.value || 0),
+        0,
+      );
+
+    const average =
+      (
+        sum /
+        progressEntries.length
+      ).toFixed(0);
+
+    deAvgValue.textContent =
+      average;
+
+    let trend = '→';
+
+    if (
+      progressEntries.length >= 2
+    ) {
+      const sorted =
+        [...progressEntries].sort(
+          (a, b) =>
+            new Date(a.date) -
+            new Date(b.date),
+        );
+
+      const midpoint =
+        Math.floor(
+          sorted.length / 2,
+        );
+
+      const firstHalf =
+        sorted.slice(
+          0,
+          midpoint,
+        );
+
+      const secondHalf =
+        sorted.slice(
+          midpoint,
+        );
+
+      const firstAverage =
+        firstHalf.reduce(
+          (total, entry) =>
+            total +
+            Number(entry.value || 0),
+          0,
+        ) /
+        firstHalf.length;
+
+      const secondAverage =
+        secondHalf.reduce(
+          (total, entry) =>
+            total +
+            Number(entry.value || 0),
+          0,
+        ) /
+        secondHalf.length;
+
+      if (
+        secondAverage >
+        firstAverage + 5
+      ) {
+        trend = '↗';
+      } else if (
+        secondAverage <
+        firstAverage - 5
+      ) {
+        trend = '↘';
+      }
+    }
+
+    deTrend.textContent =
+      trend;
+
+    deProgressSummary.style.display =
+      'flex';
   }
 
-  /**
-   * Handle form submission
-   */
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
     hideAlert();
 
-    const supabase = await getSupabase();
-    if (!supabase) {
-      showAlert('Unable to connect to database. Please check your internet connection.', 'error');
-      return;
-    }
+    const date =
+      deDate.value;
 
-    // Get form values
-    const date = deDate.value;
-    let value;
+    let value = null;
 
-    if (goalData.measurement_type === 'x_of_y') {
-      const num = parseFloat(deXofYNum.value);
-      const denom = parseFloat(deXofYDenom.value);
-      
-      if (!num || !denom || denom === 0) {
-        showAlert('Please enter valid numbers for score.', 'error');
+    if (
+      goalData.measurement_type ===
+      'x_of_y'
+    ) {
+      const numerator =
+        Number(
+          deXofYNum.value,
+        );
+
+      const denominator =
+        Number(
+          deXofYDenom.value,
+        );
+
+      if (
+        !Number.isFinite(numerator) ||
+        !Number.isFinite(denominator) ||
+        numerator < 0 ||
+        denominator <= 0 ||
+        numerator > denominator
+      ) {
+        showAlert(
+          'Please enter a valid score.',
+          'error',
+        );
+
         return;
       }
-      
-      // Convert to percentage
-      value = (num / denom) * 100;
+
+      value =
+        numerator /
+        denominator *
+        100;
     } else {
-      value = parseFloat(dePercent.value);
-      
-      if (isNaN(value) || value < 0 || value > 100) {
-        showAlert('Please enter a valid percentage between 0 and 100.', 'error');
+      value =
+        Number(
+          dePercent.value,
+        );
+
+      if (
+        !Number.isFinite(value) ||
+        value < 0 ||
+        value > 100
+      ) {
+        showAlert(
+          'Please enter a valid percentage between 0 and 100.',
+          'error',
+        );
+
         return;
       }
     }
 
-    const notes = deNotes.value.trim();
-    const collectedBy = tokenData.data_collector || 'External';
+    const notes =
+      deNotes.value.trim();
 
-    // Disable submit button
     deSubmitBtn.disabled = true;
-    deSubmitBtn.textContent = 'Saving...';
+    deSubmitBtn.textContent =
+      'Saving...';
 
     try {
-      // Insert progress entry
-      const { error } = await supabase
-        .from('goal_progress')
-        .insert({
-          goal_id: goalData.id,
-          student_id: studentData.id,
-          date,
-          value: value.toFixed(2),
-          source: 'external',
-          collected_by: collectedBy,
-          notes
-        });
+      const response =
+        await fetch(
+          '/.netlify/functions/data-entry-access',
+          {
+            method: 'POST',
+            credentials:
+              'same-origin',
+            headers: {
+              'Content-Type':
+                'application/json',
+              Accept:
+                'application/json',
+            },
+            body:
+              JSON.stringify({
+                token: tokenValue,
+                date,
+                value:
+                  Math.round(
+                    value * 100,
+                  ) / 100,
+                notes,
+              }),
+          },
+        );
 
-      if (error) throw error;
+      const result =
+        await response
+          .json()
+          .catch(() => ({
+            ok: false,
+          }));
 
-      console.log('[data-entry] Progress entry saved successfully');
-      
-      // Show success message
-      showAlert('✅ Success! Data point saved.', 'success');
+      if (
+        !response.ok ||
+        !result.ok
+      ) {
+        throw new Error(
+          result.error ||
+          'Could not save',
+        );
+      }
 
-      // Reset form
+      showAlert(
+        '✅ Success! Data point saved.',
+        'success',
+      );
+
       deForm.reset();
-      deDate.value = formatDateYYYYMMDD();
 
-      // Reload progress entries
-      await loadProgressEntries();
+      deDate.value =
+        formatDateYYYYMMDD();
+
+      await loadContext();
       renderProgressEntries();
+    } catch (error) {
+      console.error(
+        '[data-entry] Save failed:',
+        error,
+      );
 
-    } catch (err) {
-      console.error('[data-entry] Error saving progress entry:', err);
-      showAlert('Could not save. Please check your connection and try again.', 'error');
+      showAlert(
+        'Could not save. Please check your connection and try again.',
+        'error',
+      );
     } finally {
-      // Re-enable submit button
-      deSubmitBtn.disabled = false;
-      deSubmitBtn.textContent = '✅ Submit Data Point';
+      deSubmitBtn.disabled =
+        false;
+
+      deSubmitBtn.textContent =
+        '✅ Submit Data Point';
     }
   }
 
-  /**
-   * Initialize the data entry page
-   */
   async function init() {
-    console.log('[data-entry] Starting initialization');
+    tokenValue =
+      getTokenFromURL().trim();
 
-    // Validate token
-    const tokenValid = await initToken();
-    if (!tokenValid) {
-      deLoading.style.display = 'none';
+    if (!tokenValue) {
+      deLoading.style.display =
+        'none';
+
+      showAlert(
+        'No token provided. Please use the link sent to you.',
+        'error',
+      );
+
       return;
     }
 
-    // Load goal data
-    const goalLoaded = await loadGoalData();
-    if (!goalLoaded) {
-      deLoading.style.display = 'none';
-      return;
+    const quarter =
+      getCurrentQuarter();
+
+    const range =
+      getQuarterDateRange(
+        quarter,
+      );
+
+    currentQuarter = {
+      quarter,
+      startDate:
+        range?.start || null,
+      endDate:
+        range?.end || null,
+    };
+
+    try {
+      const loaded =
+        await loadContext();
+
+      if (!loaded) {
+        throw new Error(
+          'Incomplete link context',
+        );
+      }
+
+      deLoading.style.display =
+        'none';
+
+      deContent.style.display =
+        'block';
+
+      render();
+
+      deForm.addEventListener(
+        'submit',
+        handleSubmit,
+      );
+    } catch (error) {
+      console.error(
+        '[data-entry] Initialization failed:',
+        error,
+      );
+
+      deLoading.style.display =
+        'none';
+
+      showAlert(
+        'This link is no longer valid. Please contact the teacher for a new link.',
+        'error',
+      );
     }
-
-    // Load progress entries
-    await loadProgressEntries();
-
-    // Hide loading, show content
-    deLoading.style.display = 'none';
-    deContent.style.display = 'block';
-
-    // Render UI
-    render();
-
-    // Setup form handler
-    deForm.addEventListener('submit', handleSubmit);
-
-    console.log('[data-entry] Initialization complete');
   }
 
-  // Start initialization
   init();
 })();
