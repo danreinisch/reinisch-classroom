@@ -1,89 +1,86 @@
-'use strict';
-
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const source = fs.readFileSync(
-  path.join(
-    __dirname,
-    '..',
-    'site',
-    'web',
-    'assignment-mapping-db.js'
-  ),
-  'utf8'
-);
+const root =
+  path.resolve(__dirname, '..');
 
-const start = source.indexOf(
-  'export async function insertGoalProgress'
-);
+const source =
+  fs.readFileSync(
+    path.join(
+      root,
+      'site/web/assignment-mapping-db.js'
+    ),
+    'utf8'
+  );
 
-assert.ok(
+const start =
+  source.indexOf(
+    'export async function insertGoalProgress'
+  );
+
+assert(
   start >= 0,
-  'insertGoalProgress function not found'
+  'insertGoalProgress export must remain available'
 );
 
-const end = source.indexOf(
-  'export async function checkVersionLock',
-  start
-);
+const end =
+  source.indexOf(
+    '\n/**\n * Check if assignment is version-locked',
+    start
+  );
 
-assert.ok(
+assert(
   end > start,
-  'Could not isolate insertGoalProgress function'
+  'insertGoalProgress function must be isolatable'
 );
 
-const block = source.slice(start, end);
+const method =
+  source.slice(start, end);
 
-assert.ok(
-  block.includes(
+assert(
+  method.includes(
+    '/.netlify/functions/teacher-goal-progress'
+  ),
+  'assignment rollups must use signed teacher endpoint'
+);
+
+assert(
+  method.includes("credentials: 'include'"),
+  'assignment rollups must include the signed teacher cookie'
+);
+
+assert(
+  method.includes("action: 'insert_batch'"),
+  'assignment rollups must select insert_batch action'
+);
+
+assert(
+  method.includes(
     'assignment_instance_id: assignmentInstanceId'
   ),
-  'Assignment rollup must attach exact instance provenance'
+  'assignment-instance provenance must cross the server boundary'
 );
 
-assert.ok(
-  block.includes(
-    'assignment_instance_id: rec.assignment_instance_id'
+assert(
+  method.includes(
+    'student_id: studentId'
   ),
-  'Validated progress payload must preserve provenance'
+  'student scope must cross the server boundary'
 );
 
-assert.ok(
-  block.includes(
-    'date: getSchoolLocalDate()'
+assert(
+  method.includes(
+    'goal_rollups:'
   ),
-  'Assignment rollup must use school-local date'
+  'goal-level rollups must cross the server boundary'
 );
 
-assert.ok(
-  !block.includes(
-    "new Date().toISOString().split('T')[0]"
-  ),
-  'Assignment rollup must not generate date-only evidence from UTC'
+assert(
+  !method.includes(".from('goal_progress')"),
+  'assignment helper must not access goal_progress directly'
 );
 
-assert.ok(
-  source.includes(
-    "timeZone: 'America/Chicago'"
-  ),
-  'School-local date formatter must use America/Chicago'
-);
-
-console.log(
-  '✓ assignment rollup preserves exact assignment-instance provenance'
-);
-
-console.log(
-  '✓ assignment rollup preserves provenance through validProgressRecords'
-);
-
-console.log(
-  '✓ assignment rollup uses America/Chicago school-local date'
-);
-
-console.log('');
 console.log(
   'ASSIGNMENT MAPPING GOAL-PROGRESS PROVENANCE: PASS'
 );
