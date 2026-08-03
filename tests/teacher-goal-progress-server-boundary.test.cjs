@@ -134,6 +134,89 @@ assert(
   'published teacher browser code must have no direct quarterly-view access'
 );
 
+
+const quarterViewCreateIndex =
+  migration.search(
+    /CREATE OR REPLACE VIEW\s+public\.goal_progress_quarter_avg\s+AS/i
+  );
+
+const quarterViewRevokeIndex =
+  migration.search(
+    /REVOKE ALL PRIVILEGES[\s\S]*?ON TABLE\s+public\.goal_progress_quarter_avg/i
+  );
+
+const quarterViewGrantIndex =
+  migration.search(
+    /GRANT SELECT[\s\S]*?ON TABLE\s+public\.goal_progress_quarter_avg[\s\S]*?TO service_role/i
+  );
+
+assert(
+  quarterViewCreateIndex >= 0,
+  'migration must restore the canonical quarterly aggregate view'
+);
+
+assert(
+  /when extract\(month from gp\.date\) >= 7 then extract\(year from gp\.date\)[\s\S]*?else extract\(year from gp\.date\) - 1/i.test(
+    migration
+  ),
+  'quarterly view must preserve the historical school-year calculation'
+);
+
+for (
+  const [months, quarter] of [
+    ['7, 8, 9', 'Q1'],
+    ['10, 11, 12', 'Q2'],
+    ['1, 2, 3', 'Q3'],
+    ['4, 5, 6', 'Q4'],
+  ]
+) {
+  assert(
+    new RegExp(
+      `when extract\\(month from gp\\.date\\) in \\(${months}\\) then '${quarter}'`,
+      'i'
+    ).test(migration),
+    `quarterly view must preserve the historical ${quarter} mapping`
+  );
+}
+
+assert(
+  /round\(avg\(gp\.value\), 1\) as avg_value/i.test(
+    migration
+  ),
+  'quarterly view must preserve historical average calculation'
+);
+
+assert(
+  /count\(\*\) as measurement_count/i.test(
+    migration
+  ),
+  'quarterly view must preserve measurement counts'
+);
+
+assert(
+  /min\(gp\.date\) as first_date[\s\S]*?max\(gp\.date\) as last_date/i.test(
+    migration
+  ),
+  'quarterly view must preserve first and last measurement dates'
+);
+
+assert(
+  /group by gp\.goal_id, gp\.student_id, school_year, quarter/i.test(
+    migration
+  ),
+  'quarterly view must preserve historical grouping'
+);
+
+assert(
+  quarterViewCreateIndex < quarterViewRevokeIndex,
+  'quarterly view must be created before its browser privileges are revoked'
+);
+
+assert(
+  quarterViewRevokeIndex < quarterViewGrantIndex,
+  'quarterly view browser revocation must precede its service-role grant'
+);
+
 assert(
   /ADD COLUMN IF NOT EXISTS notes text/i.test(
     migration
