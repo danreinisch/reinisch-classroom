@@ -113,18 +113,94 @@ const adapterFilterCalls =
 
 assert.strictEqual(
   adapterFilterCalls.length,
-  3,
-  'shared adapter filter must cover goal-progress primary/fallback and goal-data-points'
+  2,
+  'shared adapter filter must cover signed goal progress and goal-data-points'
 );
 
-const teacherFilters =
-  students.match(
-    /filterInstructionalProgressRows/g
-  ) || [];
+assert.ok(
+  adapter.includes(
+    '/.netlify/functions/teacher-goal-progress'
+  ),
+  'Teacher Center goal-progress reads must use the signed server boundary'
+);
 
 assert.ok(
-  teacherFilters.length >= 3,
-  'Teacher Center progress primary/fallback must remain covered'
+  adapter.includes(
+    'return await filterInstructionalEvidenceRows('
+  ),
+  'signed goal-progress results must retain non-instructional evidence filtering'
+);
+
+assert.ok(
+  !/\.from\(['"]goal_progress['"]\)/.test(adapter),
+  'shared adapter must not read goal_progress directly from the browser'
+);
+
+assert.ok(
+  students.includes(
+    'db.listGoalProgress({'
+  ),
+  'Teacher Center Students must use the shared signed progress reader'
+);
+
+assert.ok(
+  !/\.from\(['"]goal_progress['"]\)/.test(students),
+  'Teacher Center Students must not read goal_progress directly'
+);
+
+const loadProgressStart =
+  students.indexOf(
+    '  async function loadProgressEntries('
+  );
+
+assert.ok(
+  loadProgressStart >= 0,
+  'Teacher Center progress reader must remain defined'
+);
+
+const loadProgressEnd =
+  students.indexOf(
+    '\n  function buildProgressLookupMap()',
+    loadProgressStart
+  );
+
+assert.ok(
+  loadProgressEnd > loadProgressStart,
+  'Teacher Center progress reader must be isolatable'
+);
+
+const loadProgressMethod =
+  students.slice(
+    loadProgressStart,
+    loadProgressEnd
+  );
+
+assert.ok(
+  loadProgressMethod.includes(
+    'db.listGoalProgress({'
+  ),
+  'Teacher Center remote progress must use the signed shared reader'
+);
+
+assert.ok(
+  loadProgressMethod.includes(
+    "localStorage.getItem(\n          'rc_goal_progress_v1'"
+  ),
+  'Teacher Center local progress fallback must remain available'
+);
+
+assert.ok(
+  loadProgressMethod.includes(
+    'return filterInstructionalProgressRows('
+  ),
+  'Teacher Center local progress fallback must exclude non-instructional evidence'
+);
+
+assert.ok(
+  loadProgressMethod.includes(
+    'Array.isArray(parsed)'
+  ),
+  'Teacher Center local progress fallback must reject malformed stored values'
 );
 
 assert.ok(

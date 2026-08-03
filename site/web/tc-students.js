@@ -1804,54 +1804,48 @@
     );
   }
 
-  async function loadProgressEntries(goalsList = [], studentsList = []) {
+  async function loadProgressEntries(
+    _goalsList = [],
+    _studentsList = []
+  ) {
     try {
-      const supabase = await getSupabase();
-      if (supabase) {
-        // Primary query: use inner joins to get goal_code and student_code directly.
-        const { data, error } = await supabase
-          .from('goal_progress')
-          .select('*, goals!inner(code), students!inner(code)');
-        if (!error) {
-          const instructionalData =
-            await filterInstructionalProgressRows(data || []);
+      const entries = await db.listGoalProgress({
+        includeAllYears: true
+      });
 
-          return instructionalData.map(row => ({
-            ...row,
-            student_code: row.students?.code || '',
-            goal_code: row.goals?.code || '',
-          }));
-        }
-        // Join failed (e.g. a PostgREST relationship error). Try a flat select and enrich locally.
-        console.warn('[tc-students] goal_progress join query failed, trying fallback:', error);
-        const { data: flatData, error: flatError } = await supabase
-          .from('goal_progress')
-          .select('*');
-        if (!flatError && flatData) {
-          const instructionalFlatData =
-            await filterInstructionalProgressRows(flatData);
-
-          // Build fast lookup maps from the arrays passed in by loadData.
-          const goalById = new Map(goalsList.map(g => [g.id, g]));
-          const studentById = new Map(studentsList.map(s => [s.id, s]));
-          return instructionalFlatData.map(row => ({
-            ...row,
-            goal_code: goalById.get(row.goal_id)?.code || '',
-            student_code: studentById.get(row.student_id)?.code || '',
-          }));
-        }
-        if (flatError) throw flatError;
-      }
+      return Array.isArray(entries)
+        ? entries
+        : [];
     } catch (e) {
-      console.warn('[tc-students] Could not load from goal_progress table, falling back to localStorage:', e);
+      console.warn(
+        '[tc-students] Signed goal-progress load failed, ' +
+        'falling back to localStorage:',
+        e
+      );
     }
-    
-    // Fall back to localStorage
+
     try {
-      const stored = localStorage.getItem('rc_goal_progress_v1');
-      return stored ? JSON.parse(stored) : [];
+      const stored =
+        localStorage.getItem(
+          'rc_goal_progress_v1'
+        );
+
+      const parsed =
+        stored
+          ? JSON.parse(stored)
+          : [];
+
+      return filterInstructionalProgressRows(
+        Array.isArray(parsed)
+          ? parsed
+          : []
+      );
     } catch (e) {
-      console.error('[tc-students] Error loading progress from localStorage:', e);
+      console.error(
+        '[tc-students] Error loading progress from localStorage:',
+        e
+      );
+
       return [];
     }
   }
@@ -7402,62 +7396,51 @@
         calculatedValue = value;
       }
 
-      // Save to goal_progress table or localStorage
-      const supabase = await getSupabase();
-      if (supabase) {
-        // Resolve student UUID – goal_progress uses student_id/goal_id FK columns
-        const student = allStudents.find(s => s.code === goal.student_code);
-        const studentId = student?.id;
-        if (!studentId) {
-          console.warn('[tc-students] Student UUID not found; falling back to localStorage');
-        }
-        // Try to save to Supabase (only when both UUIDs are available)
-        let savedToSupabase = false;
-        if (studentId) {
-          try {
-            const { error } = await supabase.from('goal_progress').insert({
-              student_id: studentId,
-              goal_id: goal.id,
-              value: calculatedValue,
-              date: dataDate,
-              notes: notes,
-              collected_by: 'teacher'
-            });
-            if (error) throw error;
-            savedToSupabase = true;
-          } catch (err) {
-            console.warn('[tc-students] Could not save to goal_progress, falling back to localStorage:', err);
-          }
-        }
-        if (!savedToSupabase) {
-          // Fall back to localStorage
-          const KEY = 'rc_goal_progress_v1';
-          const existing = JSON.parse(localStorage.getItem(KEY) || '[]');
-          existing.push({
-            student_code: goal.student_code,
-            goal_code: goal.code,
-            value: calculatedValue,
-            date: dataDate,
-            notes: notes,
-            collected_by: 'teacher',
-            created_at: new Date().toISOString()
-          });
-          localStorage.setItem(KEY, JSON.stringify(existing));
-        }
-      } else {
-        // No Supabase, use localStorage
-        const KEY = 'rc_goal_progress_v1';
-        const existing = JSON.parse(localStorage.getItem(KEY) || '[]');
+      // Save through the signed teacher goal-progress boundary.
+      let savedRemotely = false;
+
+      try {
+        await db.upsertGoalProgress({
+          student_code: goal.student_code,
+          goal_code: goal.code,
+          value: calculatedValue,
+          date: dataDate,
+          notes,
+          source: 'manual',
+          collected_by: 'teacher'
+        });
+
+        savedRemotely = true;
+      } catch (err) {
+        console.warn(
+          '[tc-students] Signed goal-progress save failed; ' +
+          'falling back to localStorage:',
+          err
+        );
+      }
+
+      if (!savedRemotely) {
+        const key = 'rc_goal_progress_v1';
+        const existing =
+          JSON.parse(
+            localStorage.getItem(key) || '[]'
+          );
+
         existing.push({
           student_code: goal.student_code,
           goal_code: goal.code,
           value: calculatedValue,
           date: dataDate,
-          notes: notes,
+          notes,
+          source: 'manual',
           collected_by: 'teacher',
           created_at: new Date().toISOString()
         });
-        localStorage.setItem(KEY, JSON.stringify(existing));
+
+        localStorage.setItem(
+          key,
+          JSON.stringify(existing)
+        );
       }
 
       // Show success message

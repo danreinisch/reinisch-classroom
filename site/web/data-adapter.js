@@ -612,10 +612,10 @@ const local = {
   // ============================================================================
   // Phase 1: Goal Progress (Local fallback)
   // ============================================================================
-  async listGoalProgress({ studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit } = {}) {
+  async listGoalProgress({ studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit, includeAllYears = false } = {}) {
     console.log('[goal-progress] listGoalProgress (local mode)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
     const currentYear = getCurrentSchoolYear();
-    const progressArr = store.get('goalProgress', []).filter(p => !p.school_year || p.school_year === currentYear);
+    const progressArr = store.get('goalProgress', []).filter(p => includeAllYears || !p.school_year || p.school_year === currentYear);
     const students = store.get('students', []);
     const goalsMap = store.get('iepGoals', {});
     
@@ -754,7 +754,7 @@ const local = {
     return result;
   },
 
-  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null, assignment_instance_id = null }) {
+  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null, assignment_instance_id = null, notes = null }) {
     console.log('[goal-progress] upsertGoalProgress (local mode)', { goal_code, student_code, date, value, source });
     const arr = store.get('goalProgress', []);
     
@@ -769,6 +769,7 @@ const local = {
       source,
       collected_by,
       assignment_instance_id,
+      notes,
       school_year: getCurrentSchoolYear(),
       created_at: new Date().toISOString()
     };
@@ -1175,6 +1176,44 @@ const local = {
   },
 };
 
+
+async function callTeacherGoalProgress(action, payload = {}) {
+  const response = await fetch(
+    '/.netlify/functions/teacher-goal-progress',
+    {
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        action,
+        ...payload,
+      }),
+    }
+  );
+
+  const result = await response
+    .json()
+    .catch(() => ({
+      ok: false,
+      error: `HTTP ${response.status}`,
+    }));
+
+  if (!response.ok || result.ok !== true) {
+    const error = new Error(
+      result.error ||
+      'Teacher goal-progress request failed'
+    );
+
+    error.status = response.status;
+    throw error;
+  }
+
+  return result;
+}
 
 async function callTeacherDataEntryTokens(action, payload = {}) {
   const response = await fetch(
@@ -2226,229 +2265,121 @@ const remote = {
   // ============================================================================
   // Phase 1: Goal Progress (Remote via Supabase)
   // ============================================================================
-  async listGoalProgress({ studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit } = {}) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    console.log('[goal-progress] listGoalProgress (remote)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
-    const schoolYear = getCurrentSchoolYear();
+  async listGoalProgress({
+    studentCodes,
+    goalCodes,
+    classCodes,
+    startDate,
+    endDate,
+    goalAreas,
+    limit,
+    includeAllYears = false,
+    sortDesc = false
+  } = {}) {
+    console.log(
+      '[goal-progress] listGoalProgress (signed server boundary)',
+      {
+        studentCodes,
+        goalCodes,
+        classCodes,
+        startDate,
+        endDate,
+        goalAreas,
+        limit,
+        includeAllYears,
+        sortDesc
+      }
+    );
 
-    
-    let query = supabase
-      .from('goal_progress')
-      .select(`
-        id,
+    const result = await callTeacherGoalProgress(
+      'list',
+      {
+        student_codes: studentCodes,
+        goal_codes: goalCodes,
+        class_codes: classCodes,
+        start_date: startDate,
+        end_date: endDate,
+        goal_areas: goalAreas,
+        limit,
+        include_all_years: includeAllYears,
+        sort_desc: sortDesc,
+        school_year: getCurrentSchoolYear()
+      }
+    );
+
+    return await filterInstructionalEvidenceRows(
+      Array.isArray(result.progress)
+        ? result.progress
+        : []
+    );
+  },
+
+  async listGoalQuarterAverages({
+    goalIds,
+    studentIds,
+    year
+  } = {}) {
+    console.log(
+      '[goal-progress] listGoalQuarterAverages (signed server boundary)',
+      {
+        goalIds,
+        studentIds,
+        year
+      }
+    );
+
+    const result = await callTeacherGoalProgress(
+      'quarter_averages',
+      {
+        goal_ids: goalIds,
+        student_ids: studentIds,
+        year
+      }
+    );
+
+    return Array.isArray(result.averages)
+      ? result.averages
+      : [];
+  },
+
+  async upsertGoalProgress({
+    goal_code,
+    student_code,
+    date,
+    value,
+    source = 'manual',
+    class_code = null,
+    collected_by = null,
+    assignment_instance_id = null,
+    notes = null
+  }) {
+    console.log(
+      '[goal-progress] upsertGoalProgress (signed server boundary)',
+      {
+        goal_code,
+        student_code,
+        date,
+        value,
+        source
+      }
+    );
+
+    const result = await callTeacherGoalProgress(
+      'insert',
+      {
+        goal_code,
+        student_code,
         date,
         value,
         source,
+        class_code,
         collected_by,
-        created_at,
         assignment_instance_id,
-        goal_id,
-        student_id,
-        class_id,
-        goals!inner(id, code, desc, goal_area, student_id),
-        students!inner(id, code, name),
-        classes(id, name)
-      `)
-      .or(`school_year.eq.${schoolYear},school_year.is.null`)
-      .order('date', { ascending: true });
-    
-    // Apply filters
-    if (studentCodes && studentCodes.length > 0) {
-      query = query.in('students.code', studentCodes);
-    }
-    
-    if (goalCodes && goalCodes.length > 0) {
-      query = query.in('goals.code', goalCodes);
-    }
-    
-    if (classCodes && classCodes.length > 0) {
-      query = query.in('classes.name', classCodes);
-    }
-    
-    if (startDate) {
-      query = query.gte('date', startDate);
-    }
-    
-    if (endDate) {
-      query = query.lte('date', endDate);
-    }
-    
-    if (goalAreas && goalAreas.length > 0) {
-      query = query.in('goals.goal_area', goalAreas);
-    }
-    
-    if (limit) {
-      query = query.limit(limit);
-    }
-    
-    const { data, error } = await query;
-    if (!error) {
-      const instructionalData =
-        await filterInstructionalEvidenceRows(data || []);
-
-      // Transform to flattened structure with defensive null checks
-      return instructionalData.map(row => ({
-        id: row.id,
-        date: row.date,
-        value: row.value,
-        source: row.source,
-        collected_by: row.collected_by,
-        created_at: row.created_at,
-        goal_id: row.goal_id,
-        goal_code: row.goals?.code || '',
-        goal_desc: row.goals?.desc || '',
-        goal_area: row.goals?.goal_area || 'Uncategorized',
-        student_id: row.student_id,
-        student_code: row.students?.code || '',
-        student_name: row.students?.name || row.students?.code || '',
-        class_id: row.class_id,
-        class_code: row.classes?.name || null
-      }));
-    }
-
-    // Join failed (e.g. PostgREST 406 on goals!inner or students!inner relationship).
-    // Try a flat query and enrich with goal/student data fetched separately.
-    console.warn('[goal-progress] listGoalProgress join query failed (possible PostgREST relationship config issue), trying flat fallback:', error);
-    const { data: flatData, error: flatError } = await supabase
-      .from('goal_progress')
-      .select('id, date, value, source, collected_by, created_at, assignment_instance_id, goal_id, student_id, class_id')
-      .order('date', { ascending: true });
-    if (flatError) throw flatError;
-
-    const instructionalFlatData =
-      await filterInstructionalEvidenceRows(flatData || []);
-
-    // Fetch goals and students to enrich the flat rows; if either lookup fails, proceed with empty maps.
-    const [goalsResult, studentsResult] = await Promise.all([
-      supabase.from('goals').select('id, code, desc, goal_area, baseline, mastery, measurement_type, class_context'),
-      supabase.from('students').select('id, code, name'),
-    ]);
-    const goalById = new Map((!goalsResult.error && goalsResult.data ? goalsResult.data : []).map(g => [g.id, g]));
-    const studentById = new Map((!studentsResult.error && studentsResult.data ? studentsResult.data : []).map(s => [s.id, s]));
-
-    return instructionalFlatData.map(row => {
-      const goal = goalById.get(row.goal_id);
-      const student = studentById.get(row.student_id);
-      return {
-        id: row.id,
-        date: row.date,
-        value: row.value,
-        source: row.source,
-        collected_by: row.collected_by,
-        created_at: row.created_at,
-        goal_id: row.goal_id,
-        goal_code: goal?.code || '',
-        goal_desc: goal?.desc || '',
-        goal_area: goal?.goal_area || 'Uncategorized',
-        student_id: row.student_id,
-        student_code: student?.code || '',
-        student_name: student?.name || student?.code || '',
-        class_id: row.class_id,
-        class_code: null
-      };
-    });
-  },
-
-  async listGoalQuarterAverages({ goalIds, studentIds, year } = {}) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    console.log('[goal-progress] listGoalQuarterAverages (remote)', { goalIds, studentIds, year });
-    
-    let query = supabase
-      .from('goal_progress_quarter_avg')
-      .select('*');
-    
-    if (goalIds && goalIds.length > 0) {
-      query = query.in('goal_id', goalIds);
-    }
-    
-    if (studentIds && studentIds.length > 0) {
-      query = query.in('student_id', studentIds);
-    }
-    
-    if (year) {
-      query = query.eq('school_year', year);
-    }
-    
-    const { data, error } = await query;
-    if (error) throw error;
-    
-    return data || [];
-  },
-
-  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null, assignment_instance_id = null }) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    console.log('[goal-progress] upsertGoalProgress (remote)', { goal_code, student_code, date, value, source });
-    
-    // Look up student first so we can scope the goal lookup to this student
-    const { data: studentData, error: studentError } = await supabase
-      .from('students')
-      .select('id, class_id')
-      .eq('code', student_code)
-      .limit(1)
-      .single();
-    
-    if (studentError) throw new Error(`Student not found with code: ${student_code}`);
-    
-    // Look up goal_id filtered by both code AND student_id to avoid picking
-    // a goal belonging to a different student when codes are not globally unique
-    const { data: goalData, error: goalError } = await supabase
-      .from('goals')
-      .select('id, student_id')
-      .eq('code', goal_code)
-      .eq('student_id', studentData.id)
-      .limit(1)
-      .single();
-    
-    if (goalError) {
-      // A goal_code on an assignment item may not correspond to an active IEP goal for
-      // this student (e.g. goal was removed or never existed). Log a warning and skip
-      // rather than throwing so other goals in the same submission still get recorded.
-      console.warn(`[goal-progress] Goal with code "${goal_code}" not found for student "${student_code}" - skipping progress entry`);
-      return null;
-    }
-    
-    // Look up class_id if class_code provided
-    let resolvedClassId = studentData.class_id; // default to student's primary class
-    if (class_code) {
-      const { data: classData } = await supabase
-        .from('classes')
-        .select('id')
-        .eq('name', class_code)
-        .limit(1)
-        .single();
-      
-      if (classData) {
-        resolvedClassId = classData.id;
+        notes
       }
-    }
-    
-    // Insert progress entry
-    const safeValue = (value === null || value === undefined || isNaN(Number(value))) ? 0 : parseFloat(value);
-    const { data, error } = await supabase
-      .from('goal_progress')
-      .insert({
-        goal_id: goalData.id,
-        student_id: studentData.id,
-        class_id: resolvedClassId,
-        date,
-        value: safeValue,
-        source,
-        collected_by,
-        assignment_instance_id,
-        school_year: getCurrentSchoolYear()
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return data;
+    );
+
+    return result.progress || null;
   },
 
   // ============================================================================
@@ -2743,14 +2674,20 @@ const remote = {
 
     if (submissionsError) throw submissionsError;
 
-    // Get all progress entries
-    const { data: progress, error: progressError } = await supabase
-      .from('goal_progress')
-      .select('*')
-      .eq('student_id', student.id)
-      .order('date', { ascending: false });
+    // Get all progress entries through the signed Teacher Center boundary.
+    const progressResult = await callTeacherGoalProgress(
+      'list',
+      {
+        student_codes: [studentCode],
+        include_all_years: true,
+        sort_desc: true,
+        limit: 10000
+      }
+    );
 
-    if (progressError) throw progressError;
+    const progress = Array.isArray(progressResult.progress)
+      ? progressResult.progress
+      : [];
 
     // Note: Gradebook scores would need a separate query if stored in a scores table
     // For now, we'll return empty array

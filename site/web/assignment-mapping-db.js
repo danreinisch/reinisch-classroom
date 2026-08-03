@@ -1,16 +1,7 @@
 // Assignment Mapping Phase 1: Database Operations
 // Handles CRUD for assignment items, mappings, and submission answers
 
-/**
- * Returns the starting calendar year of the current school year.
- * Aug–Dec → current year; Jan–Jul → current year - 1.
- * @returns {number}
- */
-function getCurrentSchoolYear() {
-  const now = new Date();
-  const month = now.getMonth() + 1; // 1-12
-  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-}
+
 
 /**
  * Insert assignment items and mappings
@@ -176,33 +167,7 @@ export async function getAssignmentItems(supabase, assignmentId) {
   }
 }
 
-/**
- * Return the canonical ReinischClassroom school-calendar date.
- * Date-only instructional evidence must use America/Chicago,
- * not UTC truncation.
- */
-function getSchoolLocalDate(dateLike = new Date()) {
-  const date = dateLike instanceof Date
-    ? dateLike
-    : new Date(dateLike);
 
-  if (Number.isNaN(date.getTime())) {
-    throw new Error('Invalid date for school-local formatting');
-  }
-
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(date);
-
-  const values = Object.fromEntries(
-    parts.map(part => [part.type, part.value])
-  );
-
-  return `${values.year}-${values.month}-${values.day}`;
-}
 
 /**
  * Insert goal_progress entries for mapped goals
@@ -215,94 +180,71 @@ function getSchoolLocalDate(dateLike = new Date()) {
  * @param {Array} goalRollups - Goal-level rollups
  * @returns {Object} Result
  */
-export async function insertGoalProgress(supabase, submissionId, studentId, assignmentInstanceId, goalRollups) {
-  console.log('[assignment-rollup] Inserting goal progress for', goalRollups.length, 'goals');
-  
+export async function insertGoalProgress(
+  _supabase,
+  submissionId,
+  studentId,
+  assignmentInstanceId,
+  goalRollups
+) {
+  console.log(
+    '[assignment-rollup] Sending goal progress through signed boundary for',
+    Array.isArray(goalRollups)
+      ? goalRollups.length
+      : 0,
+    'goals'
+  );
+
   try {
-    // Build progress records
-    const progressRecords = goalRollups.map(rollup => ({
-      student_id: studentId,
-      assignment_instance_id: assignmentInstanceId,
-      date: getSchoolLocalDate(),
-      value: rollup.percent_correct,
-      source: 'assignment',
-      collected_by: 'system',
-      school_year: getCurrentSchoolYear(),
-      meta: { goal_code: rollup.goal_code }
-    }));
-    
-    // For each goal code, find the matching goal_id
-    // This requires querying the goals table
-    const goalCodes = goalRollups.map(r => r.goal_code);
-    
-    const { data: goals, error: goalsError } = await supabase
-      .from('goals')
-      .select('id, code')
-      .eq('student_id', studentId)
-      .in('code', goalCodes);
-    
-    if (goalsError) {
-      console.error('[assignment-rollup] Error fetching goals:', goalsError);
-      throw goalsError;
+    const response = await fetch(
+      '/.netlify/functions/teacher-goal-progress',
+      {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'insert_batch',
+          submission_id: submissionId,
+          student_id: studentId,
+          assignment_instance_id: assignmentInstanceId,
+          goal_rollups: Array.isArray(goalRollups)
+            ? goalRollups
+            : []
+        })
+      }
+    );
+
+    const result = await response
+      .json()
+      .catch(() => ({
+        ok: false,
+        error: `HTTP ${response.status}`
+      }));
+
+    if (!response.ok || result.ok !== true) {
+      throw new Error(
+        result.error ||
+        'Goal-progress rollup request failed'
+      );
     }
-    
-    // Build code -> id map
-    const goalIdByCode = {};
-    (goals || []).forEach(g => {
-      goalIdByCode[g.code] = g.id;
-    });
-    
-    // Update progress records with goal_id
-    const validProgressRecords = progressRecords
-      .map(rec => {
-        const goalId = goalIdByCode[rec.meta.goal_code];
-        if (!goalId) {
-          console.warn(`[assignment-rollup] Goal not found for code: ${rec.meta.goal_code}`);
-          return null;
-        }
-        return {
-          goal_id: goalId,
-          student_id: rec.student_id,
-          assignment_instance_id: rec.assignment_instance_id,
-          date: rec.date,
-          value: rec.value,
-          source: rec.source,
-          collected_by: rec.collected_by,
-          school_year: rec.school_year
-        };
-      })
-      .filter(rec => rec !== null);
-    
-    if (validProgressRecords.length === 0) {
-      console.warn('[assignment-rollup] No valid goal mappings found');
-      return {
-        success: true,
-        inserted_count: 0,
-        warning: 'No matching goals found for student'
-      };
-    }
-    
-    // Insert progress entries
-    const { data: progress, error: progressError } = await supabase
-      .from('goal_progress')
-      .insert(validProgressRecords)
-      .select();
-    
-    if (progressError) {
-      console.error('[assignment-rollup] Error inserting progress:', progressError);
-      throw progressError;
-    }
-    
-    console.log('[assignment-rollup] Inserted', progress.length, 'progress entries');
-    
+
     return {
       success: true,
-      inserted_count: progress.length,
-      skipped_count: goalRollups.length - progress.length
+      inserted_count:
+        Number(result.inserted_count) || 0,
+      skipped_count:
+        Number(result.skipped_count) || 0
     };
-    
   } catch (error) {
-    console.error('[assignment-rollup] Failed to insert goal progress:', error);
+    console.error(
+      '[assignment-rollup] Failed to insert goal progress:',
+      error
+    );
+
     return {
       success: false,
       error: error.message
