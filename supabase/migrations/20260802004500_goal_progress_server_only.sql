@@ -34,7 +34,7 @@ select
   min(gp.date) as first_date,
   max(gp.date) as last_date
 from public.goal_progress gp
-group by gp.goal_id, gp.student_id, school_year, quarter;
+group by gp.goal_id, gp.student_id, 3, 4;
 
 COMMENT ON VIEW public.goal_progress_quarter_avg IS
   'Quarterly averages of goal progress. Quarter logic: Q1=Jul-Sep, Q2=Oct-Dec, Q3=Jan-Mar, Q4=Apr-Jun (school year basis)';

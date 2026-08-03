@@ -201,10 +201,17 @@ assert(
 );
 
 assert(
-  /group by gp\.goal_id, gp\.student_id, school_year, quarter/i.test(
+  /group by gp\.goal_id, gp\.student_id, 3, 4/i.test(
     migration
   ),
-  'quarterly view must preserve historical grouping'
+  'quarterly view must group by the calculated school-year and quarter outputs'
+);
+
+assert(
+  !/group by gp\.goal_id, gp\.student_id, school_year, quarter/i.test(
+    migration
+  ),
+  'quarterly view must reject ambiguous alias grouping when school_year is also a physical column'
 );
 
 assert(
