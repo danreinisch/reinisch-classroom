@@ -2447,7 +2447,11 @@
       try {
         // Refresh only progress data. A timed refresh must not reload the
         // complete roster or fan out assignment queries for expanded students.
-        await reloadProgressEntries();
+        const progressReloaded = await reloadProgressEntries();
+
+        // reloadProgressEntries logs the underlying error. Stop before stale
+        // progress is recalculated or reported to the teacher as refreshed.
+        if (!progressReloaded) return;
 
         // Recalculate summaries that depend on the in-memory progress data.
         renderStudentKpiSummary();
@@ -4148,8 +4152,10 @@
     try {
       allProgressEntries = await loadProgressEntries(allGoals, allStudents);
       buildProgressLookupMap();
+      return true;
     } catch (err) {
       console.warn('[tc-students] reloadProgressEntries failed:', err);
+      return false;
     }
   }
 

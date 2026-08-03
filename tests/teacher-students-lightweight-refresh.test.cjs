@@ -49,6 +49,7 @@ function extractNamedFunction(text, name) {
 }
 
 const setup = extractNamedFunction(source, 'setupAutoRefresh');
+const reload = extractNamedFunction(source, 'reloadProgressEntries');
 
 assert.ok(
   source.includes('let autoRefreshInFlight = false;'),
@@ -66,8 +67,42 @@ assert.ok(
 );
 
 assert.ok(
-  setup.includes('await reloadProgressEntries();'),
-  'timer must use the lightweight progress reload'
+  setup.includes(
+    'const progressReloaded = await reloadProgressEntries();'
+  ),
+  'timer must capture the lightweight progress reload result'
+);
+
+assert.ok(
+  setup.includes('if (!progressReloaded) return;'),
+  'timer must stop when progress data could not be refreshed'
+);
+
+assert.ok(
+  reload.includes('return true;'),
+  'progress reload must report success'
+);
+
+assert.ok(
+  reload.includes('return false;'),
+  'progress reload must report failure after logging'
+);
+
+const reloadCallIndex = setup.indexOf(
+  'const progressReloaded = await reloadProgressEntries();'
+);
+const failedReloadGuardIndex = setup.indexOf(
+  'if (!progressReloaded) return;'
+);
+const summaryIndex = setup.indexOf('renderStudentKpiSummary();');
+const successToastIndex = setup.indexOf('showRefreshToast();');
+
+assert.ok(
+  reloadCallIndex !== -1 &&
+    failedReloadGuardIndex > reloadCallIndex &&
+    summaryIndex > failedReloadGuardIndex &&
+    successToastIndex > failedReloadGuardIndex,
+  'failed reloads must stop before summaries and the success toast'
 );
 
 assert.ok(
@@ -153,6 +188,9 @@ console.log(
 );
 console.log(
   '✓ Only visible Progress tabs rerender from refreshed in-memory data'
+);
+console.log(
+  '✓ Failed progress reloads skip stale summaries and success toast'
 );
 console.log(
   '✓ Teacher Students module cache marker is updated'
