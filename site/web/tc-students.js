@@ -864,6 +864,7 @@
   // ── Auto-Refresh ─────────────────────────────────────────────────────────────
   const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
   let autoRefreshTimer = null;
+  let autoRefreshInFlight = false;
 
   // ── Per-question skill gap thresholds ─────────────────────────────────────
   /** Badge shows on goal card when any question accuracy is below this threshold */
@@ -2426,7 +2427,7 @@
     }, 2000);
   }
 
-  /** Set up the 5-minute auto-refresh timer. */
+  /** Set up the 5-minute lightweight progress auto-refresh timer. */
   function setupAutoRefresh() {
     if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     autoRefreshTimer = setInterval(async () => {
@@ -2435,21 +2436,49 @@
       if (quickEntryOpen) return;
       if (focusModeActive) return;
       if (!navigator.onLine) return;
+      if (autoRefreshInFlight) return;
+
+      autoRefreshInFlight = true;
 
       // Animate the refresh icon
       const icon = document.getElementById('stRefreshIcon');
       if (icon) icon.classList.add('st-spin');
 
-      // Preserve expanded/collapsed state across the refresh
-      const wasExpanded = new Set(expandedStudents);
-      await loadData().catch(() => { /* non-fatal */ });
-      for (const code of wasExpanded) {
-        if (allStudents.some(s => s.code === code)) expandedStudents.add(code);
-      }
-      await renderStudentList();
+      try {
+        // Refresh only progress data. A timed refresh must not reload the
+        // complete roster or fan out assignment queries for expanded students.
+        await reloadProgressEntries();
 
-      if (icon) icon.classList.remove('st-spin');
-      showRefreshToast();
+        // Recalculate summaries that depend on the in-memory progress data.
+        renderStudentKpiSummary();
+        renderDigestSummary();
+        renderStudentQualityBanner();
+
+        // Re-render only expanded students currently showing the Progress tab.
+        // Progress rendering reads the refreshed in-memory lookup and does not
+        // issue assignment, submission, or goal-data-point queries.
+        const visibleProgressStudents = Array.from(expandedStudents)
+          .filter(
+            code =>
+              (selectedDetailTabMap.get(code) || 'goals') === 'progress'
+          );
+
+        await Promise.allSettled(
+          visibleProgressStudents.map(
+            code => renderExpandedDetail(code)
+          )
+        );
+
+        showRefreshToast();
+      } catch (err) {
+        console.warn(
+          '[tc-students] lightweight auto-refresh failed:',
+          err
+        );
+      } finally {
+        if (icon) icon.classList.remove('st-spin');
+        autoRefreshInFlight = false;
+      }
     }, AUTO_REFRESH_MS);
 
     // Clean up on page unload
