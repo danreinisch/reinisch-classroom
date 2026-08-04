@@ -2953,8 +2953,13 @@
       
       filterStudents();
 
-      // Auto-expand students with alerts on the very first load (if preference is enabled)
-      if (!_initialLoadDone && autoExpandAlerts) {
+      // Auto-expand students with alerts on the very first load (if preference is enabled).
+      // This automatic boot render uses already-loaded memory and defers
+      // optional per-student evidence queries until a later teacher action.
+      const deferOptionalEnrichment =
+        !_initialLoadDone && autoExpandAlerts;
+
+      if (deferOptionalEnrichment) {
         for (const student of filteredStudents) {
           if (studentNeedsAttention(student.code)) {
             expandedStudents.add(student.code);
@@ -2963,7 +2968,7 @@
       }
       _initialLoadDone = true;
 
-      renderStudentList();
+      await renderStudentList(deferOptionalEnrichment);
       renderStudentQualityBanner();
       renderStudentKpiSummary();
       renderStudentObsHeatmap();
@@ -2981,7 +2986,7 @@
       
       // Still try to render with whatever data we have
       filterStudents();
-      renderStudentList();
+      await renderStudentList();
       renderStudentQualityBanner();
       renderStudentKpiSummary();
       renderDigestSummary();
@@ -3164,7 +3169,9 @@
   }
 
   // Render functions
-  async function renderStudentList() {
+  async function renderStudentList(
+    deferOptionalEnrichment = false
+  ) {
     const tbody = document.getElementById('stStudentTableBody');
     if (!tbody) return;
 
@@ -3310,8 +3317,11 @@
 
     // Render detail content for all expanded students
     // Use Promise.allSettled to handle async rendering safely
-    const renderPromises = Array.from(expandedStudents).map(studentCode => 
-      renderExpandedDetail(studentCode).catch(err => {
+    const renderPromises = Array.from(expandedStudents).map(studentCode =>
+      renderExpandedDetail(
+        studentCode,
+        deferOptionalEnrichment
+      ).catch(err => {
         console.error(`[tc-students] Error rendering expanded detail for ${studentCode}:`, err);
       })
     );
@@ -3442,7 +3452,10 @@
     }
   }
 
-  async function renderExpandedDetail(studentCode) {
+  async function renderExpandedDetail(
+    studentCode,
+    deferOptionalEnrichment = false
+  ) {
     const container = document.getElementById(`stExpandedDetail-${studentCode}`);
     if (!container) return;
 
@@ -3469,7 +3482,11 @@
     let tabContent = '';
     let tabContentEl = null; // For tabs that return DOM elements instead of HTML strings
     if (selectedDetailTab === 'goals') {
-      tabContent = await renderStudentGoalsTab(student, studentGoals);
+      tabContent = await renderStudentGoalsTab(
+        student,
+        studentGoals,
+        deferOptionalEnrichment
+      );
     } else if (selectedDetailTab === 'progress') {
       tabContentEl = await renderStudentProgressTab(student, studentGoals);
     } else if (selectedDetailTab === 'schedule') {
@@ -3569,8 +3586,10 @@
       initObservationFields(form);
     });
 
-    // After the goals tab is rendered, batch-fetch data points to show accurate counts
-    if (selectedDetailTab === 'goals') {
+    // Goal counts and skill-gap badges are optional evidence enrichment.
+    // Skip them during automatic boot expansion so initial page load cannot
+    // fan out per-goal or per-student assignment queries.
+    if (selectedDetailTab === 'goals' && !deferOptionalEnrichment) {
       batchUpdateGoalDataCounts(contentDiv, studentGoals).catch(() => {});
       injectSkillGapBadges(contentDiv, studentCode, studentGoals).catch(() => {});
     }
@@ -3583,9 +3602,16 @@
   }
 
 
-  async function renderStudentGoalsTab(student, studentGoals) {
-    // Check for active tokens
-    const activeTokens = await checkActiveTokens(student.code);
+  async function renderStudentGoalsTab(
+    student,
+    studentGoals,
+    deferOptionalEnrichment = false
+  ) {
+    // Token status is also optional boot enrichment. Normal later renders
+    // preserve the existing signed per-student lookup.
+    const activeTokens = deferOptionalEnrichment
+      ? {}
+      : await checkActiveTokens(student.code);
 
     // Mark goals with active tokens
     studentGoals.forEach(goal => {
