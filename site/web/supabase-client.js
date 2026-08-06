@@ -7,6 +7,70 @@ let createClient = null;
 let supabaseLoadError = null;
 let cachedClient = null;
 let lastConfig = null;
+let localRuntimeConfig = null;
+
+const LOCAL_RUNTIME_CONFIG_ENDPOINT =
+  '/.netlify/functions/browser-supabase-config';
+
+function isLocalBrowserHost() {
+  return (
+    location.hostname === 'localhost' ||
+    location.hostname === '127.0.0.1' ||
+    location.hostname === '::1'
+  );
+}
+
+async function loadLocalRuntimeConfig() {
+  if (!isLocalBrowserHost()) return;
+
+  localRuntimeConfig = {
+    url: null,
+    key: null,
+  };
+
+  try {
+    const response = await fetch(
+      LOCAL_RUNTIME_CONFIG_ENDPOINT,
+      {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const url =
+      typeof payload.url === 'string'
+        ? payload.url.trim()
+        : '';
+    const key =
+      typeof payload.anonKey === 'string'
+        ? payload.anonKey.trim()
+        : '';
+
+    if (!url || !key) {
+      throw new Error('incomplete local runtime configuration');
+    }
+
+    localRuntimeConfig = {
+      url,
+      key,
+    };
+
+    console.log(
+      '[supabase-client] Using local runtime Supabase configuration'
+    );
+  } catch (err) {
+    console.warn(
+      '[supabase-client] Local runtime Supabase configuration unavailable; browser remote access disabled.',
+      err.message
+    );
+  }
+}
 
 // Load @supabase/supabase-js@2 from vendored file (CSP-compliant, no external CDNs)
 // The vendored file at /vendor/supabase-js@2.mjs provides deterministic loading
@@ -24,8 +88,9 @@ async function loadSupabaseClient() {
   }
 }
 
-// Attempt to load the Supabase client
+// Attempt to load the Supabase client and localhost runtime configuration.
 await loadSupabaseClient();
+await loadLocalRuntimeConfig();
 
 // Read config from localStorage using unified keys with legacy fallback
 const UNIFIED_PREFIX = 'rc_unified_';
@@ -46,6 +111,21 @@ function getStoredValue(unifiedKey, legacyKeys = []) {
 }
 
 function readCurrentConfig() {
+  // Localhost must use the explicit Netlify Dev runtime configuration.
+  // Never fall through to the production window globals when this request is
+  // running against the isolated local E2E application.
+  if (isLocalBrowserHost()) {
+    const url = localRuntimeConfig?.url || null;
+    const key = localRuntimeConfig?.key || null;
+
+    return {
+      url,
+      key,
+      useRemote: Boolean(url && key),
+      optOut: false,
+    };
+  }
+
   const storedUrl = getStoredValue('supabase_url', ['supabase_url']);
   const storedKey = getStoredValue('supabase_anon', ['supabase_key', 'supabase_anon']);
   const useRemote = getStoredValue('use_supabase', ['use_remote', 'use_supabase']) === 'true';
