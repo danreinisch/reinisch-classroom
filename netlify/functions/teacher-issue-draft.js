@@ -871,7 +871,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
   
   try {
     // Primary: try class_enrollments table (UUID-based junction table)
-    const classEnrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}`;
+    const classEnrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name,active,archived_at)&class_id=eq.${encodeURIComponent(targetClass.id)}&active=eq.true&students.active=eq.true&students.archived_at=is.null`;
     
     console.log(`[teacher-issue-draft] [${requestId}] Fetching class enrollments from class_enrollments table`);
     
@@ -933,7 +933,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
           // For PostgREST 'in' operator with text fields, wrap each value in quotes
           // Since we've validated that codes only contain [a-zA-Z0-9_-], quoting is safe
           const quotedCodes = validCodes.map(code => `"${code}"`);
-          const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${quotedCodes.join(',')})`;
+          const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,active,archived_at&code=in.(${quotedCodes.join(',')})&active=eq.true&archived_at=is.null`;
           
           const studentsLookupResponse = await fetch(studentsLookupUrl, {
             method: 'GET',
@@ -1012,7 +1012,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
             // For PostgREST 'in' operator with text fields, wrap each value in quotes
             // Since we've validated that codes only contain [a-zA-Z0-9_-], quoting is safe
             const quotedCodes = validCodes.map(code => `"${code}"`);
-            const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${quotedCodes.join(',')})`;
+            const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,active,archived_at&code=in.(${quotedCodes.join(',')})&active=eq.true&archived_at=is.null`;
             
             const studentsLookupResponse = await fetch(studentsLookupUrl, {
               method: 'GET',
@@ -1436,7 +1436,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
   } else {
     // Note: studentIds come from database enrollment query above, already validated as UUIDs by Supabase
     // PostgREST syntax requires wrapping UUIDs in double quotes for `in` operator
-    const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&id=in.(${studentIds.map(id => `"${id}"`).join(',')})`;
+    const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name,active,archived_at&id=in.(${studentIds.map(id => `"${id}"`).join(',')})&active=eq.true&archived_at=is.null`;
     
     console.log(`[teacher-issue-draft] [${requestId}] Fetching student details`);
     
@@ -1490,7 +1490,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
       if (Array.isArray(draft.additionalStudentCodes) && draft.additionalStudentCodes.length > 0) {
         const additionalCodes = draft.additionalStudentCodes.map(c => c.trim().toUpperCase()).filter(Boolean);
         if (additionalCodes.length > 0) {
-          const additionalStudentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&code=in.(${additionalCodes.join(',')})`;
+          const additionalStudentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name,active,archived_at&code=in.(${additionalCodes.join(',')})&active=eq.true&archived_at=is.null`;
           try {
             const additionalStudentsResponse = await fetch(additionalStudentsUrl, {
               method: 'GET',

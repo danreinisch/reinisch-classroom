@@ -330,8 +330,10 @@ exports.handler =
         await readRows(
           await rest(
             '/rest/v1/assignment_instances' +
-            '?select=id,assignment_id,student_id,assigned_at,due_at,status,settings,school_year,students!inner(code,name)' +
+            '?select=id,assignment_id,student_id,assigned_at,due_at,status,settings,school_year,students!inner(code,name,active,archived_at)' +
             `&assignment_id=in.(${assignmentIds.map(encodeURIComponent).join(',')})` +
+            '&students.active=eq.true' +
+            '&students.archived_at=is.null' +
             `&or=(school_year.eq.${schoolYear},school_year.is.null)` +
             `&limit=${MAX_INSTANCES_QUERY_LIMIT}`
           ),
@@ -378,7 +380,9 @@ exports.handler =
 
         if (
           !student ||
-          !student.code
+          !student.code ||
+          student.active === false ||
+          Boolean(student.archived_at)
         ) {
           continue;
         }

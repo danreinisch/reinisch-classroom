@@ -171,7 +171,7 @@ exports.handler = async (event) => {
 
   try {
     // First, fetch student details to get student_code for each student_id
-    const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&id=in.(${student_ids.map(id => `"${id}"`).join(',')})`;
+    const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name,active,archived_at&id=in.(${student_ids.map(id => `"${id}"`).join(',')})`;
     
     console.log(`[teacher-issue-assignment] [${requestId}] Fetching student details`);
     
@@ -194,6 +194,27 @@ exports.handler = async (event) => {
     if (!students || students.length === 0) {
       console.log(`[teacher-issue-assignment] [${requestId}] No students found for provided IDs`);
       return jsonResponse(event, 404, { ok: false, error: 'No students found for provided IDs' }, {}, requestId);
+    }
+
+    const inactiveStudents = students.filter(
+      student =>
+        !student ||
+        student.active === false ||
+        Boolean(student.archived_at)
+    );
+
+    if (inactiveStudents.length > 0) {
+      return jsonResponse(
+        event,
+        400,
+        {
+          ok: false,
+          error:
+            'One or more selected students are inactive or archived'
+        },
+        { 'Cache-Control': 'no-store' },
+        requestId
+      );
     }
 
     console.log(`[teacher-issue-assignment] [${requestId}] Found ${students.length} students`);

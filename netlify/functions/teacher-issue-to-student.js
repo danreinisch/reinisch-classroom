@@ -196,7 +196,7 @@ exports.handler = async (event) => {
     // Normalize codes to uppercase to match DB storage convention
     const normalizedCodes = student_codes.map(c => c.trim().toUpperCase());
     const quotedCodes = normalizedCodes.map(c => `"${c}"`).join(',');
-    const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&code=in.(${quotedCodes})`;
+    const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name,active,archived_at&code=in.(${quotedCodes})`;
     const studentsResponse = await fetch(studentsUrl, {
       method: 'GET',
       headers: {
@@ -213,6 +213,27 @@ exports.handler = async (event) => {
 
     if (!Array.isArray(students) || students.length === 0) {
       return jsonResponse(event, 404, { ok: false, error: `No students found for codes: ${normalizedCodes.join(', ')}` }, { 'Cache-Control': 'no-store' }, requestId);
+    }
+
+    const inactiveStudents = students.filter(
+      student =>
+        !student ||
+        student.active === false ||
+        Boolean(student.archived_at)
+    );
+
+    if (inactiveStudents.length > 0) {
+      return jsonResponse(
+        event,
+        400,
+        {
+          ok: false,
+          error:
+            'One or more selected students are inactive or archived'
+        },
+        { 'Cache-Control': 'no-store' },
+        requestId
+      );
     }
 
     // Warn about any codes not found
