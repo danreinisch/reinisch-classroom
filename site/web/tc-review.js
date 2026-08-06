@@ -5,7 +5,7 @@
   if (!location.pathname.startsWith("/teacher/review")) return;
 
   // Import data adapter for Supabase/localStorage abstraction
-  const { db, isRemote } = await import('/web/data-adapter.js?v=2026072901');
+  const { db, isRemote } = await import('/web/data-adapter.js?v=2026080601');
   const { getSupabase, getSupabaseConfig } = await import('/web/supabase-client.js');
   const { getAssignmentItems } = await import('/web/assignment-mapping-db.js');
   const { CANON_CLASSES, CLASS_DISPLAY } = await import('/web/constants.js');

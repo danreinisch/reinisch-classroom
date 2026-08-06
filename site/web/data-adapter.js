@@ -1285,30 +1285,62 @@ async function callPublicDataEntryAccess(token) {
   return result;
 }
 
+
+let teacherRosterContextRequest = null;
+
+async function fetchTeacherRosterContext() {
+  if (!teacherRosterContextRequest) {
+    teacherRosterContextRequest = (async () => {
+      const response = await fetch(
+        '/.netlify/functions/teacher-roster-context',
+        {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: {
+            Accept: 'application/json'
+          }
+        }
+      );
+
+      const result = await response
+        .json()
+        .catch(() => ({
+          ok: false,
+          error: `HTTP ${response.status}`
+        }));
+
+      if (!response.ok || !result.ok) {
+        const requestId =
+          response.headers.get('X-Request-Id') ||
+          'unknown';
+
+        const error = new Error(
+          `${result.error || 'Failed to load Teacher roster context'} ` +
+          `(Request ID: ${requestId})`
+        );
+
+        error.status = response.status;
+        throw error;
+      }
+
+      return result;
+    })().finally(() => {
+      teacherRosterContextRequest = null;
+    });
+  }
+
+  return teacherRosterContextRequest;
+}
+
 const remote = {
   async listStudents() {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    // Try with new columns first
-    let { data, error } = await supabase
-      .from('students')
-      .select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active')
-      .order('code');
-    
-    // Graceful fallback: if schema error, retry with basic columns only
-    if (isSchemaError(error)) {
-      console.warn('[data-adapter] Schema fallback triggered in listStudents()', { code: error.code, message: error.message });
-      const fallback = await supabase
-        .from('students')
-        .select('id, code, name, class_id')
-        .order('code');
-      if (fallback.error) throw fallback.error;
-      return fallback.data;
-    }
-    
-    if (error) throw error;
-    return data;
+    const context =
+      await fetchTeacherRosterContext();
+
+    return Array.isArray(context.students)
+      ? context.students
+      : [];
   },
   async upsertStudent(studentData) {
     const supabase = await getSupabase();
@@ -1502,63 +1534,12 @@ const remote = {
     return { student_code, ...data };
   },
   async listGoalsAll() {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    // Try with new columns first — filter to active, non-closed/archived goals only
-    let { data, error } = await supabase
-      .from('goals')
-      .select(`id, code, desc, target, status, student_id, 
-              measurement_type, data_collector, data_collector_email, class_context,
-              goal_area, baseline, mastery, case_manager, version, observation_config, notes,
-              addressed_in_class, individual_delivery,
-              students!inner(code)`)
-      .eq('active', true)
-      .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
-      .order('code', { foreignTable: 'students', ascending: true });
-    
-    // Graceful fallback: if schema error, retry with basic columns only
-    if (isSchemaError(error)) {
-      console.error('[data-adapter] ⚠ Schema fallback in listGoalsAll() — enriched fields (baseline, mastery, class_context, addressed_in_class, individual_delivery, etc.) will be missing. Apply the 20260405_goal_delivery_fields migration.', { code: error.code, message: error.message });
-      const fallback = await supabase
-        .from('goals')
-        .select('id, code, desc, target, status, student_id, students!inner(code)')
-        .eq('active', true)
-        .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
-        .order('code', { foreignTable: 'students', ascending: true });
-      if (fallback.error) throw fallback.error;
-      return (fallback.data || []).map(g => ({
-        id: g.id,
-        student_code: g.students.code,
-        code: g.code,
-        desc: g.desc,
-        target: g.target,
-        status: g.status
-      }));
-    }
-    
-    if (error) throw error;
-    // Flatten to include student_code at top level
-    return (data || []).map(g => ({
-      id: g.id,
-      student_id: g.student_id,
-      student_code: g.students.code,
-      code: g.code,
-      desc: g.desc,
-      target: g.target,
-      status: g.status,
-      measurement_type: g.measurement_type,
-      data_collector: g.data_collector,
-      data_collector_email: g.data_collector_email,
-      class_context: g.class_context,
-      goal_area: g.goal_area,
-      baseline: g.baseline,
-      mastery: g.mastery,
-      case_manager: g.case_manager,
-      version: g.version,
-      observation_config: g.observation_config,
-      notes: g.notes
-    }));
+    const context =
+      await fetchTeacherRosterContext();
+
+    return Array.isArray(context.goals)
+      ? context.goals
+      : [];
   },
   async addProgress({ student_code, goal_id, date, percent = null, method = '', by_name = 'Teacher', via = 'manual', notes = '' }) {
     const supabase = await getSupabase();
@@ -2047,86 +2028,139 @@ const remote = {
   },
   
   async listClassEnrollments() {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    // Primary: try class_enrollments table with joins
-    const { data: enrollments, error: enrollError } = await supabase
-      .from('class_enrollments')
-      .select('class_id, student_id, students!inner(code, name), classes!inner(id, code, name)');
-    
-    if (enrollError) {
-      console.warn('class_enrollments query failed, falling back to students.class_id:', enrollError);
-    }
-    
-    // If we got data from class_enrollments, return it with defensive handling
-    if (enrollments && enrollments.length > 0) {
+    const context =
+      await fetchTeacherRosterContext();
+
+    const enrollments =
+      Array.isArray(context.class_enrollments)
+        ? context.class_enrollments
+        : [];
+
+    if (enrollments.length > 0) {
       const results = [];
-      for (const e of enrollments) {
-        if (!e || !e.students || !e.classes) continue;
-        
-        const classCode = e.classes.code || '';
-        const className = e.classes.name || '';
-        const canonicalNames = mapToCanonicalNames(classCode, className);
-        
-        // Create an enrollment entry for each canonical name
-        // This allows students to show up under multiple class tabs (SC and S1)
-        for (const canonName of canonicalNames) {
+
+      for (const enrollment of enrollments) {
+        if (
+          !enrollment ||
+          !enrollment.students ||
+          !enrollment.classes
+        ) {
+          continue;
+        }
+
+        const student =
+          Array.isArray(enrollment.students)
+            ? enrollment.students[0]
+            : enrollment.students;
+
+        const classRow =
+          Array.isArray(enrollment.classes)
+            ? enrollment.classes[0]
+            : enrollment.classes;
+
+        if (!student || !classRow) {
+          continue;
+        }
+
+        const classCode =
+          classRow.code || '';
+
+        const className =
+          classRow.name || '';
+
+        const canonicalNames =
+          mapToCanonicalNames(
+            classCode,
+            className
+          );
+
+        for (
+          const canonicalName
+          of canonicalNames
+        ) {
           results.push({
-            class_id: e.class_id,
-            class_code: classCode,
-            class_name: canonName,
-            student_code: e.students.code || '',
-            student_name: e.students.name || e.students.code || ''
+            class_id:
+              enrollment.class_id,
+            class_code:
+              classCode,
+            class_name:
+              canonicalName,
+            student_code:
+              student.code || '',
+            student_name:
+              student.name ||
+              student.code ||
+              ''
           });
         }
       }
+
       return results;
     }
-    
-    // Fallback: derive from students.class_id (not recommended, but available)
-    const { data: students, error: studentsError } = await supabase
-      .from('students')
-      .select('id, code, name, class_id')
-      .not('class_id', 'is', null);
-    
-    if (studentsError) {
-      console.warn('students fallback query failed:', studentsError);
-      return []; // Return empty array if both queries fail
-    }
-    
-    // In fallback, we need to look up the class info from class_id
-    const classIds = [...new Set(students.map(s => s.class_id).filter(Boolean))];
-    const { data: classes } = await supabase
-      .from('classes')
-      .select('id, code, name')
-      .in('id', classIds);
-    
-    const classMap = new Map((classes || []).map(c => [c.id, c]));
-    
+
+    const students =
+      Array.isArray(context.students)
+        ? context.students
+        : [];
+
+    const classes =
+      Array.isArray(context.classes)
+        ? context.classes
+        : [];
+
+    const classMap =
+      new Map(
+        classes.map(
+          (classRow) => [
+            classRow.id,
+            classRow
+          ]
+        )
+      );
+
     const results = [];
-    for (const s of students) {
-      if (!s || !s.class_id) continue;
-      
-      const classInfo = classMap.get(s.class_id);
-      if (!classInfo) continue;
-      
-      const canonicalNames = mapToCanonicalNames(classInfo.code, classInfo.name);
-      
-      for (const canonName of canonicalNames) {
+
+    for (const student of students) {
+      if (!student || !student.class_id) {
+        continue;
+      }
+
+      const classRow =
+        classMap.get(student.class_id);
+
+      if (!classRow) {
+        continue;
+      }
+
+      const canonicalNames =
+        mapToCanonicalNames(
+          classRow.code,
+          classRow.name
+        );
+
+      for (
+        const canonicalName
+        of canonicalNames
+      ) {
         results.push({
-          class_id: s.class_id,
-          class_code: classInfo.code,
-          class_name: canonName,
-          student_code: s.code || '',
-          student_name: s.name || s.code || ''
+          class_id:
+            student.class_id,
+          class_code:
+            classRow.code,
+          class_name:
+            canonicalName,
+          student_code:
+            student.code || '',
+          student_name:
+            student.name ||
+            student.code ||
+            ''
         });
       }
     }
-    
+
     return results;
   },
-  
   async upsertClass(classData) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');

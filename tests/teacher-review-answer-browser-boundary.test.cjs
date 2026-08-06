@@ -120,14 +120,14 @@ assert.ok(
 
 assert.ok(
   review.includes(
-    "/web/data-adapter.js?v=2026072901"
+    "/web/data-adapter.js?v=2026080601"
   ),
   'Teacher Review must request the versioned data-adapter'
 );
 
 assert.ok(
   reviewHtml.includes(
-    '/web/tc-review.js?v=2026072901'
+    '/web/tc-review.js?v=2026080601'
   ),
   'Teacher Review HTML must cache-bust the changed Review module'
 );
