@@ -512,13 +512,39 @@ async function run() {
     ['S000', 'S001']
   );
 
+  const zeroRow =
+    payload.instances.find(
+      (row) =>
+        row.id ===
+        '99999999-9999-4999-8999-999999999999'
+    );
+
+  assert.ok(
+    zeroRow,
+    'Active synthetic row must remain visible'
+  );
+
+  assert.strictEqual(
+    zeroRow.student_name,
+    'Synthetic Zero'
+  );
+
+  assert.strictEqual(
+    zeroRow.due_at,
+    null
+  );
+
+  assert.deepStrictEqual(
+    zeroRow.settings,
+    {}
+  );
+
   console.log(
     '✓ shared-reader field and student-code ordering contract preserved'
   );
 
-  // 6. Preserve legacy shared-reader behavior: active enrollment
-  // is the authorization requirement; students.active is not an
-  // additional visibility filter.
+  // 6. Exclude inactive or archived students even when a stale
+  // active enrollment remains in the class-enrollment table.
   installMocks();
 
   fixtures.instances = [
@@ -537,6 +563,26 @@ async function run() {
         code: 'S003',
         name: 'Synthetic Three',
         active: false,
+        archived_at: null,
+      },
+    },
+    {
+      id:
+        '88888888-8888-4888-8888-888888888888',
+      assignment_id: 101,
+      student_id: studentA,
+      assigned_at:
+        '2026-09-01T15:05:00.000Z',
+      due_at: null,
+      status: 'Assigned',
+      settings: {},
+      school_year: 2026,
+      students: {
+        code: 'S004',
+        name: 'Synthetic Archived',
+        active: true,
+        archived_at:
+          '2026-07-31T12:00:00.000Z',
       },
     },
   ];
@@ -550,31 +596,12 @@ async function run() {
     body(result);
 
   assert.deepStrictEqual(
-    payload.instances.map(
-      (row) => row.id
-    ),
-    [
-      '99999999-9999-4999-8999-999999999999',
-    ]
-  );
-
-  assert.strictEqual(
-    payload.instances[0].student_name,
-    'Synthetic Three'
-  );
-
-  assert.strictEqual(
-    payload.instances[0].due_at,
-    null
-  );
-
-  assert.deepStrictEqual(
-    payload.instances[0].settings,
-    {}
+    payload.instances,
+    []
   );
 
   console.log(
-    '✓ active same-class enrollment remains the visibility requirement'
+    '✓ inactive and archived students excluded despite stale active enrollments'
   );
 
   // 7. Preserve current-school-year/NULL and 5000-row query contract.
@@ -609,8 +636,29 @@ async function run() {
     )
   );
 
+  assert.ok(
+    instanceCall.url.includes(
+      'students!inner(code,name,active,archived_at)'
+    ),
+    'Assignment-instance query must load student operational state'
+  );
+
+  assert.ok(
+    instanceCall.url.includes(
+      'students.active=eq.true'
+    ),
+    'Assignment-instance query must require active students'
+  );
+
+  assert.ok(
+    instanceCall.url.includes(
+      'students.archived_at=is.null'
+    ),
+    'Assignment-instance query must exclude archived students'
+  );
+
   console.log(
-    '✓ existing school-year/NULL and query-limit contract preserved'
+    '✓ school-year/NULL, active-student, archive, and query-limit contracts preserved'
   );
 
   // 8. Query failures fail closed rather than returning unscoped data.
