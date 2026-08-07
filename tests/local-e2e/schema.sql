@@ -266,6 +266,14 @@ CREATE TABLE public.assignments (
   source_type text NOT NULL DEFAULT 'portal'
     CHECK (source_type IN ('portal', 'google_form', 'import')),
   school_year integer,
+
+  -- Local E2E support for current assignment catalog reader.
+  -- These fields mirror the application's behavioral contract only;
+  -- this minimal harness schema is not the canonical production schema.
+  unit_id text,
+  section_id text,
+  tags jsonb NOT NULL DEFAULT '[]'::jsonb,
+
   finalized_at timestamptz
 );
 
