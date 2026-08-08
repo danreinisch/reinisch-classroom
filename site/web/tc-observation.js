@@ -2,7 +2,7 @@
 // Always-visible observation tray for the Teacher Center.
 // Teachers click the clipboard icon in the topbar to open a lightweight tray
 // showing all observation goals for today, grouped by student, with inline
-// data-entry forms. No schedule dependency — records one entry per goal per day.
+// data-entry forms. Shared instructional-day rules suppress no-student dates.
 
 (async () => {
   'use strict';
@@ -189,6 +189,8 @@
   // ─── Imports ──────────────────────────────────────────────────────────────
   const { db } = await import('/web/data-adapter.js');
   const { buildObservationNotes, parseObservationNotes } = await import('/web/obs-utils.js');
+  const { getInstructionalDayStatus, isInstructionalDay } =
+    await import('/web/instructional-day.js');
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   function escapeHtml(text) {
@@ -206,11 +208,6 @@
     return d.getFullYear() + '-'
       + String(d.getMonth() + 1).padStart(2, '0') + '-'
       + String(d.getDate()).padStart(2, '0');
-  }
-
-  function isWeekend(date) {
-    const d = typeof date === 'string' ? new Date(date + 'T00:00:00') : date;
-    return d.getDay() === 0 || d.getDay() === 6; // Sun=0, Sat=6
   }
 
   function addDays(dateString, days) {
@@ -422,10 +419,25 @@
 
   // ─── Save Observation ─────────────────────────────────────────────────────
   async function saveObservation(goal, responseData, noteText, saveIndicatorEl, onSave, date) {
+    if (date == null) date = todayStr();
+
+    const dayStatus = getInstructionalDayStatus(date);
+    if (!dayStatus.instructional) {
+      console.warn(
+        '[tc-observation] Observation blocked on non-instructional date:',
+        date,
+        dayStatus.label
+      );
+      if (saveIndicatorEl) {
+        saveIndicatorEl.textContent = `No school — ${dayStatus.label}`;
+        saveIndicatorEl.className = 'obs-save-indicator offline';
+      }
+      return;
+    }
+
     const category = goal.observation_config?.category;
     const value = calcValue(category, responseData);
     const notes = buildObservationNotes(category, responseData, noteText);
-    if (date == null) date = todayStr();
 
     console.log(
       '[tc-observation] saveObservation: goal=', goal.code,
@@ -1135,12 +1147,12 @@
     const badge = trayIconEl.querySelector('.obs-tray-badge');
     if (!badge) return;
 
-    if (allGoals.length === 0 || isWeekend(new Date())) {
+    const date = todayStr();
+
+    if (allGoals.length === 0 || !isInstructionalDay(date)) {
       badge.style.display = 'none';
       return;
     }
-
-    const date = todayStr();
     const unrecorded = countUnrecorded(date);
 
     if (unrecorded === 0) {
@@ -1251,7 +1263,7 @@
     };
 
     const updateFooterText = () => {
-      if (isWeekend(currentTrayDate)) {
+      if (!isInstructionalDay(currentTrayDate)) {
         footerEl.textContent = '';
         return;
       }
@@ -1271,10 +1283,13 @@
 
     const renderBody = () => {
       bodyEl.innerHTML = '';
-      if (isWeekend(currentTrayDate)) {
+      const dayStatus = getInstructionalDayStatus(currentTrayDate);
+      if (!dayStatus.instructional) {
         const empty = document.createElement('div');
         empty.className = 'obs-tray-empty';
-        empty.textContent = 'No observations scheduled on weekends. Use the arrows to navigate to a weekday.';
+        empty.textContent =
+          `No observations scheduled — ${dayStatus.label}. ` +
+          'Use the arrows to navigate to an instructional day.';
         bodyEl.appendChild(empty);
       } else if (allGoals.length === 0) {
         const empty = document.createElement('div');
@@ -1291,7 +1306,7 @@
       currentTrayDate = newDate;
       updateTitle();
       updateNavButtons();
-      if (!isWeekend(newDate) && !recordedByDate.has(newDate)) {
+      if (isInstructionalDay(newDate) && !recordedByDate.has(newDate)) {
         bodyEl.innerHTML = '<div class="obs-tray-empty">Loading\u2026</div>';
         await loadRecordedEntriesForDate(newDate);
       }
@@ -1420,6 +1435,7 @@
   async function loadRecordedEntriesForDate(date) {
     if (allGoals.length === 0) return;
     if (date == null) date = todayStr();
+    if (!isInstructionalDay(date)) return;
     try {
       const goalCodes = allGoals.map(g => g.code);
       const entries = await db.listGoalProgress({
