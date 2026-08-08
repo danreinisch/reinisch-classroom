@@ -1147,12 +1147,12 @@
     const badge = trayIconEl.querySelector('.obs-tray-badge');
     if (!badge) return;
 
-    if (allGoals.length === 0 || !isInstructionalDay(todayStr())) {
+    const date = todayStr();
+
+    if (allGoals.length === 0 || !isInstructionalDay(date)) {
       badge.style.display = 'none';
       return;
     }
-
-    const date = todayStr();
     const unrecorded = countUnrecorded(date);
 
     if (unrecorded === 0) {

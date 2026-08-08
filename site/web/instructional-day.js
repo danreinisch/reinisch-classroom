@@ -89,14 +89,6 @@ function parseDateKey(value) {
     return value;
   }
 
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return [
-      value.getFullYear(),
-      String(value.getMonth() + 1).padStart(2, '0'),
-      String(value.getDate()).padStart(2, '0'),
-    ].join('-');
-  }
-
   return null;
 }
 
@@ -132,15 +124,6 @@ export function getInstructionalDayStatus(
     };
   }
 
-  if (!calendar.schoolDays.includes(dayOfWeek(date))) {
-    return {
-      date,
-      instructional: false,
-      reason: 'weekend',
-      label: 'Weekend',
-    };
-  }
-
   const exception = calendar.exceptions.find(
     item => date >= item.start && date <= item.end
   );
@@ -152,6 +135,15 @@ export function getInstructionalDayStatus(
       reason: 'calendar-exception',
       label: exception.label,
       type: exception.type,
+    };
+  }
+
+  if (!calendar.schoolDays.includes(dayOfWeek(date))) {
+    return {
+      date,
+      instructional: false,
+      reason: 'weekend',
+      label: 'Weekend',
     };
   }
 

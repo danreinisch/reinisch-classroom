@@ -206,6 +206,25 @@ test('invalid dates fail closed', () => {
   assert.strictEqual(status('not-a-date').instructional, false);
 });
 
+test('Date objects are outside the school-date-key contract', () => {
+  const result = vm.runInNewContext(
+    "module.exports.getInstructionalDayStatus(new Date('2026-08-25'))",
+    sandbox
+  );
+
+  assert.strictEqual(result.instructional, false);
+  assert.strictEqual(result.reason, 'invalid-date');
+});
+
+test('district calendar exceptions outrank generic weekend labels', () => {
+  const result = status('2026-12-26');
+
+  assert.strictEqual(result.instructional, false);
+  assert.strictEqual(result.reason, 'calendar-exception');
+  assert.strictEqual(result.label, 'Winter Break');
+  assert.strictEqual(result.type, 'school-closed');
+});
+
 console.log('\n--- Observation Tray integration contract ---');
 
 test('Observation dynamically imports the shared instructional-day helper', () => {
@@ -220,10 +239,20 @@ test('legacy weekend-only helper is removed', () => {
   assert.ok(!observationSource.includes('function isWeekend(date)'));
 });
 
-test('today badge uses instructional-day contract', () => {
+test('today badge computes one school-date key and reuses it', () => {
   assert.ok(
     observationSource.includes(
-      'allGoals.length === 0 || !isInstructionalDay(todayStr())'
+      'const date = todayStr();'
+    )
+  );
+  assert.ok(
+    observationSource.includes(
+      'allGoals.length === 0 || !isInstructionalDay(date)'
+    )
+  );
+  assert.ok(
+    !observationSource.includes(
+      '!isInstructionalDay(todayStr())'
     )
   );
 });
