@@ -467,6 +467,9 @@ async function run() {
   const foreignClassId =
     '99999999-9999-4999-8999-999999999999';
 
+  const secondOwnedClassId =
+    '88888888-8888-4888-8888-888888888888';
+
   const activeStudentRow = {
     id: progressRow.student_id,
     code: 'S001',
@@ -1026,6 +1029,102 @@ async function run() {
 
   console.log(
     '✓ foreign requested class cannot receive manual evidence'
+  );
+
+  calls = [];
+  insertedPayload = null;
+
+  global.fetch =
+    makeWriteFetch({
+      studentRows: [{
+        ...activeStudentRow,
+        class_id: foreignClassId,
+      }],
+      capturePayload(payload) {
+        insertedPayload = payload;
+      },
+    });
+
+  const soleClassFallbackResponse =
+    await handler(
+      eventFor({
+        action: 'insert',
+        student_code: 'S001',
+        goal_code: 'READ.1',
+        date: '2026-08-01',
+        value: 71,
+      })
+    );
+
+  assert.strictEqual(
+    soleClassFallbackResponse.statusCode,
+    200,
+    'exactly one authorized class may serve as the sole fallback'
+  );
+
+  assert.strictEqual(
+    insertedPayload[0].class_id,
+    progressRow.class_id,
+    'sole authorized class must become canonical class_id'
+  );
+
+  console.log(
+    '✓ sole authorized class remains a deterministic fallback'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeWriteFetch({
+      studentRows: [{
+        ...activeStudentRow,
+        class_id: foreignClassId,
+      }],
+      enrollmentRows: [
+        {
+          class_id: progressRow.class_id,
+        },
+        {
+          class_id: secondOwnedClassId,
+        },
+      ],
+      classRows: [
+        ownedClassRow,
+        {
+          id: secondOwnedClassId,
+          code: 'LA2',
+          name: 'Language Arts 2 SC',
+          teacher_id: teacherId,
+        },
+      ],
+      allowWrite: false,
+    });
+
+  const ambiguousClassResponse =
+    await handler(
+      eventFor({
+        action: 'insert',
+        student_code: 'S001',
+        goal_code: 'READ.1',
+        date: '2026-08-01',
+        value: 72,
+      })
+    );
+
+  assert.strictEqual(
+    ambiguousClassResponse.statusCode,
+    403,
+    'multiple authorized classes without an explicit/default match must fail closed'
+  );
+
+  assert.strictEqual(
+    hasCanonicalWrite(),
+    false,
+    'ambiguous class context must never reach canonical write'
+  );
+
+  console.log(
+    '✓ ambiguous multi-class context fails closed without guessing'
   );
 
   calls = [];

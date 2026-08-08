@@ -1131,7 +1131,9 @@ async function resolveAuthorizedClassId(
     return defaultClassId;
   }
 
-  return ownedClasses[0]?.id || null;
+  return ownedClasses.length === 1
+    ? ownedClasses[0].id
+    : null;
 }
 
 async function resolveAuthorizedInstance(
