@@ -841,12 +841,66 @@ async function findStudent(
 
   params.set(
     'select',
-    'id,code,name,class_id',
+    'id,code,name,class_id,active,archived_at',
   );
 
   params.set(
     'code',
     `eq.${studentCode}`,
+  );
+
+  params.set(
+    'active',
+    'eq.true',
+  );
+
+  params.set(
+    'archived_at',
+    'is.null',
+  );
+
+  params.set(
+    'limit',
+    '1',
+  );
+
+  const rows =
+    await getRows(
+      'students',
+      params,
+    );
+
+  return rows[0] || null;
+}
+
+async function findActiveStudentById(
+  studentId,
+) {
+  if (!UUID_PATTERN.test(studentId || '')) {
+    return null;
+  }
+
+  const params =
+    new URLSearchParams();
+
+  params.set(
+    'select',
+    'id,code,name,class_id,active,archived_at',
+  );
+
+  params.set(
+    'id',
+    `eq.${studentId}`,
+  );
+
+  params.set(
+    'active',
+    'eq.true',
+  );
+
+  params.set(
+    'archived_at',
+    'is.null',
   );
 
   params.set(
@@ -872,7 +926,7 @@ async function findGoal(
 
   params.set(
     'select',
-    'id,code,student_id',
+    'id,code,student_id,status,active',
   );
 
   params.set(
@@ -886,6 +940,11 @@ async function findGoal(
   );
 
   params.set(
+    'active',
+    'eq.true',
+  );
+
+  params.set(
     'limit',
     '1',
   );
@@ -896,101 +955,333 @@ async function findGoal(
       params,
     );
 
-  return rows[0] || null;
+  const goal =
+    rows[0] || null;
+
+  if (!goal) {
+    return null;
+  }
+
+  const status =
+    (
+      normalizeString(
+        goal.status,
+        50,
+      ) || ''
+    ).toLowerCase();
+
+  if (
+    status === 'closed' ||
+    status === 'archived'
+  ) {
+    return null;
+  }
+
+  return goal;
 }
 
-async function resolveClassId(
+function classMatchesCode(
+  classRow,
   classCode,
-  defaultClassId,
 ) {
-  if (!classCode) {
-    return defaultClassId || null;
-  }
-
-  const params =
-    new URLSearchParams();
-
-  params.set(
-    'select',
-    'id,code,name',
-  );
-
-  params.set(
-    'name',
-    `eq.${classCode}`,
-  );
-
-  params.set(
-    'limit',
-    '1',
-  );
-
-  let rows =
-    await getRows(
-      'classes',
-      params,
+  const requested =
+    normalizeString(
+      classCode,
+      150,
     );
 
-  if (rows.length === 0) {
-    params.delete('name');
-
-    params.set(
-      'code',
-      `eq.${classCode}`,
-    );
-
-    rows =
-      await getRows(
-        'classes',
-        params,
-      );
-  }
-
-  return rows[0]?.id ||
-    defaultClassId ||
-    null;
-}
-
-async function validateInstance(
-  instanceId,
-  studentId,
-) {
-  if (!instanceId) {
-    return true;
-  }
-
-  if (!UUID_PATTERN.test(instanceId)) {
+  if (!requested) {
     return false;
   }
 
-  const params =
+  const needle =
+    requested.toLowerCase();
+
+  return [
+    classRow?.code,
+    classRow?.name,
+  ].some(value => {
+    const normalized =
+      normalizeString(
+        value,
+        150,
+      );
+
+    return (
+      normalized &&
+      normalized.toLowerCase() ===
+        needle
+    );
+  });
+}
+
+async function ownedEnrollmentClasses(
+  studentId,
+  teacherId,
+) {
+  if (
+    !UUID_PATTERN.test(studentId || '') ||
+    !UUID_PATTERN.test(teacherId || '')
+  ) {
+    return [];
+  }
+
+  const enrollmentParams =
     new URLSearchParams();
 
-  params.set(
+  enrollmentParams.set(
     'select',
-    'id,student_id',
+    'class_id',
   );
 
-  params.set(
+  enrollmentParams.set(
+    'student_id',
+    `eq.${studentId}`,
+  );
+
+  enrollmentParams.set(
+    'active',
+    'eq.true',
+  );
+
+  const enrollments =
+    await getRows(
+      'class_enrollments',
+      enrollmentParams,
+    );
+
+  const classIds = [
+    ...new Set(
+      enrollments
+        .map(row => row?.class_id)
+        .filter(id =>
+          UUID_PATTERN.test(id || '')
+        ),
+    ),
+  ];
+
+  if (classIds.length === 0) {
+    return [];
+  }
+
+  const classParams =
+    new URLSearchParams();
+
+  classParams.set(
+    'select',
+    'id,code,name,teacher_id',
+  );
+
+  classParams.set(
+    'id',
+    inFilter(classIds),
+  );
+
+  classParams.set(
+    'teacher_id',
+    `eq.${teacherId}`,
+  );
+
+  const classes =
+    await getRows(
+      'classes',
+      classParams,
+    );
+
+  return classes.filter(row =>
+    UUID_PATTERN.test(row?.id || '')
+  );
+}
+
+async function resolveAuthorizedClassId(
+  studentId,
+  teacherId,
+  defaultClassId,
+  classCode,
+) {
+  const ownedClasses =
+    await ownedEnrollmentClasses(
+      studentId,
+      teacherId,
+    );
+
+  if (ownedClasses.length === 0) {
+    return null;
+  }
+
+  if (classCode) {
+    const requestedClass =
+      ownedClasses.find(row =>
+        classMatchesCode(
+          row,
+          classCode,
+        )
+      );
+
+    return requestedClass?.id || null;
+  }
+
+  if (
+    defaultClassId &&
+    ownedClasses.some(
+      row =>
+        row.id === defaultClassId
+    )
+  ) {
+    return defaultClassId;
+  }
+
+  return ownedClasses[0]?.id || null;
+}
+
+async function resolveAuthorizedInstance(
+  instanceId,
+  studentId,
+  teacherId,
+) {
+  if (!instanceId) {
+    return {
+      ok: true,
+      classId: null,
+    };
+  }
+
+  if (
+    !UUID_PATTERN.test(instanceId) ||
+    !UUID_PATTERN.test(studentId || '') ||
+    !UUID_PATTERN.test(teacherId || '')
+  ) {
+    return {
+      ok: false,
+      classId: null,
+    };
+  }
+
+  const instanceParams =
+    new URLSearchParams();
+
+  instanceParams.set(
+    'select',
+    'id,student_id,assignment_id',
+  );
+
+  instanceParams.set(
     'id',
     `eq.${instanceId}`,
   );
 
-  params.set(
+  instanceParams.set(
     'limit',
     '1',
   );
 
-  const rows =
+  const instances =
     await getRows(
       'assignment_instances',
-      params,
+      instanceParams,
     );
 
-  return (
-    rows.length === 1 &&
-    rows[0].student_id === studentId
+  const instance =
+    instances[0] || null;
+
+  if (
+    !instance ||
+    instance.student_id !== studentId ||
+    instance.assignment_id === null ||
+    instance.assignment_id === undefined
+  ) {
+    return {
+      ok: false,
+      classId: null,
+    };
+  }
+
+  const assignmentParams =
+    new URLSearchParams();
+
+  assignmentParams.set(
+    'select',
+    'id,class_id',
   );
+
+  assignmentParams.set(
+    'id',
+    `eq.${String(
+      instance.assignment_id
+    ).trim()}`,
+  );
+
+  assignmentParams.set(
+    'limit',
+    '1',
+  );
+
+  const assignments =
+    await getRows(
+      'assignments',
+      assignmentParams,
+    );
+
+  const assignment =
+    assignments[0] || null;
+
+  if (
+    !assignment ||
+    !UUID_PATTERN.test(
+      assignment.class_id || ''
+    )
+  ) {
+    return {
+      ok: false,
+      classId: null,
+    };
+  }
+
+  const classParams =
+    new URLSearchParams();
+
+  classParams.set(
+    'select',
+    'id,teacher_id',
+  );
+
+  classParams.set(
+    'id',
+    `eq.${assignment.class_id}`,
+  );
+
+  classParams.set(
+    'teacher_id',
+    `eq.${teacherId}`,
+  );
+
+  classParams.set(
+    'limit',
+    '1',
+  );
+
+  const classes =
+    await getRows(
+      'classes',
+      classParams,
+    );
+
+  if (
+    classes.length !== 1 ||
+    classes[0].id !==
+      assignment.class_id
+  ) {
+    return {
+      ok: false,
+      classId: null,
+    };
+  }
+
+  return {
+    ok: true,
+    classId:
+      assignment.class_id,
+  };
 }
 
 async function insertRows(
@@ -1064,7 +1355,28 @@ async function insertRows(
 
 async function insertProgress(
   body,
+  rawTeacherId,
 ) {
+  const teacherId =
+    normalizeString(
+      rawTeacherId,
+      50,
+    );
+
+  if (
+    !teacherId ||
+    !UUID_PATTERN.test(teacherId)
+  ) {
+    return {
+      status: 403,
+      body: {
+        ok: false,
+        error:
+          'Teacher write context unavailable',
+      },
+    };
+  }
+
   const studentCode =
     normalizeCode(
       body.student_code,
@@ -1161,20 +1473,20 @@ async function insertProgress(
       50,
     );
 
-  if (
-    !(
-      await validateInstance(
-        assignmentInstanceId,
-        student.id,
-      )
-    )
-  ) {
+  const instanceAuthorization =
+    await resolveAuthorizedInstance(
+      assignmentInstanceId,
+      student.id,
+      teacherId,
+    );
+
+  if (!instanceAuthorization.ok) {
     return {
-      status: 400,
+      status: 403,
       body: {
         ok: false,
         error:
-          'Invalid assignment instance for student',
+          'Write target unavailable',
       },
     };
   }
@@ -1185,11 +1497,64 @@ async function insertProgress(
       150,
     );
 
-  const classId =
-    await resolveClassId(
-      classCode,
-      student.class_id,
-    );
+  let classId = null;
+
+  if (instanceAuthorization.classId) {
+    const ownedClasses =
+      await ownedEnrollmentClasses(
+        student.id,
+        teacherId,
+      );
+
+    const instanceClass =
+      ownedClasses.find(
+        row =>
+          row.id ===
+            instanceAuthorization.classId
+      );
+
+    if (
+      !instanceClass ||
+      (
+        classCode &&
+        !classMatchesCode(
+          instanceClass,
+          classCode,
+        )
+      )
+    ) {
+      return {
+        status: 403,
+        body: {
+          ok: false,
+          error:
+            'Write target unavailable',
+        },
+      };
+    }
+
+    classId =
+      instanceClass.id;
+  } else {
+    classId =
+      await resolveAuthorizedClassId(
+        student.id,
+        teacherId,
+        student.class_id,
+        classCode,
+      );
+  }
+
+  if (!classId) {
+    return {
+      status: 403,
+      body: {
+        ok: false,
+        error:
+          'Write target unavailable',
+      },
+    };
+  }
 
   const source =
     normalizeString(
@@ -1247,7 +1612,14 @@ async function insertProgress(
 
 async function insertBatch(
   body,
+  rawTeacherId,
 ) {
+  const teacherId =
+    normalizeString(
+      rawTeacherId,
+      50,
+    );
+
   const studentId =
     normalizeString(
       body.student_id,
@@ -1266,6 +1638,8 @@ async function insertBatch(
       : [];
 
   if (
+    !teacherId ||
+    !UUID_PATTERN.test(teacherId) ||
     !studentId ||
     !UUID_PATTERN.test(studentId) ||
     !assignmentInstanceId ||
@@ -1275,29 +1649,77 @@ async function insertBatch(
     goalRollups.length === 0
   ) {
     return {
-      status: 400,
+      status:
+        teacherId &&
+        UUID_PATTERN.test(teacherId)
+          ? 400
+          : 403,
       body: {
         ok: false,
         error:
-          'student_id, assignment_instance_id, and goal_rollups are required',
+          teacherId &&
+          UUID_PATTERN.test(teacherId)
+            ? 'student_id, assignment_instance_id, and goal_rollups are required'
+            : 'Teacher write context unavailable',
       },
     };
   }
 
+  const student =
+    await findActiveStudentById(
+      studentId,
+    );
+
+  if (!student) {
+    return {
+      status: 404,
+      body: {
+        ok: false,
+        error: 'Student not found',
+      },
+    };
+  }
+
+  const instanceAuthorization =
+    await resolveAuthorizedInstance(
+      assignmentInstanceId,
+      studentId,
+      teacherId,
+    );
+
   if (
-    !(
-      await validateInstance(
-        assignmentInstanceId,
-        studentId,
-      )
-    )
+    !instanceAuthorization.ok ||
+    !instanceAuthorization.classId
   ) {
     return {
-      status: 400,
+      status: 403,
       body: {
         ok: false,
         error:
-          'Invalid assignment instance for student',
+          'Write target unavailable',
+      },
+    };
+  }
+
+  const ownedClasses =
+    await ownedEnrollmentClasses(
+      studentId,
+      teacherId,
+    );
+
+  if (
+    !ownedClasses.some(
+      row =>
+        row.id ===
+          instanceAuthorization.classId
+    )
+  ) {
+    return {
+      status: 403,
+      body: {
+        ok: false,
+        error:
+          'Write target unavailable',
       },
     };
   }
@@ -1338,7 +1760,7 @@ async function insertBatch(
 
   params.set(
     'select',
-    'id,code,student_id',
+    'id,code,student_id,status,active',
   );
 
   params.set(
@@ -1356,15 +1778,36 @@ async function insertBatch(
     ),
   );
 
+  params.set(
+    'active',
+    'eq.true',
+  );
+
   const goals =
     await getRows(
       'goals',
       params,
     );
 
+  const activeGoals =
+    goals.filter(goal => {
+      const status =
+        (
+          normalizeString(
+            goal?.status,
+            50,
+          ) || ''
+        ).toLowerCase();
+
+      return (
+        status !== 'closed' &&
+        status !== 'archived'
+      );
+    });
+
   const goalByCode =
     new Map(
-      goals.map(goal => [
+      activeGoals.map(goal => [
         goal.code,
         goal,
       ]),
@@ -1388,6 +1831,8 @@ async function insertBatch(
         return {
           goal_id: goal.id,
           student_id: studentId,
+          class_id:
+            instanceAuthorization.classId,
           assignment_instance_id:
             assignmentInstanceId,
           date,
@@ -1664,12 +2109,18 @@ exports.handler =
           await listProgress(body);
       } else if (action === 'insert') {
         result =
-          await insertProgress(body);
+          await insertProgress(
+            body,
+            authResult?.user?.teacherId,
+          );
       } else if (
         action === 'insert_batch'
       ) {
         result =
-          await insertBatch(body);
+          await insertBatch(
+            body,
+            authResult?.user?.teacherId,
+          );
       } else if (
         action === 'quarter_averages'
       ) {

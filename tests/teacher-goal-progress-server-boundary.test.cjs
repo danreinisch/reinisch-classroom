@@ -318,12 +318,14 @@ const {
   )
 );
 
+const teacherId =
+  '11111111-1111-4111-8111-111111111111';
+
 const teacherToken =
   sign(
     {
       role: 'teacher',
-      teacherId:
-        '11111111-1111-4111-8111-111111111111',
+      teacherId,
     },
     process.env.SESSION_SECRET
   );
@@ -453,6 +455,183 @@ async function run() {
     school_year: 2026,
   };
 
+  const assignmentInstanceId =
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+
+  const assignmentId =
+    '42';
+
+  const foreignStudentId =
+    'ffffffff-ffff-4fff-8fff-ffffffffffff';
+
+  const foreignClassId =
+    '99999999-9999-4999-8999-999999999999';
+
+  const activeStudentRow = {
+    id: progressRow.student_id,
+    code: 'S001',
+    name: 'Student S001',
+    class_id: progressRow.class_id,
+    active: true,
+    archived_at: null,
+  };
+
+  const activeGoalRow = {
+    id: progressRow.goal_id,
+    code: 'READ.1',
+    student_id: progressRow.student_id,
+    status: 'Open',
+    active: true,
+  };
+
+  const ownedClassRow = {
+    id: progressRow.class_id,
+    code: 'LA1',
+    name: 'Language Arts 1 SC',
+    teacher_id: teacherId,
+  };
+
+  function makeWriteFetch({
+    studentRows = [activeStudentRow],
+    goalRows = [activeGoalRow],
+    enrollmentRows = [{
+      class_id: progressRow.class_id,
+    }],
+    classRows = [ownedClassRow],
+    instanceRows = [{
+      id: assignmentInstanceId,
+      student_id: progressRow.student_id,
+      assignment_id: assignmentId,
+    }],
+    assignmentRows = [{
+      id: assignmentId,
+      class_id: progressRow.class_id,
+    }],
+    allowWrite = true,
+    capturePayload = null,
+  } = {}) {
+    return async (url, init = {}) => {
+      const target = String(url);
+
+      calls.push({
+        url: target,
+        init,
+      });
+
+      if (
+        target.includes(
+          '/rest/v1/students?'
+        )
+      ) {
+        return mockResponse(
+          200,
+          studentRows
+        );
+      }
+
+      if (
+        target.includes(
+          '/rest/v1/goals?'
+        )
+      ) {
+        return mockResponse(
+          200,
+          goalRows
+        );
+      }
+
+      if (
+        target.includes(
+          '/rest/v1/class_enrollments?'
+        )
+      ) {
+        return mockResponse(
+          200,
+          enrollmentRows
+        );
+      }
+
+      if (
+        target.includes(
+          '/rest/v1/assignment_instances?'
+        )
+      ) {
+        return mockResponse(
+          200,
+          instanceRows
+        );
+      }
+
+      if (
+        target.includes(
+          '/rest/v1/assignments?'
+        )
+      ) {
+        return mockResponse(
+          200,
+          assignmentRows
+        );
+      }
+
+      if (
+        target.includes(
+          '/rest/v1/classes?'
+        )
+      ) {
+        return mockResponse(
+          200,
+          classRows
+        );
+      }
+
+      if (
+        target.endsWith(
+          '/rest/v1/goal_progress'
+        ) &&
+        init.method === 'POST'
+      ) {
+        if (!allowWrite) {
+          throw new Error(
+            'Unauthorized canonical write attempted'
+          );
+        }
+
+        const payload =
+          JSON.parse(init.body);
+
+        if (capturePayload) {
+          capturePayload(payload);
+        }
+
+        return mockResponse(
+          201,
+          payload.map(
+            (row, index) => ({
+              id:
+                index === 0
+                  ? progressRow.id
+                  : undefined,
+              ...row,
+            })
+          )
+        );
+      }
+
+      throw new Error(
+        `Unexpected write URL: ${target}`
+      );
+    };
+  }
+
+  function hasCanonicalWrite() {
+    return calls.some(call =>
+      call.url.endsWith(
+        '/rest/v1/goal_progress'
+      ) &&
+      call.init.method === 'POST'
+    );
+  }
+
   global.fetch =
     async (url, init = {}) => {
       const target = String(url);
@@ -579,69 +758,11 @@ async function run() {
   let insertedPayload = null;
 
   global.fetch =
-    async (url, init = {}) => {
-      const target = String(url);
-
-      calls.push({
-        url: target,
-        init,
-      });
-
-      if (
-        target.includes(
-          '/rest/v1/students?'
-        )
-      ) {
-        return mockResponse(
-          200,
-          [{
-            id: progressRow.student_id,
-            code: 'S001',
-            name: 'Student S001',
-            class_id:
-              progressRow.class_id,
-          }]
-        );
-      }
-
-      if (
-        target.includes(
-          '/rest/v1/goals?'
-        )
-      ) {
-        return mockResponse(
-          200,
-          [{
-            id: progressRow.goal_id,
-            code: 'READ.1',
-            student_id:
-              progressRow.student_id,
-          }]
-        );
-      }
-
-      if (
-        target.endsWith(
-          '/rest/v1/goal_progress'
-        ) &&
-        init.method === 'POST'
-      ) {
-        insertedPayload =
-          JSON.parse(init.body);
-
-        return mockResponse(
-          201,
-          [{
-            id: progressRow.id,
-            ...insertedPayload[0],
-          }]
-        );
-      }
-
-      throw new Error(
-        `Unexpected insert URL: ${target}`
-      );
-    };
+    makeWriteFetch({
+      capturePayload(payload) {
+        insertedPayload = payload;
+      },
+    });
 
   const insertResponse =
     await handler(
@@ -680,6 +801,12 @@ async function run() {
   assert.strictEqual(
     insertedPayload[0].school_year,
     2026
+  );
+
+  assert.strictEqual(
+    insertedPayload[0].class_id,
+    progressRow.class_id,
+    'manual evidence must use an actively enrolled teacher-owned class'
   );
 
   assert.strictEqual(
@@ -748,78 +875,340 @@ async function run() {
 
   calls = [];
 
-  const assignmentInstanceId =
-    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  global.fetch =
+    makeWriteFetch({
+      studentRows: [],
+      allowWrite: false,
+    });
+
+  const inactiveStudentResponse =
+    await handler(
+      eventFor({
+        action: 'insert',
+        student_code: 'S001',
+        goal_code: 'READ.1',
+        date: '2026-08-01',
+        value: 70,
+      })
+    );
+
+  assert.strictEqual(
+    inactiveStudentResponse.statusCode,
+    404,
+    'inactive or archived student must fail closed'
+  );
+
+  assert.strictEqual(
+    hasCanonicalWrite(),
+    false,
+    'inactive or archived student must never reach canonical write'
+  );
+
+  assert(
+    calls.some(call =>
+      call.url.includes('/rest/v1/students?') &&
+      call.url.includes('active=eq.true') &&
+      call.url.includes('archived_at=is.null')
+    ),
+    'student write lookup must require active non-archived status'
+  );
+
+  console.log(
+    '✓ inactive or archived student cannot receive manual evidence'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeWriteFetch({
+      goalRows: [],
+      allowWrite: false,
+    });
+
+  const inactiveGoalResponse =
+    await handler(
+      eventFor({
+        action: 'insert',
+        student_code: 'S001',
+        goal_code: 'READ.1',
+        date: '2026-08-01',
+        value: 70,
+      })
+    );
+
+  assert.strictEqual(
+    inactiveGoalResponse.statusCode,
+    404,
+    'inactive or unavailable goal must fail closed'
+  );
+
+  assert.strictEqual(
+    hasCanonicalWrite(),
+    false,
+    'inactive goal must never reach canonical write'
+  );
+
+  assert(
+    calls.some(call =>
+      call.url.includes('/rest/v1/goals?') &&
+      call.url.includes('active=eq.true')
+    ),
+    'goal write lookup must require active goals'
+  );
+
+  console.log(
+    '✓ inactive or foreign goal cannot receive manual evidence'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeWriteFetch({
+      enrollmentRows: [],
+      allowWrite: false,
+    });
+
+  const noEnrollmentResponse =
+    await handler(
+      eventFor({
+        action: 'insert',
+        student_code: 'S001',
+        goal_code: 'READ.1',
+        date: '2026-08-01',
+        value: 70,
+      })
+    );
+
+  assert.strictEqual(
+    noEnrollmentResponse.statusCode,
+    403,
+    'manual evidence must require active teacher-owned enrollment'
+  );
+
+  assert.strictEqual(
+    hasCanonicalWrite(),
+    false
+  );
+
+  console.log(
+    '✓ manual evidence requires active teacher-owned enrollment'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeWriteFetch({
+      allowWrite: false,
+    });
+
+  const foreignClassResponse =
+    await handler(
+      eventFor({
+        action: 'insert',
+        student_code: 'S001',
+        goal_code: 'READ.1',
+        class_code: 'FOREIGN-CLASS',
+        date: '2026-08-01',
+        value: 70,
+      })
+    );
+
+  assert.strictEqual(
+    foreignClassResponse.statusCode,
+    403,
+    'foreign requested class must fail closed'
+  );
+
+  assert.strictEqual(
+    hasCanonicalWrite(),
+    false
+  );
+
+  console.log(
+    '✓ foreign requested class cannot receive manual evidence'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeWriteFetch({
+      instanceRows: [{
+        id: assignmentInstanceId,
+        student_id: foreignStudentId,
+        assignment_id: assignmentId,
+      }],
+      allowWrite: false,
+    });
+
+  const mismatchedInstanceResponse =
+    await handler(
+      eventFor({
+        action: 'insert_batch',
+        student_id:
+          progressRow.student_id,
+        assignment_instance_id:
+          assignmentInstanceId,
+        goal_rollups: [{
+          goal_code: 'READ.1',
+          percent_correct: 80,
+        }],
+      })
+    );
+
+  assert.strictEqual(
+    mismatchedInstanceResponse.statusCode,
+    403,
+    'instance/student mismatch must fail closed'
+  );
+
+  assert.strictEqual(
+    hasCanonicalWrite(),
+    false
+  );
+
+  console.log(
+    '✓ assignment instance/student mismatch cannot write evidence'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeWriteFetch({
+      assignmentRows: [{
+        id: assignmentId,
+        class_id: foreignClassId,
+      }],
+      classRows: [],
+      allowWrite: false,
+    });
+
+  const foreignAssignmentResponse =
+    await handler(
+      eventFor({
+        action: 'insert_batch',
+        student_id:
+          progressRow.student_id,
+        assignment_instance_id:
+          assignmentInstanceId,
+        goal_rollups: [{
+          goal_code: 'READ.1',
+          percent_correct: 80,
+        }],
+      })
+    );
+
+  assert.strictEqual(
+    foreignAssignmentResponse.statusCode,
+    403,
+    'assignment class outside signed teacher ownership must fail closed'
+  );
+
+  assert.strictEqual(
+    hasCanonicalWrite(),
+    false
+  );
+
+  console.log(
+    '✓ assignment evidence must traverse a teacher-owned assignment class'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeWriteFetch({
+      enrollmentRows: [],
+      allowWrite: false,
+    });
+
+  const batchNoEnrollmentResponse =
+    await handler(
+      eventFor({
+        action: 'insert_batch',
+        student_id:
+          progressRow.student_id,
+        assignment_instance_id:
+          assignmentInstanceId,
+        goal_rollups: [{
+          goal_code: 'READ.1',
+          percent_correct: 80,
+        }],
+      })
+    );
+
+  assert.strictEqual(
+    batchNoEnrollmentResponse.statusCode,
+    403,
+    'assignment evidence must require active enrollment in assignment class'
+  );
+
+  assert.strictEqual(
+    hasCanonicalWrite(),
+    false
+  );
+
+  console.log(
+    '✓ assignment evidence requires active enrolled teacher-owned class'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeWriteFetch({
+      goalRows: [],
+      allowWrite: false,
+    });
+
+  const batchInactiveGoalResponse =
+    await handler(
+      eventFor({
+        action: 'insert_batch',
+        student_id:
+          progressRow.student_id,
+        assignment_instance_id:
+          assignmentInstanceId,
+        goal_rollups: [{
+          goal_code: 'READ.1',
+          percent_correct: 80,
+        }],
+      })
+    );
+
+  assert.strictEqual(
+    batchInactiveGoalResponse.statusCode,
+    200,
+    'unavailable assignment goal may be safely skipped'
+  );
+
+  const batchInactiveGoalBody =
+    JSON.parse(
+      batchInactiveGoalResponse.body
+    );
+
+  assert.strictEqual(
+    batchInactiveGoalBody.inserted_count,
+    0
+  );
+
+  assert.strictEqual(
+    hasCanonicalWrite(),
+    false,
+    'inactive or foreign assignment goal must never be written'
+  );
+
+  console.log(
+    '✓ inactive or foreign assignment goal is safely skipped without write'
+  );
+
+  calls = [];
 
   let batchPayload = null;
 
   global.fetch =
-    async (url, init = {}) => {
-      const target = String(url);
-
-      calls.push({
-        url: target,
-        init,
-      });
-
-      if (
-        target.includes(
-          '/rest/v1/assignment_instances?'
-        )
-      ) {
-        return mockResponse(
-          200,
-          [{
-            id: assignmentInstanceId,
-            student_id:
-              progressRow.student_id,
-          }]
-        );
-      }
-
-      if (
-        target.includes(
-          '/rest/v1/goals?'
-        )
-      ) {
-        return mockResponse(
-          200,
-          [{
-            id: progressRow.goal_id,
-            code: 'READ.1',
-            student_id:
-              progressRow.student_id,
-          }]
-        );
-      }
-
-      if (
-        target.endsWith(
-          '/rest/v1/goal_progress'
-        ) &&
-        init.method === 'POST'
-      ) {
-        batchPayload =
-          JSON.parse(init.body);
-
-        return mockResponse(
-          201,
-          batchPayload.map(
-            (row, index) => ({
-              id:
-                index === 0
-                  ? progressRow.id
-                  : undefined,
-              ...row,
-            })
-          )
-        );
-      }
-
-      throw new Error(
-        `Unexpected batch URL: ${target}`
-      );
-    };
+    makeWriteFetch({
+      capturePayload(payload) {
+        batchPayload = payload;
+      },
+    });
 
   const batchResponse =
     await handler(
@@ -884,6 +1273,18 @@ async function run() {
   assert.strictEqual(
     batchPayload[0].value,
     88
+  );
+
+  assert.strictEqual(
+    batchPayload[0].class_id,
+    progressRow.class_id,
+    'assignment evidence must derive canonical teacher-owned class'
+  );
+
+  assert.strictEqual(
+    batchPayload[0].school_year,
+    2026,
+    'assignment evidence must preserve canonical school year'
   );
 
   console.log(
