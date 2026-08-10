@@ -15,6 +15,10 @@ const {
   requireStudent,
 } = require('./_lib/student-auth');
 
+const {
+  getStudentVisibleSchoolYears,
+} = require('./_lib/student-visible-school-years');
+
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
 
@@ -153,8 +157,19 @@ exports.handler = async (event) => {
 
     const studentId = studentData[0].id;
 
+    // Student Portal question-level goal evidence follows the same
+    // school-year visibility contract as aggregate goal progress.
+    // Historical evidence remains stored for teacher/history readers.
+    const visibleSchoolYears =
+      getStudentVisibleSchoolYears();
+
+    const schoolYearFilters =
+      visibleSchoolYears
+        .map(year => `school_year.eq.${year}`)
+        .join(',');
+
     // Build query — optionally filter by goal_id
-    let dataPointsUrl = `${SUPABASE_URL}/rest/v1/goal_data_points?student_id=eq.${encodeURIComponent(studentId)}&order=date.asc,created_at.asc`;
+    let dataPointsUrl = `${SUPABASE_URL}/rest/v1/goal_data_points?student_id=eq.${encodeURIComponent(studentId)}&or=(${schoolYearFilters})&order=date.asc,created_at.asc`;
     if (goalId) {
       dataPointsUrl += `&goal_id=eq.${encodeURIComponent(goalId)}`;
     }
