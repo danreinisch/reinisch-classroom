@@ -257,6 +257,18 @@ assert(
 
 assert(
   work.includes(
+    'savedClassName === "Life Skills" || savedClassName === "Life Skills SC"'
+  )
+);
+
+assert(
+  work.includes(
+    '? "Transitional Skills"'
+  )
+);
+
+assert(
+  work.includes(
     '"Life Skills Language Arts SC"'
   )
 );

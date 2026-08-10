@@ -1078,7 +1078,11 @@
     // Set class if it exists in the dropdown
     const classSelect = $("draftClass");
     if (classSelect) {
-      classSelect.value = d.className || "";
+      const savedClassName = d.className || "";
+      classSelect.value =
+        savedClassName === "Life Skills" || savedClassName === "Life Skills SC"
+          ? "Transitional Skills"
+          : savedClassName;
     }
 
     // Convert ISO dates to datetime-local format
