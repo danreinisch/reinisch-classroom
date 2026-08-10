@@ -165,7 +165,7 @@ assert.ok(
 
 assert.ok(
   html.includes(
-    '/web/tc-students.js?v=20260803-perf01-perf02'
+    '/web/tc-students.js?v=20260810-name02a'
   ),
   'Teacher Students HTML must use the RC-PERF-02 cache marker'
 );

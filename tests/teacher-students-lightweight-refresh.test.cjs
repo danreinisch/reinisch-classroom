@@ -171,7 +171,7 @@ assert.ok(
 );
 
 assert.ok(
-  html.includes('/web/tc-students.js?v=20260803-perf01'),
+  html.includes('/web/tc-students.js?v=20260810-name02a'),
   'Teacher Students HTML must cache-bust the repaired module'
 );
 
