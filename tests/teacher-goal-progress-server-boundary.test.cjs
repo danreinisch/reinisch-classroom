@@ -330,14 +330,27 @@ const teacherToken =
     process.env.SESSION_SECRET
   );
 
-function eventFor(body, authenticated = true) {
+const invalidTeacherToken =
+  sign(
+    {
+      role: 'teacher',
+      teacherId: 'not-a-uuid',
+    },
+    process.env.SESSION_SECRET
+  );
+
+function eventFor(
+  body,
+  authenticated = true,
+  token = teacherToken,
+) {
   const headers = {
     'content-type': 'application/json',
   };
 
   if (authenticated) {
     headers.cookie =
-      `tc=${teacherToken}`;
+      `tc=${token}`;
   }
 
   return {
@@ -635,8 +648,44 @@ async function run() {
     );
   }
 
-  global.fetch =
-    async (url, init = {}) => {
+  const listStudentRow = {
+    id: progressRow.student_id,
+    code: 'S001',
+    name: 'Student S001',
+    class_id: progressRow.class_id,
+  };
+
+  const listGoalRow = {
+    id: progressRow.goal_id,
+    code: 'READ.1',
+    desc: 'Reading goal',
+    goal_area: 'Reading',
+    student_id: progressRow.student_id,
+  };
+
+  const listClassRow = {
+    id: progressRow.class_id,
+    code: 'LA1',
+    name: 'Language Arts 1 SC',
+  };
+
+  function makeListFetch({
+    progressRows = [progressRow],
+    studentRows = [listStudentRow],
+    goalRows = [listGoalRow],
+    classRows = [listClassRow],
+    ownedClassRows = [ownedClassRow],
+    instanceRows = [{
+      id: assignmentInstanceId,
+      student_id: progressRow.student_id,
+      assignment_id: assignmentId,
+    }],
+    assignmentRows = [{
+      id: assignmentId,
+      class_id: progressRow.class_id,
+    }],
+  } = {}) {
+    return async (url, init = {}) => {
       const target = String(url);
 
       calls.push({
@@ -651,7 +700,7 @@ async function run() {
       ) {
         return mockResponse(
           200,
-          [progressRow]
+          progressRows
         );
       }
 
@@ -662,13 +711,7 @@ async function run() {
       ) {
         return mockResponse(
           200,
-          [{
-            id: progressRow.student_id,
-            code: 'S001',
-            name: 'Student S001',
-            class_id:
-              progressRow.class_id,
-          }]
+          studentRows
         );
       }
 
@@ -679,14 +722,29 @@ async function run() {
       ) {
         return mockResponse(
           200,
-          [{
-            id: progressRow.goal_id,
-            code: 'READ.1',
-            desc: 'Reading goal',
-            goal_area: 'Reading',
-            student_id:
-              progressRow.student_id,
-          }]
+          goalRows
+        );
+      }
+
+      if (
+        target.includes(
+          '/rest/v1/assignment_instances?'
+        )
+      ) {
+        return mockResponse(
+          200,
+          instanceRows
+        );
+      }
+
+      if (
+        target.includes(
+          '/rest/v1/assignments?'
+        )
+      ) {
+        return mockResponse(
+          200,
+          assignmentRows
         );
       }
 
@@ -697,11 +755,11 @@ async function run() {
       ) {
         return mockResponse(
           200,
-          [{
-            id: progressRow.class_id,
-            code: 'LA1',
-            name: 'Language Arts 1 SC',
-          }]
+          target.includes(
+            'teacher_id=eq.'
+          )
+            ? ownedClassRows
+            : classRows
         );
       }
 
@@ -709,6 +767,10 @@ async function run() {
         `Unexpected list URL: ${target}`
       );
     };
+  }
+
+  global.fetch =
+    makeListFetch();
 
   const listResponse =
     await handler(
@@ -753,8 +815,464 @@ async function run() {
     'Prompted once'
   );
 
+  const initialProgressRead =
+    calls.find(call =>
+      call.url.includes(
+        '/rest/v1/goal_progress?'
+      )
+    );
+
+  assert.ok(
+    initialProgressRead,
+    'signed list must issue a canonical progress read'
+  );
+
+  const initialProgressUrl =
+    decodeURIComponent(
+      initialProgressRead.url
+    );
+
+  assert.ok(
+    initialProgressUrl.includes(
+      `or=(class_id.in.("${progressRow.class_id}"),class_id.is.null)`
+    ),
+    'all-years canonical query must scope candidates to owned classes plus legacy NULL-class rows'
+  );
+
+  assert.ok(
+    initialProgressUrl.includes(
+      'limit=10000'
+    ),
+    'canonical query must reserve candidate space before caller limit enforcement'
+  );
+
   console.log(
     '✓ signed list returns flattened teacher progress'
+  );
+
+  console.log(
+    '✓ all-years canonical query is ownership-scoped before result limiting'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeListFetch({
+      progressRows: [
+        progressRow,
+        {
+          ...progressRow,
+          id:
+            '77777777-7777-4777-8777-777777777777',
+          date: '2026-08-02',
+        },
+      ],
+    });
+
+  const limitedCurrentYearResponse =
+    await handler(
+      eventFor({
+        action: 'list',
+        school_year: 2026,
+        limit: 1,
+      })
+    );
+
+  assert.strictEqual(
+    limitedCurrentYearResponse.statusCode,
+    200
+  );
+
+  const limitedCurrentYearBody =
+    JSON.parse(
+      limitedCurrentYearResponse.body
+    );
+
+  assert.strictEqual(
+    limitedCurrentYearBody.progress.length,
+    1,
+    'caller-requested limit must be enforced after authorization'
+  );
+
+  const limitedProgressRead =
+    calls.find(call =>
+      call.url.includes(
+        '/rest/v1/goal_progress?'
+      )
+    );
+
+  assert.ok(
+    limitedProgressRead,
+    'current-year list must issue a canonical progress read'
+  );
+
+  const limitedProgressUrl =
+    decodeURIComponent(
+      limitedProgressRead.url
+    );
+
+  assert.ok(
+    limitedProgressUrl.includes(
+      `and=(or(school_year.eq.2026,school_year.is.null),or(class_id.in.("${progressRow.class_id}"),class_id.is.null))`
+    ),
+    'current-year canonical query must combine school-year and ownership boundaries'
+  );
+
+  assert.ok(
+    limitedProgressUrl.includes(
+      'limit=10000'
+    ),
+    'small caller limits must not truncate candidate rows before authorization'
+  );
+
+  console.log(
+    '✓ current-year ownership scope precedes caller-requested result limit'
+  );
+
+  calls = [];
+
+  global.fetch =
+    async (url, init = {}) => {
+      calls.push({
+        url: String(url),
+        init,
+      });
+
+      throw new Error(
+        'Invalid teacher identity reached database'
+      );
+    };
+
+  const invalidTeacherList =
+    await handler(
+      eventFor(
+        {
+          action: 'list',
+        },
+        true,
+        invalidTeacherToken,
+      )
+    );
+
+  assert.strictEqual(
+    invalidTeacherList.statusCode,
+    403,
+    'signed list without a valid teacherId must fail closed'
+  );
+
+  assert.strictEqual(
+    calls.length,
+    0,
+    'invalid signed teacherId must stop before database access'
+  );
+
+  console.log(
+    '✓ list requires a valid signed teacher identity'
+  );
+
+  calls = [];
+
+  const historicalProgressRow = {
+    ...progressRow,
+    date: '2025-09-15',
+    school_year: 2025,
+  };
+
+  global.fetch =
+    makeListFetch({
+      progressRows: [
+        historicalProgressRow,
+      ],
+      studentRows: [{
+        ...listStudentRow,
+        active: false,
+        archived_at:
+          '2026-06-01T00:00:00.000Z',
+      }],
+      goalRows: [{
+        ...listGoalRow,
+        active: false,
+        status: 'archived',
+      }],
+    });
+
+  const historicalResponse =
+    await handler(
+      eventFor({
+        action: 'list',
+        student_codes: ['S001'],
+        include_all_years: true,
+        sort_desc: true,
+      })
+    );
+
+  assert.strictEqual(
+    historicalResponse.statusCode,
+    200
+  );
+
+  const historicalBody =
+    JSON.parse(
+      historicalResponse.body
+    );
+
+  assert.strictEqual(
+    historicalBody.progress.length,
+    1,
+    'owned historical evidence must remain readable after student/goal archival'
+  );
+
+  assert.strictEqual(
+    historicalBody.progress[0].school_year,
+    2025,
+    'include_all_years must preserve owned historical evidence'
+  );
+
+  console.log(
+    '✓ archived student/goal history remains readable through owned class provenance'
+  );
+
+  calls = [];
+
+  const foreignProgressRow = {
+    ...progressRow,
+    class_id: foreignClassId,
+  };
+
+  global.fetch =
+    makeListFetch({
+      progressRows: [
+        foreignProgressRow,
+      ],
+      classRows: [{
+        id: foreignClassId,
+        code: 'FOREIGN',
+        name: 'Foreign Language Arts',
+      }],
+    });
+
+  const foreignClassList =
+    await handler(
+      eventFor({
+        action: 'list',
+        class_codes: [
+          'Foreign Language Arts',
+        ],
+        include_all_years: true,
+      })
+    );
+
+  assert.strictEqual(
+    foreignClassList.statusCode,
+    200
+  );
+
+  assert.strictEqual(
+    JSON.parse(
+      foreignClassList.body
+    ).progress.length,
+    0,
+    'foreign class evidence must be indistinguishable from no authorized result'
+  );
+
+  console.log(
+    '✓ foreign class filter cannot disclose foreign canonical evidence'
+  );
+
+  calls = [];
+
+  const legacyAssignmentRow = {
+    ...progressRow,
+    class_id: null,
+    assignment_instance_id:
+      assignmentInstanceId,
+  };
+
+  global.fetch =
+    makeListFetch({
+      progressRows: [
+        legacyAssignmentRow,
+      ],
+      classRows: [],
+    });
+
+  const legacyOwnedResponse =
+    await handler(
+      eventFor({
+        action: 'list',
+        include_all_years: true,
+      })
+    );
+
+  assert.strictEqual(
+    legacyOwnedResponse.statusCode,
+    200
+  );
+
+  const legacyOwnedBody =
+    JSON.parse(
+      legacyOwnedResponse.body
+    );
+
+  assert.strictEqual(
+    legacyOwnedBody.progress.length,
+    1,
+    'NULL class historical evidence may be recovered from owned assignment provenance'
+  );
+
+  assert.strictEqual(
+    legacyOwnedBody.progress[0].class_id,
+    null,
+    'read authorization must not rewrite historical canonical class provenance'
+  );
+
+  const assignmentLookup =
+    calls.find(call =>
+      call.url.includes(
+        '/rest/v1/assignments?'
+      )
+    );
+
+  assert.ok(
+    assignmentLookup,
+    'legacy provenance must resolve the canonical assignment'
+  );
+
+  assert.ok(
+    decodeURIComponent(
+      assignmentLookup.url
+    ).includes(
+      `id=in.(${assignmentId})`
+    ),
+    'bigint assignment lookup must use numeric in.(...) batching'
+  );
+
+  console.log(
+    '✓ NULL-class history is recovered only through owned assignment provenance'
+  );
+
+  console.log(
+    '✓ historical bigint assignment lookup uses numeric batching'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeListFetch({
+      progressRows: [
+        legacyAssignmentRow,
+      ],
+      classRows: [],
+      assignmentRows: [{
+        id: assignmentId,
+        class_id: foreignClassId,
+      }],
+    });
+
+  const foreignLegacyResponse =
+    await handler(
+      eventFor({
+        action: 'list',
+        include_all_years: true,
+      })
+    );
+
+  assert.strictEqual(
+    foreignLegacyResponse.statusCode,
+    200
+  );
+
+  assert.strictEqual(
+    JSON.parse(
+      foreignLegacyResponse.body
+    ).progress.length,
+    0,
+    'legacy assignment provenance through a foreign class must fail closed'
+  );
+
+  console.log(
+    '✓ NULL-class history cannot be rescued through a foreign assignment class'
+  );
+
+  calls = [];
+
+  global.fetch =
+    makeListFetch({
+      progressRows: [
+        legacyAssignmentRow,
+      ],
+      classRows: [],
+      instanceRows: [{
+        id: assignmentInstanceId,
+        student_id: foreignStudentId,
+        assignment_id: assignmentId,
+      }],
+    });
+
+  const mismatchedLegacyResponse =
+    await handler(
+      eventFor({
+        action: 'list',
+        include_all_years: true,
+      })
+    );
+
+  assert.strictEqual(
+    mismatchedLegacyResponse.statusCode,
+    200
+  );
+
+  assert.strictEqual(
+    JSON.parse(
+      mismatchedLegacyResponse.body
+    ).progress.length,
+    0,
+    'legacy assignment provenance must belong to the progress student'
+  );
+
+  console.log(
+    '✓ NULL-class assignment provenance requires matching student ownership'
+  );
+
+  calls = [];
+
+  const unprovableLegacyRow = {
+    ...progressRow,
+    class_id: null,
+    assignment_instance_id: null,
+  };
+
+  global.fetch =
+    makeListFetch({
+      progressRows: [
+        unprovableLegacyRow,
+      ],
+      classRows: [],
+    });
+
+  const unprovableLegacyResponse =
+    await handler(
+      eventFor({
+        action: 'list',
+        include_all_years: true,
+      })
+    );
+
+  assert.strictEqual(
+    unprovableLegacyResponse.statusCode,
+    200
+  );
+
+  assert.strictEqual(
+    JSON.parse(
+      unprovableLegacyResponse.body
+    ).progress.length,
+    0,
+    'historical rows without class or assignment provenance must fail closed'
+  );
+
+  console.log(
+    '✓ unverifiable historical evidence is excluded rather than guessed'
   );
 
   calls = [];
