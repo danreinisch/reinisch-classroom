@@ -26,7 +26,7 @@
   var MAIN_NAV = [
     { href: '/',               label: 'Home',          icon: I.home    },
     { href: '/language-arts/', label: 'Language Arts', icon: I.book    },
-    { href: '/life-skills/',   label: 'Life Skills',   icon: I.life    },
+    { href: '/life-skills/',   label: 'Transitional Skills',   icon: I.life    },
     { href: '/toolkits/',      label: 'Toolkits',      icon: I.wrench  },
     { href: '/teacher/',       label: 'Teacher',       icon: I.teacher },
     { href: '/substitute/',    label: 'Substitute',    icon: I.clip    },
