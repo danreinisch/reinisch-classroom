@@ -13,7 +13,7 @@
     "Language Arts 3 SC",
     "Language Arts 4 SC",
     "Life Skills Language Arts SC",
-    "Life Skills",
+    "Transitional Skills",
   ];
 
   const ready = (fn) => {
@@ -56,12 +56,12 @@
   //   document.head.appendChild(st);
   // };
 
-  const ensureLifeSkillsOption = (classSelect) => {
+  const ensureTransitionalSkillsOption = (classSelect) => {
     const labels = Array.from(classSelect.options).map((o) => (o.textContent || "").trim());
-    if (!labels.includes("Life Skills")) {
+    if (!labels.includes("Transitional Skills")) {
       const opt = document.createElement("option");
-      opt.value = "Life Skills";
-      opt.textContent = "Life Skills";
+      opt.value = "Transitional Skills";
+      opt.textContent = "Transitional Skills";
       // put it right next to Life Skills LA if present
       const idx = labels.indexOf("Life Skills LA");
       if (idx >= 0 && classSelect.options[idx]) {
@@ -69,15 +69,15 @@
       } else {
         classSelect.add(opt);
       }
-      log("Added class option:", "Life Skills");
+      log("Added class option:", "Transitional Skills");
     }
   };
 
   const buildQolControls = (classSelect) => {
     // DISABLED: The multi-class and mega-split checkboxes have been replaced
     // by the new file preview panel (rc-work-mega-ux v2 in tc-work.js).
-    // We keep ensureLifeSkillsOption and forceCloseModals active.
-    ensureLifeSkillsOption(classSelect);
+    // We keep ensureTransitionalSkillsOption and forceCloseModals active.
+    ensureTransitionalSkillsOption(classSelect);
     log("QoL controls disabled (replaced by file preview panel)");
   };
 
@@ -299,7 +299,7 @@
       const classSelect = findClassSelect();
       if (!classSelect) return log("Could not find class dropdown. Skipping QoL.");
 
-      ensureLifeSkillsOption(classSelect);
+      ensureTransitionalSkillsOption(classSelect);
       buildQolControls(classSelect); // Now just ensures Life Skills option
       forceCloseModals();
 

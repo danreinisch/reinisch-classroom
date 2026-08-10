@@ -22,7 +22,7 @@
 
   const CLASS_NAMES = [
     'Language Arts 1 SC', 'Language Arts 2 SC', 'Language Arts 3 SC', 'Language Arts 4 SC',
-    'Life Skills Language Arts SC', 'Life Skills', 'Life Skills SC', 'Life Skills Math SC',
+    'Life Skills Language Arts SC', 'Transitional Skills', 'Life Skills', 'Life Skills SC', 'Life Skills Math SC',
     'Algebra 1', 'Consumer Math', 'Geometry SC', 'Speech/Language', 'Warrior Academy', 'Related Services',
   ];
 

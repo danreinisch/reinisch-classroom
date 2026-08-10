@@ -65,7 +65,7 @@ const CLASS_CODE_TO_CANONICAL_NAMES = {
   'LA3': ['Language Arts 3 SC'],
   'LA4': ['Language Arts 4 SC'],
   'LS-LA': ['Life Skills Language Arts SC'],
-  'LS': ['Life Skills'],
+  'LS': ['Transitional Skills'],
   'CM': ['Consumer Math'],
   'GEO-SC': ['Geometry SC'],
   'SL': ['Speech/Language'],
@@ -82,6 +82,11 @@ function mapToCanonicalNames(code, name) {
   // Return mapped names if code exists in mapping
   if (code && CLASS_CODE_TO_CANONICAL_NAMES[code]) {
     return CLASS_CODE_TO_CANONICAL_NAMES[code];
+  }
+  // Preserve compatibility while production code LS transitions from
+  // the legacy display name to Transitional Skills.
+  if (name === 'Life Skills' || name === 'Transitional Skills') {
+    return ['Transitional Skills'];
   }
   // Fall back to name if available, then code, then Unknown
   if (name) return [name];

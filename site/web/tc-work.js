@@ -1078,7 +1078,11 @@
     // Set class if it exists in the dropdown
     const classSelect = $("draftClass");
     if (classSelect) {
-      classSelect.value = d.className || "";
+      const savedClassName = d.className || "";
+      classSelect.value =
+        savedClassName === "Life Skills" || savedClassName === "Life Skills SC"
+          ? "Transitional Skills"
+          : savedClassName;
     }
 
     // Convert ISO dates to datetime-local format
@@ -3014,7 +3018,7 @@ function normalizeTaggedAssignmentText(input) {
     "Language Arts 2 SC",
     "Language Arts 3 SC",
     "Language Arts 4 SC",
-    "Life Skills",
+    "Transitional Skills",
     "Life Skills Language Arts SC",
     "Consumer Math",
     "Geometry SC",
@@ -3037,6 +3041,7 @@ function normalizeTaggedAssignmentText(input) {
     const t = norm(cleanHeader);
 
     const hasLifeSkills = t.includes("life") && t.includes("skills");
+    const hasTransitionalSkills = t.includes("transitional") && t.includes("skills");
     const hasLA = LA_TOKENS.test(t);
 
     // Life Skills LA variations (including "Life Skills ELA")
@@ -3045,8 +3050,8 @@ function normalizeTaggedAssignmentText(input) {
     // Check for "LSLA", "LS-LA", "LS LA" patterns
     if (/\bls\s*la\b/.test(t)) return "Life Skills LA";
     
-    // Life Skills without LA
-    if (hasLifeSkills) return "Life Skills";
+    // Transitional Skills while still accepting legacy Life Skills headers.
+    if (hasTransitionalSkills || hasLifeSkills) return "Transitional Skills";
 
     // Match LA/ELA with number and optional SC suffix
     // Handles: "LA 1 SC", "LA 1", "ELA 1 SC", "ELA 1", "Language Arts 1", etc.
