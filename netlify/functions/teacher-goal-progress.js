@@ -411,7 +411,293 @@ async function resolveFilterRows({
   };
 }
 
-async function listProgress(body) {
+async function teacherOwnedClassIds(
+  teacherId,
+) {
+  const params =
+    new URLSearchParams();
+
+  params.set(
+    'select',
+    'id',
+  );
+
+  params.set(
+    'teacher_id',
+    `eq.${teacherId}`,
+  );
+
+  const rows =
+    await getRows(
+      'classes',
+      params,
+    );
+
+  return new Set(
+    rows
+      .map(row => row?.id)
+      .filter(id =>
+        typeof id === 'string' &&
+        UUID_PATTERN.test(id)
+      ),
+  );
+}
+
+async function getRowsByScalarIds(
+  resource,
+  select,
+  ids,
+) {
+  const uniqueIds = [
+    ...new Set(
+      ids
+        .map(id => {
+          if (
+            typeof id !== 'string' &&
+            typeof id !== 'number'
+          ) {
+            return '';
+          }
+
+          const normalized =
+            String(id).trim();
+
+          return /^[0-9]+$/.test(
+            normalized,
+          )
+            ? normalized
+            : '';
+        })
+        .filter(Boolean),
+    ),
+  ];
+
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const rows = [];
+
+  for (
+    let index = 0;
+    index < uniqueIds.length;
+    index += 150
+  ) {
+    const chunk =
+      uniqueIds.slice(
+        index,
+        index + 150,
+      );
+
+    const params =
+      new URLSearchParams();
+
+    params.set(
+      'select',
+      select,
+    );
+
+    params.set(
+      'id',
+      `in.(${chunk.join(',')})`,
+    );
+
+    rows.push(
+      ...(
+        await getRows(
+          resource,
+          params,
+        )
+      ),
+    );
+  }
+
+  return rows;
+}
+
+async function historicallyOwnedInstanceIds(
+  progressRows,
+  ownedClassIds,
+) {
+  const candidates =
+    progressRows.filter(row =>
+      row &&
+      row.class_id === null &&
+      UUID_PATTERN.test(
+        row.assignment_instance_id || '',
+      ) &&
+      UUID_PATTERN.test(
+        row.student_id || '',
+      )
+    );
+
+  if (candidates.length === 0) {
+    return new Set();
+  }
+
+  const instanceIds = [
+    ...new Set(
+      candidates.map(
+        row =>
+          row.assignment_instance_id,
+      ),
+    ),
+  ];
+
+  const instances =
+    await getRowsByIds(
+      'assignment_instances',
+      'id,student_id,assignment_id',
+      instanceIds,
+    );
+
+  const assignmentIds = [
+    ...new Set(
+      instances
+        .map(row =>
+          row?.assignment_id
+        )
+        .filter(value =>
+          value !== null &&
+          value !== undefined
+        )
+        .map(value =>
+          String(value).trim()
+        )
+        .filter(Boolean),
+    ),
+  ];
+
+  if (assignmentIds.length === 0) {
+    return new Set();
+  }
+
+  const assignments =
+    await getRowsByScalarIds(
+      'assignments',
+      'id,class_id',
+      assignmentIds,
+    );
+
+  const assignmentClassById =
+    new Map();
+
+  for (const row of assignments) {
+    const assignmentId =
+      row?.id !== null &&
+      row?.id !== undefined
+        ? String(row.id).trim()
+        : '';
+
+    const classId = row?.class_id;
+
+    if (
+      assignmentId &&
+      typeof classId === 'string' &&
+      UUID_PATTERN.test(classId)
+    ) {
+      assignmentClassById.set(
+        assignmentId,
+        classId,
+      );
+    }
+  }
+
+  const instanceById =
+    new Map(
+      instances
+        .filter(row =>
+          row &&
+          UUID_PATTERN.test(row.id || '')
+        )
+        .map(row => [
+          row.id,
+          row,
+        ]),
+    );
+
+  const authorized =
+    new Set();
+
+  for (const row of candidates) {
+    const instance =
+      instanceById.get(
+        row.assignment_instance_id,
+      );
+
+    if (
+      !instance ||
+      instance.student_id !==
+        row.student_id
+    ) {
+      continue;
+    }
+
+    const assignmentId =
+      instance.assignment_id !== null &&
+      instance.assignment_id !== undefined
+        ? String(
+            instance.assignment_id,
+          ).trim()
+        : '';
+
+    const classId =
+      assignmentClassById.get(
+        assignmentId,
+      );
+
+    if (
+      classId &&
+      ownedClassIds.has(classId)
+    ) {
+      authorized.add(
+        row.assignment_instance_id,
+      );
+    }
+  }
+
+  return authorized;
+}
+
+async function listProgress(
+  body,
+  rawTeacherId,
+) {
+  const teacherId =
+    normalizeString(
+      rawTeacherId,
+      50,
+    );
+
+  if (
+    !teacherId ||
+    !UUID_PATTERN.test(teacherId)
+  ) {
+    return {
+      status: 403,
+      body: {
+        ok: false,
+        error:
+          'Teacher read context unavailable',
+      },
+    };
+  }
+
+  const ownedClassIds =
+    await teacherOwnedClassIds(
+      teacherId,
+    );
+
+  if (ownedClassIds.size === 0) {
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        progress: [],
+      },
+    };
+  }
+
   const studentCodes =
     normalizeList(
       body.student_codes,
@@ -577,13 +863,29 @@ async function listProgress(body) {
     ].join(','),
   );
 
+  const ownershipFilter =
+    (
+      `class_id.${inFilter([
+        ...ownedClassIds,
+      ])},` +
+      'class_id.is.null'
+    );
+
   if (!includeAllYears) {
     params.set(
-      'or',
+      'and',
       (
-        `(school_year.eq.${requestedYear},` +
-        'school_year.is.null)'
+        '(' +
+        `or(school_year.eq.${requestedYear},` +
+        'school_year.is.null),' +
+        `or(${ownershipFilter})` +
+        ')'
       ),
+    );
+  } else {
+    params.set(
+      'or',
+      `(${ownershipFilter})`,
     );
   }
 
@@ -643,7 +945,7 @@ async function listProgress(body) {
 
   params.set(
     'limit',
-    String(limit),
+    '10000',
   );
 
   let progressResponse =
@@ -693,10 +995,41 @@ async function listProgress(body) {
     );
   }
 
-  const progress =
+  const candidateProgress =
     Array.isArray(progressResponse.data)
       ? progressResponse.data
       : [];
+
+  const legacyOwnedInstanceIds =
+    await historicallyOwnedInstanceIds(
+      candidateProgress,
+      ownedClassIds,
+    );
+
+  const progress =
+    candidateProgress.filter(row => {
+      if (
+        typeof row?.class_id === 'string' &&
+        ownedClassIds.has(row.class_id)
+      ) {
+        return true;
+      }
+
+      if (row?.class_id !== null) {
+        return false;
+      }
+
+      const instanceId =
+        row.assignment_instance_id;
+
+      return (
+        typeof instanceId === 'string' &&
+        UUID_PATTERN.test(instanceId) &&
+        legacyOwnedInstanceIds.has(
+          instanceId,
+        )
+      );
+    });
 
   const [
     students,
@@ -821,7 +1154,8 @@ async function listProgress(body) {
             row.goal_area,
           )
         )
-      );
+      )
+      .slice(0, limit);
 
   return {
     status: 200,
@@ -2108,7 +2442,10 @@ exports.handler =
 
       if (action === 'list') {
         result =
-          await listProgress(body);
+          await listProgress(
+            body,
+            authResult?.user?.teacherId,
+          );
       } else if (action === 'insert') {
         result =
           await insertProgress(
