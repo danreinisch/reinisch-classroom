@@ -15,6 +15,10 @@ const {
   requireStudent,
 } = require('./_lib/student-auth');
 
+const {
+  getStudentVisibleSchoolYears,
+} = require('./_lib/student-visible-school-years');
+
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
@@ -167,8 +171,19 @@ exports.handler = async (event) => {
 
     const studentId = studentData[0].id;
 
+    // Student Portal goal evidence follows the same school-year
+    // visibility contract as Student Portal assignments.
+    // Historical evidence remains stored for teacher/history readers.
+    const visibleSchoolYears =
+      getStudentVisibleSchoolYears();
+
+    const schoolYearFilters =
+      visibleSchoolYears
+        .map(year => `school_year.eq.${year}`)
+        .join(',');
+
     // Fetch goal progress for this student with joined goal data — filter to active goals only
-    const progressUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*,goals!inner(code,desc,goal_area,baseline,mastery,measurement_type,class_context)&student_id=eq.${studentId}&goals.active=eq.true&order=date.desc`;
+    const progressUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*,goals!inner(code,desc,goal_area,baseline,mastery,measurement_type,class_context)&student_id=eq.${studentId}&or=(${schoolYearFilters})&goals.active=eq.true&order=date.desc`;
     
     console.log(`[student-goal-progress] [${requestId}] Fetching goal progress for student ID:`, studentId);
     
@@ -228,7 +243,7 @@ exports.handler = async (event) => {
       
       // Try fallback query without join for relationship errors
       console.log(`[student-goal-progress] [${requestId}] Attempting fallback query without join`);
-      const fallbackUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*&student_id=eq.${studentId}&order=date.desc`;
+      const fallbackUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*&student_id=eq.${studentId}&or=(${schoolYearFilters})&order=date.desc`;
       
       const fallbackResponse = await fetch(fallbackUrl, {
         method: 'GET',
