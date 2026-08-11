@@ -4086,6 +4086,7 @@
       'dashboard': 'tabDashboard',
       'goals': 'tabGoals',
       'assignments': 'tabAssignments',
+      'library': 'tabLibrary',
       'resources': 'tabResources',
       'grades': 'tabGrades',
       'settings': 'tabSettings'
@@ -7216,98 +7217,202 @@
   /**
    * Load and render student resources from site-state.json
    */
-  async function loadStudentResources() {
-    const el = document.getElementById('resourcesContent');
-    if (!el) return;
+  /**
+   * Detect whether a Student Portal resource contains inline book data.
+   * Chunked book-index.json is preferred; book-pages.json remains the
+   * legacy fallback.
+   */
+  async function detectStudentBookResource(link) {
+    const base = link.endsWith('/') ? link : link + '/';
+    const candidates = ['book-index.json', 'book-pages.json'];
+
+    for (const filename of candidates) {
+      try {
+        const response = await fetch(base + filename, { method: 'HEAD' });
+        if (response.ok) return filename;
+      } catch (err) {
+        // A failed probe simply means this candidate is not usable here.
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Load book metadata for Reading Helper deep-links.
+   * Mirrors openBookReader(): prefer the chunked index and preserve
+   * book-pages.json as the legacy fallback.
+   */
+  async function loadStudentBookMetadata(link) {
+    const base = link.endsWith('/') ? link : link + '/';
 
     try {
-      const res = await fetch('/assets/data/site-state.json');
-      if (!res.ok) throw new Error('Failed to load');
-      const state = await res.json();
+      let response = await fetch(base + 'book-index.json');
+      if (response.ok) return await response.json();
 
-      const cat = state.categories && state.categories.student_resources;
-      if (!cat) {
-        el.innerHTML = '<div class="st-resources-empty"><div class="st-resources-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></div><div class="st-resources-empty-msg">No resources available yet.</div><div style="font-size:14px;opacity:0.6;">Your teacher hasn\'t uploaded any reading materials.</div></div>';
-        return;
-      }
+      response = await fetch(base + 'book-pages.json');
+      if (response.ok) return await response.json();
+    } catch (err) {
+      // Metadata is an enhancement; book opening remains authoritative.
+    }
 
-      const titles = cat.titles || [];
-      const links = cat.links || [];
+    return null;
+  }
 
-      // Collect non-empty slots
-      const resources = [];
-      for (let i = 0; i < titles.length; i++) {
-        const title = (titles[i] || '').trim();
-        const link = (links[i] || '').trim();
-        if (title && link) {
-          resources.push({ title, link, index: i });
-        }
-      }
+  /**
+   * Load and separate Student Portal Library books from general Resources.
+   */
+  async function loadStudentResources() {
+    const resourcesEl = document.getElementById('resourcesContent');
+    const libraryEl = document.getElementById('libraryContent');
+    if (!resourcesEl || !libraryEl) return;
 
+    const escapeHtml = function (value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+
+    const bookSvg = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"></path><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"></path></svg>';
+    const resourceSvg = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>';
+
+    const renderResources = function (resources) {
       if (!resources.length) {
-        el.innerHTML = '<div class="st-resources-empty"><div class="st-resources-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></div><div class="st-resources-empty-msg">No resources available yet.</div><div style="font-size:14px;opacity:0.6;">Your teacher hasn\'t uploaded any reading materials.</div></div>';
+        resourcesEl.innerHTML = '<div class="st-resources-empty"><div class="st-resources-empty-msg">No learning resources available yet.</div><div style="font-size:14px;opacity:0.6;">Your teacher hasn\'t added any additional materials.</div></div>';
         return;
       }
 
-      // Build card grid
       let html = '<div class="st-resources-grid">';
-      for (const r of resources) {
-        const svg = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
-        const safeTitle = r.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        html += '<a class="st-resource-card" href="' + r.link + '" target="_blank" rel="noopener" data-resource-link="' + r.link + '" data-resource-title="' + safeTitle + '">' + svg + '<div class="st-resource-card-title">' + safeTitle + '</div><div class="st-resource-card-badge" style="display:none;font-size:12px;margin-top:6px;opacity:0.75;">📖 Read inline</div><div class="st-resource-progress" style="display:none;margin-top:8px;"></div></a>';
+      for (const resource of resources) {
+        const safeTitle = escapeHtml(resource.title);
+        const safeLink = escapeHtml(resource.link);
+        html += '<a class="st-resource-card" href="' + safeLink + '" target="_blank" rel="noopener">' +
+          resourceSvg +
+          '<div class="st-resource-card-title">' + safeTitle + '</div>' +
+          '</a>';
       }
       html += '</div>';
-      el.innerHTML = html;
+      resourcesEl.innerHTML = html;
+    };
 
-      // After rendering, check each card for book-pages.json (async, non-blocking)
-      const cards = el.querySelectorAll('.st-resource-card[data-resource-link]');
+    const renderLibrary = function (books) {
+      if (!books.length) {
+        libraryEl.innerHTML = '<div class="st-resources-empty"><div class="st-resources-empty-msg">No classroom books available yet.</div><div style="font-size:14px;opacity:0.6;">Your teacher hasn\'t added a book to your library.</div></div>';
+        return;
+      }
+
+      let html = '<div class="st-resources-grid">';
+      for (const book of books) {
+        const safeTitle = escapeHtml(book.title);
+        const safeLink = escapeHtml(book.link);
+
+        html += '<a class="st-resource-card" href="' + safeLink + '" data-library-book="true" data-resource-link="' + safeLink + '" data-resource-title="' + safeTitle + '">' +
+          bookSvg +
+          '<div class="st-resource-card-title">' + safeTitle + '</div>' +
+          '<div class="st-resource-card-badge" style="font-size:12px;margin-top:6px;opacity:0.75;">📖 Read inline</div>' +
+          '<div class="st-resource-progress" style="display:none;margin-top:8px;"></div>' +
+          '</a>';
+      }
+      html += '</div>';
+      libraryEl.innerHTML = html;
+
+      const cards = libraryEl.querySelectorAll('.st-resource-card[data-library-book="true"]');
       cards.forEach(function (card) {
         const link = card.getAttribute('data-resource-link');
         const title = card.getAttribute('data-resource-title');
-        const base = link.endsWith('/') ? link : link + '/';
-        // Attempt HEAD request first to avoid downloading the full file
-        fetch(base + 'book-pages.json', { method: 'HEAD' }).then(function (r) {
-          if (r.ok) {
-            // Has book-pages.json — switch card to inline reader
-            card.removeAttribute('href');
-            card.removeAttribute('target');
-            card.removeAttribute('rel');
-            card.style.cursor = 'pointer';
-            const badge = card.querySelector('.st-resource-card-badge');
-            if (badge) badge.style.display = 'block';
-            card.addEventListener('click', function (e) {
-              e.preventDefault();
-              openBookReader(link, title);
-            });
-            // Show reading progress if available
-            const storageKey = 'rc_book_page_' + encodeURIComponent(link);
-            const savedPage = parseInt(localStorage.getItem(storageKey) || '0', 10);
-            const savedTotal = parseInt(localStorage.getItem(storageKey + '_total') || '0', 10);
-            if (savedPage > 0 && savedTotal > 0) {
-              const pct = Math.round(savedPage / Math.max(1, savedTotal) * 100);
-              const progressEl = card.querySelector('.st-resource-progress');
-              if (progressEl) {
-                progressEl.innerHTML = `<div class="st-resource-progress-text">Page ${savedPage} of ${savedTotal} \u00b7 ${pct}% read</div><div class="st-resource-progress-bar"><div class="st-resource-progress-fill" style="width:${pct}%"></div></div>`;
-                progressEl.style.display = 'block';
-              }
-            }
-            // Populate _knownBookResources for hint deep-links (fetch full JSON)
-            if (!_knownBookResources.find(function (x) { return x.link === link; })) {
-              fetch(base + 'book-pages.json').then(function (r2) {
-                return r2.ok ? r2.json() : null;
-              }).then(function (bd) {
-                if (bd && bd.chapters && !_knownBookResources.find(function (x) { return x.link === link; })) {
-                  _knownBookResources.push({ link: link, title: title, chapters: bd.chapters, totalPages: bd.totalPages || 0 });
-                }
-              }).catch(function () {});
-            }
+
+        card.removeAttribute('target');
+        card.removeAttribute('rel');
+        card.style.cursor = 'pointer';
+
+        card.addEventListener('click', function (event) {
+          event.preventDefault();
+          openBookReader(link, title);
+        });
+
+        const storageKey = 'rc_book_page_' + encodeURIComponent(link);
+        const savedPage = parseInt(localStorage.getItem(storageKey) || '0', 10);
+        const savedTotal = parseInt(localStorage.getItem(storageKey + '_total') || '0', 10);
+
+        if (savedPage > 0 && savedTotal > 0) {
+          const pct = Math.round(savedPage / Math.max(1, savedTotal) * 100);
+          const progressEl = card.querySelector('.st-resource-progress');
+
+          if (progressEl) {
+            progressEl.innerHTML =
+              '<div class="st-resource-progress-text">Page ' + savedPage + ' of ' + savedTotal + ' · ' + pct + '% read</div>' +
+              '<div class="st-resource-progress-bar"><div class="st-resource-progress-fill" style="width:' + pct + '%"></div></div>';
+            progressEl.style.display = 'block';
           }
-        }).catch(function () { /* no book-pages.json, leave as external link */ });
+        }
+
+        if (!_knownBookResources.find(function (item) { return item.link === link; })) {
+          loadStudentBookMetadata(link).then(function (bookData) {
+            if (
+              bookData &&
+              bookData.chapters &&
+              !_knownBookResources.find(function (item) { return item.link === link; })
+            ) {
+              _knownBookResources.push({
+                link: link,
+                title: title,
+                chapters: bookData.chapters,
+                totalPages: bookData.totalPages || 0
+              });
+            }
+          }).catch(function () {});
+        }
+      });
+    };
+
+    try {
+      const response = await fetch('/assets/data/site-state.json');
+      if (!response.ok) throw new Error('Failed to load site state');
+
+      const state = await response.json();
+      const category = state.categories && state.categories.student_resources;
+
+      if (!category) {
+        renderLibrary([]);
+        renderResources([]);
+        return;
+      }
+
+      const titles = category.titles || [];
+      const links = category.links || [];
+      const entries = [];
+
+      for (let i = 0; i < titles.length; i++) {
+        const title = (titles[i] || '').trim();
+        const link = (links[i] || '').trim();
+
+        if (title && link) {
+          entries.push({ title: title, link: link, index: i });
+        }
+      }
+
+      const classified = await Promise.all(entries.map(async function (entry) {
+        const bookDataFile = await detectStudentBookResource(entry.link);
+        return Object.assign({}, entry, { bookDataFile: bookDataFile });
+      }));
+
+      const books = classified.filter(function (entry) {
+        return Boolean(entry.bookDataFile);
       });
 
+      const resources = classified.filter(function (entry) {
+        return !entry.bookDataFile;
+      });
+
+      renderLibrary(books);
+      renderResources(resources);
     } catch (err) {
-      console.error(LOG_PREFIX, 'Failed to load resources:', err);
-      el.innerHTML = '<div class="st-resources-empty"><div class="st-resources-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div><div class="st-resources-empty-msg">Unable to load resources</div><div style="font-size:14px;opacity:0.6;">Please try again later.</div></div>';
+      console.error(LOG_PREFIX, 'Failed to load student Library/Resources:', err);
+
+      libraryEl.innerHTML = '<div class="st-resources-empty"><div class="st-resources-empty-msg">Unable to load your library</div><div style="font-size:14px;opacity:0.6;">Please try again later.</div></div>';
+      resourcesEl.innerHTML = '<div class="st-resources-empty"><div class="st-resources-empty-msg">Unable to load resources</div><div style="font-size:14px;opacity:0.6;">Please try again later.</div></div>';
     }
   }
 
