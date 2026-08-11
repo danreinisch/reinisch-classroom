@@ -50,7 +50,7 @@ async function mockStudentFunctions(page) {
 }
 
 test.describe('RC-LIBRARY-01 Student Portal Library shell', () => {
-  test('separates books from Resources and opens Lost inline', async ({
+  test('separates books from Resources and classifies Lost securely', async ({
     context,
     page,
   }) => {
@@ -118,32 +118,9 @@ test.describe('RC-LIBRARY-01 Student Portal Library shell', () => {
       'Lost in Kragdon-ah'
     );
 
-    // Return to Library and prove the existing inline reader opens.
-    await page.locator('[data-tab="library"]:visible').first().click();
-
-    const requestsBeforeOpen = bookIndexRequests.length;
-
-    await lostCard.click();
-
-    await expect(page.locator('#bookTtsBtn')).toBeVisible({
-      timeout: 10000,
-    });
-
-    await expect(
-      page.locator('#bookReadingHelperBtn')
-    ).toBeVisible();
-
-    // Inline means we remain in Student Portal rather than navigating
-    // to the generated resource landing page.
-    expect(page.url()).toContain('/student/');
-    expect(page.url()).not.toContain('/presentation-02/');
-
-    // Detection uses HEAD; opening the reader should add a GET for
-    // the actual chunked book index.
-    await expect
-      .poll(() => bookIndexRequests.length)
-      .toBeGreaterThan(requestsBeforeOpen);
-
-    expect(bookIndexRequests).toContain('GET');
+    // Secure EPUB classification must not probe or load the retired
+    // presentation-02 public book index. Actual reader opening is covered
+    // by the certified real-EPUB browser smoke.
+    expect(bookIndexRequests).toEqual([]);
   });
 });
