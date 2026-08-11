@@ -39,16 +39,20 @@ const { SESSION_SECRET } = process.env;
 const BOOK_BUCKET = 'classroom-books';
 
 /**
- * RC-LIBRARY-02A deliberately contains only a synthetic fixture ID.
- * No copyrighted classroom book is added in this slice.
+ * Classroom-book Storage allowlist.
  *
- * Future real-book entries must remain server-side allowlist entries;
- * client input must never become a Storage object path directly.
+ * Client input must never become a Storage object path directly.
+ * Real EPUB bytes live only in private Storage and never in this repo.
  */
 const BOOK_CATALOG = Object.freeze({
   'rc-library-02a-fixture': Object.freeze({
     objectPath: 'fixtures/rc-library-02a-test.epub',
     filename: 'rc-library-02a-test.epub',
+    contentType: 'application/epub+zip',
+  }),
+  'lost-in-kragdon-ah': Object.freeze({
+    objectPath: 'books/lost-in-kragdon-ah.epub',
+    filename: 'Lost in Kragdon-ah.epub',
     contentType: 'application/epub+zip',
   }),
 });

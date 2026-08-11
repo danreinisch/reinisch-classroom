@@ -222,6 +222,65 @@ test('valid session receives exact synthetic binary bytes', async () => {
   );
 });
 
+
+test('Lost resolves only to its fixed private Storage object path', async () => {
+  const fixtureBytes = Buffer.from('synthetic-lost-epub-response');
+
+  global.fetch = async (url, options) => {
+    assert.match(
+      String(url),
+      /\/storage\/v1\/object\/authenticated\/classroom-books\/books\/lost-in-kragdon-ah\.epub$/
+    );
+
+    assert.equal(
+      options.headers.Authorization,
+      'Bearer rc-library-02a-test-service-role-key'
+    );
+
+    return {
+      ok: true,
+      status: 200,
+      arrayBuffer: async () =>
+        fixtureBytes.buffer.slice(
+          fixtureBytes.byteOffset,
+          fixtureBytes.byteOffset + fixtureBytes.byteLength
+        ),
+    };
+  };
+
+  const cookie = createStudentSessionCookie(
+    'RC02B_TEST',
+    process.env.SESSION_SECRET
+  ).split(';', 1)[0];
+
+  const response = await handler({
+    httpMethod: 'GET',
+    headers: {
+      cookie,
+    },
+    queryStringParameters: {
+      book: 'lost-in-kragdon-ah',
+    },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.isBase64Encoded, true);
+  assert.equal(
+    response.headers['Content-Type'],
+    'application/epub+zip'
+  );
+
+  assert.equal(
+    response.headers['Content-Disposition'],
+    'inline; filename="Lost in Kragdon-ah.epub"'
+  );
+
+  assert.deepEqual(
+    Buffer.from(response.body, 'base64'),
+    fixtureBytes
+  );
+});
+
 test('private Storage 404 is normalized without exposing details', async () => {
   global.fetch = async () => ({
     ok: false,

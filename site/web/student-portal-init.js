@@ -4367,6 +4367,489 @@
   }
 
   /**
+   * RC-LIBRARY-02B secure EPUB mapping.
+   *
+   * Keep Storage object paths server-side. The browser knows only the
+   * allowlisted book ID accepted by student-book.
+   */
+  const SECURE_EPUB_BOOKS = Object.freeze({
+    '/student/resources/presentation-02/': Object.freeze({
+      id: 'lost-in-kragdon-ah',
+      title: 'Lost in Kragdon-ah'
+    })
+  });
+
+  function normalizeStudentBookLink(link) {
+    try {
+      const url = new URL(link, window.location.origin);
+      let pathname = url.pathname || '/';
+      if (!pathname.endsWith('/')) pathname += '/';
+      return pathname;
+    } catch (err) {
+      let pathname = String(link || '').split(/[?#]/, 1)[0];
+      if (!pathname.startsWith('/')) pathname = '/' + pathname;
+      if (!pathname.endsWith('/')) pathname += '/';
+      return pathname;
+    }
+  }
+
+  function getSecureEpubBook(link) {
+    return SECURE_EPUB_BOOKS[normalizeStudentBookLink(link)] || null;
+  }
+
+  let _epubBook = null;
+  let _epubRendition = null;
+  let _epubEscapeHandler = null;
+
+  function closeEpubReader() {
+    if (_epubEscapeHandler) {
+      document.removeEventListener('keydown', _epubEscapeHandler);
+      _epubEscapeHandler = null;
+    }
+
+    try {
+      if (_epubRendition) _epubRendition.destroy();
+    } catch (err) {
+      console.warn(LOG_PREFIX, 'Could not destroy EPUB rendition:', err);
+    }
+
+    try {
+      if (_epubBook) _epubBook.destroy();
+    } catch (err) {
+      console.warn(LOG_PREFIX, 'Could not destroy EPUB book:', err);
+    }
+
+    _epubRendition = null;
+    _epubBook = null;
+
+    const panel = document.getElementById('epubBookPanel');
+    const backdrop = document.getElementById('epubBookPanelBackdrop');
+
+    if (panel) {
+      panel.classList.remove('open');
+      setTimeout(function () {
+        panel.remove();
+      }, PANEL_TRANSITION_MS);
+    }
+
+    if (backdrop) {
+      backdrop.classList.remove('open');
+      setTimeout(function () {
+        backdrop.remove();
+      }, PANEL_TRANSITION_MS);
+    }
+  }
+
+  async function openEpubReader(link, title) {
+    const secureBook = getSecureEpubBook(link);
+
+    if (!secureBook) {
+      openBookReader(link, title);
+      return;
+    }
+
+    if (typeof window.ePub !== 'function') {
+      console.error(LOG_PREFIX, 'EPUB.js runtime is unavailable.');
+      showToast('Unable to start the book reader.');
+      return;
+    }
+
+    let loadBackdrop = document.getElementById('bookLoadBackdrop');
+
+    if (!loadBackdrop) {
+      loadBackdrop = document.createElement('div');
+      loadBackdrop.id = 'bookLoadBackdrop';
+      loadBackdrop.className = 'st-panel-backdrop';
+      loadBackdrop.innerHTML =
+        '<div style="color:#e8edf5;font-size:16px;text-align:center;padding:40px;">' +
+        '<div style="font-size:32px;margin-bottom:12px;">📖</div>' +
+        '<div>Loading book…</div></div>';
+
+      document.body.appendChild(loadBackdrop);
+
+      requestAnimationFrame(function () {
+        loadBackdrop.classList.add('open');
+      });
+    }
+
+    let epubBytes;
+
+    try {
+      const response = await fetch(
+        '/.netlify/functions/student-book?book=' +
+          encodeURIComponent(secureBook.id),
+        {
+          method: 'GET',
+          credentials: 'same-origin',
+          cache: 'no-store'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          'Secure book request failed with HTTP ' + response.status
+        );
+      }
+
+      epubBytes = await response.arrayBuffer();
+
+      if (!epubBytes || !epubBytes.byteLength) {
+        throw new Error('Secure book response was empty.');
+      }
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Could not load secure EPUB:', err);
+
+      if (loadBackdrop) {
+        loadBackdrop.classList.remove('open');
+        setTimeout(function () {
+          loadBackdrop.remove();
+        }, 300);
+      }
+
+      showToast('Unable to load this classroom book.');
+      return;
+    }
+
+    closeEpubReader();
+    stopBookTts();
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'st-panel-backdrop';
+    backdrop.id = 'epubBookPanelBackdrop';
+
+    const panel = document.createElement('div');
+    panel.className = 'st-book-panel';
+    panel.id = 'epubBookPanel';
+
+    const safeTitle = escapeHtml(
+      title || secureBook.title || 'Book'
+    );
+
+    panel.innerHTML = `
+      <div class="st-book-panel-header">
+        <button class="st-panel-back-btn" id="epubBackBtn" style="margin-bottom:0;flex-shrink:0;">← Back</button>
+        <h2 class="st-book-panel-title">${safeTitle}</h2>
+        <button class="st-book-nav-btn" id="epubTocToggle" title="Toggle chapters">☰ Chapters</button>
+        <button class="st-panel-close-btn" id="epubCloseBtn">✕</button>
+      </div>
+
+      <div class="st-book-body">
+        <aside class="st-book-sidebar" id="epubSidebar">
+          <div class="st-book-sidebar-heading">Chapters</div>
+          <div id="epubTocList">
+            <p style="padding:8px 12px;opacity:0.5;font-size:13px;">Loading chapters…</p>
+          </div>
+        </aside>
+
+        <div
+          class="st-book-content"
+          id="epubReaderViewport"
+          style="height:100%;min-height:0;padding:0;overflow:hidden;"
+        ></div>
+      </div>
+
+      <div class="st-book-nav">
+        <button class="st-book-nav-btn" id="epubPrevBtn">← Previous</button>
+        <div class="st-book-page-info" id="epubLocationInfo">Opening book…</div>
+        <button class="st-book-nav-btn" id="epubNextBtn">Next →</button>
+
+        <div class="st-book-font-controls" style="display:flex;align-items:center;gap:4px;">
+          <button class="st-book-nav-btn" id="epubFontDecBtn" title="Decrease font size" style="padding:8px 10px;font-weight:700;">A-</button>
+          <button class="st-book-nav-btn" id="epubFontIncBtn" title="Increase font size" style="padding:8px 10px;font-weight:700;">A+</button>
+        </div>
+      </div>
+    `;
+
+    backdrop.appendChild(panel);
+    document.body.appendChild(backdrop);
+
+    panel
+      .querySelector('#epubBackBtn')
+      .addEventListener('click', closeEpubReader);
+
+    panel
+      .querySelector('#epubCloseBtn')
+      .addEventListener('click', closeEpubReader);
+
+    panel
+      .querySelector('#epubTocToggle')
+      .addEventListener('click', function () {
+        const sidebar =
+          document.getElementById('epubSidebar');
+
+        if (sidebar) {
+          sidebar.classList.toggle('collapsed');
+          sidebar.classList.toggle('open');
+        }
+      });
+
+    backdrop.addEventListener('click', function (event) {
+      if (event.target === backdrop) closeEpubReader();
+    });
+
+    requestAnimationFrame(function () {
+      backdrop.classList.add('open');
+      panel.classList.add('open');
+    });
+
+    try {
+      _epubBook = window.ePub(epubBytes);
+
+      _epubRendition = _epubBook.renderTo(
+        'epubReaderViewport',
+        {
+          width: '100%',
+          height: '100%',
+          flow: 'paginated',
+          spread: 'auto'
+        }
+      );
+
+      const progressKey =
+        'rc_epub_cfi_' + secureBook.id;
+
+      const fontKey =
+        'rc_epub_font_size_' + secureBook.id;
+
+      let fontSize =
+        parseInt(
+          localStorage.getItem(fontKey) || '100',
+          10
+        );
+
+      if (
+        !Number.isFinite(fontSize) ||
+        fontSize < 75 ||
+        fontSize > 180
+      ) {
+        fontSize = 100;
+      }
+
+      const applyEpubFontSize = function (nextSize) {
+        fontSize =
+          Math.max(
+            75,
+            Math.min(180, nextSize)
+          );
+
+        _epubRendition.themes.fontSize(
+          fontSize + '%'
+        );
+
+        localStorage.setItem(
+          fontKey,
+          String(fontSize)
+        );
+      };
+
+      panel
+        .querySelector('#epubFontDecBtn')
+        .addEventListener('click', function () {
+          applyEpubFontSize(fontSize - 10);
+        });
+
+      panel
+        .querySelector('#epubFontIncBtn')
+        .addEventListener('click', function () {
+          applyEpubFontSize(fontSize + 10);
+        });
+
+      panel
+        .querySelector('#epubPrevBtn')
+        .addEventListener('click', function () {
+          if (_epubRendition) {
+            _epubRendition.prev();
+          }
+        });
+
+      panel
+        .querySelector('#epubNextBtn')
+        .addEventListener('click', function () {
+          if (_epubRendition) {
+            _epubRendition.next();
+          }
+        });
+
+      _epubEscapeHandler = function (event) {
+        const tag =
+          document.activeElement &&
+          document.activeElement.tagName;
+
+        if (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          tag === 'SELECT'
+        ) {
+          return;
+        }
+
+        if (event.key === 'Escape') {
+          closeEpubReader();
+        } else if (
+          event.key === 'ArrowRight' &&
+          _epubRendition
+        ) {
+          _epubRendition.next();
+        } else if (
+          event.key === 'ArrowLeft' &&
+          _epubRendition
+        ) {
+          _epubRendition.prev();
+        }
+      };
+
+      document.addEventListener(
+        'keydown',
+        _epubEscapeHandler
+      );
+
+      _epubRendition.on(
+        'relocated',
+        function (location) {
+          if (
+            location &&
+            location.start &&
+            location.start.cfi
+          ) {
+            localStorage.setItem(
+              progressKey,
+              location.start.cfi
+            );
+          }
+
+          const info =
+            document.getElementById(
+              'epubLocationInfo'
+            );
+
+          if (!info) return;
+
+          const displayed =
+            location &&
+            location.start &&
+            location.start.displayed;
+
+          if (
+            displayed &&
+            displayed.page &&
+            displayed.total
+          ) {
+            info.textContent =
+              'Page ' +
+              displayed.page +
+              ' of ' +
+              displayed.total +
+              ' in this section';
+          } else {
+            info.textContent = 'Reading';
+          }
+        }
+      );
+
+      const navigation =
+        await _epubBook.loaded.navigation;
+
+      const tocList =
+        document.getElementById('epubTocList');
+
+      if (tocList) {
+        const toc =
+          navigation &&
+          Array.isArray(navigation.toc)
+            ? navigation.toc
+            : [];
+
+        if (!toc.length) {
+          tocList.innerHTML =
+            '<p style="padding:8px 12px;opacity:0.5;font-size:13px;">No chapter list available</p>';
+        } else {
+          tocList.innerHTML = '';
+
+          toc.forEach(function (chapter) {
+            const button =
+              document.createElement('button');
+
+            button.type = 'button';
+            button.className =
+              'st-book-toc-item';
+
+            button.textContent =
+              chapter.label ||
+              chapter.href ||
+              'Chapter';
+
+            button.addEventListener(
+              'click',
+              function () {
+                if (_epubRendition) {
+                  _epubRendition.display(
+                    chapter.href
+                  );
+                }
+              }
+            );
+
+            tocList.appendChild(button);
+          });
+        }
+      }
+
+      applyEpubFontSize(fontSize);
+
+      await _epubBook.ready;
+
+      const savedCfi =
+        localStorage.getItem(progressKey);
+
+      try {
+        if (savedCfi) {
+          await _epubRendition.display(
+            savedCfi
+          );
+
+          showToast(
+            '📖 Resuming your book'
+          );
+        } else {
+          await _epubRendition.display();
+        }
+      } catch (resumeError) {
+        console.warn(
+          LOG_PREFIX,
+          'Could not resume EPUB position:',
+          resumeError
+        );
+
+        localStorage.removeItem(
+          progressKey
+        );
+
+        await _epubRendition.display();
+      }
+    } catch (err) {
+      console.error(
+        LOG_PREFIX,
+        'Could not initialize EPUB reader:',
+        err
+      );
+
+      closeEpubReader();
+      showToast(
+        'Unable to open this classroom book.'
+      );
+      return;
+    } finally {
+      if (loadBackdrop) {
+        loadBackdrop.classList.remove('open');
+
+        setTimeout(function () {
+          loadBackdrop.remove();
+        }, 300);
+      }
+    }
+  }
+
+  /**
    * Open the inline book reader for a resource with book-pages.json
    */
   async function openBookReader(link, title, targetPage) {
@@ -7329,7 +7812,12 @@
 
         card.addEventListener('click', function (event) {
           event.preventDefault();
-          openBookReader(link, title);
+
+          if (getSecureEpubBook(link)) {
+            openEpubReader(link, title);
+          } else {
+            openBookReader(link, title);
+          }
         });
 
         const storageKey = 'rc_book_page_' + encodeURIComponent(link);
