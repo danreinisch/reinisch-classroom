@@ -57,6 +57,27 @@ test.describe('RC-LIBRARY-01 Student Portal Library shell', () => {
     await context.addInitScript((studentCode) => {
       sessionStorage.setItem('rc_user_role', 'student');
       sessionStorage.setItem('rc_user_code', studentCode);
+
+      /*
+       * Simulate stale pseudo-reader progress from the retired Lost reader.
+       * Secure EPUB Library cards must ignore this legacy state.
+       */
+      const secureLostLink =
+        '/student/resources/presentation-02/';
+
+      const legacyStorageKey =
+        'rc_book_page_' +
+        encodeURIComponent(secureLostLink);
+
+      localStorage.setItem(
+        legacyStorageKey,
+        '1'
+      );
+
+      localStorage.setItem(
+        legacyStorageKey + '_total',
+        '535'
+      );
     }, SYNTHETIC_CODE);
 
     await mockStudentFunctions(page);
@@ -129,6 +150,19 @@ test.describe('RC-LIBRARY-01 Student Portal Library shell', () => {
 
     await expect(lostCard).toHaveCount(1);
     await expect(lostCard).toBeVisible();
+
+    // Secure EPUB cards must not display stale pseudo-reader page progress.
+    await expect(lostCard).not.toContainText(
+      'Page 1 of 535'
+    );
+
+    await expect(lostCard).not.toContainText(
+      '0% read'
+    );
+
+    await expect(
+      lostCard.locator('.st-resource-progress')
+    ).toBeHidden();
 
     // Resources should contain Skill Builder and not the book.
     await page.locator('[data-tab="resources"]:visible').first().click();

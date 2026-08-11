@@ -7860,19 +7860,26 @@
           }
         });
 
-        const storageKey = 'rc_book_page_' + encodeURIComponent(link);
-        const savedPage = parseInt(localStorage.getItem(storageKey) || '0', 10);
-        const savedTotal = parseInt(localStorage.getItem(storageKey + '_total') || '0', 10);
+        /*
+         * Secure EPUBs use EPUB-native CFI/location progress. Never surface
+         * legacy pseudo-page state left behind by the retired inline reader.
+         * Legacy book resources keep their existing page-progress behavior.
+         */
+        if (!getSecureEpubBook(link)) {
+          const storageKey = 'rc_book_page_' + encodeURIComponent(link);
+          const savedPage = parseInt(localStorage.getItem(storageKey) || '0', 10);
+          const savedTotal = parseInt(localStorage.getItem(storageKey + '_total') || '0', 10);
 
-        if (savedPage > 0 && savedTotal > 0) {
-          const pct = Math.round(savedPage / Math.max(1, savedTotal) * 100);
-          const progressEl = card.querySelector('.st-resource-progress');
+          if (savedPage > 0 && savedTotal > 0) {
+            const pct = Math.round(savedPage / Math.max(1, savedTotal) * 100);
+            const progressEl = card.querySelector('.st-resource-progress');
 
-          if (progressEl) {
-            progressEl.innerHTML =
-              '<div class="st-resource-progress-text">Page ' + savedPage + ' of ' + savedTotal + ' · ' + pct + '% read</div>' +
-              '<div class="st-resource-progress-bar"><div class="st-resource-progress-fill" style="width:' + pct + '%"></div></div>';
-            progressEl.style.display = 'block';
+            if (progressEl) {
+              progressEl.innerHTML =
+                '<div class="st-resource-progress-text">Page ' + savedPage + ' of ' + savedTotal + ' · ' + pct + '% read</div>' +
+                '<div class="st-resource-progress-bar"><div class="st-resource-progress-fill" style="width:' + pct + '%"></div></div>';
+              progressEl.style.display = 'block';
+            }
           }
         }
 
