@@ -9,6 +9,48 @@ const EPUB_PATH = process.env.RC_LIBRARY_02B_EPUB_PATH;
 const EXPECTED_SHA =
   '7add3244f8835f80b0bf76f0ef605eb5fd78891e10c24cd206d8a42b2d497778';
 
+const NETLIFY_TOML_PATH = 'netlify.toml';
+
+function readStudentCsp() {
+  const text = fs.readFileSync(
+    NETLIFY_TOML_PATH,
+    'utf8'
+  );
+
+  const marker = 'for = "/student/*"';
+  const start = text.indexOf(marker);
+
+  if (start < 0) {
+    throw new Error(
+      'Student CSP header block not found'
+    );
+  }
+
+  const nextHeader = text.indexOf(
+    '[[headers]]',
+    start + marker.length
+  );
+
+  const block = text.slice(
+    start,
+    nextHeader >= 0
+      ? nextHeader
+      : text.length
+  );
+
+  const match = block.match(
+    /Content-Security-Policy\s*=\s*"([^"]+)"/
+  );
+
+  if (!match) {
+    throw new Error(
+      'Student Content-Security-Policy not found'
+    );
+  }
+
+  return match[1];
+}
+
 function sha256(buffer) {
   return crypto
     .createHash('sha256')
@@ -33,6 +75,16 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
     expect(epubBytes.length).toBe(1018108);
     expect(sha256(epubBytes)).toBe(EXPECTED_SHA);
 
+    const studentCsp = readStudentCsp();
+
+    expect(studentCsp).toContain(
+      "style-src 'self' 'unsafe-inline' blob: https://fonts.googleapis.com"
+    );
+
+    expect(studentCsp).toContain(
+      "img-src 'self' data: blob: https:"
+    );
+
     await context.addInitScript((studentCode) => {
       sessionStorage.setItem('rc_user_role', 'student');
       sessionStorage.setItem('rc_user_code', studentCode);
@@ -47,6 +99,18 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
     }, SYNTHETIC_CODE);
 
     let secureBookRequests = 0;
+
+    await page.route('**/student/', async (route) => {
+      const response = await route.fetch();
+
+      await route.fulfill({
+        response,
+        headers: {
+          ...response.headers(),
+          'content-security-policy': studentCsp,
+        },
+      });
+    });
 
     await page.route('**/.netlify/functions/**', async (route) => {
       const url = new URL(route.request().url());
@@ -111,9 +175,37 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
     });
 
     const pageErrors = [];
+    const blobCspFailures = [];
+    const blobCspConsoleErrors = [];
 
     page.on('pageerror', (error) => {
       pageErrors.push(error.message);
+    });
+
+    page.on('requestfailed', (request) => {
+      const failure =
+        request.failure()?.errorText || '';
+
+      if (
+        request.url().startsWith('blob:') &&
+        failure.toLowerCase().includes('csp')
+      ) {
+        blobCspFailures.push({
+          url: request.url(),
+          failure,
+        });
+      }
+    });
+
+    page.on('console', (message) => {
+      const value = message.text();
+
+      if (
+        value.includes('blob:') &&
+        /Content Security Policy|Refused to load/i.test(value)
+      ) {
+        blobCspConsoleErrors.push(value);
+      }
     });
 
     await page.goto('/student/');
@@ -184,6 +276,115 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
         }
       )
       .toBe(true);
+
+    /*
+     * The audited Copyright Page contains an EPUB image. It must resolve
+     * through EPUB.js as a blob URL and actually decode. A broken <img>
+     * element with naturalWidth === 0 must never count as success.
+     */
+    const copyrightPage = page.locator(
+      '#epubTocList .st-book-toc-item',
+      { hasText: 'Copyright Page' }
+    ).first();
+
+    await expect(copyrightPage).toBeVisible({
+      timeout: 15000,
+    });
+
+    await copyrightPage.click();
+
+    await expect
+      .poll(
+        async () => {
+          return epubFrame
+            .locator('img')
+            .first()
+            .evaluate((img) => {
+              if (!img.complete) return 0;
+              return img.naturalWidth;
+            })
+            .catch(() => 0);
+        },
+        {
+          timeout: 15000,
+          message:
+            'Copyright Page EPUB image should load with nonzero width',
+        }
+      )
+      .toBeGreaterThan(0);
+
+    const copyrightImage =
+      await epubFrame
+        .locator('img')
+        .first()
+        .evaluate((img) => ({
+          src:
+            img.currentSrc ||
+            img.src ||
+            img.getAttribute('src') ||
+            '',
+          complete: img.complete,
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight,
+        }));
+
+    expect(copyrightImage.src).toMatch(
+      /^blob:/
+    );
+
+    expect(copyrightImage.complete).toBe(
+      true
+    );
+
+    expect(
+      copyrightImage.naturalWidth
+    ).toBeGreaterThan(0);
+
+    expect(
+      copyrightImage.naturalHeight
+    ).toBeGreaterThan(0);
+
+    /*
+     * EPUB.js may materialize publication styling without exposing a
+     * separate Playwright request event. Test the rendered document:
+     * at least one stylesheet must be attached with readable CSS rules.
+     */
+    const epubStylesheets =
+      await epubFrame
+        .locator('body')
+        .evaluate((body) => {
+          return [
+            ...body.ownerDocument.styleSheets,
+          ].map((sheet) => {
+            let ruleCount = null;
+
+            try {
+              ruleCount =
+                sheet.cssRules?.length ??
+                0;
+            } catch (error) {
+              ruleCount = null;
+            }
+
+            return {
+              href: sheet.href,
+              ruleCount,
+            };
+          });
+        });
+
+    expect(
+      epubStylesheets.length
+    ).toBeGreaterThan(0);
+
+    expect(
+      epubStylesheets.some(
+        (sheet) =>
+          typeof sheet.ruleCount ===
+            'number' &&
+          sheet.ruleCount > 0
+      )
+    ).toBe(true);
 
     // Lost uses split chapter sections:
     // the TOC target is a chapter opener, followed by prose
@@ -332,6 +533,8 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
     expect(page.url()).toContain('/student/');
     expect(page.url()).not.toContain('/presentation-02/');
 
+    expect(blobCspFailures).toEqual([]);
+    expect(blobCspConsoleErrors).toEqual([]);
     expect(pageErrors).toEqual([]);
   });
 });
