@@ -7715,7 +7715,24 @@
     for (const filename of candidates) {
       try {
         const response = await fetch(base + filename, { method: 'HEAD' });
-        if (response.ok) return filename;
+
+        if (!response.ok) continue;
+
+        /*
+         * Production rewrites unknown /student/* paths to the Student Portal
+         * shell with HTTP 200. Do not mistake that HTML fallback for book
+         * metadata. Only an actual JSON response may classify a legacy
+         * resource as a book.
+         */
+        const contentType =
+          (response.headers.get('content-type') || '').toLowerCase();
+
+        const isJson =
+          contentType.includes('application/json') ||
+          contentType.includes('text/json') ||
+          contentType.includes('+json');
+
+        if (isJson) return filename;
       } catch (err) {
         // A failed probe simply means this candidate is not usable here.
       }

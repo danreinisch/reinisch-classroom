@@ -61,6 +61,33 @@ test.describe('RC-LIBRARY-01 Student Portal Library shell', () => {
 
     await mockStudentFunctions(page);
 
+    /*
+     * Production rewrites unknown /student/* paths to Student Portal HTML
+     * with HTTP 200. Simulate that exact behavior for Skill Builder's
+     * nonexistent legacy-book probes.
+     */
+    const falseBookProbeRequests = [];
+
+    for (const filename of ['book-index.json', 'book-pages.json']) {
+      await page.route(
+        `**/student/resources/presentation-01/${filename}`,
+        async (route) => {
+          falseBookProbeRequests.push({
+            filename,
+            method: route.request().method(),
+          });
+
+          await route.fulfill({
+            status: 200,
+            headers: {
+              'content-type': 'text/html; charset=UTF-8',
+            },
+            body: '',
+          });
+        }
+      );
+    }
+
     const bookIndexRequests = [];
 
     page.on('request', (request) => {
@@ -117,6 +144,17 @@ test.describe('RC-LIBRARY-01 Student Portal Library shell', () => {
     await expect(resources).not.toContainText(
       'Lost in Kragdon-ah'
     );
+
+    expect(falseBookProbeRequests).toEqual([
+      {
+        filename: 'book-index.json',
+        method: 'HEAD',
+      },
+      {
+        filename: 'book-pages.json',
+        method: 'HEAD',
+      },
+    ]);
 
     // Secure EPUB classification must not probe or load the retired
     // presentation-02 public book index. Actual reader opening is covered
