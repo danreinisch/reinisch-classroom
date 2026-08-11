@@ -1,0 +1,275 @@
+{
+  "bookId": "lost-in-kragdon-ah",
+  "title": "Lost in Kragdon-ah",
+  "author": "Shawn Inmon",
+  "glossary": [
+    {
+      "term": "-ak  —",
+      "definition": "Male"
+    },
+    {
+      "term": "-eh  —",
+      "definition": "Female"
+    },
+    {
+      "term": "-ah  —",
+      "definition": "Geographic"
+    },
+    {
+      "term": "-ta  —",
+      "definition": "Animal"
+    },
+    {
+      "term": "Alecs-ta —",
+      "definition": "Beast of burden, much like a donkey."
+    },
+    {
+      "term": "Alex Hawk  —",
+      "definition": "Former Special Forces member flung forward in time."
+    },
+    {
+      "term": "Banda-ak   —",
+      "definition": "Husband of Ganku-eh. Died protecting Winten-ah."
+    },
+    {
+      "term": "Batama-ah —",
+      "definition": "Mountain monastery and home of the holy men."
+    },
+    {
+      "term": "Braka-ak   —",
+      "definition": "Member of the pirate force who gets left behind and shipwrecked."
+    },
+    {
+      "term": "Dan Hadaller —",
+      "definition": "Fellow time traveler who was in Kragdon-ah before Alex Hawk."
+    },
+    {
+      "term": "Denta-ah —",
+      "definition": "Tribe that used stama. Destroyed in A Door into Time."
+    },
+    {
+      "term": "Det  —",
+      "definition": "“Yes,” in the universal language of Kragdon-ah"
+    },
+    {
+      "term": "Dandra-ta —",
+      "definition": "Dragon-like creature that Alex must fight in Matori-ah."
+    },
+    {
+      "term": "Doken-ak —",
+      "definition": "Alex Hawk’s first friend. Died at Denta-ah."
+    },
+    {
+      "term": "Draka-ak —",
+      "definition": "Chieftain of the Lasta-ah."
+    },
+    {
+      "term": "Duntas  —",
+      "definition": "Tiles used as currency in some areas of Kragdon-ah."
+    },
+    {
+      "term": "Fenda-ak —",
+      "definition": "Servant to Preta-ah in Tonton-ah."
+    },
+    {
+      "term": "Frina-eh —",
+      "definition": "Young healer in Matori-ah."
+    },
+    {
+      "term": "Ganku-eh —",
+      "definition": "Once-chieftain of the Winten-ah."
+    },
+    {
+      "term": "Grita-ta —",
+      "definition": "Fox."
+    },
+    {
+      "term": "Godat-ta —",
+      "definition": "Grizzly bear."
+    },
+    {
+      "term": "Grinta-ah —",
+      "definition": "City on the inland sea."
+    },
+    {
+      "term": "Grunda-ta —",
+      "definition": "Coyote"
+    },
+    {
+      "term": "Grunta-ak —",
+      "definition": "Mighty warrior from Rinta-ah who Alex must fight."
+    },
+    {
+      "term": "Gunta  —",
+      "definition": "Hello, goodbye, I wish you well, in the universal language of Kragdon-ah."
+    },
+    {
+      "term": "Harta-ak —",
+      "definition": "Captain of the barge that rescues Alex."
+    },
+    {
+      "term": "Jabril-ak —",
+      "definition": "Son of Nanka-ak, who is chief of the Matori-ah."
+    },
+    {
+      "term": "Kel  -",
+      "definition": "“No,” in the universal language of Kragdon-ah"
+    },
+    {
+      "term": "Kilta-eh —",
+      "definition": "Healer of the Tonton-ah."
+    },
+    {
+      "term": "Klaka-ah —",
+      "definition": "Town on Okrent-ah where weapons are made."
+    },
+    {
+      "term": "Kragdon-ah —",
+      "definition": "The name of the entire world in the future."
+    },
+    {
+      "term": "Kranda-ah —",
+      "definition": "The mighty river formerly known as The Columbia."
+    },
+    {
+      "term": "Krista-ta —",
+      "definition": "Winten-ah for fish."
+    },
+    {
+      "term": "Lanta-ah —",
+      "definition": "The Chosen One."
+    },
+    {
+      "term": "Lasta-ah —",
+      "definition": "Actual name of the home of the kidnappers."
+    },
+    {
+      "term": "Lusta-ah —",
+      "definition": "Original name Alex hears of the home of the kidnappers."
+    },
+    {
+      "term": "Magda  —",
+      "definition": "Someone who complains a lot."
+    },
+    {
+      "term": "Manta-ak —",
+      "definition": "Alex Hawk’s name in Kragdon-ah."
+    },
+    {
+      "term": "Matori-ah —",
+      "definition": "Island village where Alex fights the dandra-ta."
+    },
+    {
+      "term": "Monda-ak —",
+      "definition": "Gigantic dog. Loyal best friend to Alex Hawk."
+    },
+    {
+      "term": "Nanka-ak —",
+      "definition": "Chieftain of Matori-ah."
+    },
+    {
+      "term": "Niten-eh —",
+      "definition": "Healer of the Winten-ah."
+    },
+    {
+      "term": "Okrent-ah —",
+      "definition": "Inland sea formed when the Great Lakes emptied."
+    },
+    {
+      "term": "Otkan  —",
+      "definition": "An outcast."
+    },
+    {
+      "term": "Preta-eh —",
+      "definition": "Chieftain of the Tonton-ah."
+    },
+    {
+      "term": "Rapka-ah —",
+      "definition": "Small village on the Okrent-ah, close to Lasta-ah."
+    },
+    {
+      "term": "Reggie  —",
+      "definition": "Fellow time traveler who travels Kragdon-ah as a bard."
+    },
+    {
+      "term": "Rinka-ak —",
+      "definition": "Young chieftain of Rinta-ah."
+    },
+    {
+      "term": "Ronit-ta —",
+      "definition": "Dire wolves"
+    },
+    {
+      "term": "Rinta-ah —",
+      "definition": "Town beside the Kranda-ah that built the bridge across the river."
+    },
+    {
+      "term": "Rundi-ak —",
+      "definition": "Spurned lover of Versa-eh, son of chief of unnamed village."
+    },
+    {
+      "term": "Rutan-ta —",
+      "definition": "Mountain lion."
+    },
+    {
+      "term": "Sekun-ak —",
+      "definition": "New chief of the Winten-ah. Close friend of Alex Hawk."
+    },
+    {
+      "term": "Senta-eh —",
+      "definition": "Tall, beautiful warrior and bow fighter who travels with Alex Hawk."
+    },
+    {
+      "term": "Stama  —",
+      "definition": "Kragdon-ah word for technology."
+    },
+    {
+      "term": "Stinda-ta —",
+      "definition": "Alligator"
+    },
+    {
+      "term": "Tinta-ak —",
+      "definition": "Massive warrior Alex defeated, who then became his biggest supporter."
+    },
+    {
+      "term": "Tokin-ak —",
+      "definition": "Blind old wise man from Batama-ah."
+    },
+    {
+      "term": "Tonton-ah —",
+      "definition": "Village built in the trees."
+    },
+    {
+      "term": "Traka-ta —",
+      "definition": "Large pigeons."
+    },
+    {
+      "term": "Trema-ak —",
+      "definition": "Monk from Batama-ah and friend of Alex."
+    },
+    {
+      "term": "Untrin-ak —",
+      "definition": "Traveler Alex meets in Rinka-ak."
+    },
+    {
+      "term": "Vanda-ak —",
+      "definition": "Winten-ah name for Dan Hadaller."
+    },
+    {
+      "term": "Verda-eh —",
+      "definition": "Young woman in Tonton-ah who is close to Untrin-ak."
+    },
+    {
+      "term": "Versa-eh —",
+      "definition": "Strong-willed young woman, daughter of The Trader."
+    },
+    {
+      "term": "Werda-ak —",
+      "definition": "Teenage boy and tracker who travels with Alex Hawk."
+    },
+    {
+      "term": "Winten-ah —",
+      "definition": "Cliffside home and name of the tribe Alex first meets."
+    }
+  ]
+}

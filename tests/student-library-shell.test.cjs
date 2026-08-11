@@ -32,7 +32,7 @@ test('tab router maps Library independently from Resources', () => {
   assert.match(portalJs, /'resources':\s*'tabResources'/);
 });
 
-test('book classification prefers chunked index and preserves legacy fallback', () => {
+test('secure EPUB classification bypasses public probes while legacy fallback remains', () => {
   const detectorStart = portalJs.indexOf(
     'async function detectStudentBookResource'
   );
@@ -46,12 +46,90 @@ test('book classification prefers chunked index and preserves legacy fallback', 
 
   const detector = portalJs.slice(detectorStart, detectorEnd);
 
+  const securePos = detector.indexOf(
+    'getSecureEpubBook(link)'
+  );
   const indexPos = detector.indexOf('book-index.json');
   const pagesPos = detector.indexOf('book-pages.json');
 
+  assert.ok(securePos >= 0);
   assert.ok(indexPos >= 0);
   assert.ok(pagesPos >= 0);
+  assert.ok(securePos < indexPos);
   assert.ok(indexPos < pagesPos);
+});
+
+test('Lost public pseudo-book assets are retired and support metadata is minimal', () => {
+  const legacyDir = path.join(
+    ROOT,
+    'site/student/resources/presentation-02'
+  );
+
+  assert.equal(
+    fs.existsSync(legacyDir),
+    false,
+    'retired Lost public directory must stay absent'
+  );
+
+  const supportPath = path.join(
+    ROOT,
+    'site/assets/data/student-book-support/lost-in-kragdon-ah.json'
+  );
+
+  assert.equal(
+    fs.existsSync(supportPath),
+    true
+  );
+
+  const support = JSON.parse(
+    fs.readFileSync(
+      supportPath,
+      'utf8'
+    )
+  );
+
+  assert.deepEqual(
+    Object.keys(support),
+    [
+      'bookId',
+      'title',
+      'author',
+      'glossary',
+    ]
+  );
+
+  assert.equal(
+    support.bookId,
+    'lost-in-kragdon-ah'
+  );
+
+  assert.equal(
+    support.glossary.length,
+    67
+  );
+
+  for (const entry of support.glossary) {
+    assert.ok(entry.term);
+    assert.ok(entry.definition);
+  }
+
+  for (const forbidden of [
+    'pages',
+    'chapters',
+    'chunks',
+    'chunked',
+    'totalPages',
+    'wordsPerPage',
+  ]) {
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(
+        support,
+        forbidden
+      ),
+      false,
+      `support metadata must not contain ${forbidden}`
+    );
+  }
 });
 
 test('Library and Resources are rendered into separate containers', () => {

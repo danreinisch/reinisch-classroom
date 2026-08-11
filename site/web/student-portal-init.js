@@ -4375,7 +4375,8 @@
   const SECURE_EPUB_BOOKS = Object.freeze({
     '/student/resources/presentation-02/': Object.freeze({
       id: 'lost-in-kragdon-ah',
-      title: 'Lost in Kragdon-ah'
+      title: 'Lost in Kragdon-ah',
+      supportPath: '/assets/data/student-book-support/lost-in-kragdon-ah.json'
     })
   });
 
@@ -7706,6 +7707,8 @@
    * legacy fallback.
    */
   async function detectStudentBookResource(link) {
+    if (getSecureEpubBook(link)) return 'secure-epub';
+
     const base = link.endsWith('/') ? link : link + '/';
     const candidates = ['book-index.json', 'book-pages.json'];
 
@@ -7722,11 +7725,31 @@
   }
 
   /**
-   * Load book metadata for Reading Helper deep-links.
-   * Mirrors openBookReader(): prefer the chunked index and preserve
-   * book-pages.json as the legacy fallback.
+   * Load optional support metadata for classroom books.
+   * Secure EPUBs use prose-free support data. Legacy resources continue
+   * to prefer book-index.json with book-pages.json as their fallback.
    */
   async function loadStudentBookMetadata(link) {
+    const secureBook = getSecureEpubBook(link);
+
+    if (secureBook && secureBook.supportPath) {
+      try {
+        const response = await fetch(
+          secureBook.supportPath,
+          {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          }
+        );
+
+        if (response.ok) return await response.json();
+      } catch (err) {
+        // Support metadata is optional; EPUB opening remains authoritative.
+      }
+
+      return null;
+    }
+
     const base = link.endsWith('/') ? link : link + '/';
 
     try {

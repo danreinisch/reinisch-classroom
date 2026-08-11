@@ -11,12 +11,58 @@ const source =
   );
 
 test(
-  'Lost maps to the secure student-book allowlist ID',
+  'Lost maps to secure EPUB and support metadata',
   () => {
     assert.match(
       source,
       /['"]\/student\/resources\/presentation-02\/['"][\s\S]*?id:\s*['"]lost-in-kragdon-ah['"]/
     );
+
+    assert.match(
+      source,
+      /supportPath:\s*['"]\/assets\/data\/student-book-support\/lost-in-kragdon-ah\.json['"]/
+    );
+  }
+);
+
+test(
+  'secure Lost metadata path precedes legacy pseudo-book fallback',
+  () => {
+    const start =
+      source.indexOf(
+        'async function loadStudentBookMetadata('
+      );
+
+    const end =
+      source.indexOf(
+        '/**\n   * Load and separate Student Portal Library',
+        start
+      );
+
+    assert.ok(start >= 0);
+    assert.ok(end > start);
+
+    const block =
+      source.slice(start, end);
+
+    const securePos =
+      block.indexOf(
+        'getSecureEpubBook(link)'
+      );
+
+    const supportPos =
+      block.indexOf(
+        'secureBook.supportPath'
+      );
+
+    const legacyPos =
+      block.indexOf(
+        "fetch(base + 'book-index.json')"
+      );
+
+    assert.ok(securePos >= 0);
+    assert.ok(supportPos > securePos);
+    assert.ok(legacyPos > supportPos);
   }
 );
 
