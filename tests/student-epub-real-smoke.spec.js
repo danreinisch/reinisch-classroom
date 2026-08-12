@@ -11,7 +11,7 @@ const EXPECTED_SHA =
 
 const NETLIFY_TOML_PATH = 'netlify.toml';
 
-function readStudentCsp() {
+function readStudentCspHeaders() {
   const text = fs.readFileSync(
     NETLIFY_TOML_PATH,
     'utf8'
@@ -38,17 +38,30 @@ function readStudentCsp() {
       : text.length
   );
 
-  const match = block.match(
+  const enforcedMatch = block.match(
     /Content-Security-Policy\s*=\s*"([^"]+)"/
   );
 
-  if (!match) {
+  const reportOnlyMatch = block.match(
+    /Content-Security-Policy-Report-Only\s*=\s*"([^"]+)"/
+  );
+
+  if (!enforcedMatch) {
     throw new Error(
       'Student Content-Security-Policy not found'
     );
   }
 
-  return match[1];
+  if (!reportOnlyMatch) {
+    throw new Error(
+      'Student Content-Security-Policy-Report-Only not found'
+    );
+  }
+
+  return {
+    enforced: enforcedMatch[1],
+    reportOnly: reportOnlyMatch[1],
+  };
 }
 
 function sha256(buffer) {
@@ -75,13 +88,22 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
     expect(epubBytes.length).toBe(1018108);
     expect(sha256(epubBytes)).toBe(EXPECTED_SHA);
 
-    const studentCsp = readStudentCsp();
+    const studentCsp =
+      readStudentCspHeaders();
 
-    expect(studentCsp).toContain(
+    expect(studentCsp.enforced).toContain(
       "style-src 'self' 'unsafe-inline' blob: https://fonts.googleapis.com"
     );
 
-    expect(studentCsp).toContain(
+    expect(studentCsp.enforced).toContain(
+      "img-src 'self' data: blob: https:"
+    );
+
+    expect(studentCsp.reportOnly).toContain(
+      "style-src 'self' 'unsafe-inline' blob: https://fonts.googleapis.com"
+    );
+
+    expect(studentCsp.reportOnly).toContain(
       "img-src 'self' data: blob: https:"
     );
 
@@ -107,7 +129,10 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
         response,
         headers: {
           ...response.headers(),
-          'content-security-policy': studentCsp,
+          'content-security-policy':
+            studentCsp.enforced,
+          'content-security-policy-report-only':
+            studentCsp.reportOnly,
         },
       });
     });
