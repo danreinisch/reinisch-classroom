@@ -91,19 +91,15 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
     const studentCsp =
       readStudentCspHeaders();
 
+    expect(studentCsp.reportOnly).toBe(
+      studentCsp.enforced
+    );
+
     expect(studentCsp.enforced).toContain(
       "style-src 'self' 'unsafe-inline' blob: https://fonts.googleapis.com"
     );
 
     expect(studentCsp.enforced).toContain(
-      "img-src 'self' data: blob: https:"
-    );
-
-    expect(studentCsp.reportOnly).toContain(
-      "style-src 'self' 'unsafe-inline' blob: https://fonts.googleapis.com"
-    );
-
-    expect(studentCsp.reportOnly).toContain(
       "img-src 'self' data: blob: https:"
     );
 
