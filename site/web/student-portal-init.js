@@ -7715,7 +7715,24 @@
     for (const filename of candidates) {
       try {
         const response = await fetch(base + filename, { method: 'HEAD' });
-        if (response.ok) return filename;
+
+        if (!response.ok) continue;
+
+        /*
+         * Production rewrites unknown /student/* paths to the Student Portal
+         * shell with HTTP 200. Do not mistake that HTML fallback for book
+         * metadata. Only an actual JSON response may classify a legacy
+         * resource as a book.
+         */
+        const contentType =
+          (response.headers.get('content-type') || '').toLowerCase();
+
+        const isJson =
+          contentType.includes('application/json') ||
+          contentType.includes('text/json') ||
+          contentType.includes('+json');
+
+        if (isJson) return filename;
       } catch (err) {
         // A failed probe simply means this candidate is not usable here.
       }
@@ -7843,19 +7860,26 @@
           }
         });
 
-        const storageKey = 'rc_book_page_' + encodeURIComponent(link);
-        const savedPage = parseInt(localStorage.getItem(storageKey) || '0', 10);
-        const savedTotal = parseInt(localStorage.getItem(storageKey + '_total') || '0', 10);
+        /*
+         * Secure EPUBs use EPUB-native CFI/location progress. Never surface
+         * legacy pseudo-page state left behind by the retired inline reader.
+         * Legacy book resources keep their existing page-progress behavior.
+         */
+        if (!getSecureEpubBook(link)) {
+          const storageKey = 'rc_book_page_' + encodeURIComponent(link);
+          const savedPage = parseInt(localStorage.getItem(storageKey) || '0', 10);
+          const savedTotal = parseInt(localStorage.getItem(storageKey + '_total') || '0', 10);
 
-        if (savedPage > 0 && savedTotal > 0) {
-          const pct = Math.round(savedPage / Math.max(1, savedTotal) * 100);
-          const progressEl = card.querySelector('.st-resource-progress');
+          if (savedPage > 0 && savedTotal > 0) {
+            const pct = Math.round(savedPage / Math.max(1, savedTotal) * 100);
+            const progressEl = card.querySelector('.st-resource-progress');
 
-          if (progressEl) {
-            progressEl.innerHTML =
-              '<div class="st-resource-progress-text">Page ' + savedPage + ' of ' + savedTotal + ' · ' + pct + '% read</div>' +
-              '<div class="st-resource-progress-bar"><div class="st-resource-progress-fill" style="width:' + pct + '%"></div></div>';
-            progressEl.style.display = 'block';
+            if (progressEl) {
+              progressEl.innerHTML =
+                '<div class="st-resource-progress-text">Page ' + savedPage + ' of ' + savedTotal + ' · ' + pct + '% read</div>' +
+                '<div class="st-resource-progress-bar"><div class="st-resource-progress-fill" style="width:' + pct + '%"></div></div>';
+              progressEl.style.display = 'block';
+            }
           }
         }
 
