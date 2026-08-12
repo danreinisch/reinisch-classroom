@@ -4402,7 +4402,541 @@
   let _epubRendition = null;
   let _epubEscapeHandler = null;
 
+  // Secure EPUB Read Aloud is intentionally separate from the legacy
+  // pseudo-page reader TTS state. Both use the existing student-tts
+  // endpoint and saved voice/rate preferences.
+  let _epubTtsAudio = null;
+  let _epubTtsAudioUrl = null;
+  let _epubTtsAbortController = null;
+  let _epubTtsActive = false;
+  let _epubTtsPaused = false;
+  let _epubTtsRunId = 0;
+
+  function syncEpubTtsControls() {
+    const playBtn =
+      document.getElementById('epubTtsBtn');
+    const controls =
+      document.getElementById('epubTtsControls');
+    const pauseBtn =
+      document.getElementById('epubTtsPause');
+
+    if (playBtn) {
+      playBtn.classList.toggle(
+        'tts-active',
+        _epubTtsActive
+      );
+    }
+
+    if (controls) {
+      controls.style.display =
+        _epubTtsActive
+          ? 'flex'
+          : 'none';
+    }
+
+    if (pauseBtn) {
+      pauseBtn.textContent =
+        _epubTtsPaused
+          ? '▶ Resume'
+          : '⏸ Pause';
+
+      pauseBtn.disabled =
+        !_epubTtsAudio;
+    }
+  }
+
+  function clearEpubTtsAudio() {
+    if (_epubTtsAudio) {
+      _epubTtsAudio.pause();
+      _epubTtsAudio.onended = null;
+      _epubTtsAudio.onerror = null;
+      _epubTtsAudio = null;
+    }
+
+    if (_epubTtsAudioUrl) {
+      URL.revokeObjectURL(
+        _epubTtsAudioUrl
+      );
+      _epubTtsAudioUrl = null;
+    }
+  }
+
+  function stopEpubTts() {
+    _epubTtsRunId += 1;
+
+    if (_epubTtsAbortController) {
+      _epubTtsAbortController.abort();
+      _epubTtsAbortController = null;
+    }
+
+    clearEpubTtsAudio();
+
+    _epubTtsActive = false;
+    _epubTtsPaused = false;
+
+    syncEpubTtsControls();
+  }
+
+  function getEpubTtsSettings() {
+    const allowedVoices = [
+      'alloy',
+      'echo',
+      'fable',
+      'onyx',
+      'nova',
+      'shimmer'
+    ];
+
+    let voice =
+      localStorage.getItem(
+        'rc_book_tts_voice'
+      ) || 'nova';
+
+    if (!allowedVoices.includes(voice)) {
+      voice = 'nova';
+      localStorage.setItem(
+        'rc_book_tts_voice',
+        voice
+      );
+    }
+
+    let rate =
+      parseFloat(
+        localStorage.getItem(
+          'rc_book_tts_rate'
+        ) ||
+        String(DEFAULT_TTS_RATE)
+      );
+
+    if (
+      !Number.isFinite(rate) ||
+      rate < 0.25 ||
+      rate > 4
+    ) {
+      rate = DEFAULT_TTS_RATE;
+    }
+
+    return {
+      voice,
+      rate
+    };
+  }
+
+  function getVisibleEpubTtsChunks() {
+    if (
+      !_epubRendition ||
+      typeof _epubRendition.getContents !==
+        'function'
+    ) {
+      return [];
+    }
+
+    const paragraphs = [];
+
+    _epubRendition
+      .getContents()
+      .forEach(function (content) {
+        const doc =
+          content &&
+          content.document;
+
+        const body =
+          doc &&
+          doc.body;
+
+        if (!body) return;
+
+        const nodes =
+          Array.from(
+            body.querySelectorAll(
+              'h1,h2,h3,h4,h5,h6,p,blockquote,li'
+            )
+          );
+
+        const values =
+          nodes
+            .map(function (node) {
+              return (
+                node.innerText ||
+                node.textContent ||
+                ''
+              )
+                .replace(/\s+/g, ' ')
+                .trim();
+            })
+            .filter(Boolean);
+
+        if (values.length) {
+          paragraphs.push(...values);
+          return;
+        }
+
+        const fallback =
+          (
+            body.innerText ||
+            body.textContent ||
+            ''
+          )
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (fallback) {
+          paragraphs.push(fallback);
+        }
+      });
+
+    const chunks = [];
+    const maxChars = 4000;
+    let current = '';
+
+    function flushCurrent() {
+      if (!current) return;
+      chunks.push(current);
+      current = '';
+    }
+
+    function appendText(value) {
+      let remaining =
+        String(value || '').trim();
+
+      while (remaining.length) {
+        if (
+          current &&
+          current.length +
+            2 +
+            remaining.length <=
+            maxChars
+        ) {
+          current +=
+            '\n\n' +
+            remaining;
+          return;
+        }
+
+        if (
+          !current &&
+          remaining.length <=
+            maxChars
+        ) {
+          current = remaining;
+          return;
+        }
+
+        if (current) {
+          flushCurrent();
+          continue;
+        }
+
+        let cut =
+          remaining.lastIndexOf(
+            ' ',
+            maxChars
+          );
+
+        if (cut < 1000) {
+          cut = maxChars;
+        }
+
+        chunks.push(
+          remaining
+            .slice(0, cut)
+            .trim()
+        );
+
+        remaining =
+          remaining
+            .slice(cut)
+            .trim();
+      }
+    }
+
+    paragraphs.forEach(appendText);
+    flushCurrent();
+
+    return chunks.filter(Boolean);
+  }
+
+  async function playEpubTtsChunk(
+    chunks,
+    index,
+    runId
+  ) {
+    if (
+      !_epubTtsActive ||
+      runId !== _epubTtsRunId
+    ) {
+      return;
+    }
+
+    if (index >= chunks.length) {
+      clearEpubTtsAudio();
+      _epubTtsActive = false;
+      _epubTtsPaused = false;
+      syncEpubTtsControls();
+      return;
+    }
+
+    const settings =
+      getEpubTtsSettings();
+
+    const controller =
+      new AbortController();
+
+    _epubTtsAbortController =
+      controller;
+
+    let data;
+
+    try {
+      const response =
+        await fetch(
+          '/.netlify/functions/student-tts',
+          {
+            method: 'POST',
+            credentials:
+              'same-origin',
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+            body: JSON.stringify({
+              text: chunks[index],
+              voice:
+                settings.voice,
+              speed:
+                settings.rate
+            }),
+            signal:
+              controller.signal
+          }
+        );
+
+      data =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !data.ok ||
+        !data.audio
+      ) {
+        throw new Error(
+          data &&
+          data.error
+            ? data.error
+            : 'TTS request failed'
+        );
+      }
+    } catch (err) {
+      if (
+        err &&
+        err.name ===
+          'AbortError'
+      ) {
+        return;
+      }
+
+      console.warn(
+        LOG_PREFIX,
+        'EPUB Read Aloud request failed:',
+        err
+      );
+
+      showToast(
+        '⚠️ Could not load Read Aloud audio.',
+        'error'
+      );
+
+      stopEpubTts();
+      return;
+    } finally {
+      if (
+        _epubTtsAbortController ===
+        controller
+      ) {
+        _epubTtsAbortController =
+          null;
+      }
+    }
+
+    if (
+      !_epubTtsActive ||
+      runId !== _epubTtsRunId
+    ) {
+      return;
+    }
+
+    const binaryStr =
+      atob(data.audio);
+
+    const bytes =
+      new Uint8Array(
+        binaryStr.length
+      );
+
+    for (
+      let i = 0;
+      i < binaryStr.length;
+      i++
+    ) {
+      bytes[i] =
+        binaryStr.charCodeAt(i);
+    }
+
+    clearEpubTtsAudio();
+
+    const blob =
+      new Blob(
+        [bytes],
+        {
+          type: 'audio/mpeg'
+        }
+      );
+
+    _epubTtsAudioUrl =
+      URL.createObjectURL(blob);
+
+    const audio =
+      new Audio(
+        _epubTtsAudioUrl
+      );
+
+    _epubTtsAudio = audio;
+    _epubTtsPaused = false;
+
+    syncEpubTtsControls();
+
+    audio.onended =
+      function () {
+        if (
+          !_epubTtsActive ||
+          runId !== _epubTtsRunId
+        ) {
+          return;
+        }
+
+        clearEpubTtsAudio();
+
+        playEpubTtsChunk(
+          chunks,
+          index + 1,
+          runId
+        );
+      };
+
+    audio.onerror =
+      function () {
+        if (
+          !_epubTtsActive ||
+          runId !== _epubTtsRunId
+        ) {
+          return;
+        }
+
+        console.warn(
+          LOG_PREFIX,
+          'EPUB Read Aloud audio playback failed.'
+        );
+
+        showToast(
+          '⚠️ Audio unavailable. Please try again.',
+          'error'
+        );
+
+        stopEpubTts();
+      };
+
+    try {
+      await audio.play();
+    } catch (err) {
+      if (
+        !_epubTtsActive ||
+        runId !== _epubTtsRunId
+      ) {
+        return;
+      }
+
+      console.warn(
+        LOG_PREFIX,
+        'EPUB Read Aloud play() failed:',
+        err
+      );
+
+      showToast(
+        '⚠️ Audio unavailable. Please try again.',
+        'error'
+      );
+
+      stopEpubTts();
+    }
+  }
+
+  function startEpubTts() {
+    const chunks =
+      getVisibleEpubTtsChunks();
+
+    if (!chunks.length) {
+      showToast(
+        'No readable text is available on this page.'
+      );
+      return;
+    }
+
+    stopEpubTts();
+
+    const runId =
+      ++_epubTtsRunId;
+
+    _epubTtsActive = true;
+    _epubTtsPaused = false;
+
+    syncEpubTtsControls();
+
+    playEpubTtsChunk(
+      chunks,
+      0,
+      runId
+    );
+  }
+
+  function toggleEpubTts() {
+    if (_epubTtsActive) {
+      stopEpubTts();
+    } else {
+      startEpubTts();
+    }
+  }
+
+  function pauseResumeEpubTts() {
+    if (
+      !_epubTtsActive ||
+      !_epubTtsAudio
+    ) {
+      return;
+    }
+
+    if (_epubTtsPaused) {
+      _epubTtsAudio
+        .play()
+        .catch(function (err) {
+          console.warn(
+            LOG_PREFIX,
+            'EPUB Read Aloud resume failed:',
+            err
+          );
+        });
+
+      _epubTtsPaused = false;
+    } else {
+      _epubTtsAudio.pause();
+      _epubTtsPaused = true;
+    }
+
+    syncEpubTtsControls();
+  }
+
   function closeEpubReader() {
+    stopEpubTts();
+
     if (_epubEscapeHandler) {
       document.removeEventListener('keydown', _epubEscapeHandler);
       _epubEscapeHandler = null;
@@ -4558,6 +5092,14 @@
           <button class="st-book-nav-btn" id="epubFontDecBtn" title="Decrease font size" style="padding:8px 10px;font-weight:700;">A-</button>
           <button class="st-book-nav-btn" id="epubFontIncBtn" title="Increase font size" style="padding:8px 10px;font-weight:700;">A+</button>
         </div>
+
+        <div class="st-book-tts-wrapper" style="display:flex;align-items:center;gap:4px;">
+          <button class="st-book-nav-btn" id="epubTtsBtn">🔊 Read Aloud</button>
+          <div id="epubTtsControls" style="display:none;align-items:center;gap:4px;">
+            <button class="st-book-nav-btn" id="epubTtsPause" disabled>⏸ Pause</button>
+            <button class="st-book-nav-btn" id="epubTtsStop">⏹ Stop</button>
+          </div>
+        </div>
       </div>
     `;
 
@@ -4656,8 +5198,28 @@
         });
 
       panel
+        .querySelector('#epubTtsBtn')
+        .addEventListener('click', function () {
+          toggleEpubTts();
+        });
+
+      panel
+        .querySelector('#epubTtsPause')
+        .addEventListener('click', function () {
+          pauseResumeEpubTts();
+        });
+
+      panel
+        .querySelector('#epubTtsStop')
+        .addEventListener('click', function () {
+          stopEpubTts();
+        });
+
+      panel
         .querySelector('#epubPrevBtn')
         .addEventListener('click', function () {
+          stopEpubTts();
+
           if (_epubRendition) {
             _epubRendition.prev();
           }
@@ -4666,6 +5228,8 @@
       panel
         .querySelector('#epubNextBtn')
         .addEventListener('click', function () {
+          stopEpubTts();
+
           if (_epubRendition) {
             _epubRendition.next();
           }
@@ -4690,11 +5254,13 @@
           event.key === 'ArrowRight' &&
           _epubRendition
         ) {
+          stopEpubTts();
           _epubRendition.next();
         } else if (
           event.key === 'ArrowLeft' &&
           _epubRendition
         ) {
+          stopEpubTts();
           _epubRendition.prev();
         }
       };
@@ -4782,6 +5348,8 @@
             button.addEventListener(
               'click',
               function () {
+                stopEpubTts();
+
                 if (_epubRendition) {
                   _epubRendition.display(
                     chapter.href
