@@ -114,9 +114,61 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
       localStorage.removeItem(
         'rc_epub_font_size_lost-in-kragdon-ah'
       );
+
+      // Deterministic audio shim: the smoke verifies the Read Aloud
+      // request/lifecycle without relying on host audio hardware.
+      window.__rcEpubTtsAudio = {
+        created: 0,
+        playCount: 0,
+        pauseCount: 0,
+        rejectedPlayCount: 0,
+        rejectNextPlay: false,
+      };
+
+      window.Audio = class {
+        constructor(src) {
+          this.src = src;
+          this.paused = true;
+          this.onended = null;
+          this.onerror = null;
+          window.__rcEpubTtsAudio.created += 1;
+        }
+
+        play() {
+          if (
+            window.__rcEpubTtsAudio
+              .rejectNextPlay
+          ) {
+            window.__rcEpubTtsAudio
+              .rejectNextPlay = false;
+
+            window.__rcEpubTtsAudio
+              .rejectedPlayCount += 1;
+
+            this.paused = true;
+
+            return Promise.reject(
+              new Error(
+                'synthetic audio resume failure'
+              )
+            );
+          }
+
+          this.paused = false;
+          window.__rcEpubTtsAudio.playCount += 1;
+          return Promise.resolve();
+        }
+
+        pause() {
+          this.paused = true;
+          window.__rcEpubTtsAudio.pauseCount += 1;
+        }
+      };
     }, SYNTHETIC_CODE);
 
     let secureBookRequests = 0;
+    let secureTtsRequests = 0;
+    let lastTtsRequest = null;
 
     await page.route('**/student/', async (route) => {
       const response = await route.fetch();
@@ -152,6 +204,57 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
               'inline; filename="Lost in Kragdon-ah.epub"',
           },
           body: epubBytes,
+        });
+
+        return;
+      }
+
+      if (url.pathname.endsWith('/student-tts')) {
+        const requestBody =
+          route.request().postDataJSON();
+
+        expect(
+          typeof requestBody.text
+        ).toBe('string');
+
+        expect(
+          requestBody.text.length
+        ).toBeGreaterThan(100);
+
+        expect(
+          requestBody.text.length
+        ).toBeLessThanOrEqual(5000);
+
+        expect([
+          'alloy',
+          'echo',
+          'fable',
+          'onyx',
+          'nova',
+          'shimmer',
+        ]).toContain(requestBody.voice);
+
+        expect(
+          Number(requestBody.speed)
+        ).toBeGreaterThanOrEqual(0.25);
+
+        expect(
+          Number(requestBody.speed)
+        ).toBeLessThanOrEqual(4);
+
+        secureTtsRequests += 1;
+        lastTtsRequest = requestBody;
+
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ok: true,
+            audio: Buffer.from(
+              'reader-01-audio'
+            ).toString('base64'),
+            format: 'mp3',
+          }),
         });
 
         return;
@@ -475,6 +578,167 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
       )
       .toBeGreaterThan(1000);
 
+    // READER-01: Read Aloud must operate against the currently
+    // displayed secure EPUB content without using legacy pseudo-pages.
+    const epubTtsBtn =
+      page.locator('#epubTtsBtn');
+
+    const epubTtsControls =
+      page.locator('#epubTtsControls');
+
+    const epubTtsPause =
+      page.locator('#epubTtsPause');
+
+    const epubTtsStop =
+      page.locator('#epubTtsStop');
+
+    await expect(
+      epubTtsBtn
+    ).toBeVisible();
+
+    await expect(
+      epubTtsControls
+    ).toBeHidden();
+
+    await page.evaluate(() => {
+      window.__rcEpubTtsAudio.created = 0;
+      window.__rcEpubTtsAudio.playCount = 0;
+      window.__rcEpubTtsAudio.pauseCount = 0;
+      window.__rcEpubTtsAudio.rejectedPlayCount = 0;
+      window.__rcEpubTtsAudio.rejectNextPlay = false;
+    });
+
+    await epubTtsBtn.click();
+
+    await expect
+      .poll(
+        () => secureTtsRequests,
+        {
+          timeout: 5000,
+          message:
+            'Read Aloud should request student-tts audio',
+        }
+      )
+      .toBe(1);
+
+    expect(
+      lastTtsRequest.text.length
+    ).toBeGreaterThan(100);
+
+    await expect
+      .poll(
+        async () => {
+          return page.evaluate(() => {
+            return window
+              .__rcEpubTtsAudio
+              .playCount;
+          });
+        },
+        {
+          timeout: 5000,
+          message:
+            'Read Aloud should start audio playback',
+        }
+      )
+      .toBe(1);
+
+    await expect(
+      epubTtsControls
+    ).toBeVisible();
+
+    await expect(
+      epubTtsBtn
+    ).toHaveClass(/tts-active/);
+
+    await epubTtsPause.click();
+
+    await expect(
+      epubTtsPause
+    ).toHaveText('▶ Resume');
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          return window
+            .__rcEpubTtsAudio
+            .pauseCount;
+        });
+      })
+      .toBeGreaterThan(0);
+
+    // A rejected browser resume must leave the reader visibly
+    // paused rather than claiming playback resumed.
+    await page.evaluate(() => {
+      window.__rcEpubTtsAudio.rejectNextPlay = true;
+    });
+
+    await epubTtsPause.click();
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          return window
+            .__rcEpubTtsAudio
+            .rejectedPlayCount;
+        });
+      })
+      .toBe(1);
+
+    await expect(
+      epubTtsPause
+    ).toHaveText('▶ Resume');
+
+    // A later successful Resume should clear the paused state.
+    await epubTtsPause.click();
+
+    await expect(
+      epubTtsPause
+    ).toHaveText('⏸ Pause');
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          return window
+            .__rcEpubTtsAudio
+            .playCount;
+        });
+      })
+      .toBe(2);
+
+    await epubTtsStop.click();
+
+    await expect(
+      epubTtsControls
+    ).toBeHidden();
+
+    await expect(
+      epubTtsBtn
+    ).not.toHaveClass(/tts-active/);
+
+    const pauseCountAfterStop =
+      await page.evaluate(() => {
+        return window
+          .__rcEpubTtsAudio
+          .pauseCount;
+      });
+
+    // Start once more so existing Next navigation proves it
+    // cancels stale spoken text before changing EPUB position.
+    await epubTtsBtn.click();
+
+    await expect
+      .poll(
+        () => secureTtsRequests,
+        {
+          timeout: 5000,
+        }
+      )
+      .toBe(2);
+
+    await expect(
+      epubTtsControls
+    ).toBeVisible();
+
     await expect(
       page.locator('#epubPrevBtn')
     ).toBeVisible();
@@ -524,6 +788,26 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
 
     await page.locator('#epubNextBtn').click();
 
+    await expect(
+      epubTtsControls
+    ).toBeHidden();
+
+    await expect(
+      epubTtsBtn
+    ).not.toHaveClass(/tts-active/);
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          return window
+            .__rcEpubTtsAudio
+            .pauseCount;
+        });
+      })
+      .toBeGreaterThan(
+        pauseCountAfterStop
+      );
+
     await expect
       .poll(
         async () => {
@@ -550,6 +834,58 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
     });
 
     expect(fontSetting).toBe('110');
+
+    // Reader close must also stop active EPUB audio and remove
+    // its panel without touching the authenticated Student shell.
+    await epubTtsBtn.click();
+
+    await expect
+      .poll(
+        () => secureTtsRequests,
+        {
+          timeout: 5000,
+        }
+      )
+      .toBe(3);
+
+    await expect(
+      epubTtsControls
+    ).toBeVisible();
+
+    const pauseCountBeforeClose =
+      await page.evaluate(() => {
+        return window
+          .__rcEpubTtsAudio
+          .pauseCount;
+      });
+
+    await page
+      .locator('#epubCloseBtn')
+      .click();
+
+    await expect(
+      page.locator('#epubBookPanel')
+    ).toHaveCount(
+      0,
+      {
+        timeout: 2000,
+      }
+    );
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          return window
+            .__rcEpubTtsAudio
+            .pauseCount;
+        });
+      })
+      .toBeGreaterThan(
+        pauseCountBeforeClose
+      );
+
+    expect(secureBookRequests).toBe(1);
+    expect(secureTtsRequests).toBe(3);
 
     expect(page.url()).toContain('/student/');
     expect(page.url()).not.toContain('/presentation-02/');
