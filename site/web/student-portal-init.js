@@ -4915,9 +4915,33 @@
     }
 
     if (_epubTtsPaused) {
-      _epubTtsAudio
+      const audio =
+        _epubTtsAudio;
+
+      audio
         .play()
+        .then(function () {
+          if (
+            !_epubTtsActive ||
+            _epubTtsAudio !== audio
+          ) {
+            return;
+          }
+
+          _epubTtsPaused = false;
+          syncEpubTtsControls();
+        })
         .catch(function (err) {
+          if (
+            !_epubTtsActive ||
+            _epubTtsAudio !== audio
+          ) {
+            return;
+          }
+
+          _epubTtsPaused = true;
+          syncEpubTtsControls();
+
           console.warn(
             LOG_PREFIX,
             'EPUB Read Aloud resume failed:',
@@ -4925,12 +4949,11 @@
           );
         });
 
-      _epubTtsPaused = false;
-    } else {
-      _epubTtsAudio.pause();
-      _epubTtsPaused = true;
+      return;
     }
 
+    _epubTtsAudio.pause();
+    _epubTtsPaused = true;
     syncEpubTtsControls();
   }
 

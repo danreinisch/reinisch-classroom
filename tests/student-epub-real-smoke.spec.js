@@ -121,6 +121,8 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
         created: 0,
         playCount: 0,
         pauseCount: 0,
+        rejectedPlayCount: 0,
+        rejectNextPlay: false,
       };
 
       window.Audio = class {
@@ -133,6 +135,25 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
         }
 
         play() {
+          if (
+            window.__rcEpubTtsAudio
+              .rejectNextPlay
+          ) {
+            window.__rcEpubTtsAudio
+              .rejectNextPlay = false;
+
+            window.__rcEpubTtsAudio
+              .rejectedPlayCount += 1;
+
+            this.paused = true;
+
+            return Promise.reject(
+              new Error(
+                'synthetic audio resume failure'
+              )
+            );
+          }
+
           this.paused = false;
           window.__rcEpubTtsAudio.playCount += 1;
           return Promise.resolve();
@@ -583,6 +604,8 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
       window.__rcEpubTtsAudio.created = 0;
       window.__rcEpubTtsAudio.playCount = 0;
       window.__rcEpubTtsAudio.pauseCount = 0;
+      window.__rcEpubTtsAudio.rejectedPlayCount = 0;
+      window.__rcEpubTtsAudio.rejectNextPlay = false;
     });
 
     await epubTtsBtn.click();
@@ -643,6 +666,29 @@ test.describe('RC-LIBRARY-02B real EPUB smoke', () => {
       })
       .toBeGreaterThan(0);
 
+    // A rejected browser resume must leave the reader visibly
+    // paused rather than claiming playback resumed.
+    await page.evaluate(() => {
+      window.__rcEpubTtsAudio.rejectNextPlay = true;
+    });
+
+    await epubTtsPause.click();
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          return window
+            .__rcEpubTtsAudio
+            .rejectedPlayCount;
+        });
+      })
+      .toBe(1);
+
+    await expect(
+      epubTtsPause
+    ).toHaveText('▶ Resume');
+
+    // A later successful Resume should clear the paused state.
     await epubTtsPause.click();
 
     await expect(
