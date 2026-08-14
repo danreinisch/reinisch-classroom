@@ -4377,6 +4377,11 @@
       id: 'lost-in-kragdon-ah',
       title: 'Lost in Kragdon-ah',
       supportPath: '/assets/data/student-book-support/lost-in-kragdon-ah.json'
+    }),
+    '/student/resources/presentation-03/': Object.freeze({
+      id: 'a-door-into-time',
+      title: 'A Door Into Time',
+      supportPath: '/assets/data/student-book-support/a-door-into-time.json'
     })
   });
 
