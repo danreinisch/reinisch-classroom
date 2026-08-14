@@ -55,6 +55,11 @@ const BOOK_CATALOG = Object.freeze({
     filename: 'Lost in Kragdon-ah.epub',
     contentType: 'application/epub+zip',
   }),
+  'a-door-into-time': Object.freeze({
+    objectPath: 'books/a-door-into-time.epub',
+    filename: 'A Door Into Time.epub',
+    contentType: 'application/epub+zip',
+  }),
 });
 
 function storageObjectUrl(objectPath) {
