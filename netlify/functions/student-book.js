@@ -60,6 +60,11 @@ const BOOK_CATALOG = Object.freeze({
     filename: 'A Door Into Time.epub',
     contentType: 'application/epub+zip',
   }),
+  'escape-from-camp-14': Object.freeze({
+    objectPath: 'books/escape-from-camp-14.epub',
+    filename: 'Escape from Camp 14.epub',
+    contentType: 'application/epub+zip',
+  }),
 });
 
 function storageObjectUrl(objectPath) {

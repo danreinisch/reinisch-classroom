@@ -4382,6 +4382,11 @@
       id: 'a-door-into-time',
       title: 'A Door Into Time',
       supportPath: '/assets/data/student-book-support/a-door-into-time.json'
+    }),
+    '/student/resources/presentation-04/': Object.freeze({
+      id: 'escape-from-camp-14',
+      title: 'Escape from Camp 14',
+      supportPath: '/assets/data/student-book-support/escape-from-camp-14.json'
     })
   });
 
