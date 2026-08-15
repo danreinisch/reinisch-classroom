@@ -4392,6 +4392,11 @@
       id: 'seeker',
       title: 'Seeker',
       supportPath: '/assets/data/student-book-support/seeker.json'
+    }),
+    '/student/resources/presentation-06/': Object.freeze({
+      id: '1984',
+      title: '1984',
+      supportPath: '/assets/data/student-book-support/1984.json'
     })
   });
 

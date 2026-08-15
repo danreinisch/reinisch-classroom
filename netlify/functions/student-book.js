@@ -70,6 +70,11 @@ const BOOK_CATALOG = Object.freeze({
     filename: 'Seeker.epub',
     contentType: 'application/epub+zip',
   }),
+  '1984': Object.freeze({
+    objectPath: 'books/1984.epub',
+    filename: '1984.epub',
+    contentType: 'application/epub+zip',
+  }),
 });
 
 function storageObjectUrl(objectPath) {
