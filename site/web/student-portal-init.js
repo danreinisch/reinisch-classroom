@@ -4397,6 +4397,11 @@
       id: '1984',
       title: '1984',
       supportPath: '/assets/data/student-book-support/1984.json'
+    }),
+    '/student/resources/presentation-07/': Object.freeze({
+      id: 'return-from-kragdon-ah',
+      title: 'Return from Kragdon-ah',
+      supportPath: '/assets/data/student-book-support/return-from-kragdon-ah.json'
     })
   });
 
