@@ -80,6 +80,11 @@ const BOOK_CATALOG = Object.freeze({
     filename: 'Return from Kragdon-ah.epub',
     contentType: 'application/epub+zip',
   }),
+  'warrior-of-kragdon-ah': Object.freeze({
+    objectPath: 'books/warrior-of-kragdon-ah.epub',
+    filename: 'Warrior of Kragdon-ah.epub',
+    contentType: 'application/epub+zip',
+  }),
 });
 
 function storageObjectUrl(objectPath) {

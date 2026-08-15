@@ -4402,6 +4402,11 @@
       id: 'return-from-kragdon-ah',
       title: 'Return from Kragdon-ah',
       supportPath: '/assets/data/student-book-support/return-from-kragdon-ah.json'
+    }),
+    '/student/resources/presentation-08/': Object.freeze({
+      id: 'warrior-of-kragdon-ah',
+      title: 'Warrior of Kragdon-ah',
+      supportPath: '/assets/data/student-book-support/warrior-of-kragdon-ah.json'
     })
   });
 

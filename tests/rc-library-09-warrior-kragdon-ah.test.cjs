@@ -15,7 +15,7 @@ function read(relativePath) {
 }
 
 test(
-  'Return from Kragdon-ah uses its fixed private Storage object',
+  'Warrior of Kragdon-ah uses its fixed private Storage object',
   () => {
     const source = read(
       'netlify/functions/student-book.js'
@@ -23,13 +23,13 @@ test(
 
     assert.match(
       source,
-      /'return-from-kragdon-ah': Object\.freeze\(\{[\s\S]*?objectPath:\s*'books\/return-from-kragdon-ah\.epub'[\s\S]*?filename:\s*'Return from Kragdon-ah\.epub'[\s\S]*?contentType:\s*'application\/epub\+zip'/
+      /'warrior-of-kragdon-ah': Object\.freeze\(\{[\s\S]*?objectPath:\s*'books\/warrior-of-kragdon-ah\.epub'[\s\S]*?filename:\s*'Warrior of Kragdon-ah\.epub'[\s\S]*?contentType:\s*'application\/epub\+zip'/
     );
   }
 );
 
 test(
-  'Student Resource slot 7 maps Return into the secure EPUB reader',
+  'Student Resource slot 8 maps Warrior into the secure EPUB reader',
   () => {
     const source = read(
       'site/web/student-portal-init.js'
@@ -37,18 +37,18 @@ test(
 
     assert.match(
       source,
-      /['"]\/student\/resources\/presentation-07\/['"][\s\S]*?id:\s*['"]return-from-kragdon-ah['"][\s\S]*?title:\s*['"]Return from Kragdon-ah['"]/
+      /['"]\/student\/resources\/presentation-08\/['"][\s\S]*?id:\s*['"]warrior-of-kragdon-ah['"][\s\S]*?title:\s*['"]Warrior of Kragdon-ah['"]/
     );
 
     assert.match(
       source,
-      /supportPath:\s*['"]\/assets\/data\/student-book-support\/return-from-kragdon-ah\.json['"]/
+      /supportPath:\s*['"]\/assets\/data\/student-book-support\/warrior-of-kragdon-ah\.json['"]/
     );
   }
 );
 
 test(
-  'Student Resources keeps Return at slot 7 while preserving 40-slot topology',
+  'Student Resources consumes slot 8 for Warrior while preserving 40-slot topology',
   () => {
     const state = JSON.parse(
       read('site/assets/data/site-state.json')
@@ -73,7 +73,7 @@ test(
     );
 
     assert.deepEqual(
-      category.titles.slice(0, 7),
+      category.titles.slice(0, 9),
       [
         'Language Arts Skill Builder',
         '"Lost in Kragdon-ah" by Shawn Inmon',
@@ -81,12 +81,14 @@ test(
         '"Escape from Camp 14" by Blaine Harden',
         '"Seeker" by Douglas E. Richards',
         '"1984" by George Orwell',
-        '"Return from Kragdon-ah" by Shawn Inmon'
+        '"Return from Kragdon-ah" by Shawn Inmon',
+        '"Warrior of Kragdon-ah" by Shawn Inmon',
+        ''
       ]
     );
 
     assert.deepEqual(
-      category.links.slice(0, 7),
+      category.links.slice(0, 9),
       [
         '/student/resources/presentation-01/',
         '/student/resources/presentation-02/',
@@ -94,7 +96,9 @@ test(
         '/student/resources/presentation-04/',
         '/student/resources/presentation-05/',
         '/student/resources/presentation-06/',
-        '/student/resources/presentation-07/'
+        '/student/resources/presentation-07/',
+        '/student/resources/presentation-08/',
+        ''
       ]
     );
 
@@ -113,19 +117,19 @@ test(
 );
 
 test(
-  'Return support metadata is minimal and contains no book prose',
+  'Warrior support metadata is minimal and contains no book prose',
   () => {
     const support = JSON.parse(
       read(
-        'site/assets/data/student-book-support/return-from-kragdon-ah.json'
+        'site/assets/data/student-book-support/warrior-of-kragdon-ah.json'
       )
     );
 
     assert.deepEqual(
       support,
       {
-        bookId: 'return-from-kragdon-ah',
-        title: 'Return from Kragdon-ah',
+        bookId: 'warrior-of-kragdon-ah',
+        title: 'Warrior of Kragdon-ah',
         author: 'Shawn Inmon',
         glossary: []
       }
@@ -134,7 +138,7 @@ test(
 );
 
 test(
-  'Student Portal cache key is at least the RC-LIBRARY-08 version',
+  'Student Portal cache key is at least the RC-LIBRARY-09 version',
   () => {
     const source = read(
       'site/student/index.html'
@@ -153,13 +157,13 @@ test(
     );
 
     assert.ok(
-      Number(matches[0][1]) >= 2026081405,
-      'Student Portal cache key regressed below RC-LIBRARY-08'
+      Number(matches[0][1]) >= 2026081406,
+      'Student Portal cache key regressed below RC-LIBRARY-09'
     );
 
     assert.doesNotMatch(
       source,
-      /\/web\/student-portal-init\.js\?v=2026081404/
+      /\/web\/student-portal-init\.js\?v=2026081405/
     );
   }
 );
