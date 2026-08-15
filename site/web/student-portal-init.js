@@ -4387,6 +4387,11 @@
       id: 'escape-from-camp-14',
       title: 'Escape from Camp 14',
       supportPath: '/assets/data/student-book-support/escape-from-camp-14.json'
+    }),
+    '/student/resources/presentation-05/': Object.freeze({
+      id: 'seeker',
+      title: 'Seeker',
+      supportPath: '/assets/data/student-book-support/seeker.json'
     })
   });
 

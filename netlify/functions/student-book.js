@@ -65,6 +65,11 @@ const BOOK_CATALOG = Object.freeze({
     filename: 'Escape from Camp 14.epub',
     contentType: 'application/epub+zip',
   }),
+  'seeker': Object.freeze({
+    objectPath: 'books/seeker.epub',
+    filename: 'Seeker.epub',
+    contentType: 'application/epub+zip',
+  }),
 });
 
 function storageObjectUrl(objectPath) {
