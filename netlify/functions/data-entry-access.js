@@ -237,6 +237,10 @@ async function resolveTokenContext(rawToken) {
       `?select=id,code,desc,goal_area,measurement_type,student_id` +
       `&student_id=eq.${encodeURIComponent(student.id)}` +
       `&code=eq.${encodeURIComponent(tokenRow.goal_code)}` +
+      // A token fails closed when its goal has been retired, even when
+      // the token itself has not expired or been explicitly revoked.
+      `&active=eq.true` +
+      `&or=(status.is.null,status.not.in.(closed,archived,Closed,Archived))` +
       `&limit=1`,
     );
 

@@ -688,7 +688,15 @@ exports.handler = async (event) => {
 
                         // Look up goal IDs for all unique goal codes in one query
                         const goalCodesParam = uniqueGoalCodes.map(c => encodeURIComponent(c)).join(',');
-                        const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?student_id=eq.${encodeURIComponent(student.id)}&code=in.(${goalCodesParam})&select=id,code`;
+                        // Resolve only active, non-retired goals. Stale assignment
+                        // mappings must not create new evidence on archived goal versions.
+                        const goalsUrl =
+                          `${SUPABASE_URL}/rest/v1/goals` +
+                          `?student_id=eq.${encodeURIComponent(student.id)}` +
+                          `&code=in.(${goalCodesParam})` +
+                          `&active=eq.true` +
+                          `&or=(status.is.null,status.not.in.(closed,archived,Closed,Archived))` +
+                          `&select=id,code`;
                         let goalIdMap = {};
                         try {
                           const goalsRes = await fetch(goalsUrl, {
