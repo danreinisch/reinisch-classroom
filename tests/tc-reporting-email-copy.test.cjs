@@ -208,10 +208,26 @@ test('Tab 6 button handles clipboard failure gracefully', () => {
 console.log('\n--- Tab 1 export actions button ---');
 
 test('Tab 1 IEP Progress template includes btnCopyEmailBody button', () => {
-  // Find btnCopyEmailBody in the IEP progress template context
+  // Inspect the complete template function rather than an arbitrary
+  // character window; the template grows as report features are added.
   const iepIdx = src.indexOf('function renderIEPProgressTemplate(');
   assert.ok(iepIdx > -1, 'renderIEPProgressTemplate not found');
-  const iepSection = src.slice(iepIdx, iepIdx + 10000);
+
+  const parentIdx = src.indexOf(
+    'function renderParentSummaryTemplate(',
+    iepIdx
+  );
+
+  assert.ok(
+    parentIdx > iepIdx,
+    'renderParentSummaryTemplate boundary not found'
+  );
+
+  const iepSection = src.slice(
+    iepIdx,
+    parentIdx
+  );
+
   assert.ok(
     iepSection.includes('btnCopyEmailBody'),
     'btnCopyEmailBody not found in renderIEPProgressTemplate'
@@ -361,7 +377,23 @@ console.log('\n--- Email body content structure ---');
 
 test('email body includes professional closing line', () => {
   const fnIdx = src.indexOf('function buildEvidenceEmailBodyText(');
-  const fnSection = src.slice(fnIdx, fnIdx + 6000);
+  assert.ok(fnIdx > -1, 'buildEvidenceEmailBodyText not found');
+
+  const nextFnIdx = src.indexOf(
+    'function generateTab6Preview(',
+    fnIdx
+  );
+
+  assert.ok(
+    nextFnIdx > fnIdx,
+    'generateTab6Preview boundary not found'
+  );
+
+  const fnSection = src.slice(
+    fnIdx,
+    nextFnIdx
+  );
+
   assert.ok(
     fnSection.includes('Please contact me if you have any questions about this progress update.'),
     'Professional closing line not found in buildEvidenceEmailBodyText'

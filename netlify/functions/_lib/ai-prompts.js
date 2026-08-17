@@ -128,10 +128,10 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
   prompt += `5. Purely descriptive — NO action items, tips, next steps, recommendations, suggestions, or editorial opinions of any kind. No qualitative adjectives such as "good," "poor," "weak," "strong," "some clarity," or "room for improvement."\n`;
   prompt += `6. No vague qualitative judgments — state numbers only.\n`;
   if (isExternal) {
-    prompt += `7. Vocabulary at approximately 6th-grade reading level. Use plain everyday words. Avoid all IEP/SPED jargon.\n`;
-    prompt += `   Use "starting score" instead of "baseline" and "quiz scores" instead of "data points."\n`;
+    prompt += `7. Vocabulary at approximately 6th-grade reading level. Use plain everyday words. Avoid all IEP/SPED jargon except the exact source labels required for STATUS: CRITERION_CONFLICT.\n`;
+    prompt += `   Use "starting score" instead of "baseline" and "quiz scores" instead of "data points." For CRITERION_CONFLICT, preserve the exact labels "Header Mastery", "Goal-Text Target", and "Manual Criterion Review Required".\n`;
   } else {
-    prompt += `7. Vocabulary at approximately 8th-grade reading level. Avoid: proficiency, mastery, monitoring, demonstrate, performance.\n`;
+    prompt += `7. Vocabulary at approximately 8th-grade reading level. Avoid: proficiency, mastery, monitoring, demonstrate, performance, except preserve the exact source label "Header Mastery" for STATUS: CRITERION_CONFLICT.\n`;
   }
   prompt += `8. DATA_POINTS_PATTERN RULE — ABSOLUTE:\n`;
   prompt += `   - If a goal's DATA_POINTS_PATTERN is SINGLE: you MUST write "scoring [X]% on 1 ${isExternal ? 'quiz score' : 'assessment'}" — NEVER use "averaging" or "across" with a single data point.\n`;
@@ -140,7 +140,8 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
   // Narrative patterns
   prompt += `## NARRATIVE PATTERNS TO FOLLOW:\n`;
   prompt += `IMPORTANT: The DATA_POINTS_PATTERN label on each goal overrides everything — SINGLE always uses "on 1 ${isExternal ? 'quiz score' : 'assessment'}", MULTIPLE uses "across N ${isExternal ? 'quiz scores' : 'assessments'}".\n`;
-  prompt += `Each IEP goal below is pre-labeled STATUS: AT_OR_ABOVE_TARGET or BELOW_TARGET. Use that label to pick the correct pattern.\n`;
+  prompt += `Each IEP goal below is pre-labeled STATUS: AT_OR_ABOVE_TARGET, BELOW_TARGET, or CRITERION_CONFLICT. Use that label to pick the correct pattern.\n`;
+  prompt += `CRITERION_CONFLICT is used only when criterion_conflict is explicitly true in the supplied goal data. Never infer a conflict merely because Header Mastery and Goal-Text Target differ.\n`;
   if (isExternal) {
     prompt += `- AT_OR_ABOVE_TARGET (data_points = 1): "${safeCode} has increased their [area] skills, scoring [X]% on 1 quiz score — above their [target]% goal and up from a [starting score]% starting score."\n`;
     prompt += `- AT_OR_ABOVE_TARGET (data_points > 1): "${safeCode} has increased their [area] skills, averaging [X]% across [N] quiz scores — above their [target]% goal and up from a [starting score]% starting score."\n`;
@@ -152,6 +153,10 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
     prompt += `- BELOW_TARGET (data_points = 1): "${safeCode} is still working to grow their [area] skills, scoring [X]% on 1 assessment, which is below their [target]% target. [One evidence sentence from the specific skill struggles list, if available.]"\n`;
     prompt += `- BELOW_TARGET (data_points > 1): "${safeCode} is still working to grow their [area] skills, averaging [X]% across [N] assessments, which is below their [target]% target. [One evidence sentence from the specific skill struggles list, if available.]"\n\n`;
   }
+
+  prompt += `- CRITERION_CONFLICT (data_points = 1): "${safeCode} scored [X]% on 1 ${isExternal ? 'quiz score' : 'assessment'}, compared with a [baseline]% ${isExternal ? 'starting score' : 'baseline'}. ${safeCode} has 2 official criterion values: Header Mastery [header_mastery] and Goal-Text Target [goal_text_target]; Manual Criterion Review Required."\n`;
+  prompt += `- CRITERION_CONFLICT (data_points > 1): "${safeCode} averaged [X]% across [N] ${isExternal ? 'quiz scores' : 'assessments'}, compared with a [baseline]% ${isExternal ? 'starting score' : 'baseline'}. ${safeCode} has 2 official criterion values: Header Mastery [header_mastery] and Goal-Text Target [goal_text_target]; Manual Criterion Review Required."\n`;
+  prompt += `For STATUS: CRITERION_CONFLICT, do not describe the goal as above target, below target, met, mastered, on track, at target, near mastery, or needing a number of points to reach either criterion. Report raw numbers, trend, both official criterion values, and Manual Criterion Review Required.\n\n`;
 
   // Same-area goal rule
   prompt += `## SAME-AREA GOAL RULE:\n`;
@@ -175,13 +180,41 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
       const area = sanitizeForPrompt(g.area, 100);
       const trend = sanitizeForPrompt(g.trend, 10);
       const currentAvg = parseFloat(g.current_avg);
+      const criterionConflict = g && g.criterion_conflict === true;
       const target = parseFloat(g.target);
-      const status = (!isNaN(currentAvg) && !isNaN(target) && currentAvg >= target)
-        ? 'AT_OR_ABOVE_TARGET'
-        : 'BELOW_TARGET';
+      const status = criterionConflict
+        ? 'CRITERION_CONFLICT'
+        : (
+            !isNaN(currentAvg) &&
+            !isNaN(target) &&
+            currentAvg >= target
+          )
+          ? 'AT_OR_ABOVE_TARGET'
+          : 'BELOW_TARGET';
       const dp = parseFloat(g.data_points);
       const dpPattern = (!isNaN(dp) && dp === 1) ? 'SINGLE' : 'MULTIPLE';
-      let goalLine = `- Code: ${code}, Area: ${area}, STATUS: ${status}, DATA_POINTS_PATTERN: ${dpPattern}, Current average: ${sanitizeNumber(g.current_avg)}%, Trend: ${trend}, Data points: ${sanitizeNumber(g.data_points)}, Target: ${sanitizeNumber(g.target)}%, Baseline: ${sanitizeNumber(g.baseline)}%`;
+
+      let goalLine;
+
+      if (criterionConflict) {
+        const headerMastery =
+          sanitizeForPrompt(
+            g.header_mastery,
+            50
+          ) || 'Not stated';
+
+        const goalTextTarget =
+          sanitizeForPrompt(
+            g.goal_text_target,
+            50
+          ) || 'Not stated';
+
+        goalLine =
+          `- Code: ${code}, Area: ${area}, STATUS: CRITERION_CONFLICT, DATA_POINTS_PATTERN: ${dpPattern}, Current average: ${sanitizeNumber(g.current_avg)}%, Trend: ${trend}, Data points: ${sanitizeNumber(g.data_points)}, Header Mastery: ${headerMastery}, Goal-Text Target: ${goalTextTarget}, Criterion Status: Manual Criterion Review Required, Baseline: ${sanitizeNumber(g.baseline)}%`;
+      } else {
+        goalLine =
+          `- Code: ${code}, Area: ${area}, STATUS: ${status}, DATA_POINTS_PATTERN: ${dpPattern}, Current average: ${sanitizeNumber(g.current_avg)}%, Trend: ${trend}, Data points: ${sanitizeNumber(g.data_points)}, Target: ${sanitizeNumber(g.target)}%, Baseline: ${sanitizeNumber(g.baseline)}%`;
+      }
       if (areaCounts[area] > 1) {
         goalLine += `, NOTE: multiple goals share this area name — you MUST reference the goal code "${code}" in the summary to differentiate`;
       }
@@ -226,7 +259,8 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
   } else {
     prompt += `  "plain_language": one sentence under 200 characters, purely descriptive (e.g. "${safeCode} is reading at 100% — well above their 80% target.") — no tips\n`;
   }
-  prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%)\n`;
+  prompt += `  For an IEP goal with STATUS: CRITERION_CONFLICT, "plain_language" must preserve Header Mastery and Goal-Text Target as separate values, include "Manual Criterion Review Required", and must not describe the goal as above, below, met, mastered, on track, at target, or near mastery.\n`;
+  prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%). This is only a raw score-band display field and is not an IEP criterion-status judgment; never use the tier wording to characterize a CRITERION_CONFLICT goal in narrative text.\n`;
   prompt += `  "source": "iep" if from IEP Goals, or "dese" if from DESE Standards\n`;
   prompt += `Do NOT include a "goal_recommendation" field.\n`;
   prompt += `Include every IEP goal and every DESE standard provided. Do not add or remove entries.\n`;

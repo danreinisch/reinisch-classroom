@@ -6,7 +6,7 @@
  *   🟡 Stalled goals      — students whose progress is flat / not improving
  *   📅 IEP/Eval deadlines — upcoming (≤30 days) and recently overdue dates
  *   📊 Stale data         — goals with no data collected in >14 school days
- *   🏆 Mastery reached    — goals where current performance ≥ mastery target
+ *   🏆 Mastery reached    — non-conflicted goals where current performance ≥ automatic criterion
  *   📊 Quick stats        — active students, goals tracked, data points (30 d)
  *
  * Environment variables required:
@@ -123,6 +123,7 @@ serve(async (req: Request): Promise<Response> => {
     baseline: string | null;
     mastery: string | null;
     target: string | null;
+    criterion_conflict?: boolean | null;
     measurement_type: string | null;
     observation_config: Record<string, unknown> | null;
     student_code?: string; // joined from students
@@ -138,6 +139,30 @@ serve(async (req: Request): Promise<Response> => {
     goal_code?: string;   // synthesised
     student_code?: string; // synthesised
   };
+
+  function hasCriterionConflict(goal: Goal): boolean {
+    return goal.criterion_conflict === true;
+  }
+
+  function getAutomaticCriterionValue(goal: Goal): number | null {
+    if (hasCriterionConflict(goal)) {
+      return null;
+    }
+
+    return parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);
+  }
+
+  function buildCriterionDetail(goal: Goal): string {
+    if (hasCriterionConflict(goal)) {
+      return [
+        `Header Mastery: ${goal.mastery ?? "—"}`,
+        `Goal-Text Target: ${goal.target ?? "—"}`,
+        "Criterion Status: Manual Criterion Review Required",
+      ].join(" | ");
+    }
+
+    return `Target: ${goal.mastery ?? goal.target ?? "—"}`;
+  }
 
   const trendCutoffStr = toDateStr(
     new Date(Date.now() - TREND_WINDOW_DAYS * 86_400_000)
@@ -210,7 +235,7 @@ serve(async (req: Request): Promise<Response> => {
       if (goal.measurement_type === "Observation") continue; // skip observation goals for trend
 
       const baselineNum = parseGoalValue(goal.baseline);
-      const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);
+      const masteryNum = getAutomaticCriterionValue(goal);
 
       const recentProgress = progressRows
         .filter(
@@ -259,7 +284,7 @@ serve(async (req: Request): Promise<Response> => {
         baseline: baselineNum != null ? Math.round(baselineNum * 10) / 10 : null,
         mastery: masteryNum != null ? Math.round(masteryNum * 10) / 10 : null,
         severity: isRegressing ? "red" : "amber",
-        detail: `Current: ${currentNum}% | Baseline: ${goal.baseline ?? "—"} | Target: ${goal.mastery ?? goal.target ?? "—"}`,
+        detail: `Current: ${currentNum}% | Baseline: ${goal.baseline ?? "—"} | ${buildCriterionDetail(goal)}`,
       };
 
       if (isRegressing) regressingAlerts.push(alert);
@@ -386,7 +411,7 @@ serve(async (req: Request): Promise<Response> => {
       (g) => g.student_code === student.code
     );
     for (const goal of studentGoals) {
-      const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);
+      const masteryNum = getAutomaticCriterionValue(goal);
       if (masteryNum == null) continue;
 
       const recentProgress = progressRows

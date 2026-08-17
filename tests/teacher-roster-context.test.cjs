@@ -200,6 +200,7 @@ function loadEndpoint({
                 goal_area: 'Reading',
                 baseline: '40%',
                 mastery: '80%',
+                criterion_conflict: true,
                 case_manager: 'Teacher',
                 version: 1,
                 observation_config: null,
@@ -360,12 +361,29 @@ async function run() {
           goal_area: 'Reading',
           baseline: '40%',
           mastery: '80%',
+          criterion_conflict: true,
           case_manager: 'Teacher',
           version: 1,
           observation_config: null,
           notes: null,
         },
       ]
+    );
+
+    const goalRead =
+      restCalls.find(
+        requestPath =>
+          requestPath.startsWith(
+            '/rest/v1/goals'
+          )
+      );
+
+    assert.ok(
+      goalRead &&
+      goalRead.includes(
+        'criterion_conflict'
+      ),
+      'signed roster context must select criterion_conflict'
     );
 
     assert.strictEqual(

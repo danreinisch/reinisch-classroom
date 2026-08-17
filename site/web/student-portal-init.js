@@ -549,10 +549,40 @@
    * @param {string} [measurementType] - Measurement type for formatting
    * @returns {string} HTML string for the banner, or '' if latest is unavailable
    */
-  function buildStatusBannerHtml(latestNumeric, targetNumeric, baselineNumeric, measurementType) {
+  function buildStatusBannerHtml(
+    latestNumeric,
+    targetNumeric,
+    baselineNumeric,
+    measurementType,
+    criterionConflict = false
+  ) {
     if (latestNumeric == null || isNaN(latestNumeric)) return '';
-    const status = computeGoalStatus(latestNumeric, targetNumeric, baselineNumeric);
-    const latestFmt = escapeHtml(formatProgressValue(latestNumeric, measurementType));
+
+    const latestFmt =
+      escapeHtml(
+        formatProgressValue(
+          latestNumeric,
+          measurementType
+        )
+      );
+
+    if (criterionConflict) {
+      return `<div class="st-goal-status-banner st-goal-status-banner--manual-review" role="status" aria-live="polite">
+        <span class="st-goal-status-banner__icon" aria-hidden="true">⚠️</span>
+        <div class="st-goal-status-banner__text">
+          <div class="st-goal-status-banner__label">Manual Criterion Review Required</div>
+          <div class="st-goal-status-banner__sentence">Latest score: ${latestFmt}. Your IEP lists two different goal criteria, so no automatic goal-status judgment is shown.</div>
+        </div>
+      </div>`;
+    }
+
+    const status =
+      computeGoalStatus(
+        latestNumeric,
+        targetNumeric,
+        baselineNumeric
+      );
+
     const targetFmt = (targetNumeric != null && !isNaN(targetNumeric))
       ? escapeHtml(formatProgressValue(targetNumeric, measurementType))
       : null;
@@ -592,7 +622,14 @@
    * @param {string} [measurementType] - For formatting
    * @returns {string} HTML string for the stats row
    */
-  function buildStatsRowHtml(latestVal, qAvgVal, targetVal, trend, measurementType) {
+  function buildStatsRowHtml(
+    latestVal,
+    qAvgVal,
+    targetVal,
+    trend,
+    measurementType,
+    criterionConflict = false
+  ) {
     const stats = [];
     if (latestVal != null && !isNaN(latestVal)) {
       stats.push({ label: 'Latest', value: escapeHtml(formatProgressValue(latestVal, measurementType)) });
@@ -600,8 +637,21 @@
     if (qAvgVal != null && !isNaN(qAvgVal)) {
       stats.push({ label: 'Avg This Quarter', value: escapeHtml(formatProgressValue(qAvgVal, measurementType)) });
     }
-    if (targetVal != null && !isNaN(targetVal)) {
-      stats.push({ label: 'Target', value: escapeHtml(formatProgressValue(targetVal, measurementType)) });
+    if (
+      !criterionConflict &&
+      targetVal != null &&
+      !isNaN(targetVal)
+    ) {
+      stats.push({
+        label: 'Target',
+        value:
+          escapeHtml(
+            formatProgressValue(
+              targetVal,
+              measurementType
+            )
+          ),
+      });
     }
     if (trend) {
       stats.push({ label: 'Trend', value: `<span class="${escapeHtml(trend.cssClass)}" aria-label="${escapeHtml(trend.label)}">${trend.arrow}</span>` });
@@ -657,8 +707,22 @@
       return `<div class="st-goal-chart-empty" role="status">Progress values are not numeric; chart unavailable.</div>`;
     }
 
-    const baseline = goal.baseline != null ? parseFloat(goal.baseline) : null;
-    const target = goal.target != null ? parseFloat(goal.target) : null;
+    const criterionConflict =
+      goal?.criterion_conflict === true;
+
+    const baseline =
+      goal.baseline != null
+        ? parseFloat(goal.baseline)
+        : null;
+
+    const target =
+      criterionConflict
+        ? null
+        : (
+            goal.target != null
+              ? parseFloat(goal.target)
+              : null
+          );
 
     const allNums = [...values];
     if (baseline != null && !isNaN(baseline)) allNums.push(baseline);
@@ -1344,18 +1408,63 @@
       ? `<span class="st-badge st-badge-measurement"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:middle;margin-right:3px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(goal.measurement_type)}</span>`
       : '';
     
-    // Baseline, mastery, and target display with friendly empty states
-    const baselineHtml = (goal.baseline != null && goal.baseline !== '')
-      ? escapeHtml(String(goal.baseline))
-      : '<span class="st-metric-empty">Not yet set</span>';
-    const masteryHtml = (goal.mastery != null && goal.mastery !== '')
-      ? escapeHtml(String(goal.mastery))
-      : (goal.target != null && goal.target !== '')
-        ? escapeHtml(formatProgressValue(goal.target, goal.measurement_type))
+    // Preserve both official criterion fields. A source conflict is
+    // explicit metadata; it is never inferred from unequal values alone.
+    const criterionConflict =
+      goal.criterion_conflict === true;
+
+    const masteryLabel =
+      criterionConflict
+        ? 'Header Mastery:'
+        : 'Mastery:';
+
+    const targetLabel =
+      criterionConflict
+        ? 'Goal-Text Target:'
+        : 'Target:';
+
+    const baselineHtml =
+      (goal.baseline != null && goal.baseline !== '')
+        ? escapeHtml(String(goal.baseline))
         : '<span class="st-metric-empty">Not yet set</span>';
-    const targetHtml = (goal.target != null && goal.target !== '')
-      ? escapeHtml(formatProgressValue(goal.target, goal.measurement_type))
-      : '<span class="st-metric-empty">Not yet set</span>';
+
+    const masteryHtml =
+      (goal.mastery != null && goal.mastery !== '')
+        ? escapeHtml(String(goal.mastery))
+        : (
+            !criterionConflict &&
+            goal.target != null &&
+            goal.target !== ''
+          )
+          ? escapeHtml(
+              formatProgressValue(
+                goal.target,
+                goal.measurement_type
+              )
+            )
+          : '<span class="st-metric-empty">Not yet set</span>';
+
+    const targetHtml =
+      (goal.target != null && goal.target !== '')
+        ? (
+            criterionConflict
+              ? escapeHtml(String(goal.target))
+              : escapeHtml(
+                  formatProgressValue(
+                    goal.target,
+                    goal.measurement_type
+                  )
+                )
+          )
+        : '<span class="st-metric-empty">Not yet set</span>';
+
+    const criterionReviewHtml =
+      criterionConflict
+        ? `<div class="st-goal-criterion-review" role="note">
+            <strong>Manual Criterion Review Required</strong>
+            <span>Your IEP lists different values for Header Mastery and Goal-Text Target. Reinisch Classroom will show your progress but will not automatically decide whether this goal is met.</span>
+          </div>`
+        : '';
     
     // Build progress detail section (if there are entries to show)
     const progressDetailId = `st-goal-progress-${(goal.code ?? goal.id).replace(/[^a-z0-9]/gi, '_')}${containerSuffix ? '-' + containerSuffix : ''}`;
@@ -1374,13 +1483,50 @@
         ? thisQuarterEntries.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / thisQuarterEntries.length
         : null;
 
-      // SPED-friendly status banner and summary stats
-      const targetNumeric = goal.target != null ? parseFloat(goal.target) : null;
-      const baselineNumeric = goal.baseline != null ? parseFloat(goal.baseline) : null;
-      const sortedAsc = [...progressEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
-      const trend = computeTrendArrow(sortedAsc);
-      const statusBannerHtml = buildStatusBannerHtml(latestNumeric, targetNumeric, baselineNumeric, goal.measurement_type);
-      const statsRowHtml = buildStatsRowHtml(latestNumeric, qAvgVal, targetNumeric, trend, goal.measurement_type);
+      // SPED-friendly status banner and summary stats.
+      // Conflicted goals retain raw progress and trend data, but no
+      // automatic target-based judgment is allowed.
+      const targetNumeric =
+        !criterionConflict &&
+        goal.target != null
+          ? parseFloat(goal.target)
+          : null;
+
+      const baselineNumeric =
+        goal.baseline != null
+          ? parseFloat(goal.baseline)
+          : null;
+
+      const sortedAsc =
+        [...progressEntries].sort(
+          (a, b) =>
+            new Date(a.date) -
+            new Date(b.date)
+        );
+
+      const trend =
+        computeTrendArrow(
+          sortedAsc
+        );
+
+      const statusBannerHtml =
+        buildStatusBannerHtml(
+          latestNumeric,
+          targetNumeric,
+          baselineNumeric,
+          goal.measurement_type,
+          criterionConflict
+        );
+
+      const statsRowHtml =
+        buildStatsRowHtml(
+          latestNumeric,
+          qAvgVal,
+          targetNumeric,
+          trend,
+          goal.measurement_type,
+          criterionConflict
+        );
 
       // Dot grid chart (per-question data points)
       const goalDataPoints = dataPointsMap ? (dataPointsMap.get(goal.id) || []) : [];
@@ -1420,14 +1566,15 @@
             <span class="st-metric-value">${baselineHtml}</span>
           </div>
           <div class="st-metric">
-            <span class="st-metric-label">Mastery:</span>
+            <span class="st-metric-label">${masteryLabel}</span>
             <span class="st-metric-value">${masteryHtml}</span>
           </div>
           <div class="st-metric">
-            <span class="st-metric-label">Target:</span>
+            <span class="st-metric-label">${targetLabel}</span>
             <span class="st-metric-value">${targetHtml}</span>
           </div>
         </div>
+        ${criterionReviewHtml}
         <div class="st-goal-data-status">
           <div class="st-data-status-item">
             <span>${statusSvg}</span>

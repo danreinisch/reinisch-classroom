@@ -35,6 +35,12 @@ function sanitizeField(value, maxLen) {
  * Build the system prompt for the compliance notes writer.
  */
 function buildComplianceSystemPrompt() {
+  var criterionGuidance =
+    'Some goals may be explicitly marked Criterion Conflict: YES. For those goals, Header Mastery and Goal-Text Target are two competing official source values. ' +
+    'Do not select or infer either value as the controlling criterion. Do not classify a conflicted goal as met, mastered, on track, at target, near mastery, below target, or otherwise relative to either criterion. ' +
+    'Report raw current performance, baseline, data count, and trend, preserve both source values, and state Manual Criterion Review Required. ' +
+    'The existence of a criterion conflict by itself is not evidence of a service-delivery or data-collection compliance failure.';
+
   return 'You are a professional IEP (Individualized Education Program) compliance coordinator drafting formal compliance documentation notes for an IEP file. ' +
     'Your role is to produce structured, audit-ready compliance notes that document progress monitoring activities, data collection practices, and service delivery. ' +
     'Use formal compliance language suitable for IEP files and regulatory audits. ' +
@@ -42,9 +48,10 @@ function buildComplianceSystemPrompt() {
     '1. Progress Monitoring Statement -- document that progress monitoring was conducted per the IEP schedule. ' +
     '2. Data Collection Summary -- note frequency, total data points collected, and any gaps. ' +
     '3. Service Delivery Confirmation -- summarize whether services were delivered as specified. ' +
-    '4. Goal Progress Overview -- briefly note current status of each goal relative to targets. ' +
-    '5. Compliance Concerns (if any) -- flag any missed data collection windows or service gaps. ' +
+    '4. Goal Progress Overview -- for ordinary goals, briefly note current status relative to the target. For goals marked Criterion Conflict: YES, report raw evidence and Manual Criterion Review Required without assigning a criterion-relative status. ' +
+    '5. Compliance Concerns (if any) -- flag any missed data collection windows or service gaps. Do not treat a criterion conflict alone as a compliance failure. ' +
     'Be precise, factual, and reference specific metrics. Do not fabricate data. ' +
+    criterionGuidance + ' ' +
     'Output only the numbered compliance notes -- no preamble or postamble.';
 }
 
@@ -75,9 +82,20 @@ function buildComplianceUserMessage(studentName, studentCode, goals, complianceD
     goals.forEach(function(g, i) {
       lines.push('');
       lines.push('Goal ' + (i + 1) + ': [' + sanitizeField(g.code, 20) + '] ' + sanitizeField(g.area, 50));
+      var criterionConflict = g && g.criterion_conflict === true;
+
       lines.push('  Description: ' + sanitizeField(g.description, 500));
       lines.push('  Baseline: ' + sanitizeField(g.baseline, 50));
-      lines.push('  Target: ' + sanitizeField(g.target, 50));
+      lines.push('  Criterion Conflict: ' + (criterionConflict ? 'YES' : 'NO'));
+
+      if (criterionConflict) {
+        lines.push('  Header Mastery: ' + sanitizeField(g.header_mastery || 'Not stated', 50));
+        lines.push('  Goal-Text Target: ' + sanitizeField(g.goal_text_target || 'Not stated', 50));
+        lines.push('  Criterion Status: Manual Criterion Review Required');
+      } else {
+        lines.push('  Target: ' + sanitizeField(g.target, 50));
+      }
+
       lines.push('  Current Value: ' + sanitizeField(g.currentValue, 50));
       lines.push('  Data Points Collected: ' + sanitizeField(String(g.dataCount || 0), 10));
       lines.push('  Trend: ' + sanitizeField(g.trend, 30));
@@ -85,7 +103,9 @@ function buildComplianceUserMessage(studentName, studentCode, goals, complianceD
     lines.push('');
   }
 
-  lines.push('Draft formal compliance notes for this IEP file. Use numbered items with clear headings. Flag any compliance concerns.');
+  lines.push('');
+  lines.push('For any goal marked Criterion Conflict: YES, preserve Header Mastery and Goal-Text Target separately, make no criterion-relative progress judgment, and state Manual Criterion Review Required. Do not treat the conflict itself as a service-delivery or data-collection compliance violation.');
+  lines.push('Draft formal compliance notes for this IEP file. Use numbered items with clear headings. Flag compliance concerns only when supported by the supplied compliance evidence.');
 
   return lines.join('\n');
 }

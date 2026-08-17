@@ -14,7 +14,7 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
   const { buildItemsFromMeta } = await import('/web/shared-build-items.js');
-  const { formatGoalValue } = await import('/web/goal-utils.js');
+  const { formatGoalValue, hasCriterionConflict } = await import('/web/goal-utils.js');
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
@@ -10492,12 +10492,83 @@
         });
         const vals = pts.map((p) => parseFloat(p.value)).filter((v) => !isNaN(v));
         const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
-        const progressCell = isParent
-          ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
-          : (avg != null ? formatGoalValue(parseFloat(avg), goal.measurement_type, goal) : '—');
-        const target = goal.target != null ? esc(String(goal.target)) : '—';
-        const mastery = goal.mastery != null ? esc(String(goal.mastery)) : (goal.target != null ? esc(String(goal.target)) : '—');
-        const baseline = goal.baseline != null ? esc(String(goal.baseline)) : '—';
+        const criterionConflict =
+          hasCriterionConflict(goal);
+
+        const rawProgress =
+          avg == null
+            ? null
+            : formatGoalValue(
+                parseFloat(avg),
+                goal.measurement_type,
+                goal
+              );
+
+        const progressCell =
+          criterionConflict
+            ? (
+                rawProgress == null
+                  ? 'Manual Criterion Review Required'
+                  : `${rawProgress} · Manual Criterion Review Required`
+              )
+            : (
+                isParent
+                  ? (
+                      avg == null
+                        ? 'No data yet'
+                        : (
+                            parseFloat(avg) >= 80
+                              ? '✅ On track'
+                              : (
+                                  parseFloat(avg) >= 60
+                                    ? '📈 Making progress'
+                                    : '⚠️ Needs support'
+                                )
+                          )
+                    )
+                  : (
+                      rawProgress == null
+                        ? '—'
+                        : rawProgress
+                    )
+              );
+
+        const headerMasteryValue =
+          goal.mastery == null
+            ? '—'
+            : esc(String(goal.mastery));
+
+        const goalTextTargetValue =
+          goal.target == null
+            ? '—'
+            : esc(String(goal.target));
+
+        const mastery =
+          criterionConflict
+            ? `Header Mastery: ${headerMasteryValue}`
+            : (
+                goal.mastery == null
+                  ? (
+                      goal.target == null
+                        ? '—'
+                        : esc(String(goal.target))
+                    )
+                  : esc(String(goal.mastery))
+              );
+
+        const target =
+          criterionConflict
+            ? `Goal-Text Target: ${goalTextTargetValue}`
+            : (
+                goal.target == null
+                  ? '—'
+                  : esc(String(goal.target))
+              );
+
+        const baseline =
+          goal.baseline == null
+            ? '—'
+            : esc(String(goal.baseline));
         const adminCols = isParent ? '' : `<td>${pts.length} pts</td>`;
         return `<tr><td>${esc(goal.code || goal.id || '—')}</td><td>${esc(goal.area || goal.skill_area || '—')}</td><td>${baseline}</td><td>${esc(progressCell)}</td><td>${mastery}</td><td>${target}</td>${adminCols}</tr>`;
       }).join('');
@@ -10675,12 +10746,83 @@
         });
         const vals = pts.map((p) => parseFloat(p.value)).filter((v) => !isNaN(v));
         const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
-        const progressCell = isParent
-          ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
-          : (avg != null ? formatGoalValue(parseFloat(avg), goal.measurement_type, goal) : '—');
-        const target = goal.target != null ? esc(String(goal.target)) : '—';
-        const mastery = goal.mastery != null ? esc(String(goal.mastery)) : (goal.target != null ? esc(String(goal.target)) : '—');
-        const baseline = goal.baseline != null ? esc(String(goal.baseline)) : '—';
+        const criterionConflict =
+          hasCriterionConflict(goal);
+
+        const rawProgress =
+          avg == null
+            ? null
+            : formatGoalValue(
+                parseFloat(avg),
+                goal.measurement_type,
+                goal
+              );
+
+        const progressCell =
+          criterionConflict
+            ? (
+                rawProgress == null
+                  ? 'Manual Criterion Review Required'
+                  : `${rawProgress} · Manual Criterion Review Required`
+              )
+            : (
+                isParent
+                  ? (
+                      avg == null
+                        ? 'No data yet'
+                        : (
+                            parseFloat(avg) >= 80
+                              ? '✅ On track'
+                              : (
+                                  parseFloat(avg) >= 60
+                                    ? '📈 Making progress'
+                                    : '⚠️ Needs support'
+                                )
+                          )
+                    )
+                  : (
+                      rawProgress == null
+                        ? '—'
+                        : rawProgress
+                    )
+              );
+
+        const headerMasteryValue =
+          goal.mastery == null
+            ? '—'
+            : esc(String(goal.mastery));
+
+        const goalTextTargetValue =
+          goal.target == null
+            ? '—'
+            : esc(String(goal.target));
+
+        const mastery =
+          criterionConflict
+            ? `Header Mastery: ${headerMasteryValue}`
+            : (
+                goal.mastery == null
+                  ? (
+                      goal.target == null
+                        ? '—'
+                        : esc(String(goal.target))
+                    )
+                  : esc(String(goal.mastery))
+              );
+
+        const target =
+          criterionConflict
+            ? `Goal-Text Target: ${goalTextTargetValue}`
+            : (
+                goal.target == null
+                  ? '—'
+                  : esc(String(goal.target))
+              );
+
+        const baseline =
+          goal.baseline == null
+            ? '—'
+            : esc(String(goal.baseline));
         const adminCols = isParent ? '' : `<td>${pts.length} pts</td>`;
         return `<tr><td>${esc(goal.code || goal.id || '—')}</td><td>${esc(goal.area || goal.skill_area || '—')}</td><td>${baseline}</td><td>${esc(progressCell)}</td><td>${mastery}</td><td>${target}</td>${adminCols}</tr>`;
       }).join('');
@@ -10899,18 +11041,90 @@
           });
           const vals = pts.map((p) => parseFloat(p.value)).filter((v) => !isNaN(v));
           const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
-          const progress = isParent
-            ? (avg == null ? 'No data' : parseFloat(avg) >= 80 ? 'On track' : parseFloat(avg) >= 60 ? 'Making progress' : 'Needs support')
-            : (avg != null ? formatGoalValue(parseFloat(avg), goal.measurement_type, goal) : '—');
-          const dpCol = isParent ? '' : `<td>${pts.length} pts</td>`;
+          const criterionConflict =
+            hasCriterionConflict(goal);
+
+          const rawProgress =
+            avg == null
+              ? null
+              : formatGoalValue(
+                  parseFloat(avg),
+                  goal.measurement_type,
+                  goal
+                );
+
+          const progress =
+            criterionConflict
+              ? (
+                  rawProgress == null
+                    ? 'Manual Criterion Review Required'
+                    : `${rawProgress} · Manual Criterion Review Required`
+                )
+              : (
+                  isParent
+                    ? (
+                        avg == null
+                          ? 'No data'
+                          : (
+                              parseFloat(avg) >= 80
+                                ? 'On track'
+                                : (
+                                    parseFloat(avg) >= 60
+                                      ? 'Making progress'
+                                      : 'Needs support'
+                                  )
+                            )
+                      )
+                    : (
+                        rawProgress == null
+                          ? '—'
+                          : rawProgress
+                      )
+                );
+
+          const mastery =
+            criterionConflict
+              ? `Header Mastery: ${
+                  goal.mastery == null
+                    ? '—'
+                    : esc(String(goal.mastery))
+                }`
+              : (
+                  goal.mastery == null
+                    ? (
+                        goal.target == null
+                          ? '—'
+                          : esc(String(goal.target))
+                      )
+                    : esc(String(goal.mastery))
+                );
+
+          const target =
+            criterionConflict
+              ? `Goal-Text Target: ${
+                  goal.target == null
+                    ? '—'
+                    : esc(String(goal.target))
+                }`
+              : (
+                  goal.target == null
+                    ? '—'
+                    : esc(String(goal.target))
+                );
+
+          const dpCol =
+            isParent
+              ? ''
+              : `<td>${pts.length} pts</td>`;
+
           return `<tr>
             <td>${esc(goal.code || goal.id || '—')}</td>
             <td>${esc(goal.area || goal.skill_area || '—')}</td>
             <td style="font-size:12px;">${esc(goal.desc || goal.description || '—')}</td>
-            <td>${goal.baseline != null ? esc(String(goal.baseline)) : '—'}</td>
+            <td>${goal.baseline == null ? '—' : esc(String(goal.baseline))}</td>
             <td>${esc(progress)}</td>
-            <td>${goal.mastery != null ? esc(String(goal.mastery)) : (goal.target != null ? esc(String(goal.target)) : '—')}</td>
-            <td>${goal.target != null ? esc(String(goal.target)) : '—'}</td>
+            <td>${mastery}</td>
+            <td>${target}</td>
             ${dpCol}
           </tr>`;
         }).join('');

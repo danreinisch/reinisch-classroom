@@ -46,6 +46,160 @@ function sanitizeSourceForPrompt(value, maxLen) {
     .slice(0, len);
 }
 
+var GOAL_CONTEXT_BASE_FIELDS = [
+  'id',
+  'student_id',
+  'code',
+  'desc',
+  'goal_area',
+  'baseline',
+  'mastery',
+  'target',
+  'status',
+  'active',
+  'class_context',
+  'data_collector',
+  'data_collector_email',
+  'measurement_type',
+  'notes',
+  'case_manager',
+  'version',
+  'addressed_in_class',
+  'individual_delivery',
+].join(',');
+
+var GOAL_CONTEXT_CONFLICT_FIELDS =
+  GOAL_CONTEXT_BASE_FIELDS.replace(
+    ',status,',
+    ',criterion_conflict,status,'
+  );
+
+function isCriterionConflictSchemaError(result) {
+  var data =
+    result && result.data && typeof result.data === 'object'
+      ? result.data
+      : {};
+
+  var code =
+    data.code
+      ? String(data.code)
+      : '';
+
+  var message =
+    data.message
+      ? String(data.message)
+      : String(
+          result && result.data
+            ? result.data
+            : ''
+        );
+
+  var detail =
+    (code + ' ' + message).toLowerCase();
+
+  return (
+    detail.includes('criterion_conflict') &&
+    (
+      code === 'PGRST204' ||
+      code === '42703' ||
+      detail.includes('column') ||
+      detail.includes('does not exist') ||
+      detail.includes('schema')
+    )
+  );
+}
+
+async function fetchActiveGoalsForContext(requestId) {
+  var querySuffix =
+    '&active=eq.true&order=code.asc';
+
+  var enrichedRes =
+    await rest(
+      '/rest/v1/goals?select=' +
+      GOAL_CONTEXT_CONFLICT_FIELDS +
+      querySuffix
+    );
+
+  var enrichedData =
+    await jsonRes(enrichedRes);
+
+  if (
+    enrichedData.ok === true &&
+    Array.isArray(enrichedData.data)
+  ) {
+    return {
+      ok: true,
+      goals: enrichedData.data,
+      criterionConflictAvailable: true,
+      fallback: false,
+    };
+  }
+
+  if (
+    isCriterionConflictSchemaError(
+      enrichedData
+    )
+  ) {
+    console.warn(
+      '[teacher-ai-builder] [' +
+      requestId +
+      '] criterion_conflict column unavailable; retrying goal context without that field'
+    );
+
+    var fallbackRes =
+      await rest(
+        '/rest/v1/goals?select=' +
+        GOAL_CONTEXT_BASE_FIELDS +
+        querySuffix
+      );
+
+    var fallbackData =
+      await jsonRes(fallbackRes);
+
+    if (
+      fallbackData.ok === true &&
+      Array.isArray(fallbackData.data)
+    ) {
+      return {
+        ok: true,
+        goals: fallbackData.data,
+        criterionConflictAvailable: false,
+        fallback: true,
+      };
+    }
+
+    console.warn(
+      '[teacher-ai-builder] [' +
+      requestId +
+      '] fallback goal query unavailable: ' +
+      fallbackData.status
+    );
+
+    return {
+      ok: false,
+      goals: [],
+      criterionConflictAvailable: false,
+      fallback: true,
+      status: fallbackData.status,
+    };
+  }
+
+  console.warn(
+    '[teacher-ai-builder] [' +
+    requestId +
+    '] goal query unavailable: ' +
+    enrichedData.status
+  );
+
+  return {
+    ok: false,
+    goals: [],
+    criterionConflictAvailable: false,
+    fallback: false,
+    status: enrichedData.status,
+  };
+}
+
 /**
  * Query live student roster, goals, and enrollments from Supabase.
  * Returns a structured context string for injection into the Claude prompt.
@@ -62,10 +216,17 @@ async function buildStudentContext(requestId) {
   }
   var students = Array.isArray(studentsData.data) ? studentsData.data : [];
 
-  // Fetch all active IEP goals (all enriched fields for AI context quality)
-  var goalsRes = await rest('/rest/v1/goals?select=id,student_id,code,desc,goal_area,baseline,mastery,status,active,class_context,data_collector,data_collector_email,measurement_type,notes,case_manager,version,addressed_in_class,individual_delivery&active=eq.true&order=code.asc');
-  var goalsData = await jsonRes(goalsRes);
-  var goals = (goalsData.ok && Array.isArray(goalsData.data)) ? goalsData.data : [];
+  // Fetch active IEP goals with migration-safe criterion metadata.
+  var goalResult =
+    await fetchActiveGoalsForContext(
+      requestId
+    );
+
+  var goals =
+    goalResult.goals;
+
+  var goalsAvailable =
+    goalResult.ok === true;
 
   // Fetch class enrollments
   var enrollRes = await rest('/rest/v1/class_enrollments?select=student_code,class_name,active&active=eq.true');
@@ -91,17 +252,50 @@ async function buildStudentContext(requestId) {
     '',
   ];
 
+  if (goalsAvailable === false) {
+    lines.push(
+      'GOAL DATA STATUS: unavailable — do not infer DESE-only status from missing goal rows.'
+    );
+    lines.push('');
+  } else if (
+    goalResult.criterionConflictAvailable === false
+  ) {
+    lines.push(
+      'CRITERION CONFLICT METADATA STATUS: unavailable in the current schema — do not infer conflicts from differing criterion values.'
+    );
+    lines.push('');
+  }
+
   students.forEach(function(s) {
     var className = classByStudentCode[s.code] || '(unknown class)';
     var studentGoals = goalsByStudentId[s.id] || [];
 
     lines.push(s.code + ' | ' + className + ' | Active');
-    if (studentGoals.length === 0) {
+    if (goalsAvailable === false) {
+      lines.push(
+        '  Goals: Unavailable — goal query failed; do not treat this student as DESE-only.'
+      );
+    } else if (studentGoals.length === 0) {
       lines.push('  Goals: None (DESE-only)');
     } else {
       studentGoals.forEach(function(g) {
         var baseline = g.baseline || 'N/A';
-        var mastery = g.mastery || 'N/A';
+        var headerMastery = g.mastery || 'N/A';
+        var goalTextTarget = g.target || 'N/A';
+        var criterionConflict =
+          g.criterion_conflict === true;
+
+        var criterionParts = [
+          'Header Mastery: ' + headerMastery,
+          'Goal-Text Target: ' + goalTextTarget,
+        ];
+
+        if (criterionConflict) {
+          criterionParts.push(
+            'Criterion Status: Manual Criterion Review Required'
+          );
+        }
+
         var area = g.goal_area || 'N/A';
         var status = g.status || 'Open';
         var measurement = g.measurement_type || '';
@@ -118,7 +312,19 @@ async function buildStudentContext(requestId) {
           'Individual: ' + individual,
           notes ? 'Notes: ' + sanitizeForPrompt(notes, 200) : '',
         ].filter(Boolean).join(' | ');
-        lines.push('  [' + g.code + '] ' + area + ' | ' + baseline + ' → ' + mastery + ' | ' + status + (extra ? ' | ' + extra : ''));
+        lines.push(
+          '  [' +
+          g.code +
+          '] ' +
+          area +
+          ' | Baseline: ' +
+          baseline +
+          ' | ' +
+          criterionParts.join(' | ') +
+          ' | ' +
+          status +
+          (extra ? ' | ' + extra : '')
+        );
       });
     }
     lines.push('');
@@ -368,3 +574,4 @@ exports.handler = async function(event) {
 // Exported for unit testing only
 exports._sanitizeForPrompt = sanitizeForPrompt;
 exports._sanitizeSourceForPrompt = sanitizeSourceForPrompt;
+exports._buildStudentContext = buildStudentContext;

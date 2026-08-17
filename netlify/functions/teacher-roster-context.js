@@ -45,6 +45,20 @@ function isSchemaError(value) {
     normalized.includes('42703');
 }
 
+function isCriterionConflictSchemaError(value) {
+  const text =
+    typeof value === 'string'
+      ? value
+      : JSON.stringify(value || {});
+
+  return (
+    text
+      .toLowerCase()
+      .includes('criterion_conflict') &&
+    isSchemaError(value)
+  );
+}
+
 async function readRows(path) {
   const response =
     await rest(
@@ -93,6 +107,8 @@ function flattenGoals(rows, enriched) {
       code: goal.code,
       desc: goal.desc,
       target: goal.target,
+      criterion_conflict:
+        goal.criterion_conflict === true,
       status: goal.status,
     };
 
@@ -249,7 +265,7 @@ exports.handler =
           '?select=id,code,desc,target,status,student_id,' +
           'measurement_type,data_collector,data_collector_email,' +
           'class_context,goal_area,baseline,mastery,case_manager,' +
-          'version,observation_config,notes,' +
+          'version,observation_config,notes,criterion_conflict,' +
           'addressed_in_class,individual_delivery,' +
           'students!inner(code)' +
           '&active=eq.true' +
@@ -260,9 +276,27 @@ exports.handler =
 
       let enrichedGoals = true;
 
+      // criterion_conflict is safety metadata, not an optional display
+      // enhancement. If that column itself is unavailable, do not erase
+      // the unknown state by falling back to a target-only goal shape.
       if (
-        !goalsResult.ok &&
-        isSchemaError(goalsResult.data)
+        goalsResult.ok === false &&
+        isCriterionConflictSchemaError(
+          goalsResult.data
+        )
+      ) {
+        throw new Error(
+          'goals criterion-conflict metadata unavailable'
+        );
+      }
+
+      // Preserve the established compatibility fallback for unrelated
+      // legacy enriched columns, while retaining criterion_conflict.
+      if (
+        goalsResult.ok === false &&
+        isSchemaError(
+          goalsResult.data
+        )
       ) {
         enrichedGoals = false;
 
@@ -270,6 +304,7 @@ exports.handler =
           await readRows(
             '/rest/v1/goals' +
             '?select=id,code,desc,target,status,student_id,' +
+            'criterion_conflict,' +
             'students!inner(code)' +
             '&active=eq.true' +
             '&or=(status.is.null,' +
@@ -278,7 +313,9 @@ exports.handler =
           );
       }
 
-      if (!goalsResult.ok) {
+      if (
+        goalsResult.ok === false
+      ) {
         throw new Error(
           `goals query failed with status ` +
           `${goalsResult.status}`

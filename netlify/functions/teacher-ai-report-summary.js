@@ -42,7 +42,10 @@ function buildSummarySystemPrompt(audience) {
   return 'You are a professional IEP (Individualized Education Program) meeting facilitator writing an executive summary for an IEP meeting cover page. ' +
     'Write exactly 2-3 focused paragraphs. ' +
     'Paragraph 1: Provide an overall progress overview — highlight the student\'s key strengths and growth areas during the reporting period, referencing goal areas broadly. ' +
-    'Paragraph 2: Provide goal-by-goal highlights — identify which goals are on track or exceeding expectations and which goals need additional attention or intervention. ' +
+    'Paragraph 2: Provide goal-by-goal highlights — identify which ordinary goals are on track or exceeding expectations and which goals need additional attention or intervention. ' +
+    'Some goals may be explicitly marked Criterion Conflict: YES. For those goals, Header Mastery and Goal-Text Target are two competing official source values. ' +
+    'Do not select or infer either value as the controlling criterion. Do not classify a conflicted goal as met, mastered, on track, at target, near mastery, exceeding expectations, or below target. ' +
+    'You may describe raw current performance, baseline, data count, and trend, but you must preserve both source values and state that Manual Criterion Review Required. ' +
     'Paragraph 3: Provide actionable recommendations — ' + (audience === 'parent'
       ? 'offer encouraging next steps and practical ways the family can support continued progress at home.'
       : 'outline specific recommendations for the IEP team, including data-driven adjustments to goals, services, or supports.') + ' ' +
@@ -69,7 +72,20 @@ function buildSummaryUserMessage(studentName, studentCode, goals, quarterLabel, 
   goals.forEach(function(g, i) {
     lines.push('');
     lines.push('Goal ' + (i + 1) + ': [' + sanitizeField(g.code, 20) + '] ' + sanitizeField(g.area, 50));
+    var criterionConflict = g && g.criterion_conflict === true;
+
     lines.push('  Description: ' + sanitizeField(g.description, 500));
+    lines.push('  Baseline: ' + sanitizeField(g.baseline, 50));
+    lines.push('  Criterion Conflict: ' + (criterionConflict ? 'YES' : 'NO'));
+
+    if (criterionConflict) {
+      lines.push('  Header Mastery: ' + sanitizeField(g.header_mastery || 'Not stated', 50));
+      lines.push('  Goal-Text Target: ' + sanitizeField(g.goal_text_target || 'Not stated', 50));
+      lines.push('  Criterion Status: Manual Criterion Review Required');
+    } else {
+      lines.push('  Target: ' + sanitizeField(g.target, 50));
+    }
+
     lines.push('  Current Value: ' + sanitizeField(g.currentValue, 50));
     lines.push('  Data Points Collected: ' + sanitizeField(String(g.dataCount || 0), 10));
     lines.push('  Trend: ' + sanitizeField(g.trend, 30));
@@ -87,6 +103,7 @@ function buildSummaryUserMessage(studentName, studentCode, goals, quarterLabel, 
   }
 
   lines.push('');
+  lines.push('For any goal marked Criterion Conflict: YES, preserve Header Mastery and Goal-Text Target separately, do not decide which criterion controls, and do not assign a criterion-relative status. State Manual Criterion Review Required.');
   lines.push('Write a 2-3 paragraph executive summary covering overall progress, goal highlights, and recommendations.');
 
   return lines.join('\n');

@@ -13,7 +13,7 @@
   const { isRosterLoaded, loadRoster: loadDistrictRoster, translateAndDownload } = await import('/web/district-translator.js');
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import('/web/quarter-utils.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
-  const { parseGoalValue, formatGoalValue } = await import('/web/goal-utils.js');
+  const { parseGoalValue, formatGoalValue, getAutomaticCriterionValue } = await import('/web/goal-utils.js');
   const { parseObservationNotes, formatObservationValue } = await import('/web/obs-utils.js');
   const { getSchedule } = await import('/web/class-schedule.js');
   const { buildItemsFromMeta } = await import('/web/shared-build-items.js');
@@ -1958,9 +1958,16 @@
       const goal = goalMap.get(`${p.student_code}_${p.goal_code}`);
       const issueKey = `${p.student_code}_${p.goal_code}_${p.date}`;
       
-      // Progress > Mastery (using goal.mastery or goal.target as mastery threshold)
-      const masteryThreshold = parseGoalValue(goal.mastery || goal.target);
-      if (goal && masteryThreshold != null && p.percent > masteryThreshold) {
+      // Progress > Mastery is only meaningful when one automatic
+      // criterion is valid. Explicit source conflicts return null here.
+      const masteryThreshold =
+        getAutomaticCriterionValue(goal);
+
+      if (
+        goal &&
+        masteryThreshold != null &&
+        p.percent > masteryThreshold
+      ) {
         const key = `exceeds_mastery_${issueKey}`;
         if (!dismissed.has(key)) {
           issues.push({

@@ -16,7 +16,12 @@
   const { isRosterLoaded, loadRoster, translateAndDownload } = await import("/web/district-translator.js");
   const { getSupabase } = await import("/web/supabase-client.js");
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel, getSchoolYearDateRange, getPeriodLabel, getDateRangeForPeriod } = await import("/web/quarter-utils.js");
-  const { parseGoalValue, isGoalActive, formatGoalValue } = await import("/web/goal-utils.js");
+  const {
+    parseGoalValue,
+    isGoalActive,
+    formatGoalValue,
+    hasCriterionConflict
+  } = await import("/web/goal-utils.js");
   const { parseObservationNotes } = await import("/web/obs-utils.js");
   const { buildItemsFromMeta } = await import("/web/shared-build-items.js");
 
@@ -556,7 +561,15 @@
         (d) =>
           d.status === "Progressing but Not Sufficient" || d.status === "Not Making Progress"
       ).length;
-      const noDataCount = goalSummaryData.filter((d) => d.progress.count === 0).length;
+
+      const manualReviewCount = goalSummaryData.filter(
+        (d) =>
+          d.status === "Manual Criterion Review Required"
+      ).length;
+
+      const noDataCount = goalSummaryData.filter(
+        (d) => d.progress.count === 0
+      ).length;
 
       // Quarterly IEP Progress Summary panel
       const goalDetailRowsHtml = goalSummaryData.map(({ goal, progress, status, narrative }) => {
@@ -565,10 +578,15 @@
           ? (progress.count > 0 ? status : 'No Data')
           : formatGoalValue(progress.average, goal.measurement_type, goal);
         const statusClass =
-          status === "Goal Met" ? "rp-qs-goal-status--met" :
-          status === "Making Adequate Progress" ? "rp-qs-goal-status--adequate" :
-          status === "Progressing but Not Sufficient" ? "rp-qs-goal-status--insufficient" :
-          "rp-qs-goal-status--not-progressing";
+          status === "Manual Criterion Review Required"
+            ? "rp-qs-goal-status--manual-review"
+            : status === "Goal Met"
+              ? "rp-qs-goal-status--met"
+              : status === "Making Adequate Progress"
+                ? "rp-qs-goal-status--adequate"
+                : status === "Progressing but Not Sufficient"
+                  ? "rp-qs-goal-status--insufficient"
+                  : "rp-qs-goal-status--not-progressing";
         return `
           <div class="rp-qs-goal-row">
             <div class="rp-qs-goal-header">
@@ -598,6 +616,10 @@
             <div class="rp-qs-stat rp-qs-needs-support">
               <span class="rp-qs-value">${needsSupportCount}</span>
               <span class="rp-qs-label">Needs Support</span>
+            </div>
+            <div class="rp-qs-stat">
+              <span class="rp-qs-value">${manualReviewCount}</span>
+              <span class="rp-qs-label">Manual Review</span>
             </div>
             <div class="rp-qs-stat rp-qs-no-data">
               <span class="rp-qs-value">${noDataCount}</span>
@@ -630,14 +652,41 @@
       for (const { goal, progress: goalProgressData, prevProgress: prevGoalProgressData, status } of goalSummaryData) {
         const narrative = generateNarrative(student, goal, goalProgressData, prevGoalProgressData);
         const trend = getTrendIndicator(goalProgressData, prevGoalProgressData);
-        const selectedStatusValue = statusValueMap[status] || "adequate";
 
-        const currentDisplay = goal.measurement_type === 'Observation'
-          ? (goalProgressData.count > 0 ? status : 'No Data')
-          : formatGoalValue(goalProgressData.average, goal.measurement_type, goal);
+        const criterionConflict =
+          hasCriterionConflict(goal);
+
+        const selectedStatusValue =
+          criterionConflict
+            ? "manual-review"
+            : (statusValueMap[status] || "adequate");
+
+        const currentDisplay =
+          goal.measurement_type === 'Observation'
+            ? (
+                goalProgressData.count > 0
+                  ? (
+                      criterionConflict
+                        ? `${goalProgressData.count} observation data point${goalProgressData.count !== 1 ? 's' : ''}`
+                        : status
+                    )
+                  : 'No Data'
+              )
+            : formatGoalValue(
+                goalProgressData.average,
+                goal.measurement_type,
+                goal
+              );
 
         const makeOption = (val, label) =>
           `<option value="${val}"${selectedStatusValue === val ? " selected" : ""}>${label}</option>`;
+
+        const criterionTargetsHtml =
+          criterionConflict
+            ? `<div><strong>Header Mastery:</strong> ${escapeHtml(String(goal.mastery ?? 'N/A'))}</div>
+               <div><strong>Goal-Text Target:</strong> ${escapeHtml(String(goal.target ?? 'N/A'))}</div>
+               <div><strong>Criterion Status:</strong> Manual Criterion Review Required</div>`
+            : `<div><strong>Mastery:</strong> ${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</div>`;
 
         html += `
           <div class="rp-goal-card">
@@ -650,8 +699,8 @@
             </div>
             <div class="rp-goal-desc">${escapeHtml(goal.desc || "No description")}</div>
             <div class="rp-goal-targets">
-              <div><strong>Baseline:</strong> ${goal.baseline || 'N/A'}</div>
-              <div><strong>Mastery:</strong> ${goal.mastery || goal.target || 'N/A'}</div>
+              <div><strong>Baseline:</strong> ${escapeHtml(String(goal.baseline || 'N/A'))}</div>
+              ${criterionTargetsHtml}
               <div><strong>Current:</strong> ${currentDisplay}</div>
               <div><strong>Data Points:</strong> ${goalProgressData.count}</div>
             </div>
@@ -662,6 +711,12 @@
             <div class="rp-goal-status">
               <label><strong>Progress Status:</strong></label>
               <select class="rp-status-select" data-goal="${escapeHtml(goal.code)}">
+                ${criterionConflict
+                  ? makeOption(
+                      "manual-review",
+                      "Manual Criterion Review Required"
+                    )
+                  : ""}
                 ${makeOption("adequate", "Making Adequate Progress")}
                 ${makeOption("insufficient", "Progressing but Not Sufficient")}
                 ${makeOption("not-progressing", "Not Making Progress")}
@@ -753,12 +808,31 @@
           : null;
 
         // Simplified language
-        let statusText = "No data collected yet";
-        let statusColor = "#9ca3af";
-        
-        if (goalProgressData.average != null) {
-          const baselineNum = parseGoalValue(goal.baseline) ?? 0;
-          const masteryNum = parseGoalValue(goal.mastery || goal.target) ?? 100;
+        const criterionConflict =
+          hasCriterionConflict(goal);
+
+        let statusText =
+          "No data collected yet";
+
+        let statusColor =
+          "#9ca3af";
+
+        if (criterionConflict) {
+          statusText =
+            "Manual Criterion Review Required";
+
+          statusColor =
+            "#6b7280";
+        } else if (
+          goalProgressData.average != null
+        ) {
+          const baselineNum =
+            parseGoalValue(goal.baseline) ?? 0;
+
+          const masteryNum =
+            parseGoalValue(
+              goal.mastery || goal.target
+            ) ?? 100;
           const progressRange = masteryNum - baselineNum;
           
           // Avoid division by zero when target equals baseline
@@ -789,6 +863,12 @@
           }
         }
 
+        const parentCriterionHtml =
+          criterionConflict
+            ? `<div><strong>Header Mastery:</strong> ${escapeHtml(String(goal.mastery ?? 'N/A'))}</div>
+               <div><strong>Goal-Text Target:</strong> ${escapeHtml(String(goal.target ?? 'N/A'))}</div>`
+            : `<div><strong>Goal:</strong> ${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</div>`;
+
         html += `
           <div class="rp-goal-card">
             <h3 style="margin: 0 0 12px 0; font-size: 16px;">${escapeHtml(goal.goal_area || "Goal")}</h3>
@@ -796,10 +876,10 @@
               <strong>What we're working on:</strong><br/>
               ${escapeHtml(goal.desc || "No description")}
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 12px;">
               <div><strong>Starting point:</strong> ${escapeHtml(String(goal.baseline || 'N/A'))}</div>
               <div><strong>Current:</strong> ${formatGoalValue(goalProgressData.average, goal.measurement_type, goal)}</div>
-              <div><strong>Goal:</strong> ${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</div>
+              ${parentCriterionHtml}
             </div>
             <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; border-left: 4px solid ${statusColor};">
               <strong style="color: ${statusColor};">${statusText}</strong>
@@ -811,6 +891,7 @@
               </div>
             </div>
             ${(() => {
+              if (criterionConflict) return '';
               if (!cachedSkills || !Array.isArray(cachedSkills)) return '';
               const skill = cachedSkills.find(s =>
                 s.plain_language && s.code === goal.code
@@ -880,11 +961,32 @@
           quarterRange
         );
         
-        let status = "❌ No Data";
-        let rowClass = "";
-        
-        if (goalProgressData.average != null) {
-          if (goalProgressData.average >= (parseGoalValue(goal.mastery || goal.target) ?? 80)) {
+        const criterionConflict =
+          hasCriterionConflict(goal);
+
+        let status =
+          "❌ No Data";
+
+        let rowClass =
+          "";
+
+        if (criterionConflict) {
+          status =
+            "Manual Criterion Review Required";
+
+          rowClass =
+            "rp-status-manual-review";
+        } else if (
+          goalProgressData.average != null
+        ) {
+          if (
+            goalProgressData.average >=
+            (
+              parseGoalValue(
+                goal.mastery || goal.target
+              ) ?? 80
+            )
+          ) {
             status = "✅ At Target";
             rowClass = "rp-status-good";
           } else if (goalProgressData.average >= (parseGoalValue(goal.baseline) ?? 0)) {
@@ -896,15 +998,27 @@
           }
         }
 
+        const adminCriterionHtml =
+          criterionConflict
+            ? `<div><strong>Header Mastery:</strong> ${escapeHtml(String(goal.mastery ?? 'N/A'))}</div>
+               <div><strong>Goal-Text Target:</strong> ${escapeHtml(String(goal.target ?? 'N/A'))}</div>`
+            : escapeHtml(
+                String(
+                  goal.mastery ||
+                  goal.target ||
+                  'N/A'
+                )
+              );
+
         html += `
           <tr class="${rowClass}">
             <td><strong>${escapeHtml(goal.code)}</strong></td>
             <td>${escapeHtml(goal.goal_area || "N/A")}</td>
             <td>${escapeHtml(String(goal.baseline || 'N/A'))}</td>
             <td>${formatGoalValue(goalProgressData.average, goal.measurement_type, goal)}</td>
-            <td>${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</td>
+            <td>${adminCriterionHtml}</td>
             <td>${goalProgressData.count}</td>
-            <td>${status}</td>
+            <td>${escapeHtml(status)}</td>
           </tr>
         `;
       }
@@ -955,9 +1069,38 @@
 
     const quarterLabel = getPeriodLabel(tab1State.quarter);
     const quarterDates = getDateRangeForPeriod(tab1State.quarter);
-    const current = formatGoalValue(goalProgressData.average, goal.measurement_type, goal);
-    const baseline = goal.baseline || "N/A";
-    const target = goal.target || "N/A";
+    const current =
+      formatGoalValue(
+        goalProgressData.average,
+        goal.measurement_type,
+        goal
+      );
+
+    const baseline =
+      goal.baseline || "N/A";
+
+    const criterionConflict =
+      hasCriterionConflict(goal);
+
+    const headerMastery =
+      goal.mastery != null &&
+      goal.mastery !== ""
+        ? String(goal.mastery)
+        : "N/A";
+
+    const goalTextTarget =
+      goal.target != null &&
+      goal.target !== ""
+        ? String(goal.target)
+        : "N/A";
+
+    const criterionLines =
+      criterionConflict
+        ? `Baseline: ${baseline} | Current: ${current}
+Header Mastery: ${headerMastery}
+Goal-Text Target: ${goalTextTarget}
+Criterion Status: Manual Criterion Review Required`
+        : `Baseline: ${baseline} | Current: ${current} | Target: ${goalTextTarget}`;
 
     // Calculate previous quarter data for trend and narrative
     const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
@@ -987,7 +1130,7 @@
 
     return `[Goal Code: ${goalCode}] ${goal.goal_area || ""}
 Reporting Period: ${quarterLabel} (${formatDateYYYYMMDD(quarterDates.start)} - ${formatDateYYYYMMDD(quarterDates.end)})
-Baseline: ${baseline} | Current: ${current} | Target: ${target}
+${criterionLines}
 Data Points (${goalProgressData.count}): ${dataPointsStr}
 Method: ${method}
 Status: ${richStatus}
@@ -1033,11 +1176,40 @@ ${narrative}`;
         const prevGp = prevQuarterRange
           ? getGoalProgressForQuarter(goal.code, tab1State.studentCode, prevQuarterRange)
           : null;
-        const { status, narrative } = buildRichProgressNarrative(student, goal, gp, prevGp, tab1State.quarter);
+        const { status, narrative } =
+          buildRichProgressNarrative(
+            student,
+            goal,
+            gp,
+            prevGp,
+            tab1State.quarter
+          );
 
-        // Progress display — respect isParent flag
+        const criterionConflict =
+          hasCriterionConflict(goal);
+
+        const headerMastery =
+          goal.mastery != null &&
+          goal.mastery !== ''
+            ? String(goal.mastery)
+            : 'N/A';
+
+        const goalTextTarget =
+          goal.target != null &&
+          goal.target !== ''
+            ? String(goal.target)
+            : 'N/A';
+
+        // Parent copies remain score-simplified. A conflict must not be
+        // translated into a fixed-threshold "On track" style judgment.
         let progressText;
-        if (isParent) {
+
+        if (criterionConflict && isParent) {
+          progressText =
+            gp.average == null
+              ? 'No data yet'
+              : 'Data collected';
+        } else if (isParent) {
           if (gp.average == null) {
             progressText = 'No data yet';
           } else if (gp.average >= 80) {
@@ -1053,10 +1225,38 @@ ${narrative}`;
             : 'No data';
         }
 
-        const areaLabel = goal.goal_area || goal.area || '';
-        lines.push(`\u2022 ${goal.code}${areaLabel ? ` \u2014 ${areaLabel}` : ''}`);
-        if (goal.desc) lines.push(`  ${goal.desc}`);
-        lines.push(`  Progress: ${progressText}  |  Status: ${status}`);
+        const areaLabel =
+          goal.goal_area ||
+          goal.area ||
+          '';
+
+        lines.push(
+          `\u2022 ${goal.code}${areaLabel ? ` \u2014 ${areaLabel}` : ''}`
+        );
+
+        if (goal.desc) {
+          lines.push(
+            `  ${goal.desc}`
+          );
+        }
+
+        if (criterionConflict) {
+          lines.push(
+            `  Header Mastery: ${headerMastery}`
+          );
+
+          lines.push(
+            `  Goal-Text Target: ${goalTextTarget}`
+          );
+
+          lines.push(
+            '  Criterion Status: Manual Criterion Review Required'
+          );
+        }
+
+        lines.push(
+          `  Progress: ${progressText}  |  Status: ${status}`
+        );
         if (!isParent) {
           lines.push(`  ${narrative}`);
           lines.push(`  Data points: ${gp.count}`);
@@ -1163,12 +1363,22 @@ ${narrative}`;
       const currentDisplay = goal.measurement_type === 'Observation'
         ? (gp.count > 0 ? 'Data collected' : 'No data')
         : (gp.average != null ? String(gp.average.toFixed(1)) : 'No data');
+
+      const criterionConflict =
+        hasCriterionConflict(goal);
+
       return {
         code: goal.code || '',
         area: goal.goal_area || '',
         description: goal.desc || '',
         baseline: String(goal.baseline || ''),
-        target: String(goal.mastery || goal.target || ''),
+        criterion_conflict: criterionConflict,
+        header_mastery: String(goal.mastery ?? ''),
+        goal_text_target: String(goal.target ?? ''),
+        target:
+          criterionConflict
+            ? ''
+            : String(goal.mastery || goal.target || ''),
         currentValue: currentDisplay,
         trend: trend,
         dataCount: gp.count || 0,
@@ -1260,10 +1470,22 @@ ${narrative}`;
       const currentDisplay = goal.measurement_type === 'Observation'
         ? (gp.count > 0 ? 'Data collected' : 'No data')
         : (gp.average != null ? String(gp.average.toFixed(1)) : 'No data');
+
+      const criterionConflict =
+        hasCriterionConflict(goal);
+
       return {
         code: goal.code || '',
         area: goal.goal_area || goal.area || '',
         description: goal.desc || '',
+        baseline: String(goal.baseline || ''),
+        criterion_conflict: criterionConflict,
+        header_mastery: String(goal.mastery ?? ''),
+        goal_text_target: String(goal.target ?? ''),
+        target:
+          criterionConflict
+            ? ''
+            : String(goal.mastery || goal.target || ''),
         currentValue: currentDisplay,
         trend: '—',
         dataCount: gp.count || 0,
@@ -1374,14 +1596,32 @@ ${narrative}`;
     filteredStudents.forEach((student) => {
       const studentGoals = goalsData.filter((g) => g.student_code === student.code && isGoalActive(g));
       studentGoals.forEach((goal) => {
-        const gp = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        const gp =
+          getGoalProgressForQuarter(
+            goal.code,
+            student.code,
+            quarterRange
+          );
+
+        const criterionConflict =
+          hasCriterionConflict(goal);
+
         classGoals.push({
           code: goal.code || '',
           area: goal.goal_area || '',
           description: goal.desc || '',
           baseline: String(goal.baseline || ''),
-          target: String(goal.mastery || goal.target || ''),
-          currentValue: gp.average != null ? String(gp.average.toFixed(1)) : 'No data',
+          criterion_conflict: criterionConflict,
+          header_mastery: String(goal.mastery ?? ''),
+          goal_text_target: String(goal.target ?? ''),
+          target:
+            criterionConflict
+              ? ''
+              : String(goal.mastery || goal.target || ''),
+          currentValue:
+            gp.average != null
+              ? String(gp.average.toFixed(1))
+              : 'No data',
           trend: '—',
           dataCount: gp.count || 0,
         });
@@ -1480,14 +1720,32 @@ ${narrative}`;
     filteredStudents.forEach((student) => {
       const studentGoals = goalsData.filter((g) => g.student_code === student.code && isGoalActive(g));
       studentGoals.forEach((goal) => {
-        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        const goalData =
+          getGoalProgressForQuarter(
+            goal.code,
+            student.code,
+            quarterRange
+          );
+
+        const criterionConflict =
+          hasCriterionConflict(goal);
+
         allGoalsList.push({
           code: goal.code || '',
           area: goal.goal_area || '',
           description: goal.desc || '',
           baseline: String(goal.baseline || ''),
-          target: String(goal.mastery || goal.target || ''),
-          currentValue: goalData.average != null ? String(goalData.average.toFixed(1)) : 'No data',
+          criterion_conflict: criterionConflict,
+          header_mastery: String(goal.mastery ?? ''),
+          goal_text_target: String(goal.target ?? ''),
+          target:
+            criterionConflict
+              ? ''
+              : String(goal.mastery || goal.target || ''),
+          currentValue:
+            goalData.average != null
+              ? String(goalData.average.toFixed(1))
+              : 'No data',
           trend: '—',
           dataCount: goalData.count || 0,
         });
@@ -1899,6 +2157,113 @@ ${narrative}`;
       _ctxParts.push(`data collected by ${goal.data_collector}`);
     }
     const _ctx = _ctxParts.length > 0 ? ' ' + _ctxParts.join('; ') + '.' : '';
+
+    // An explicitly source-conflicted goal has no approved controlling
+    // criterion. Preserve both official values and raw evidence, but do
+    // not produce an automatic target/mastery status.
+    if (hasCriterionConflict(goal)) {
+      const headerMastery =
+        goal.mastery != null &&
+        goal.mastery !== ''
+          ? String(goal.mastery)
+          : 'Not stated';
+
+      const goalTextTarget =
+        goal.target != null &&
+        goal.target !== ''
+          ? String(goal.target)
+          : 'Not stated';
+
+      const criterionStatement =
+        `Header Mastery: ${headerMastery}; Goal-Text Target: ${goalTextTarget}. ` +
+        'Manual Criterion Review Required. Reinisch Classroom does not select either value as the controlling criterion.';
+
+      if (count === 0) {
+        return {
+          narrative:
+            `No performance data was collected for ${name} in the area of ${area} during ${quarter}. ` +
+            criterionStatement +
+            _ctx,
+          status:
+            'Manual Criterion Review Required',
+        };
+      }
+
+      if (
+        goal.measurement_type ===
+        'Observation'
+      ) {
+        return {
+          narrative:
+            `${count} observation data point${count !== 1 ? 's were' : ' was'} recorded for ${name} in the area of ${area} during ${quarter}. ` +
+            criterionStatement +
+            _ctx,
+          status:
+            'Manual Criterion Review Required',
+        };
+      }
+
+      if (avg == null) {
+        return {
+          narrative:
+            `Data was collected for ${name} in the area of ${area} during ${quarter} (${count} data point${count !== 1 ? 's' : ''}), but the recorded values could not be summarized numerically. ` +
+            criterionStatement +
+            _ctx,
+          status:
+            'Manual Criterion Review Required',
+        };
+      }
+
+      const avgDisplay =
+        formatGoalValue(
+          avg,
+          goal.measurement_type,
+          goal
+        );
+
+      const baselineDisplay =
+        goal.baseline != null &&
+        goal.baseline !== ''
+          ? String(goal.baseline)
+          : 'Not stated';
+
+      const prevAvg =
+        prevData &&
+        prevData.average != null
+          ? prevData.average
+          : null;
+
+      let trendStatement =
+        'No previous-period comparison is available.';
+
+      if (prevAvg != null) {
+        const trendDiff =
+          avg - prevAvg;
+
+        if (trendDiff > 2) {
+          trendStatement =
+            'The current-period average is higher than the previous-period average.';
+        } else if (trendDiff < -2) {
+          trendStatement =
+            'The current-period average is lower than the previous-period average.';
+        } else {
+          trendStatement =
+            'The current-period average is generally consistent with the previous-period average.';
+        }
+      }
+
+      return {
+        narrative:
+          `${name} recorded an average of ${avgDisplay} across ${count} data point${count !== 1 ? 's' : ''} during ${quarter}. ` +
+          `Baseline: ${baselineDisplay}. ` +
+          trendStatement +
+          ' ' +
+          criterionStatement +
+          _ctx,
+        status:
+          'Manual Criterion Review Required',
+      };
+    }
 
     // Deterministic phrase picker: same goal → same index variation across templates.
     // Fall back to goal_area + desc when code is missing to preserve uniqueness.
@@ -5251,8 +5616,36 @@ ${narrative}`;
       }
 
       for (const goal of activeGoals) {
-        const data = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
-        const prevData = prevRange ? getGoalProgressForQuarter(goal.code, student.code, prevRange) : null;
+        const data =
+          getGoalProgressForQuarter(
+            goal.code,
+            student.code,
+            quarterRange
+          );
+
+        const prevData =
+          prevRange
+            ? getGoalProgressForQuarter(
+                goal.code,
+                student.code,
+                prevRange
+              )
+            : null;
+
+        const criterionConflict =
+          hasCriterionConflict(goal);
+
+        const headerMastery =
+          goal.mastery != null &&
+          goal.mastery !== ''
+            ? String(goal.mastery)
+            : 'N/A';
+
+        const goalTextTarget =
+          goal.target != null &&
+          goal.target !== ''
+            ? String(goal.target)
+            : 'N/A';
 
         // Trend
         let trendText = 'No data';
@@ -5270,7 +5663,16 @@ ${narrative}`;
 
         // Progress display — respect isParent flag
         let progressText;
-        if (isParent) {
+
+        if (
+          criterionConflict &&
+          isParent
+        ) {
+          progressText =
+            data.average == null
+              ? 'No data yet'
+              : 'Data collected';
+        } else if (isParent) {
           if (data.average == null) {
             progressText = 'No data yet';
           } else if (data.average >= 80) {
@@ -5286,10 +5688,39 @@ ${narrative}`;
             : 'No data';
         }
 
-        const areaLabel = goal.goal_area || goal.area || goal.skill_area || '';
-        lines.push(`\u2022 ${goal.code}${areaLabel ? ` \u2014 ${areaLabel}` : ''}`);
-        if (goal.desc) lines.push(`  ${goal.desc}`);
-        lines.push(`  Progress: ${progressText}  |  Trend: ${trendText}`);
+        const areaLabel =
+          goal.goal_area ||
+          goal.area ||
+          goal.skill_area ||
+          '';
+
+        lines.push(
+          `\u2022 ${goal.code}${areaLabel ? ` \u2014 ${areaLabel}` : ''}`
+        );
+
+        if (goal.desc) {
+          lines.push(
+            `  ${goal.desc}`
+          );
+        }
+
+        if (criterionConflict) {
+          lines.push(
+            `  Header Mastery: ${headerMastery}`
+          );
+
+          lines.push(
+            `  Goal-Text Target: ${goalTextTarget}`
+          );
+
+          lines.push(
+            '  Criterion Status: Manual Criterion Review Required'
+          );
+        }
+
+        lines.push(
+          `  Progress: ${progressText}  |  Trend: ${trendText}`
+        );
         if (!isParent) lines.push(`  Data points this period: ${data.count}`);
         lines.push('');
       }
@@ -5336,11 +5767,54 @@ ${narrative}`;
       lines.push(`  Average score: ${avgScore}%`);
     }
     if (activeGoals.length > 0) {
-      const goalsOnTrack = activeGoals.filter((goal) => {
-        const data = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
-        return data.average != null && data.average >= 70;
-      }).length;
-      lines.push(`  Goals on track: ${goalsOnTrack} of ${activeGoals.length}`);
+      const manualReviewGoals =
+        activeGoals.filter(
+          (goal) =>
+            hasCriterionConflict(goal)
+        );
+
+      const evaluableGoals =
+        activeGoals.filter(
+          (goal) =>
+            !hasCriterionConflict(goal)
+        );
+
+      const goalsOnTrack =
+        evaluableGoals.filter(
+          (goal) => {
+            const data =
+              getGoalProgressForQuarter(
+                goal.code,
+                student.code,
+                quarterRange
+              );
+
+            return (
+              data.average != null &&
+              data.average >= 70
+            );
+          }
+        ).length;
+
+      if (
+        manualReviewGoals.length === 0
+      ) {
+        lines.push(
+          `  Goals on track: ${goalsOnTrack} of ${activeGoals.length}`
+        );
+      } else {
+        if (
+          evaluableGoals.length > 0
+        ) {
+          lines.push(
+            `  Goals on track: ${goalsOnTrack} of ${evaluableGoals.length} evaluable goals`
+          );
+        }
+
+        lines.push(
+          `  Goals requiring manual criterion review: ${manualReviewGoals.length}`
+        );
+      }
     }
     lines.push('');
     lines.push('─'.repeat(50));
