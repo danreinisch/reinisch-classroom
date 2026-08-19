@@ -864,183 +864,182 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
     console.log(`[teacher-issue-draft] [${requestId}] Found class: ${targetClass.name} (ID: ${targetClass.id}, teacher_id: ${targetClass.teacher_id || 'unset'})`);
   }
 
-  // Step 2: Fetch enrollments for this class
-  // Try class_enrollments first (for forward compatibility), then fall back to enrollments table
+  // Step 2: Fetch current active enrollments for this class.
+  // class_enrollments is authoritative for current membership.
+  // The legacy enrollments table is used only when the primary
+  // compatibility surface itself is unavailable.
   let studentIds = [];
   let enrollmentSource = '';
-  
+
   try {
-    // Primary: try class_enrollments table (UUID-based junction table)
-    const classEnrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name,active,archived_at)&class_id=eq.${encodeURIComponent(targetClass.id)}&active=eq.true&students.active=eq.true&students.archived_at=is.null`;
-    
-    console.log(`[teacher-issue-draft] [${requestId}] Fetching class enrollments from class_enrollments table`);
-    
-    const classEnrollmentsResponse = await fetch(classEnrollmentsUrl, {
-      method: 'GET',
-      headers: {
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    const classEnrollmentsUrl =
+      `${SUPABASE_URL}/rest/v1/class_enrollments` +
+      `?select=student_id,students!inner(id,code,name,active,archived_at)` +
+      `&class_id=eq.${encodeURIComponent(targetClass.id)}` +
+      `&active=eq.true` +
+      `&students.active=eq.true` +
+      `&students.archived_at=is.null`;
 
-    let classEnrollments = [];
-    
-    if (!classEnrollmentsResponse.ok) {
-      console.warn(`[teacher-issue-draft] [${requestId}] class_enrollments query returned ${classEnrollmentsResponse.status}, trying enrollments fallback`);
-      
-      // Fallback: query enrollments table (text-based student_code + class_id)
-      const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/enrollments?select=student_code&class_id=eq.${encodeURIComponent(targetClass.id)}`;
-      
-      const enrollmentsResponse = await fetch(enrollmentsUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      });
+    console.log(
+      `[teacher-issue-draft] [${requestId}] ` +
+      'Fetching active class enrollments'
+    );
 
-      if (!enrollmentsResponse.ok) {
-        console.warn(`[teacher-issue-draft] [${requestId}] enrollments fallback also returned ${enrollmentsResponse.status}, returning empty student list`);
-        studentIds = [];
-      } else {
-        const enrollments = await enrollmentsResponse.json();
-        const studentCodes = enrollments.map(e => e.student_code).filter(Boolean);
-
-        console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
-
-        // Validate student codes match expected pattern (alphanumeric, hyphen, underscore)
-        // This prevents injection by ensuring codes can be safely quoted in the query
-        const validCodePattern = /^[a-zA-Z0-9_-]+$/;
-        const validCodes = [];
-        const invalidCodes = [];
-        
-        for (const code of studentCodes) {
-          if (validCodePattern.test(code)) {
-            validCodes.push(code);
-          } else {
-            invalidCodes.push(code);
+    const classEnrollmentsResponse =
+      await fetch(
+        classEnrollmentsUrl,
+        {
+          method: 'GET',
+          headers: {
+            'apikey':
+              SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization':
+              `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type':
+              'application/json'
           }
         }
-        
-        if (invalidCodes.length > 0) {
-          console.warn(`[teacher-issue-draft] [${requestId}] Found invalid student codes (skipping):`, invalidCodes);
-        }
+      );
 
-        if (validCodes.length > 0) {
-          // Look up students by their codes to get UUIDs
-          // For PostgREST 'in' operator with text fields, wrap each value in quotes
-          // Since we've validated that codes only contain [a-zA-Z0-9_-], quoting is safe
-          const quotedCodes = validCodes.map(code => `"${code}"`);
-          const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,active,archived_at&code=in.(${quotedCodes.join(',')})&active=eq.true&archived_at=is.null`;
-          
-          const studentsLookupResponse = await fetch(studentsLookupUrl, {
+    if (classEnrollmentsResponse.ok) {
+      const classEnrollments =
+        await classEnrollmentsResponse.json();
+
+      studentIds =
+        classEnrollments
+          .map(row => row.student_id)
+          .filter(Boolean);
+
+      enrollmentSource =
+        'class_enrollments';
+
+      console.log(
+        `[teacher-issue-draft] [${requestId}] ` +
+        `Found ${studentIds.length} active enrolled students ` +
+        'from class_enrollments'
+      );
+    } else if (
+      classEnrollmentsResponse.status === 400 ||
+      classEnrollmentsResponse.status === 404
+    ) {
+      console.warn(
+        `[teacher-issue-draft] [${requestId}] ` +
+        'class_enrollments compatibility surface unavailable ' +
+        `(${classEnrollmentsResponse.status}); ` +
+        'trying legacy enrollments fallback'
+      );
+
+      const enrollmentsUrl =
+        `${SUPABASE_URL}/rest/v1/enrollments` +
+        `?select=student_code` +
+        `&class_id=eq.${encodeURIComponent(targetClass.id)}`;
+
+      const enrollmentsResponse =
+        await fetch(
+          enrollmentsUrl,
+          {
             method: 'GET',
             headers: {
-              'apikey': SUPABASE_SERVICE_ROLE_KEY,
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-              'Content-Type': 'application/json'
+              'apikey':
+                SUPABASE_SERVICE_ROLE_KEY,
+              'Authorization':
+                `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type':
+                'application/json'
             }
-          });
+          }
+        );
 
-          if (!studentsLookupResponse.ok) {
-            console.warn(`[teacher-issue-draft] [${requestId}] Students lookup failed with status: ${studentsLookupResponse.status}, returning empty student list`);
-            studentIds = [];
+      if (enrollmentsResponse.ok === false) {
+        console.warn(
+          `[teacher-issue-draft] [${requestId}] ` +
+          'legacy enrollments fallback failed with status ' +
+          `${enrollmentsResponse.status}; ` +
+          'returning empty student list'
+        );
+      } else {
+        const enrollments =
+          await enrollmentsResponse.json();
+
+        const studentCodes =
+          enrollments
+            .map(row => row.student_code)
+            .filter(Boolean);
+
+        const validCodePattern =
+          /^[a-zA-Z0-9_-]+$/;
+
+        const validCodes =
+          studentCodes.filter(
+            code => validCodePattern.test(code)
+          );
+
+        if (validCodes.length > 0) {
+          const quotedCodes =
+            validCodes.map(
+              code => `"${code}"`
+            );
+
+          const studentsLookupUrl =
+            `${SUPABASE_URL}/rest/v1/students` +
+            `?select=id,code,active,archived_at` +
+            `&code=in.(${quotedCodes.join(',')})` +
+            `&active=eq.true` +
+            `&archived_at=is.null`;
+
+          const studentsLookupResponse =
+            await fetch(
+              studentsLookupUrl,
+              {
+                method: 'GET',
+                headers: {
+                  'apikey':
+                    SUPABASE_SERVICE_ROLE_KEY,
+                  'Authorization':
+                    `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                  'Content-Type':
+                    'application/json'
+                }
+              }
+            );
+
+          if (studentsLookupResponse.ok) {
+            const studentsFromCodes =
+              await studentsLookupResponse.json();
+
+            studentIds =
+              studentsFromCodes
+                .map(student => student.id)
+                .filter(Boolean);
+
+            enrollmentSource =
+              'enrollments';
           } else {
-            const studentsFromCodes = await studentsLookupResponse.json();
-            studentIds = studentsFromCodes.map(s => s.id).filter(Boolean);
-
-            if (studentIds.length > 0) {
-              enrollmentSource = 'enrollments';
-              console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} student IDs from enrollments table`);
-            }
+            console.warn(
+              `[teacher-issue-draft] [${requestId}] ` +
+              'legacy student lookup failed with status ' +
+              `${studentsLookupResponse.status}; ` +
+              'returning empty student list'
+            );
           }
         }
       }
     } else {
-      classEnrollments = await classEnrollmentsResponse.json();
-      studentIds = classEnrollments.map(e => e.student_id).filter(Boolean);
-
-      if (studentIds.length > 0) {
-        enrollmentSource = 'class_enrollments';
-        console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} enrolled students from class_enrollments table`);
-      } else {
-        // Empty results from class_enrollments, try enrollments fallback
-        console.log(`[teacher-issue-draft] [${requestId}] No enrollments in class_enrollments, trying enrollments table`);
-        
-        const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/enrollments?select=student_code&class_id=eq.${encodeURIComponent(targetClass.id)}`;
-        
-        const enrollmentsResponse = await fetch(enrollmentsUrl, {
-          method: 'GET',
-          headers: {
-            'apikey': SUPABASE_SERVICE_ROLE_KEY,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!enrollmentsResponse.ok) {
-          console.warn(`[teacher-issue-draft] [${requestId}] enrollments fallback also returned ${enrollmentsResponse.status}, returning empty student list`);
-          studentIds = [];
-        } else {
-          const enrollments = await enrollmentsResponse.json();
-          const studentCodes = enrollments.map(e => e.student_code).filter(Boolean);
-
-          console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
-
-          // Validate student codes match expected pattern (alphanumeric, hyphen, underscore)
-          // This prevents injection by ensuring codes can be safely quoted in the query
-          const validCodePattern = /^[a-zA-Z0-9_-]+$/;
-          const validCodes = [];
-          const invalidCodes = [];
-          
-          for (const code of studentCodes) {
-            if (validCodePattern.test(code)) {
-              validCodes.push(code);
-            } else {
-              invalidCodes.push(code);
-            }
-          }
-          
-          if (invalidCodes.length > 0) {
-            console.warn(`[teacher-issue-draft] [${requestId}] Found invalid student codes (skipping):`, invalidCodes);
-          }
-
-          if (validCodes.length > 0) {
-            // Look up students by their codes to get UUIDs
-            // For PostgREST 'in' operator with text fields, wrap each value in quotes
-            // Since we've validated that codes only contain [a-zA-Z0-9_-], quoting is safe
-            const quotedCodes = validCodes.map(code => `"${code}"`);
-            const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,active,archived_at&code=in.(${quotedCodes.join(',')})&active=eq.true&archived_at=is.null`;
-            
-            const studentsLookupResponse = await fetch(studentsLookupUrl, {
-              method: 'GET',
-              headers: {
-                'apikey': SUPABASE_SERVICE_ROLE_KEY,
-                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                'Content-Type': 'application/json'
-              }
-            });
-
-            if (!studentsLookupResponse.ok) {
-              console.warn(`[teacher-issue-draft] [${requestId}] Students lookup failed with status: ${studentsLookupResponse.status}, returning empty student list`);
-              studentIds = [];
-            } else {
-              const studentsFromCodes = await studentsLookupResponse.json();
-              studentIds = studentsFromCodes.map(s => s.id).filter(Boolean);
-
-              if (studentIds.length > 0) {
-                enrollmentSource = 'enrollments';
-                console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} student IDs from enrollments table`);
-              }
-            }
-          }
-        }
-      }
+      console.warn(
+        `[teacher-issue-draft] [${requestId}] ` +
+        'class_enrollments query failed with status ' +
+        `${classEnrollmentsResponse.status}; ` +
+        'refusing legacy enrollment fallback'
+      );
     }
   } catch (err) {
-    console.warn(`[teacher-issue-draft] [${requestId}] Enrollment query error:`, err.message, '— returning empty student list');
+    console.warn(
+      `[teacher-issue-draft] [${requestId}] ` +
+      'Enrollment query error:',
+      err.message,
+      '— returning empty student list'
+    );
+
     studentIds = [];
   }
 
