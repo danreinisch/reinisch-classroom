@@ -512,6 +512,8 @@ const local = {
       // Add class_name if not present
       const results = [];
       for (const e of storedEnrollments) {
+        if (e.active === false) continue;
+
         const classCode = e.class_code || e.class_id || '';
         const className = e.class_name || classCode || '';
         const canonicalNames = mapToCanonicalNames(classCode, className);
@@ -566,14 +568,23 @@ const local = {
   
   async upsertClassEnrollment(enrollment) {
     const enrollments = store.get('classEnrollments', []);
-    const existing = enrollments.find(e => 
-      e.class_id === enrollment.class_id && e.student_code === enrollment.student_code
+    const normalized = {
+      ...enrollment,
+      active: true
+    };
+    const existing = enrollments.find(e =>
+      e.class_id === normalized.class_id &&
+      e.student_code === normalized.student_code
     );
-    if (!existing) {
-      enrollments.push(enrollment);
-      store.set('classEnrollments', enrollments);
+
+    if (existing) {
+      Object.assign(existing, normalized);
+    } else {
+      enrollments.push(normalized);
     }
-    return enrollment;
+
+    store.set('classEnrollments', enrollments);
+    return normalized;
   },
   
   // Phase B: HTML Package Upload (local stub - stores manifest but not actual files)
@@ -2059,106 +2070,44 @@ const remote = {
         ? context.class_enrollments
         : [];
 
-    if (enrollments.length > 0) {
-      const results = [];
-
-      for (const enrollment of enrollments) {
-        if (
-          !enrollment ||
-          !enrollment.students ||
-          !enrollment.classes
-        ) {
-          continue;
-        }
-
-        const student =
-          Array.isArray(enrollment.students)
-            ? enrollment.students[0]
-            : enrollment.students;
-
-        const classRow =
-          Array.isArray(enrollment.classes)
-            ? enrollment.classes[0]
-            : enrollment.classes;
-
-        if (!student || !classRow) {
-          continue;
-        }
-
-        const classCode =
-          classRow.code || '';
-
-        const className =
-          classRow.name || '';
-
-        const canonicalNames =
-          mapToCanonicalNames(
-            classCode,
-            className
-          );
-
-        for (
-          const canonicalName
-          of canonicalNames
-        ) {
-          results.push({
-            class_id:
-              enrollment.class_id,
-            class_code:
-              classCode,
-            class_name:
-              canonicalName,
-            student_code:
-              student.code || '',
-            student_name:
-              student.name ||
-              student.code ||
-              ''
-          });
-        }
-      }
-
-      return results;
-    }
-
-    const students =
-      Array.isArray(context.students)
-        ? context.students
-        : [];
-
-    const classes =
-      Array.isArray(context.classes)
-        ? context.classes
-        : [];
-
-    const classMap =
-      new Map(
-        classes.map(
-          (classRow) => [
-            classRow.id,
-            classRow
-          ]
-        )
-      );
-
     const results = [];
 
-    for (const student of students) {
-      if (!student || !student.class_id) {
+    for (const enrollment of enrollments) {
+      if (
+        enrollment == null ||
+        enrollment.students == null ||
+        enrollment.classes == null
+      ) {
         continue;
       }
+
+      const student =
+        Array.isArray(enrollment.students)
+          ? enrollment.students[0]
+          : enrollment.students;
 
       const classRow =
-        classMap.get(student.class_id);
+        Array.isArray(enrollment.classes)
+          ? enrollment.classes[0]
+          : enrollment.classes;
 
-      if (!classRow) {
+      if (
+        student == null ||
+        classRow == null
+      ) {
         continue;
       }
+
+      const classCode =
+        classRow.code || '';
+
+      const className =
+        classRow.name || '';
 
       const canonicalNames =
         mapToCanonicalNames(
-          classRow.code,
-          classRow.name
+          classCode,
+          className
         );
 
       for (
@@ -2167,9 +2116,9 @@ const remote = {
       ) {
         results.push({
           class_id:
-            student.class_id,
+            enrollment.class_id,
           class_code:
-            classRow.code,
+            classCode,
           class_name:
             canonicalName,
           student_code:
@@ -2184,6 +2133,7 @@ const remote = {
 
     return results;
   },
+
   async upsertClass(classData) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
@@ -2214,7 +2164,7 @@ const remote = {
     const { error } = await supabase
       .from('class_enrollments')
       .upsert(
-        { class_id: enrollment.class_id, student_id: studentId },
+        { class_id: enrollment.class_id, student_id: studentId, active: true },
         { onConflict: 'class_id,student_id' }
       );
     if (error) throw error;

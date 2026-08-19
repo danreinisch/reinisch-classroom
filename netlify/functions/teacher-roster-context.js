@@ -327,14 +327,14 @@ exports.handler =
           '/rest/v1/class_enrollments' +
           '?select=class_id,student_id,' +
           'students!inner(code,name),' +
-          'classes!inner(id,code,name)'
+          'classes!inner(id,code,name)' +
+          '&active=eq.true'
         );
 
-      if (!enrollmentResult.ok) {
-        console.warn(
-          `[teacher-roster-context] [${requestId}] ` +
-          'class_enrollments query unavailable; ' +
-          'browser fallback will use students.class_id'
+      if (enrollmentResult.ok === false) {
+        throw new Error(
+          `class_enrollments query failed with status ` +
+          `${enrollmentResult.status}`
         );
       }
 

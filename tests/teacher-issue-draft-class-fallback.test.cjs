@@ -193,10 +193,16 @@ await test('uses fallback name-only query when teacher-scoped query returns empt
     },
     // 4. Any subsequent call (enrollment fetch, etc.) — signal end of the relevant flow
     //    by returning a benign empty result so the function can proceed or fail gracefully.
-    () => okJson([]),   // class_enrollments query
-    () => okJson([]),   // enrollments fallback
-    // Assignment duplicate check
-    () => okJson([]),
+    (url) => {
+      assert(url.includes('/rest/v1/class_enrollments?'), 'Expected class_enrollments query');
+      assert(url.includes('active=eq.true'), 'Expected active enrollment filter');
+      return okJson([]);
+    },
+    // Successful empty active roster is authoritative.
+    (url) => {
+      assert(url.includes('/rest/v1/assignments?'), 'Expected duplicate assignment lookup after empty active roster');
+      return okJson([]);
+    },
     // Assignment create — returns the new assignment so the function can proceed to PATCH
     () => okJson([{ id: 'assignment-fb-001', title: 'Week 10 Test' }]),
     // Trailing teacher_drafts PATCH from PR #1296 — issued_at stamp
@@ -247,10 +253,11 @@ await test('does NOT trigger fallback when teacher-scoped query returns the clas
       }
       return okJson([]);
     },
-    // 3. enrollments fallback → empty
-    () => okJson([]),
-    // 4. Duplicate check → no existing assignment
-    () => okJson([]),
+    // Successful empty active roster is authoritative.
+    (url) => {
+      assert(url.includes('/rest/v1/assignments?'), 'Expected duplicate assignment lookup after empty active roster');
+      return okJson([]);
+    },
     // 5. Assignment create → success
     () => okJson([{ id: 'assignment-no-fallback-001', title: 'Week 10 Test' }]),
     // Trailing teacher_drafts PATCH from PR #1296 — issued_at stamp
@@ -287,12 +294,17 @@ await test('auto-creates class when neither teacher-scoped nor fallback query fi
       autoCreateCalled = true;
       return okJson([{ id: 'new-class-id', name: 'Language Arts 3 SC', teacher_id: TEACHER_UUID }]);
     },
-    // 4. class_enrollments → empty
-    () => okJson([]),
-    // 5. enrollments fallback → empty
-    () => okJson([]),
-    // 6. Duplicate check → no existing assignment
-    () => okJson([]),
+    // 4. class_enrollments → empty active roster
+    (url) => {
+      assert(url.includes('/rest/v1/class_enrollments?'), 'Expected class_enrollments query');
+      assert(url.includes('active=eq.true'), 'Expected active enrollment filter');
+      return okJson([]);
+    },
+    // Successful empty active roster is authoritative.
+    (url) => {
+      assert(url.includes('/rest/v1/assignments?'), 'Expected duplicate assignment lookup after empty active roster');
+      return okJson([]);
+    },
     // 7. Assignment create → success
     () => okJson([{ id: 'assignment-autocreate-001', title: 'Week 10 Test' }]),
     // Trailing teacher_drafts PATCH from PR #1296 — issued_at stamp
@@ -338,10 +350,12 @@ await test('returns 422 when file-type draft content has no DAY/Chapter headers'
   _fetchQueue = [
     // 1. Teacher-scoped class lookup → class found directly (no fallback)
     () => okJson([{ id: 'class-uuid-w13', name: 'Language Arts 3 SC', teacher_id: TEACHER_UUID }]),
-    // 2. class_enrollments → empty (simplify: zero students enrolled)
-    () => okJson([]),
-    // 3. Enrollments fallback → also empty
-    () => okJson([]),
+    // 2. class_enrollments → empty active roster
+    (url) => {
+      assert(url.includes('/rest/v1/class_enrollments?'), 'Expected class_enrollments query');
+      assert(url.includes('active=eq.true'), 'Expected active enrollment filter');
+      return okJson([]);
+    },
     // The 422 should be returned BEFORE the duplicate-check/assignment-create fetches.
     // Any unexpected fetch beyond this point will throw (queue is empty).
     ...REMAINING_CALL_STUBS,

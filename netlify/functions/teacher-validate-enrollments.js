@@ -31,12 +31,13 @@ const { SESSION_SECRET } = process.env;
 
 /**
  * Fetch the list of enrolled student codes for a given class ID.
- * Tries class_enrollments first, falls back to enrollments table.
+ * Uses active class_enrollments as authoritative current membership.
+ * Uses legacy enrollments only when the primary compatibility surface is unavailable.
  * Returns an array of student code strings, or null if class was not found.
  */
 async function fetchEnrolledCodes(classId, requestId) {
   // Primary: class_enrollments (UUID-based junction table with embedded student info)
-  const classEnrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=students!inner(code)&class_id=eq.${encodeURIComponent(classId)}`;
+  const classEnrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=students!inner(code)&class_id=eq.${encodeURIComponent(classId)}&active=eq.true`;
 
   const ceResponse = await fetch(classEnrollmentsUrl, {
     method: 'GET',
@@ -50,14 +51,15 @@ async function fetchEnrolledCodes(classId, requestId) {
   if (ceResponse.ok) {
     const rows = await ceResponse.json();
     const codes = rows.filter(r => r.students && r.students.code).map(r => r.students.code);
-    if (codes.length > 0) {
-      console.log(`[teacher-validate-enrollments] [${requestId}] Found ${codes.length} students via class_enrollments for class ${classId}`);
-      return codes;
-    }
-    // Empty class_enrollments — try fallback
-    console.log(`[teacher-validate-enrollments] [${requestId}] class_enrollments empty for ${classId}, trying enrollments fallback`);
+    console.log(`[teacher-validate-enrollments] [${requestId}] Found ${codes.length} active students via class_enrollments for class ${classId}`);
+    return codes;
+  }
+
+  if (ceResponse.status === 400 || ceResponse.status === 404) {
+    console.warn(`[teacher-validate-enrollments] [${requestId}] class_enrollments compatibility surface unavailable (${ceResponse.status}), trying legacy enrollments fallback`);
   } else {
-    console.warn(`[teacher-validate-enrollments] [${requestId}] class_enrollments query failed (${ceResponse.status}), trying enrollments fallback`);
+    console.warn(`[teacher-validate-enrollments] [${requestId}] class_enrollments query failed (${ceResponse.status}); refusing legacy enrollment fallback`);
+    return [];
   }
 
   // Fallback: enrollments table (text-based student_code + class_id)
