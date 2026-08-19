@@ -42,7 +42,10 @@ function buildNarrativeSystemPrompt(audience) {
   return 'You are a professional IEP (Individualized Education Program) progress narrative writer. ' +
     'Your role is to generate clear, accurate, data-driven progress narratives for IEP quarterly reports. ' +
     'Write exactly one paragraph per goal, in the order provided. ' +
-    'Each paragraph must reference the goal description, baseline, target, current performance, data count, and trend. ' +
+    'For ordinary goals, each paragraph must reference the goal description, baseline, target, current performance, data count, and trend. ' +
+    'Some goals may be explicitly marked Criterion Conflict: YES. For those goals, Header Mastery and Goal-Text Target are two competing official source values. ' +
+    'Do not select or infer either value as the controlling criterion. Do not describe a conflicted goal as met, mastered, on track, at target, near mastery, or otherwise make a criterion-relative judgment. ' +
+    'Instead, report raw current performance, baseline, data count, and trend, preserve both official criterion values, and state that Manual Criterion Review Required. ' +
     'Be specific about numbers and progress. Do not fabricate data. ' +
     toneGuidance + ' ' +
     'Output only the narrative paragraphs — no headers, no bullet points, no preamble or postamble. ' +
@@ -66,9 +69,20 @@ function buildNarrativeUserMessage(studentName, studentCode, goals, scores, quar
   goals.forEach(function(g, i) {
     lines.push('');
     lines.push('Goal ' + (i + 1) + ': [' + sanitizeField(g.code, 20) + '] ' + sanitizeField(g.area, 50));
+    var criterionConflict = g && g.criterion_conflict === true;
+
     lines.push('  Description: ' + sanitizeField(g.description, 500));
     lines.push('  Baseline: ' + sanitizeField(g.baseline, 50));
-    lines.push('  Target: ' + sanitizeField(g.target, 50));
+    lines.push('  Criterion Conflict: ' + (criterionConflict ? 'YES' : 'NO'));
+
+    if (criterionConflict) {
+      lines.push('  Header Mastery: ' + sanitizeField(g.header_mastery || 'Not stated', 50));
+      lines.push('  Goal-Text Target: ' + sanitizeField(g.goal_text_target || 'Not stated', 50));
+      lines.push('  Criterion Status: Manual Criterion Review Required');
+    } else {
+      lines.push('  Target: ' + sanitizeField(g.target, 50));
+    }
+
     lines.push('  Current Value: ' + sanitizeField(g.currentValue, 50));
     lines.push('  Data Points Collected: ' + sanitizeField(String(g.dataCount || 0), 10));
     lines.push('  Trend: ' + sanitizeField(g.trend, 30));
@@ -83,6 +97,7 @@ function buildNarrativeUserMessage(studentName, studentCode, goals, scores, quar
   }
 
   lines.push('');
+  lines.push('For any goal marked Criterion Conflict: YES, preserve Header Mastery and Goal-Text Target exactly as separate values, make no criterion-relative status judgment, and state Manual Criterion Review Required.');
   lines.push('Write one narrative paragraph per goal in the order listed above. Separate paragraphs with a blank line.');
 
   return lines.join('\n');

@@ -15,6 +15,7 @@
   // Import data adapter
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
+  const { hasCriterionConflict } = await import('/web/goal-utils.js');
 
   // State
   let archivedStudents = [];
@@ -65,6 +66,56 @@
     if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  /**
+   * Preserve official criterion values without choosing between them
+   * when the source explicitly marks a conflict.
+   */
+  function getArchiveCriterionDisplay(goal) {
+    const isConflict =
+      hasCriterionConflict(goal);
+
+    if (isConflict) {
+      const masteryValue =
+        goal?.mastery == null ||
+        goal.mastery === ''
+          ? 'N/A'
+          : String(goal.mastery);
+
+      const targetValue =
+        goal?.target == null ||
+        goal.target === ''
+          ? 'N/A'
+          : String(goal.target);
+
+      return {
+        isConflict: true,
+        masteryLabel: 'Header Mastery',
+        masteryValue,
+        targetLabel: 'Goal-Text Target',
+        targetValue,
+        status: 'Manual Criterion Review Required',
+      };
+    }
+
+    return {
+      isConflict: false,
+      masteryLabel: 'Mastery',
+      masteryValue:
+        String(
+          goal?.mastery ||
+          goal?.target ||
+          'N/A'
+        ),
+      targetLabel: 'Target',
+      targetValue:
+        String(
+          goal?.target ||
+          'N/A'
+        ),
+      status: '',
+    };
   }
 
   /**
@@ -300,6 +351,11 @@
       // Sort by version descending (latest first)
       versions.sort((a, b) => (b.version || 1) - (a.version || 1));
       const latest = versions[0];
+
+      const criterion =
+        getArchiveCriterionDisplay(
+          latest
+        );
       const hasVersions = versions.length > 1;
 
       // Calculate final average from progress data
@@ -321,7 +377,13 @@
           <div class="ar-goal-stats">
             <span>Baseline: ${escapeHtml(String(latest.baseline || 'N/A'))}</span>
             <span>→</span>
-            <span>Mastery: ${escapeHtml(String(latest.mastery || latest.target || 'N/A'))}</span>
+            <span>${escapeHtml(criterion.masteryLabel)}: ${escapeHtml(criterion.masteryValue)}</span>
+            ${criterion.isConflict
+              ? `<span>→</span>
+                 <span>${escapeHtml(criterion.targetLabel)}: ${escapeHtml(criterion.targetValue)}</span>
+                 <span>→</span>
+                 <span>Criterion Status: ${escapeHtml(criterion.status)}</span>`
+              : ''}
             <span>→</span>
             <span>Final Avg: ${finalAvg}${finalAvg !== 'N/A' ? '%' : ''}</span>
           </div>
@@ -591,15 +653,30 @@
       </tr>
     </thead>
     <tbody>
-      ${goals.map(g => `
+      ${goals.map(g => {
+        const criterion =
+          getArchiveCriterionDisplay(g);
+
+        const masteryCell =
+          criterion.isConflict
+            ? `Header Mastery: ${escapeXml(criterion.masteryValue)}`
+            : escapeXml(criterion.masteryValue);
+
+        const targetCell =
+          criterion.isConflict
+            ? `Goal-Text Target: ${escapeXml(criterion.targetValue)}<br/><strong>Criterion Status:</strong> ${escapeXml(criterion.status)}`
+            : escapeXml(criterion.targetValue);
+
+        return `
       <tr>
         <td>${escapeXml(g.code)}</td>
         <td>${escapeXml(g.goal_area || 'N/A')}</td>
         <td>${escapeXml(g.desc || 'N/A')}</td>
         <td>${escapeXml(String(g.baseline || 'N/A'))}</td>
-        <td>${escapeXml(String(g.mastery || g.target || 'N/A'))}</td>
-        <td>${escapeXml(String(g.target || 'N/A'))}</td>
-      </tr>`).join('')}
+        <td>${masteryCell}</td>
+        <td>${targetCell}</td>
+      </tr>`;
+      }).join('')}
     </tbody>
   </table>`}
   

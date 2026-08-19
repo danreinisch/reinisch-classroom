@@ -8,7 +8,12 @@
   const { db } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
   const { getCurrentQuarter, getQuarterDateRange, getQuarterDates, saveQuarterDates, DEFAULT_QUARTER_DATES, getQuarterLabel, parseQuarterDate } = await import('/web/quarter-utils.js');
-  const { parseGoalValue, formatGoalValue } = await import('/web/goal-utils.js');
+  const {
+    parseGoalValue,
+    formatGoalValue,
+    hasCriterionConflict,
+    getAutomaticCriterionValue
+  } = await import('/web/goal-utils.js');
   const { getSchedule } = await import('/web/class-schedule.js');
   const { formatObservationValue, parseObservationNotes } = await import('/web/obs-utils.js');
   const { getGoalStaleness, getStudentHealthDot, formatRelativeTime } = await import('/web/staleness-utils.js');
@@ -910,8 +915,13 @@
       const pValue = rawValue != null ? parseFloat(rawValue) : null;
 
       if (goal && pValue != null && !isNaN(pValue)) {
-        const masteryThreshold = parseGoalValue(goal.mastery || goal.target);
-        if (masteryThreshold != null && pValue > masteryThreshold) {
+        const masteryThreshold =
+          getAutomaticCriterionValue(goal);
+
+        if (
+          masteryThreshold != null &&
+          pValue > masteryThreshold
+        ) {
           const key = `exceeds_mastery_${issueKey}`;
           if (!dismissed.has(key)) {
             issues.push({
@@ -1147,10 +1157,15 @@
             const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
             totalProgressSum += avg;
             progressCount++;
-            const mastery = parseGoalValue(goal.mastery || goal.target);
-            if (mastery != null) {
-              if (avg >= mastery) onTrack++;
-              else belowTarget++;
+            const automaticCriterion =
+              getAutomaticCriterionValue(goal);
+
+            if (automaticCriterion != null) {
+              if (avg >= automaticCriterion) {
+                onTrack++;
+              } else {
+                belowTarget++;
+              }
             }
           }
         }
@@ -2026,9 +2041,13 @@
 
     if (goal.measurement_type === 'Observation') return noop;
 
-    const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);
-    const baselineNum = parseGoalValue(goal.baseline);
-    if (masteryNum == null || baselineNum == null) return noop;
+    const masteryNum =
+      getAutomaticCriterionValue(goal);
+
+    const baselineNum =
+      parseGoalValue(goal.baseline);
+
+    if (baselineNum == null) return noop;
 
     const trendCutoff = new Date();
     trendCutoff.setDate(trendCutoff.getDate() - ALERT_TREND_WINDOW);
@@ -2048,21 +2067,45 @@
     const currentNum = values[0];
     const avgValue = values.reduce((s, v) => s + v, 0) / values.length;
 
-    // Mastery detection: count consecutive recent points at or above mastery
+    // Automatic mastery judgments require an unambiguous criterion.
+    // Baseline-based regression and stalled analysis remain available.
     let consecutiveAboveMastery = 0;
-    if (masteryNum > baselineNum) {
+
+    if (
+      masteryNum != null &&
+      masteryNum > baselineNum
+    ) {
       for (const v of values) {
-        if (v >= masteryNum) consecutiveAboveMastery++;
-        else break;
+        if (v >= masteryNum) {
+          consecutiveAboveMastery++;
+        } else {
+          break;
+        }
       }
     }
-    const isMastered = consecutiveAboveMastery >= 3 && avgValue >= masteryNum;
 
-    // Approaching mastery: avg within 10% of mastery-baseline range (but not yet mastered)
-    const range = masteryNum - baselineNum;
-    const nearThreshold = masteryNum - Math.abs(range) * 0.1;
-    const isApproachingMastery = !isMastered && masteryNum > baselineNum
-      && avgValue >= nearThreshold && avgValue < masteryNum;
+    const isMastered =
+      masteryNum != null &&
+      consecutiveAboveMastery >= 3 &&
+      avgValue >= masteryNum;
+
+    const range =
+      masteryNum != null
+        ? masteryNum - baselineNum
+        : null;
+
+    const nearThreshold =
+      range != null
+        ? masteryNum - Math.abs(range) * 0.1
+        : null;
+
+    const isApproachingMastery =
+      masteryNum != null &&
+      nearThreshold != null &&
+      !isMastered &&
+      masteryNum > baselineNum &&
+      avgValue >= nearThreshold &&
+      avgValue < masteryNum;
 
     // Regression / stalled detection
     const last3 = values.slice(0, 3);
@@ -3869,9 +3912,40 @@
    */
   function buildProgressStatsEl(goal, entries) {
     const avg = calcProgressAvg(entries);
-    const baseline = goal.baseline != null ? String(goal.baseline) : 'N/A';
-    const mastery = goal.mastery != null ? String(goal.mastery) : (goal.target != null ? String(goal.target) : 'N/A');
-    const target = goal.target != null ? String(goal.target) : 'N/A';
+
+    const criterionConflict =
+      hasCriterionConflict(goal);
+
+    const masteryLabel =
+      criterionConflict
+        ? 'Header Mastery'
+        : 'Mastery';
+
+    const targetLabel =
+      criterionConflict
+        ? 'Goal-Text Target'
+        : 'Target';
+
+    const baseline =
+      goal.baseline != null
+        ? String(goal.baseline)
+        : 'N/A';
+
+    const mastery =
+      goal.mastery != null
+        ? String(goal.mastery)
+        : (
+            !criterionConflict &&
+            goal.target != null
+          )
+          ? String(goal.target)
+          : 'N/A';
+
+    const target =
+      goal.target != null
+        ? String(goal.target)
+        : 'N/A';
+
     const current = entries.length > 0 ? parseFloat(entries[entries.length - 1].value) : null;
     const baselineNum = parseGoalValue(goal.baseline) ?? 0;
     const delta = current != null ? current - baselineNum : null;
@@ -3906,8 +3980,8 @@
       const avgDisplay = avg != null ? `${avg.toFixed(0)}%` : 'N/A';
       const avgClass = progressScoreColorClass(avg);
       statsDiv.appendChild(makeStatSpan('Baseline', baseline, ''));
-      statsDiv.appendChild(makeStatSpan('Mastery', mastery, ''));
-      statsDiv.appendChild(makeStatSpan('Target', target, ''));
+      statsDiv.appendChild(makeStatSpan(masteryLabel, mastery, ''));
+      statsDiv.appendChild(makeStatSpan(targetLabel, target, ''));
       statsDiv.appendChild(makeStatSpan('Current', currentDisplay, ''));
       statsDiv.appendChild(makeStatSpan('Avg', avgDisplay, avgClass));
       statsDiv.appendChild(makeStatSpan('Trend', trend, ''));
@@ -3918,12 +3992,22 @@
       const avgDisplay = avg != null ? formatGoalValue(avg, goal.measurement_type, goal) : 'N/A';
       const deltaDisplay = delta != null ? (delta >= 0 ? '+' : '') + delta.toFixed(1) : 'N/A';
       statsDiv.appendChild(makeStatSpan('Baseline', baseline, ''));
-      statsDiv.appendChild(makeStatSpan('Mastery', mastery, ''));
-      statsDiv.appendChild(makeStatSpan('Target', target, ''));
+      statsDiv.appendChild(makeStatSpan(masteryLabel, mastery, ''));
+      statsDiv.appendChild(makeStatSpan(targetLabel, target, ''));
       statsDiv.appendChild(makeStatSpan('Current', currentDisplay, currentClass));
       statsDiv.appendChild(makeStatSpan('Rolling Avg', avgDisplay, avgClass));
       statsDiv.appendChild(makeStatSpan('Delta', deltaDisplay, ''));
       statsDiv.appendChild(makeStatSpan('Trend', trend, ''));
+    }
+
+    if (criterionConflict) {
+      statsDiv.appendChild(
+        makeStatSpan(
+          'Criterion Status',
+          'Manual Criterion Review Required',
+          ''
+        )
+      );
     }
 
     return statsDiv;
@@ -4346,7 +4430,48 @@
     body.appendChild(mkPara('Student', (student.name || student.code) + ' (' + student.code + ')'));
     body.appendChild(mkPara('Goal Area', goal.goal_area || 'Uncategorized'));
     body.appendChild(mkPara('Baseline', goal.baseline != null ? String(goal.baseline) : 'N/A'));
-    body.appendChild(mkPara('Target', goal.target != null ? String(goal.target) : 'N/A'));
+
+    if (hasCriterionConflict(goal)) {
+      body.appendChild(
+        mkPara(
+          'Header Mastery',
+          goal.mastery != null
+            ? String(goal.mastery)
+            : 'N/A'
+        )
+      );
+
+      body.appendChild(
+        mkPara(
+          'Goal-Text Target',
+          goal.target != null
+            ? String(goal.target)
+            : 'N/A'
+        )
+      );
+
+      const reviewNote =
+        stEl(
+          'p',
+          'st-goal-criterion-review'
+        );
+
+      reviewNote.textContent =
+        'Manual Criterion Review Required: the official IEP lists competing criteria, so no automatic mastery judgment is used.';
+
+      body.appendChild(
+        reviewNote
+      );
+    } else {
+      body.appendChild(
+        mkPara(
+          'Target',
+          goal.target != null
+            ? String(goal.target)
+            : 'N/A'
+        )
+      );
+    }
 
     // Work samples section header
     const samplesH4 = stEl('h4', null, 'Work Samples');
@@ -5558,6 +5683,52 @@
     // Compute mastery / regression / stalled alert status for this goal
     const alertStatus = computeGoalAlertStatus(goal);
 
+    const criterionConflict =
+      hasCriterionConflict(goal);
+
+    const criterionReviewHtml =
+      criterionConflict
+        ? `<div class="st-goal-criterion-review" role="note">
+            <strong>Manual Criterion Review Required</strong>
+            <span>Header Mastery and Goal-Text Target conflict in the official source. Raw progress and trend remain available, but automatic mastery judgments are disabled.</span>
+          </div>`
+        : '';
+
+    const criterionMetricsHtml =
+      criterionConflict
+        ? `<div class="st-goal-metrics">
+            <div class="st-metric">
+              <span class="st-metric-label">Baseline:</span>
+              <span class="st-metric-value">${escapeHtml(goal.baseline || 'N/A')}</span>
+            </div>
+            <div class="st-metric">
+              <span class="st-metric-label">Header Mastery:</span>
+              <span class="st-metric-value">${escapeHtml(
+                goal.mastery != null && goal.mastery !== ''
+                  ? String(goal.mastery)
+                  : 'N/A'
+              )}</span>
+            </div>
+            <div class="st-metric">
+              <span class="st-metric-label">Goal-Text Target:</span>
+              <span class="st-metric-value">${escapeHtml(
+                goal.target != null && goal.target !== ''
+                  ? String(goal.target)
+                  : 'N/A'
+              )}</span>
+            </div>
+          </div>`
+        : `<div class="st-goal-metrics">
+            <div class="st-metric">
+              <span class="st-metric-label">Baseline:</span>
+              <span class="st-metric-value">${escapeHtml(goal.baseline || 'N/A')}</span>
+            </div>
+            <div class="st-metric">
+              <span class="st-metric-label">Target:</span>
+              <span class="st-metric-value">${escapeHtml(goal.target || 'N/A')}</span>
+            </div>
+          </div>`;
+
     // Build mastery banner HTML (shown below header, above body)
     let masteryBannerHtml = '';
     if (alertStatus.isMastered && !isMasteryDismissed(goal.code, goal.student_code)) {
@@ -5636,19 +5807,11 @@
           <span class="st-goal-chevron">▶</span>
         </div>
         ${renderQuarterlyAverages(goal.student_code, goal.code, goal.id)}
+        ${criterionReviewHtml}
         ${masteryBannerHtml}${alertStripHtml}
         <div class="st-goal-body">
           ${descHtml}
-          <div class="st-goal-metrics">
-            <div class="st-metric">
-              <span class="st-metric-label">Baseline:</span>
-              <span class="st-metric-value">${escapeHtml(goal.baseline || 'N/A')}</span>
-            </div>
-            <div class="st-metric">
-              <span class="st-metric-label">Target:</span>
-              <span class="st-metric-value">${escapeHtml(goal.target || 'N/A')}</span>
-            </div>
-          </div>
+          ${criterionMetricsHtml}
           <div class="st-goal-data-status">
             <div class="st-data-status-item">
               <span>${statusEmoji}</span>
@@ -6572,7 +6735,10 @@
               previous_avg: c.previousAvg,
               trend: c.trend,
               data_points: c.dataPoints,
-              target: c.target,
+              criterion_conflict: c.criterionConflict === true,
+              header_mastery: c.headerMastery,
+              goal_text_target: c.goalTextTarget,
+              target: c.criterionConflict === true ? null : c.target,
               baseline: c.baseline,
             }));
             const desePayload = deseCards.map(c => ({
@@ -7163,6 +7329,7 @@
       baseline: form.querySelector('[name="baseline"]').value,
       mastery: form.querySelector('[name="mastery"]').value,
       target: form.querySelector('[name="target"]').value,
+      criterion_conflict: goal.criterion_conflict === true,
       case_manager: form.querySelector('[name="case_manager"]').value,
       data_collector: form.querySelector('[name="data_collector"]').value,
       expected_data_points: parseInt(form.querySelector('[name="expected_data_points"]').value) || 3,
@@ -7805,7 +7972,14 @@
    */
   function showReplaceGoalVersionModal(oldGoal, avgValue) {
     const newCode = incrementGoalCode(oldGoal.code || '');
-    const newBaseline = avgValue != null ? String(Math.round(avgValue)) : (oldGoal.mastery || oldGoal.target || '');
+    const newBaseline =
+      avgValue != null
+        ? String(Math.round(avgValue))
+        : (
+            hasCriterionConflict(oldGoal)
+              ? (oldGoal.baseline || '')
+              : (oldGoal.mastery || oldGoal.target || '')
+          );
 
     const modal = createModal('🔄 Replace with Next Version', `
       <form id="replace-goal-form">
@@ -7871,6 +8045,12 @@
     form.querySelector('[name="goal_code"]').value = newCode;
     form.querySelector('[name="goal_text"]').value = oldGoal.desc || oldGoal.goal_text || '';
     form.querySelector('[name="baseline"]').value = newBaseline;
+
+    if (hasCriterionConflict(oldGoal)) {
+      form.querySelector('[name="mastery"]').value =
+        oldGoal.mastery || '';
+    }
+
     form.querySelector('[name="target"]').value = oldGoal.target || '';
     form.querySelector('[name="case_manager"]').value = oldGoal.case_manager || '';
 
@@ -7907,6 +8087,7 @@
       baseline: formData.get('baseline'),
       mastery: formData.get('mastery') || null,
       target: formData.get('target'),
+      criterion_conflict: oldGoal.criterion_conflict === true,
       case_manager: formData.get('case_manager'),
       data_collector: oldGoal.data_collector || DEFAULT_DATA_COLLECTOR,
       data_collector_email: oldGoal.data_collector_email || null,
@@ -9470,6 +9651,9 @@
         previousAvg: prevAvg,
         trend,
         dataPoints,
+        criterionConflict: hasCriterionConflict(goal),
+        headerMastery: goal.mastery !== undefined && goal.mastery !== null ? String(goal.mastery) : '',
+        goalTextTarget: goal.target !== undefined && goal.target !== null ? String(goal.target) : '',
         target: goal.mastery !== undefined && goal.mastery !== null ? parseFloat(goal.mastery) : null,
         baseline: goal.baseline !== undefined && goal.baseline !== null ? parseFloat(goal.baseline) : null,
       });
@@ -9510,18 +9694,56 @@
       ? `<span class="st-skill-confidence">${card.itemCount} item${card.itemCount !== 1 ? 's' : ''}</span>`
       : `<span class="st-skill-confidence">${card.dataPoints} data point${card.dataPoints !== 1 ? 's' : ''}</span>`;
 
-    const metaHtml = card.type === 'iep' && (card.baseline !== null || card.target !== null)
-      ? `<div class="st-skill-meta">
+    const criterionConflict =
+      card.type === 'iep' &&
+      card.criterionConflict === true;
+
+    let metaHtml = '';
+
+    if (card.type === 'iep') {
+      if (criterionConflict) {
+        const baselineDisplay =
+          card.baseline !== null
+            ? `${card.baseline}%`
+            : 'N/A';
+
+        const headerMasteryDisplay =
+          card.headerMastery
+            ? String(card.headerMastery)
+            : 'N/A';
+
+        const goalTextTargetDisplay =
+          card.goalTextTarget
+            ? String(card.goalTextTarget)
+            : 'N/A';
+
+        metaHtml = `<div class="st-skill-meta">
+           <span>Baseline: ${escapeHtml(baselineDisplay)}</span>
+           <span>Header Mastery: ${escapeHtml(headerMasteryDisplay)}</span>
+           <span>Goal-Text Target: ${escapeHtml(goalTextTargetDisplay)}</span>
+           <span>Criterion Status: Manual Criterion Review Required</span>
+         </div>`;
+      } else if (
+        card.baseline !== null ||
+        card.target !== null
+      ) {
+        metaHtml = `<div class="st-skill-meta">
            ${card.baseline !== null ? `<span>Baseline: ${card.baseline}%</span>` : ''}
            ${card.target !== null ? `<span>Target: ${card.target}%</span>` : ''}
-         </div>`
-      : '';
+         </div>`;
+      }
+    }
 
     const scoreDisplay = score !== null ? `${score}%` : '—';
 
     // Mastery callout for excellent IEP goals
     let calloutHtml = '';
-    if (studentCode && card.type === 'iep' && tierInfo.tier === 'excellent') {
+    if (
+      studentCode &&
+      card.type === 'iep' &&
+      criterionConflict === false &&
+      tierInfo.tier === 'excellent'
+    ) {
       const safeStudentCode = escapeHtml(studentCode);
       const safeGoalCode = escapeHtml(card.code);
       const safeArea = escapeHtml(card.area);
@@ -9678,13 +9900,37 @@
       </div>
     `;
 
-    // Build strengths & weaknesses strip
+    // Build strengths & weaknesses strip.
+    // Explicit criterion conflicts are not placed into an automatic
+    // Strengths / Needs Attention bucket.
     const allCards = [...iepCards, ...deseCards];
+
+    const criterionReviewCards =
+      iepCards.filter(
+        c =>
+          c.criterionConflict === true
+      );
+
     const strengthCards = allCards.filter(c => {
+      if (
+        c.type === 'iep' &&
+        c.criterionConflict === true
+      ) {
+        return false;
+      }
+
       const tier = getSkillTier(c.displayScore).tier;
       return tier === 'excellent' || tier === 'on-track';
     });
+
     const concernCards = allCards.filter(c => {
+      if (
+        c.type === 'iep' &&
+        c.criterionConflict === true
+      ) {
+        return false;
+      }
+
       const tier = getSkillTier(c.displayScore).tier;
       return tier === 'needs-support' || tier === 'critical';
     });
@@ -9711,6 +9957,12 @@
             ? buildStripItems(concernCards)
             : '<span style="opacity:0.5">None identified</span>'}
         </div>
+        ${criterionReviewCards.length > 0
+          ? `<div class="st-skill-strengths-row">
+              <span class="st-skill-strengths-label concern">⚠️ Manual Criterion Review Required:</span>
+              ${buildStripItems(criterionReviewCards)}
+            </div>`
+          : ''}
       </div>
     `;
 
@@ -9924,7 +10176,10 @@
         previous_avg: c.previousAvg,
         trend: c.trend,
         data_points: c.dataPoints,
-        target: c.target,
+        criterion_conflict: c.criterionConflict === true,
+        header_mastery: c.headerMastery,
+        goal_text_target: c.goalTextTarget,
+        target: c.criterionConflict === true ? null : c.target,
         baseline: c.baseline,
         question_weaknesses: iepQuestionWeaknesses[c.code] || [],
       }));
@@ -10047,7 +10302,10 @@
         previous_avg: c.previousAvg,
         trend: c.trend,
         data_points: c.dataPoints,
-        target: c.target,
+        criterion_conflict: c.criterionConflict === true,
+        header_mastery: c.headerMastery,
+        goal_text_target: c.goalTextTarget,
+        target: c.criterionConflict === true ? null : c.target,
         baseline: c.baseline,
       }));
       const desePayload = deseCards.map(c => ({
@@ -10568,18 +10826,66 @@
         const description = ai ? ai.description || '' : '';
         const summary = ai ? ai.summary || '' : '';
         const goalRec = ai ? ai.goal_recommendation || '' : '';
-        const tier = tierLabel(c.displayScore);
+        const criterionConflict =
+          c.criterionConflict === true;
 
-        lines.push(`${c.code} \u2014 ${c.area} \u00b7 ${score} \u00b7 ${tierSymbol(c.displayScore)} ${tier}`);
+        const tier =
+          criterionConflict
+            ? 'Manual Criterion Review Required'
+            : tierLabel(c.displayScore);
+
+        const tierDisplay =
+          criterionConflict
+            ? `[REVIEW] ${tier}`
+            : `${tierSymbol(c.displayScore)} ${tier}`;
+
+        lines.push(`${c.code} \u2014 ${c.area} \u00b7 ${score} \u00b7 ${tierDisplay}`);
         if (description) lines.push(`  ${description}`);
 
-        const baseline = c.baseline !== null ? `${c.baseline}%` : '?';
-        const current = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
-        const target = c.target !== null ? `${c.target}%` : '?';
-        lines.push(`\u2192 ${c.dataPoints} data point${c.dataPoints !== 1 ? 's' : ''} \u00b7 Baseline: ${baseline} \u2192 Current: ${current} (Target: ${target})`);
+        const baseline =
+          c.baseline === null
+            ? '?'
+            : `${c.baseline}%`;
+
+        const current =
+          c.displayScore === null
+            ? '\u2014'
+            : `${c.displayScore}%`;
+
+        if (criterionConflict) {
+          const headerMastery =
+            c.headerMastery
+              ? String(c.headerMastery)
+              : 'N/A';
+
+          const goalTextTarget =
+            c.goalTextTarget
+              ? String(c.goalTextTarget)
+              : 'N/A';
+
+          lines.push(`\u2192 ${c.dataPoints} data point${c.dataPoints === 1 ? '' : 's'} \u00b7 Baseline: ${baseline} \u2192 Current: ${current}`);
+          lines.push(`  Header Mastery: ${headerMastery}`);
+          lines.push(`  Goal-Text Target: ${goalTextTarget}`);
+          lines.push('  Criterion Status: Manual Criterion Review Required');
+        } else {
+          const target =
+            c.target === null
+              ? '?'
+              : `${c.target}%`;
+
+          lines.push(`\u2192 ${c.dataPoints} data point${c.dataPoints === 1 ? '' : 's'} \u00b7 Baseline: ${baseline} \u2192 Current: ${current} (Target: ${target})`);
+        }
 
         if (summary) lines.push(summary);
-        if (goalRec && (c.displayScore === null || c.displayScore < SKILL_TIER_ON_TRACK)) {
+
+        if (
+          criterionConflict === false &&
+          goalRec &&
+          (
+            c.displayScore === null ||
+            c.displayScore < SKILL_TIER_ON_TRACK
+          )
+        ) {
           lines.push(`  [*] Goal recommendation: ${goalRec}`);
         }
         lines.push('');
@@ -10587,13 +10893,36 @@
       lines.push(divider);
     }
 
-    // DESE Standards sections
+    // Score-band summary sections.
+    // Explicit criterion conflicts are reported separately.
     const allCards = [...(iepCards || []), ...(deseCards || [])];
+
+    const criterionReviewCards =
+      (iepCards || []).filter(
+        c =>
+          c.criterionConflict === true
+      );
+
     const strengthCards = allCards.filter(c => {
+      if (
+        c.type === 'iep' &&
+        c.criterionConflict === true
+      ) {
+        return false;
+      }
+
       const t = getSkillTier(c.displayScore).tier;
       return t === 'excellent' || t === 'on-track';
     });
+
     const concernCards = sortConcernCards(allCards.filter(c => {
+      if (
+        c.type === 'iep' &&
+        c.criterionConflict === true
+      ) {
+        return false;
+      }
+
       const t = getSkillTier(c.displayScore).tier;
       return t === 'needs-support' || t === 'critical';
     }));
@@ -10626,9 +10955,42 @@
       lines.push('  None identified');
     }
 
+    if (criterionReviewCards.length > 0) {
+      lines.push('');
+      lines.push('[REVIEW] Manual Criterion Review Required');
+
+      for (const c of criterionReviewCards) {
+        const score =
+          c.displayScore === null
+            ? '\u2014'
+            : `${c.displayScore}%`;
+
+        const headerMastery =
+          c.headerMastery
+            ? String(c.headerMastery)
+            : 'N/A';
+
+        const goalTextTarget =
+          c.goalTextTarget
+            ? String(c.goalTextTarget)
+            : 'N/A';
+
+        lines.push(
+          `  \u25cf ${c.code} \u2014 ${score} \u00b7 Header Mastery: ${headerMastery} \u00b7 Goal-Text Target: ${goalTextTarget}`
+        );
+      }
+    }
+
     // Goal recommendations from AI
     const recommendations = [];
     for (const c of [...(iepCards || []), ...(deseCards || [])]) {
+      if (
+        c.type === 'iep' &&
+        c.criterionConflict === true
+      ) {
+        continue;
+      }
+
       const t = getSkillTier(c.displayScore).tier;
       if (t !== 'needs-support' && t !== 'critical') continue;
       const ai = getAiEntry(c.code, c.type === 'dese' ? 'dese' : 'iep');
@@ -10732,22 +11094,77 @@
         const summary = ai ? ai.summary || '' : '';
         const goalRec = ai ? ai.goal_recommendation || '' : '';
         const tierInfo = getSkillTier(c.displayScore);
-        const borderColor = tierHtmlColor(c.displayScore);
 
-        const baseline = c.baseline !== null ? `${c.baseline}%` : '?';
-        const current = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
-        const target = c.target !== null ? `${c.target}%` : '?';
+        const criterionConflict =
+          c.criterionConflict === true;
+
+        const borderColor =
+          criterionConflict
+            ? '#6b7280'
+            : tierHtmlColor(c.displayScore);
+
+        const displayIcon =
+          criterionConflict
+            ? SVG_WARN
+            : tierIcon(c.displayScore);
+
+        const displayTierLabel =
+          criterionConflict
+            ? 'Manual Criterion Review Required'
+            : tierInfo.label;
+
+        const baseline =
+          c.baseline === null
+            ? '?'
+            : `${c.baseline}%`;
+
+        const current =
+          c.displayScore === null
+            ? '\u2014'
+            : `${c.displayScore}%`;
 
         html += `<div style="border-left:3px solid ${borderColor};padding:10px 14px;margin-bottom:14px;background:#f9fafb;border-radius:0 6px 6px 0;">`;
-        html += `<div style="font-size:14px;font-weight:600;color:#111827;">${tierIcon(c.displayScore)}${escapeHtml(c.code)} \u2014 ${escapeHtml(c.area)} \u00b7 ${escapeHtml(score)} \u00b7 ${escapeHtml(tierInfo.label)}</div>`;
+        html += `<div style="font-size:14px;font-weight:600;color:#111827;">${displayIcon}${escapeHtml(c.code)} \u2014 ${escapeHtml(c.area)} \u00b7 ${escapeHtml(score)} \u00b7 ${escapeHtml(displayTierLabel)}</div>`;
+
         if (description) {
           html += `<div style="font-size:12px;color:#6b7280;font-style:italic;margin:4px 0;">${escapeHtml(description)}</div>`;
         }
-        html += `<div style="font-size:12px;color:#4b5563;margin:4px 0;">${SVG_TREND}${escapeHtml(String(c.dataPoints))} data point${c.dataPoints !== 1 ? 's' : ''} \u00b7 Baseline: ${escapeHtml(baseline)} \u2192 Current: ${escapeHtml(current)} (Target: ${escapeHtml(target)})</div>`;
+
+        if (criterionConflict) {
+          const headerMastery =
+            c.headerMastery
+              ? String(c.headerMastery)
+              : 'N/A';
+
+          const goalTextTarget =
+            c.goalTextTarget
+              ? String(c.goalTextTarget)
+              : 'N/A';
+
+          html += `<div style="font-size:12px;color:#4b5563;margin:4px 0;">${SVG_TREND}${escapeHtml(String(c.dataPoints))} data point${c.dataPoints === 1 ? '' : 's'} \u00b7 Baseline: ${escapeHtml(baseline)} \u2192 Current: ${escapeHtml(current)}</div>`;
+          html += `<div style="font-size:12px;color:#4b5563;margin:4px 0;">Header Mastery: ${escapeHtml(headerMastery)} \u00b7 Goal-Text Target: ${escapeHtml(goalTextTarget)}</div>`;
+          html += `<div style="font-size:12px;color:#6b7280;margin:4px 0;font-weight:600;">Criterion Status: Manual Criterion Review Required</div>`;
+        } else {
+          const target =
+            c.target === null
+              ? '?'
+              : `${c.target}%`;
+
+          html += `<div style="font-size:12px;color:#4b5563;margin:4px 0;">${SVG_TREND}${escapeHtml(String(c.dataPoints))} data point${c.dataPoints === 1 ? '' : 's'} \u00b7 Baseline: ${escapeHtml(baseline)} \u2192 Current: ${escapeHtml(current)} (Target: ${escapeHtml(target)})</div>`;
+        }
+
         if (summary) {
           html += `<div style="font-size:13px;color:#374151;margin-top:6px;">${escapeHtml(summary)}</div>`;
         }
-        if (goalRec && (c.displayScore === null || c.displayScore < SKILL_TIER_ON_TRACK)) {
+
+        if (
+          criterionConflict === false &&
+          goalRec &&
+          (
+            c.displayScore === null ||
+            c.displayScore < SKILL_TIER_ON_TRACK
+          )
+        ) {
           html += `<div style="font-size:12px;color:#6366f1;margin-top:6px;font-style:italic;">${SVG_BULB}Recommendation: ${escapeHtml(goalRec)}</div>`;
         }
         html += `</div>`;
@@ -10756,13 +11173,36 @@
       html += HR;
     }
 
-    // DESE Standards sections
+    // Score-band summary sections.
+    // Explicit criterion conflicts are reported separately.
     const allCards = [...(iepCards || []), ...(deseCards || [])];
+
+    const criterionReviewCards =
+      (iepCards || []).filter(
+        c =>
+          c.criterionConflict === true
+      );
+
     const strengthCards = allCards.filter(c => {
+      if (
+        c.type === 'iep' &&
+        c.criterionConflict === true
+      ) {
+        return false;
+      }
+
       const t = getSkillTier(c.displayScore).tier;
       return t === 'excellent' || t === 'on-track';
     });
+
     const concernCards = sortConcernCards(allCards.filter(c => {
+      if (
+        c.type === 'iep' &&
+        c.criterionConflict === true
+      ) {
+        return false;
+      }
+
       const t = getSkillTier(c.displayScore).tier;
       return t === 'needs-support' || t === 'critical';
     }));
@@ -10806,9 +11246,43 @@
       html += `<p style="font-size:13px;color:#6b7280;margin:0;">None identified</p>`;
     }
 
+    if (criterionReviewCards.length > 0) {
+      html += HR;
+      html += `<h3 style="font-size:15px;color:#6b7280;margin:0 0 10px;">Manual Criterion Review Required</h3>`;
+      html += `<ul style="margin:0;padding-left:20px;font-size:13px;color:#374151;">`;
+
+      for (const c of criterionReviewCards) {
+        const score =
+          c.displayScore === null
+            ? '\u2014'
+            : `${c.displayScore}%`;
+
+        const headerMastery =
+          c.headerMastery
+            ? String(c.headerMastery)
+            : 'N/A';
+
+        const goalTextTarget =
+          c.goalTextTarget
+            ? String(c.goalTextTarget)
+            : 'N/A';
+
+        html += `<li style="margin-bottom:6px;"><strong>${escapeHtml(c.code)}</strong> \u2014 ${escapeHtml(score)} \u00b7 Header Mastery: ${escapeHtml(headerMastery)} \u00b7 Goal-Text Target: ${escapeHtml(goalTextTarget)}</li>`;
+      }
+
+      html += `</ul>`;
+    }
+
     // Goal recommendations from AI
     const recommendations = [];
     for (const c of [...(iepCards || []), ...(deseCards || [])]) {
+      if (
+        c.type === 'iep' &&
+        c.criterionConflict === true
+      ) {
+        continue;
+      }
+
       const t = getSkillTier(c.displayScore).tier;
       if (t !== 'needs-support' && t !== 'critical') continue;
       const ai = getAiEntry(c.code, c.type === 'dese' ? 'dese' : 'iep');
@@ -10943,8 +11417,23 @@
     const dateRange = sorted.length === 1 ? MS_PER_DAY : (maxDate - minDate);
     
     const baselineNum = parseGoalValue(goal.baseline) ?? 0;
-    const masteryNum = parseGoalValue(goal.mastery || goal.target) ?? 100;
-    const maxY = Math.max(100, masteryNum, ...sorted.map(p => p.percent));
+
+    const criterionConflict =
+      hasCriterionConflict(goal);
+
+    const automaticCriterion =
+      getAutomaticCriterionValue(goal);
+
+    const masteryNum =
+      criterionConflict
+        ? null
+        : (automaticCriterion ?? 100);
+
+    const maxY = Math.max(
+      100,
+      masteryNum ?? 0,
+      ...sorted.map(p => p.percent)
+    );
     const minY = Math.min(0, baselineNum);
     // Handle all points having same value by adding small range
     const yRange = (maxY - minY) || 10;
@@ -10979,9 +11468,34 @@
       </circle>`;
     }).join('');
     
-    // Baseline and mastery lines
+    // Baseline and criterion guide lines
     const baselineY = scaleY(baselineNum);
-    const masteryY = scaleY(masteryNum);
+
+    const masteryY =
+      masteryNum == null
+        ? null
+        : scaleY(masteryNum);
+
+    const masteryGuideSvg =
+      masteryY == null
+        ? ''
+        : `
+          <!-- Mastery line (gold dashed) -->
+          <line x1="${padding.left}" y1="${masteryY}" x2="${width - padding.right}" y2="${masteryY}"
+                stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,5" />
+          <text x="${padding.left - 5}" y="${masteryY - 5}" fill="#fbbf24" font-size="10" text-anchor="end">
+            Mastery: ${escapeHtml(String(goal.mastery || goal.target || 100))}
+          </text>`;
+
+    const criterionReviewHtml =
+      criterionConflict
+        ? `<div class="st-goal-criterion-review" role="note" style="margin-top:8px;">
+            <strong>Manual Criterion Review Required</strong>
+            <span>Header Mastery: ${escapeHtml(String(goal.mastery ?? 'N/A'))}</span>
+            <span>Goal-Text Target: ${escapeHtml(String(goal.target ?? 'N/A'))}</span>
+            <span>No automatic mastery guide is drawn for this goal.</span>
+          </div>`
+        : '';
     
     return `
       <div class="st-timeline-chart-container" style="margin-bottom: 24px;">
@@ -10994,12 +11508,7 @@
             Baseline: ${escapeHtml(String(goal.baseline || 0))}
           </text>
           
-          <!-- Mastery line (gold dashed) -->
-          <line x1="${padding.left}" y1="${masteryY}" x2="${width - padding.right}" y2="${masteryY}" 
-                stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,5" />
-          <text x="${padding.left - 5}" y="${masteryY - 5}" fill="#fbbf24" font-size="10" text-anchor="end">
-            Mastery: ${escapeHtml(String(goal.mastery || goal.target || 100))}
-          </text>
+          ${masteryGuideSvg}
           
           <!-- Progress line (teal/green) -->
           ${sorted.length > 1 ? `<path d="${pathData}" fill="none" stroke="#22c55e" stroke-width="3" />` : ''}
@@ -11012,6 +11521,7 @@
           <text x="${padding.left - 10}" y="${scaleY(50)}" fill="rgba(240,255,250,0.6)" font-size="10" text-anchor="end">50%</text>
           <text x="${padding.left - 10}" y="${scaleY(100)}" fill="rgba(240,255,250,0.6)" font-size="10" text-anchor="end">100%</text>
         </svg>
+        ${criterionReviewHtml}
       </div>
     `;
   }
@@ -11149,8 +11659,35 @@
     }
     
     const predictions = studentGoals.map(goal => {
+      const criterionConflict =
+        hasCriterionConflict(goal);
+
+      const headerMastery =
+        goal.mastery == null ||
+        goal.mastery === ''
+          ? 'N/A'
+          : String(goal.mastery);
+
+      const goalTextTarget =
+        goal.target == null ||
+        goal.target === ''
+          ? 'N/A'
+          : String(goal.target);
+
       const goalProgress = progressData.filter(p => p.goal_code === goal.code || p.goal_id === goal.id);
       if (goalProgress.length < 3) {
+        if (criterionConflict) {
+          return `
+            <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 12px;">
+              <div style="font-weight: 600;">${escapeHtml(goal.code)} - ${escapeHtml(goal.goal_area || '')}</div>
+              <div style="opacity: 0.7; font-size: 13px; margin-top: 4px;">Need more data for prediction (${goalProgress.length}/3 data points)</div>
+              <div style="font-size: 13px; margin-top: 8px;">Header Mastery: <strong>${escapeHtml(headerMastery)}</strong></div>
+              <div style="font-size: 13px; margin-top: 4px;">Goal-Text Target: <strong>${escapeHtml(goalTextTarget)}</strong></div>
+              <div style="font-size: 13px; margin-top: 8px; font-weight: 600;">Manual Criterion Review Required</div>
+            </div>
+          `;
+        }
+
         return `
           <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 12px;">
             <div style="font-weight: 600;">${escapeHtml(goal.code)} - ${escapeHtml(goal.goal_area || '')}</div>
@@ -11177,6 +11714,33 @@
       const projectionDate = iepDue || new Date(new Date().setFullYear(new Date().getFullYear() + 1));
       const daysToProject = Math.floor((projectionDate - startDate) / (1000 * 60 * 60 * 24));
       const projected = predictAt(regression, daysToProject);
+
+      if (criterionConflict) {
+        const trendLabel =
+          regression.slope > 0
+            ? 'Increasing trend'
+            : (
+                regression.slope < 0
+                  ? 'Decreasing trend'
+                  : 'Flat trend'
+              );
+
+        return `
+          <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 12px;">
+            <div style="font-weight: 600;">${escapeHtml(goal.code)} - ${escapeHtml(goal.goal_area || '')}</div>
+            <div style="margin-top: 8px; font-size: 13px;">
+              Projected to reach <strong>${Math.round(projected)}%</strong> by ${iepDue ? formatDate(iepDue) : 'next year'}
+            </div>
+            <div style="margin-top: 6px; font-size: 13px;">Trend: <strong>${escapeHtml(trendLabel)}</strong></div>
+            <div style="margin-top: 8px; font-size: 13px;">Header Mastery: <strong>${escapeHtml(headerMastery)}</strong></div>
+            <div style="margin-top: 4px; font-size: 13px;">Goal-Text Target: <strong>${escapeHtml(goalTextTarget)}</strong></div>
+            <div style="margin-top: 8px; color: #9ca3af; font-weight: 600; font-size: 14px;">
+              Manual Criterion Review Required — no automatic mastery or target status is assigned.
+            </div>
+          </div>
+        `;
+      }
+
       const masteryRaw = goal.mastery || goal.target || 80;
       const masteryNum = parseGoalValue(masteryRaw) ?? 80;
       
@@ -12678,6 +13242,9 @@
         previousAvg: prevAvg,
         trend,
         dataPoints,
+        criterionConflict: hasCriterionConflict(goal),
+        headerMastery: goal.mastery !== undefined && goal.mastery !== null ? String(goal.mastery) : '',
+        goalTextTarget: goal.target !== undefined && goal.target !== null ? String(goal.target) : '',
         target: goal.mastery !== undefined && goal.mastery !== null ? parseFloat(goal.mastery) : null,
         baseline: goal.baseline !== undefined && goal.baseline !== null ? parseFloat(goal.baseline) : null,
       });
@@ -12748,7 +13315,10 @@
           previous_avg: c.previousAvg !== undefined ? c.previousAvg : null,
           trend: c.trend || null,
           data_points: c.dataPoints || 0,
-          target: c.target,
+          criterion_conflict: c.criterionConflict === true,
+          header_mastery: c.headerMastery,
+          goal_text_target: c.goalTextTarget,
+          target: c.criterionConflict === true ? null : c.target,
           baseline: c.baseline,
           question_weaknesses: [],
         }));
@@ -13352,7 +13922,10 @@
       previous_avg: c.previousAvg,
       trend: c.trend,
       data_points: c.dataPoints,
-      target: c.target,
+      criterion_conflict: c.criterionConflict === true,
+      header_mastery: c.headerMastery,
+      goal_text_target: c.goalTextTarget,
+      target: c.criterionConflict === true ? null : c.target,
       baseline: c.baseline,
       question_weaknesses: [],
     }));
@@ -13443,7 +14016,9 @@
     const headers = [
       'Period', 'Class', 'Student Code', 'Student Name', 'IEP Due',
       'Type', 'Code', 'Area / Description',
-      'Current %', termBaseline + ' %', termTarget + ' %', termDataPts, 'Trend',
+      'Current %', termBaseline + ' %', termTarget + ' %',
+      'Header Mastery', 'Goal-Text Target', 'Criterion Status',
+      termDataPts, 'Trend',
     ];
     if (comparePrev) headers.push('Previous %', 'Change %');
     headers.push('AI Summary', 'Tier');
@@ -13464,16 +14039,65 @@
 
         for (const card of iepCards) {
           const ai = skills.find(s => s.code === card.code && (s.source === 'iep' || !s.source));
-          const tierInfo = getSkillTier(card.displayScore);
-          const tierLabel = isParentFriendly
-            ? (PARENT_FRIENDLY_TIER_LABELS[tierInfo.tier] || tierInfo.label)
-            : tierInfo.label;
+          const criterionConflict =
+            card.criterionConflict === true;
+
+          const tierInfo =
+            getSkillTier(
+              card.displayScore
+            );
+
+          const tierLabel =
+            criterionConflict
+              ? 'Manual Criterion Review Required'
+              : (
+                  isParentFriendly
+                    ? (
+                        PARENT_FRIENDLY_TIER_LABELS[tierInfo.tier] ||
+                        tierInfo.label
+                      )
+                    : tierInfo.label
+                );
+
+          const targetValue =
+            criterionConflict
+              ? ''
+              : (
+                  card.target === null
+                    ? ''
+                    : card.target
+                );
+
+          const headerMastery =
+            criterionConflict
+              ? (
+                  card.headerMastery ||
+                  ''
+                )
+              : '';
+
+          const goalTextTarget =
+            criterionConflict
+              ? (
+                  card.goalTextTarget ||
+                  ''
+                )
+              : '';
+
+          const criterionStatus =
+            criterionConflict
+              ? 'Manual Criterion Review Required'
+              : '';
+
           const row = [
             periodKey, className, student.code, studentName, iepDate,
             'IEP Goal', card.code, ai && ai.description ? ai.description : card.area,
-            card.displayScore !== null ? card.displayScore : '',
-            card.baseline !== null ? card.baseline : '',
-            card.target !== null ? card.target : '',
+            card.displayScore === null ? '' : card.displayScore,
+            card.baseline === null ? '' : card.baseline,
+            targetValue,
+            headerMastery,
+            goalTextTarget,
+            criterionStatus,
             card.dataPoints, card.trend || '',
           ];
           if (comparePrev) {
@@ -13483,7 +14107,22 @@
           }
           row.push(ai && ai.summary ? ai.summary : '');
           row.push(tierLabel);
-          if (!isParentFriendly) row.push(ai && ai.goal_recommendation && (tierInfo.tier === 'needs-support' || tierInfo.tier === 'critical') ? ai.goal_recommendation : '');
+          if (isParentFriendly === false) {
+            row.push(
+              criterionConflict
+                ? ''
+                : (
+                    ai &&
+                    ai.goal_recommendation &&
+                    (
+                      tierInfo.tier === 'needs-support' ||
+                      tierInfo.tier === 'critical'
+                    )
+                      ? ai.goal_recommendation
+                      : ''
+                  )
+            );
+          }
           rows.push(row.map(escapeCsvField).join(','));
         }
 
@@ -13498,7 +14137,7 @@
               periodKey, className, student.code, studentName, iepDate,
               'DESE Standard', card.code, ai && ai.description ? ai.description : card.code,
               card.displayScore !== null ? card.displayScore : '',
-              '', '', card.itemCount || '', '',
+              '', '', '', '', '', card.itemCount || '', '',
             ];
             if (comparePrev) { row.push('', ''); }
             row.push(ai && ai.summary ? ai.summary : '');
@@ -13539,20 +14178,86 @@
 
     // ── Caseload-level stats ─────────────────────────────────────────────────
     const allIepCards = studentData.flatMap(d => d.iepCards);
-    const scoredCards = allIepCards.filter(c => c.displayScore !== null);
+
+    const scoredCards =
+      allIepCards.filter(
+        c =>
+          c.displayScore === null
+            ? false
+            : true
+      );
+
+    // Raw average remains reportable even for goals requiring manual
+    // criterion review because it does not compare performance to either
+    // disputed criterion.
     const avgProgress = scoredCards.length > 0
-      ? Math.round(scoredCards.reduce((s, c) => s + c.displayScore, 0) / scoredCards.length)
+      ? Math.round(
+          scoredCards.reduce(
+            (s, c) =>
+              s + c.displayScore,
+            0
+          ) / scoredCards.length
+        )
       : null;
 
-    const tierCounts = { excellent: 0, 'on-track': 0, 'needs-support': 0, critical: 0 };
-    for (const c of scoredCards) {
-      const t = getSkillTier(c.displayScore).tier;
-      if (tierCounts[t] !== undefined) tierCounts[t]++;
+    const evaluableScoredCards =
+      scoredCards.filter(
+        c =>
+          c.criterionConflict === true
+            ? false
+            : true
+      );
+
+    const manualReviewCount =
+      allIepCards.filter(
+        c =>
+          c.criterionConflict === true
+      ).length;
+
+    const tierCounts = {
+      excellent: 0,
+      'on-track': 0,
+      'needs-support': 0,
+      critical: 0,
+    };
+
+    for (const c of evaluableScoredCards) {
+      const t =
+        getSkillTier(
+          c.displayScore
+        ).tier;
+
+      if (tierCounts[t] === undefined) {
+        continue;
+      }
+
+      tierCounts[t]++;
     }
 
-    const criticalStudents = studentData.filter(d =>
-      d.iepCards.some(c => c.displayScore !== null && getSkillTier(c.displayScore).tier === 'critical')
-    ).map(d => d.student.code);
+    const criticalStudents =
+      studentData.filter(
+        d =>
+          d.iepCards.some(
+            c => {
+              if (c.criterionConflict === true) {
+                return false;
+              }
+
+              if (c.displayScore === null) {
+                return false;
+              }
+
+              return (
+                getSkillTier(
+                  c.displayScore
+                ).tier === 'critical'
+              );
+            }
+          )
+      ).map(
+        d =>
+          d.student.code
+      );
 
     // ── Caseload Summary HTML ────────────────────────────────────────────────
     let html = `<div class="cse-caseload-summary">`;
@@ -13566,6 +14271,7 @@
     html += `<div class="cse-kpi"><div class="cse-kpi-val" style="color:rgba(147,197,253,0.9)">${tierCounts['on-track']}</div><div class="cse-kpi-lbl">On Track</div></div>`;
     html += `<div class="cse-kpi"><div class="cse-kpi-val" style="color:rgba(252,211,77,0.9)">${tierCounts['needs-support']}</div><div class="cse-kpi-lbl">Needs Support</div></div>`;
     html += `<div class="cse-kpi"><div class="cse-kpi-val" style="color:rgba(252,165,165,0.9)">${tierCounts.critical}</div><div class="cse-kpi-lbl">Critical</div></div>`;
+    html += `<div class="cse-kpi"><div class="cse-kpi-val" style="color:rgba(209,213,219,0.9)">${manualReviewCount}</div><div class="cse-kpi-lbl">Manual Review</div></div>`;
     html += `</div>`;
 
     if (criticalStudents.length > 0) {
@@ -13607,13 +14313,38 @@
           }
           for (const card of iepCards) {
             const ai = skills.find(s => s.code === card.code && (s.source === 'iep' || !s.source));
-            const tierInfo = getSkillTier(card.displayScore);
-            const tierLabel = isParentFriendly
-              ? ({ excellent: 'Doing Great', 'on-track': 'Making Progress', 'needs-support': 'Needs More Practice', critical: 'Needs Help Right Away' })[tierInfo.tier] || tierInfo.label
-              : tierInfo.label;
+            const criterionConflict =
+              card.criterionConflict === true;
 
-            html += `<div class="cse-goal-block tier-${escapeHtml(tierInfo.tier)}">`;
-            html += `<div class="cse-goal-title">${escapeHtml(card.code)} — ${escapeHtml(card.area)}<span class="cse-tier-badge ${escapeHtml(tierInfo.tier)}">${escapeHtml(tierLabel)}</span></div>`;
+            const tierInfo =
+              getSkillTier(
+                card.displayScore
+              );
+
+            const displayTierClass =
+              criterionConflict
+                ? 'manual-review'
+                : tierInfo.tier;
+
+            const tierLabel =
+              criterionConflict
+                ? 'Manual Criterion Review Required'
+                : (
+                    isParentFriendly
+                      ? (
+                          {
+                            excellent: 'Doing Great',
+                            'on-track': 'Making Progress',
+                            'needs-support': 'Needs More Practice',
+                            critical: 'Needs Help Right Away',
+                          }[tierInfo.tier] ||
+                          tierInfo.label
+                        )
+                      : tierInfo.label
+                  );
+
+            html += `<div class="cse-goal-block tier-${escapeHtml(displayTierClass)}">`;
+            html += `<div class="cse-goal-title">${escapeHtml(card.code)} — ${escapeHtml(card.area)}<span class="cse-tier-badge ${escapeHtml(displayTierClass)}">${escapeHtml(tierLabel)}</span></div>`;
 
             // Full description from AI
             if (ai && ai.description) {
@@ -13621,13 +14352,43 @@
             }
 
             // Stats row
-            const score = card.displayScore !== null ? `${card.displayScore}%` : '—';
-            const baseline = card.baseline !== null ? `${card.baseline}%` : '?';
-            const target = card.target !== null ? `${card.target}%` : '?';
+            const score =
+              card.displayScore === null
+                ? '—'
+                : `${card.displayScore}%`;
+
+            const baseline =
+              card.baseline === null
+                ? '?'
+                : `${card.baseline}%`;
+
             html += `<div class="cse-goal-stats">`;
             html += `<span>Current: <strong>${escapeHtml(score)}</strong></span>`;
             html += `<span>${escapeHtml(termBaseline)}: ${escapeHtml(baseline)}</span>`;
-            html += `<span>${escapeHtml(termTarget)}: ${escapeHtml(target)}</span>`;
+
+            if (criterionConflict) {
+              const headerMastery =
+                card.headerMastery
+                  ? String(card.headerMastery)
+                  : 'N/A';
+
+              const goalTextTarget =
+                card.goalTextTarget
+                  ? String(card.goalTextTarget)
+                  : 'N/A';
+
+              html += `<span>Header Mastery: ${escapeHtml(headerMastery)}</span>`;
+              html += `<span>Goal-Text Target: ${escapeHtml(goalTextTarget)}</span>`;
+              html += `<span>Criterion Status: Manual Criterion Review Required</span>`;
+            } else {
+              const target =
+                card.target === null
+                  ? '?'
+                  : `${card.target}%`;
+
+              html += `<span>${escapeHtml(termTarget)}: ${escapeHtml(target)}</span>`;
+            }
+
             html += `<span>${escapeHtml(card.dataPoints.toString())} ${escapeHtml(termDataPts)}</span>`;
             html += `</div>`;
 
@@ -13650,7 +14411,16 @@
             }
 
             // Goal recommendation (professional mode only, needs-support/critical tiers)
-            if (!isParentFriendly && ai && ai.goal_recommendation && (tierInfo.tier === 'needs-support' || tierInfo.tier === 'critical')) {
+            if (
+              criterionConflict === false &&
+              isParentFriendly === false &&
+              ai &&
+              ai.goal_recommendation &&
+              (
+                tierInfo.tier === 'needs-support' ||
+                tierInfo.tier === 'critical'
+              )
+            ) {
               html += `<div class="cse-skill-goal-rec cse-goal-rec">💡 <strong>Goal Recommendation:</strong> ${escapeHtml(ai.goal_recommendation)}</div>`;
             }
 

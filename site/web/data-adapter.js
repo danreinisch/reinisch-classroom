@@ -231,7 +231,8 @@ const local = {
                      measurement_type = 'percent', data_collector = null, 
                      data_collector_email = null, class_context = null, 
                      goal_area = null, baseline = null, mastery = null, case_manager = null, version = 1,
-                     observation_config = null, notes = null }) {
+                     observation_config = null, notes = null,
+                     criterion_conflict = undefined }) {
     const map = store.get('iepGoals', {});
     const goals = map[student_code] || [];
     const idx = goals.findIndex(g => g.code === code);
@@ -242,6 +243,11 @@ const local = {
       data_collector_email, class_context, goal_area, baseline, mastery, case_manager, version,
       observation_config, notes
     };
+
+    if (typeof criterion_conflict === 'boolean') {
+      goal.criterion_conflict = criterion_conflict;
+    }
+
     if (idx >= 0) {
       goals[idx] = { ...goals[idx], ...goal };
     } else {
@@ -1490,7 +1496,7 @@ const remote = {
     const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', code).single();
     if (e1) throw e1;
     const { data, error } = await supabase.from('goals')
-      .select('id, code, desc, target, status, measurement_type, data_collector, data_collector_email, class_context, goal_area, baseline, mastery, case_manager, version, observation_config, notes, addressed_in_class, individual_delivery')
+      .select('id, code, desc, target, status, measurement_type, data_collector, data_collector_email, class_context, goal_area, baseline, mastery, case_manager, version, observation_config, notes, criterion_conflict, addressed_in_class, individual_delivery')
       .eq('student_id', stu.id)
       .eq('active', true)
       .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
@@ -1502,6 +1508,7 @@ const remote = {
                      data_collector_email = null, class_context = null,
                      goal_area = null, baseline = null, mastery = null, case_manager = null, version = 1,
                      observation_config = null, notes = null,
+                     criterion_conflict = undefined,
                      addressed_in_class = true, individual_delivery = false }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
@@ -1518,6 +1525,11 @@ const remote = {
       goal_area, baseline, mastery, case_manager, version,
       observation_config, notes, addressed_in_class, individual_delivery
     };
+
+    if (typeof criterion_conflict === 'boolean') {
+      fullPayload.criterion_conflict = criterion_conflict;
+    }
+
     let { data, error } = await supabase.from('goals')
       .upsert(fullPayload, { onConflict: 'student_id,code' })
       .select()
@@ -1525,6 +1537,12 @@ const remote = {
     
     // Graceful fallback: if schema error, retry with basic columns only
     if (isSchemaError(error)) {
+      if (criterion_conflict === true) {
+        throw new Error(
+          'criterion-conflict-schema-unavailable'
+        );
+      }
+
       console.error('[data-adapter] ⚠ Schema fallback in upsertGoal() — enriched fields (baseline, mastery, class_context, addressed_in_class, individual_delivery, etc.) were NOT saved. Apply the 20260405_goal_delivery_fields migration.', { code: error.code, message: error.message });
       const basicPayload = { student_id: stu.id, code, desc: description, target, status };
       const fallback = await supabase.from('goals')

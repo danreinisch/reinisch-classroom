@@ -831,7 +831,22 @@ test('generateProgressNarrative delegates to buildRichProgressNarrative', () => 
 test('generateSpedTrackText uses buildRichProgressNarrative', () => {
   const fnIdx = src.indexOf('function generateSpedTrackText(');
   assert.ok(fnIdx !== -1, 'generateSpedTrackText not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 1200);
+
+  const nextFnIdx = src.indexOf(
+    'function buildTab1EmailBodyText(',
+    fnIdx
+  );
+
+  assert.ok(
+    nextFnIdx > fnIdx,
+    'buildTab1EmailBodyText boundary not found'
+  );
+
+  const fnSection = src.slice(
+    fnIdx,
+    nextFnIdx
+  );
+
   assert.ok(
     fnSection.includes('buildRichProgressNarrative'),
     'generateSpedTrackText should use buildRichProgressNarrative'

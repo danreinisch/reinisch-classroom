@@ -37,16 +37,22 @@ function sanitizeField(value, maxLen) {
  * 'parent' = accessible language focused on student progress.
  */
 function buildTrendsSystemPrompt(audience) {
+  var criterionGuidance =
+    'Some goals may be explicitly marked Criterion Conflict: YES. For those goals, Header Mastery and Goal-Text Target are two competing official source values. ' +
+    'Do not select or infer either value as the controlling criterion. Do not classify a conflicted goal as met, mastered, on track, at target, near mastery, at risk of missing target, or otherwise relative to either criterion. ' +
+    'You may analyze raw direction of change, current performance, baseline, data count, and data-collection trend. Preserve both official criterion values and state Manual Criterion Review Required.';
+
   if (audience === 'parent') {
     return 'You are helping a teacher write a progress update for a parent or guardian about their child\'s IEP goals. ' +
       'Use clear, simple, encouraging language that a non-specialist can understand -- avoid jargon. ' +
       'Write 3-5 focused paragraphs. ' +
       'Paragraph 1: Give a general overview of how the student is doing across their goals -- what is going well and what still needs work. ' +
-      'Paragraph 2: Describe which goals the student is on track to meet and which may need extra support, using plain language. ' +
+      'Paragraph 2: For ordinary goals, describe which goals are on track to meet their target and which may need extra support, using plain language. For goals marked Criterion Conflict: YES, describe only raw progress and trend plus the need for manual criterion review; do not classify them relative to either criterion. ' +
       'Paragraph 3: Note any connections between different goal areas if relevant (e.g., reading and writing improving together). ' +
       'Paragraph 4: Share what the teacher plans to do to help the student continue making progress. ' +
       'Optional Paragraph 5: Mention any data gaps or patterns worth noting in plain terms. ' +
       'Be specific but accessible. Do not fabricate data. ' +
+      criterionGuidance + ' ' +
       'Output only the paragraphs -- no headers, no bullet points, no preamble or postamble. ' +
       'Separate each paragraph with a single blank line.';
   }
@@ -54,11 +60,12 @@ function buildTrendsSystemPrompt(audience) {
     'Your role is to analyze goal progress data and identify meaningful patterns, risks, and instructional opportunities. ' +
     'Write 3-5 focused paragraphs using professional IEP team language. ' +
     'Paragraph 1: Provide an overall trend summary -- which goals are progressing well, which are plateauing, and which are regressing. ' +
-    'Paragraph 2: Identify which goals are on track to meet targets and which are at risk, with specific data references (dates, values, rates of change). ' +
+    'Paragraph 2: For ordinary goals, identify which goals are on track to meet targets and which are at risk of missing targets, with specific data references (dates, values, rates of change). For goals marked Criterion Conflict: YES, report raw direction of change and evidence only; do not make a criterion-relative risk or success judgment. ' +
     'Paragraph 3: Note any correlations between goal areas (e.g., reading improvement coinciding with writing improvement). ' +
     'Paragraph 4: Suggest specific instructional adjustments for goals showing plateaus or regression. ' +
     'Optional Paragraph 5: Highlight any data collection gaps or patterns worth noting. ' +
     'Be specific with data references. Do not fabricate data. ' +
+    criterionGuidance + ' ' +
     'Output only the analysis paragraphs -- no headers, no bullet points, no preamble or postamble. ' +
     'Separate each paragraph with a single blank line.';
 }
@@ -83,9 +90,20 @@ function buildTrendsUserMessage(studentName, studentCode, goals, dateRange, data
   goals.forEach(function(g, i) {
     lines.push('');
     lines.push('Goal ' + (i + 1) + ': [' + sanitizeField(g.code, 20) + '] ' + sanitizeField(g.area, 50));
+    var criterionConflict = g && g.criterion_conflict === true;
+
     lines.push('  Description: ' + sanitizeField(g.description, 500));
     lines.push('  Baseline: ' + sanitizeField(g.baseline, 50));
-    lines.push('  Target: ' + sanitizeField(g.target, 50));
+    lines.push('  Criterion Conflict: ' + (criterionConflict ? 'YES' : 'NO'));
+
+    if (criterionConflict) {
+      lines.push('  Header Mastery: ' + sanitizeField(g.header_mastery || 'Not stated', 50));
+      lines.push('  Goal-Text Target: ' + sanitizeField(g.goal_text_target || 'Not stated', 50));
+      lines.push('  Criterion Status: Manual Criterion Review Required');
+    } else {
+      lines.push('  Target: ' + sanitizeField(g.target, 50));
+    }
+
     lines.push('  Current Value: ' + sanitizeField(g.currentValue, 50));
     lines.push('  Data Points Collected: ' + sanitizeField(String(g.dataCount || 0), 10));
     lines.push('  Trend: ' + sanitizeField(g.trend, 30));
@@ -100,7 +118,8 @@ function buildTrendsUserMessage(studentName, studentCode, goals, dateRange, data
   }
 
   lines.push('');
-  lines.push('Analyze the trends across all goals for patterns, identify risks and strengths, and suggest instructional adjustments where needed.');
+  lines.push('For any goal marked Criterion Conflict: YES, preserve Header Mastery and Goal-Text Target separately, do not decide which criterion controls, and do not make a target-relative success or risk judgment. State Manual Criterion Review Required.');
+  lines.push('Analyze raw trends across all goals for patterns, risks supported by raw trend evidence, strengths, and instructional adjustments where needed.');
 
   return lines.join('\n');
 }

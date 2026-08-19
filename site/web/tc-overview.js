@@ -15,7 +15,12 @@
   // Import data adapter
   const { db, isRemote } = await import("/web/data-adapter.js");
   const { getCurrentQuarter, getQuarterDateRange } = await import("/web/quarter-utils.js");
-  const { parseGoalValue, isGoalActive } = await import("/web/goal-utils.js");
+  const {
+    parseGoalValue,
+    isGoalActive,
+    hasCriterionConflict,
+    getAutomaticCriterionValue
+  } = await import("/web/goal-utils.js");
   const { getSchedule } = await import("/web/class-schedule.js");
 
   // DOM helper
@@ -222,7 +227,9 @@
       }
     }
 
-    // 6. Near Mastery KPI — goals within 10% of the mastery–baseline range from mastery target
+    // 6. Near Mastery KPI — goals within 10% of an unambiguous
+    // mastery–baseline range. Source-conflicted goals are excluded from
+    // automatic near-mastery classification.
     const kpiNearMasteryCard = $("kpiNearMasteryCard");
     const kpiNearMastery = $("kpiNearMastery");
     const kpiNearMasterySub = $("kpiNearMasterySub");
@@ -232,9 +239,19 @@
       const nearMasteryStudents = new Set();
       for (const goal of activeGoals) {
         if (goal.measurement_type === 'Observation') continue;
-        const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);
-        const baselineNum = parseGoalValue(goal.baseline);
-        if (masteryNum == null || baselineNum == null || masteryNum < baselineNum) continue;
+        const masteryNum =
+          getAutomaticCriterionValue(goal);
+
+        const baselineNum =
+          parseGoalValue(goal.baseline);
+
+        if (
+          masteryNum == null ||
+          baselineNum == null ||
+          masteryNum < baselineNum
+        ) {
+          continue;
+        }
         const range = masteryNum - baselineNum;
         const nearThreshold = masteryNum - range * 0.1;
         const latestProgress = progress
@@ -946,7 +963,29 @@
               const notes = e.notes || '';
               return notes.includes('[obs:session_outcome:met]');
             }).length;
-            const targetSessions = parseGoalValue(goal.mastery || goal.target) ?? 3;
+            const criterionConflict =
+              hasCriterionConflict(goal);
+
+            const automaticCriterion =
+              getAutomaticCriterionValue(goal);
+
+            const targetSessions =
+              obsConfig.target_met != null
+                ? obsConfig.target_met
+                : (
+                    automaticCriterion != null
+                      ? automaticCriterion
+                      : (
+                          criterionConflict
+                            ? null
+                            : 3
+                        )
+                  );
+
+            if (targetSessions == null) {
+              continue;
+            }
+
             if (metCount < targetSessions * 0.5) {
               const entry = ensureStudentEntry(student);
               const item = {
@@ -956,7 +995,15 @@
                 baseline: 0,
                 mastery: null,
                 baselineRaw: goal.baseline || '0',
-                masteryRaw: goal.mastery || goal.target || null,
+                criterionConflict,
+                headerMasteryRaw:
+                  goal.mastery ?? null,
+                goalTextTargetRaw:
+                  goal.target ?? null,
+                masteryRaw:
+                  criterionConflict
+                    ? null
+                    : (goal.mastery || goal.target || null),
                 currentRaw: `${metCount}/${window5.length} sessions met`,
               };
               entry.stalledGoals.push(goal.code);
@@ -969,9 +1016,29 @@
             const recentValues = recentProgress.slice(0, 5).map(e => parseFloat(e.value)).filter(v => !isNaN(v));
             if (recentValues.length === 0) continue;
             const avgPrompts = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
-            const targetMax = obsConfig.target_max_prompts != null
-              ? obsConfig.target_max_prompts
-              : (parseGoalValue(goal.mastery || goal.target) ?? 2);
+            const criterionConflict =
+              hasCriterionConflict(goal);
+
+            const automaticCriterion =
+              getAutomaticCriterionValue(goal);
+
+            const targetMax =
+              obsConfig.target_max_prompts != null
+                ? obsConfig.target_max_prompts
+                : (
+                    automaticCriterion != null
+                      ? automaticCriterion
+                      : (
+                          criterionConflict
+                            ? null
+                            : 2
+                        )
+                  );
+
+            if (targetMax == null) {
+              continue;
+            }
+
             if (avgPrompts > targetMax * 1.5) {
               const entry = ensureStudentEntry(student);
               const item = {
@@ -981,7 +1048,15 @@
                 baseline: 0,
                 mastery: null,
                 baselineRaw: goal.baseline || '0',
-                masteryRaw: goal.mastery || goal.target || null,
+                criterionConflict,
+                headerMasteryRaw:
+                  goal.mastery ?? null,
+                goalTextTargetRaw:
+                  goal.target ?? null,
+                masteryRaw:
+                  criterionConflict
+                    ? null
+                    : (goal.mastery || goal.target || null),
                 currentRaw: `Avg ${avgPrompts.toFixed(1)} prompts (target: ${targetMax})`,
               };
               entry.stalledGoals.push(goal.code);
@@ -992,8 +1067,15 @@
         }
 
         // ── Numeric percentage goals ───────────────────────────────────────
-        const baselineNum = parseGoalValue(goal.baseline);
-        const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);
+        const criterionConflict =
+          hasCriterionConflict(goal);
+
+        const baselineNum =
+          parseGoalValue(goal.baseline);
+
+        const masteryNum =
+          getAutomaticCriterionValue(goal);
+
         const values = recentProgress
           .map(p => p.value != null ? parseFloat(p.value) : null)
           .filter(v => v != null);
@@ -1007,9 +1089,20 @@
           goalArea: goal.goal_area || '',
           current: Math.round(currentNum * 10) / 10,
           baseline: Math.round(baselineNum * 10) / 10,
-          mastery: masteryNum != null ? Math.round(masteryNum * 10) / 10 : null,
+          mastery:
+            masteryNum != null
+              ? Math.round(masteryNum * 10) / 10
+              : null,
           baselineRaw: goal.baseline,
-          masteryRaw: goal.mastery || goal.target || null,
+          criterionConflict,
+          headerMasteryRaw:
+            goal.mastery ?? null,
+          goalTextTargetRaw:
+            goal.target ?? null,
+          masteryRaw:
+            criterionConflict
+              ? null
+              : (goal.mastery || goal.target || null),
           currentRaw: recentProgress[0].value,
         };
 
@@ -1088,16 +1181,50 @@
     html += '<div class="ov-list-body">';
 
     function buildProgressBar(item, fillClass) {
-      if (item.mastery == null) return '';
-      const maxVal = Math.max(item.mastery, item.current, item.baseline) * BAR_PADDING || 100;
-      const currentPct = Math.min(100, (item.current / maxVal) * 100).toFixed(1);
-      const baselinePct = Math.min(100, (item.baseline / maxVal) * 100).toFixed(1);
-      const masteryPct = Math.min(100, (item.mastery / maxVal) * 100).toFixed(1);
+      if (
+        item.mastery == null &&
+        !item.criterionConflict
+      ) {
+        return '';
+      }
+
+      const maxVal =
+        Math.max(
+          item.current,
+          item.baseline,
+          item.mastery ?? 0
+        ) * BAR_PADDING || 100;
+
+      const currentPct =
+        Math.min(
+          100,
+          (item.current / maxVal) * 100
+        ).toFixed(1);
+
+      const baselinePct =
+        Math.min(
+          100,
+          (item.baseline / maxVal) * 100
+        ).toFixed(1);
+
+      const masteryMarker =
+        item.mastery != null
+          ? `<div class="ov-progress-marker ov-marker-mastery" style="left:${Math.min(
+              100,
+              (item.mastery / maxVal) * 100
+            ).toFixed(1)}%" title="Mastery: ${item.masteryRaw}"></div>`
+          : '';
+
+      const trackTitle =
+        item.criterionConflict
+          ? `Current: ${item.currentRaw} | Baseline: ${item.baselineRaw} | Manual Criterion Review Required`
+          : `Current: ${item.currentRaw} | Baseline: ${item.baselineRaw} | Mastery: ${item.masteryRaw}`;
+
       return `
-        <div class="ov-progress-track" title="Current: ${item.currentRaw} | Baseline: ${item.baselineRaw} | Mastery: ${item.masteryRaw}">
+        <div class="ov-progress-track" title="${trackTitle}">
           <div class="ov-progress-fill ${fillClass}" style="width:${currentPct}%"></div>
           <div class="ov-progress-marker ov-marker-baseline" style="left:${baselinePct}%" title="Baseline: ${item.baselineRaw}"></div>
-          <div class="ov-progress-marker ov-marker-mastery" style="left:${masteryPct}%" title="Mastery: ${item.masteryRaw}"></div>
+          ${masteryMarker}
         </div>`;
     }
 
@@ -1128,9 +1255,14 @@
           const gi = entry.goalItems[goalCode];
           if (!gi) continue;
           const fillClass = gi.severity === 'red' ? 'ov-fill-red' : 'ov-fill-amber';
-          const metaText = gi.item.masteryRaw
-            ? `${gi.item.currentRaw} current · baseline: ${gi.item.baselineRaw} · mastery: ${gi.item.masteryRaw}`
-            : `${gi.item.currentRaw} current · baseline: ${gi.item.baselineRaw}`;
+          const metaText =
+            gi.item.criterionConflict
+              ? `${gi.item.currentRaw} current · baseline: ${gi.item.baselineRaw} · Header Mastery: ${gi.item.headerMasteryRaw ?? 'N/A'} · Goal-Text Target: ${gi.item.goalTextTargetRaw ?? 'N/A'} · Manual Criterion Review Required`
+              : (
+                  gi.item.masteryRaw
+                    ? `${gi.item.currentRaw} current · baseline: ${gi.item.baselineRaw} · mastery: ${gi.item.masteryRaw}`
+                    : `${gi.item.currentRaw} current · baseline: ${gi.item.baselineRaw}`
+                );
           detailHtml += `
             <div style="margin-bottom:6px; padding:4px 0; border-top:1px solid rgba(0,0,0,0.06);">
               <div class="ov-row-secondary" style="margin-bottom:4px;">

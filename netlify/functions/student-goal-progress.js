@@ -183,7 +183,7 @@ exports.handler = async (event) => {
         .join(',');
 
     // Fetch goal progress for this student with joined goal data — filter to active goals only
-    const progressUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*,goals!inner(code,desc,goal_area,baseline,mastery,measurement_type,class_context)&student_id=eq.${studentId}&or=(${schoolYearFilters})&goals.active=eq.true&order=date.desc`;
+    const progressUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*,goals!inner(code,desc,goal_area,baseline,mastery,target,criterion_conflict,measurement_type,class_context)&student_id=eq.${studentId}&or=(${schoolYearFilters})&goals.active=eq.true&order=date.desc`;
     
     console.log(`[student-goal-progress] [${requestId}] Fetching goal progress for student ID:`, studentId);
     
@@ -283,6 +283,8 @@ exports.handler = async (event) => {
         goal_area: FALLBACK_GOAL_AREA,
         baseline: null,
         mastery: null,
+        target: null,
+        criterion_conflict: false,
         measurement_type: null,
         class_context: null,
         student_id: entry.student_id,
@@ -300,7 +302,7 @@ exports.handler = async (event) => {
       const goalIds = [...new Set((fallbackProgress || []).map(p => p.goal_id).filter(Boolean))];
       if (goalIds.length > 0) {
         try {
-          const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?select=id,code,desc,goal_area,baseline,mastery,measurement_type,class_context&id=in.(${goalIds.join(',')})`;
+          const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?select=id,code,desc,goal_area,baseline,mastery,target,criterion_conflict,measurement_type,class_context&id=in.(${goalIds.join(',')})`;
           const goalsResponse = await fetch(goalsUrl, {
             method: 'GET',
             headers: {
@@ -322,6 +324,9 @@ exports.handler = async (event) => {
                 goal_area: goal.goal_area || entry.goal_area,
                 baseline: goal.baseline ?? entry.baseline,
                 mastery: goal.mastery ?? entry.mastery,
+                target: goal.target ?? entry.target,
+                criterion_conflict:
+                  goal.criterion_conflict === true,
                 measurement_type: goal.measurement_type ?? entry.measurement_type,
                 class_context: goal.class_context ?? entry.class_context,
               };
@@ -364,6 +369,9 @@ exports.handler = async (event) => {
       goal_area: entry.goals?.goal_area || FALLBACK_GOAL_AREA,
       baseline: entry.goals?.baseline ?? null,
       mastery: entry.goals?.mastery ?? null,
+      target: entry.goals?.target ?? null,
+      criterion_conflict:
+        entry.goals?.criterion_conflict === true,
       measurement_type: entry.goals?.measurement_type ?? null,
       class_context: entry.goals?.class_context ?? null,
       student_id: entry.student_id,

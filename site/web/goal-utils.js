@@ -39,8 +39,14 @@ export function formatGoalValue(value, measurementType, goal) {
   const type = (measurementType || 'Percent').toLowerCase();
   if (type === 'observation') return 'N/A';
   if (type === 'x/y' || type === 'fraction') {
-    // value is stored as a 0-100 percentage internally; convert back to x/y using
-    // the mastery/target denominator.
+    // A source-conflicted goal has no approved controlling denominator.
+    // Preserve the raw progress value as a percentage rather than silently
+    // choosing either Header Mastery or Goal-Text Target.
+    if (hasCriterionConflict(goal)) {
+      return value.toFixed(0) + '%';
+    }
+
+    // Ordinary goals retain the historical mastery-first denominator behavior.
     const denomMatch = (goal?.mastery || goal?.target || '').match(/\/(\d+)/);
     if (denomMatch) {
       const denom = parseInt(denomMatch[1]);
@@ -54,6 +60,29 @@ export function formatGoalValue(value, measurementType, goal) {
   return value.toFixed(0) + '%';
 }
 
+
+/**
+ * Return true only for an explicitly source-verified criterion conflict.
+ * Unequal mastery and target values do not imply a conflict.
+ */
+export function hasCriterionConflict(goal) {
+  return goal?.criterion_conflict === true;
+}
+
+/**
+ * Return the numeric criterion usable for automatic judgments.
+ * Source-conflicted goals deliberately return null.
+ */
+export function getAutomaticCriterionValue(goal) {
+  if (hasCriterionConflict(goal)) {
+    return null;
+  }
+
+  return (
+    parseGoalValue(goal?.mastery) ??
+    parseGoalValue(goal?.target)
+  );
+}
 
 /**
  * Returns true if a goal should be considered active/open.
