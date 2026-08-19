@@ -71,6 +71,8 @@ jobs:
       
       - name: Run unit tests
         run: npm run test:unit
+      - name: Run RC-MEDIA-01 large-media regression
+        run: node tests/rc-media-01-large-classroom-media.test.cjs
 
   smoke:
     runs-on: ubuntu-latest
