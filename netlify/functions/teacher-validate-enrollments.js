@@ -33,7 +33,8 @@ const { SESSION_SECRET } = process.env;
  * Fetch the list of enrolled student codes for a given class ID.
  * Uses active class_enrollments as authoritative current membership.
  * Uses legacy enrollments only when the primary compatibility surface is unavailable.
- * Returns an array of student code strings, or null if class was not found.
+ * Returns an array of student code strings.
+ * Class-not-found is handled by the caller before this function is invoked.
  */
 async function fetchEnrolledCodes(classId, requestId) {
   // Primary: class_enrollments (UUID-based junction table with embedded student info)
