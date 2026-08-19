@@ -79,6 +79,18 @@
     deAlert.style.display = 'none';
   }
 
+  function isXOfYMeasurementType(value) {
+    const normalized =
+      String(value || '')
+        .trim()
+        .toLowerCase();
+
+    return (
+      normalized === 'x/y' ||
+      normalized === 'x_of_y'
+    );
+  }
+
   function formatDate(dateStr) {
     const date =
       new Date(
@@ -225,8 +237,9 @@
       'Uncategorized';
 
     deMeasurementType.textContent =
-      goalData.measurement_type ===
-      'x_of_y'
+      isXOfYMeasurementType(
+        goalData.measurement_type,
+      )
         ? 'X out of Y'
         : 'Percent';
 
@@ -239,8 +252,9 @@
       'Unknown';
 
     if (
-      goalData.measurement_type ===
-      'x_of_y'
+      isXOfYMeasurementType(
+        goalData.measurement_type,
+      )
     ) {
       dePercentGroup.style.display =
         'none';
@@ -463,8 +477,9 @@
     let value = null;
 
     if (
-      goalData.measurement_type ===
-      'x_of_y'
+      isXOfYMeasurementType(
+        goalData.measurement_type,
+      )
     ) {
       const numerator =
         Number(
