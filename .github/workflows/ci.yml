@@ -92,8 +92,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+      - name: Show Playwright install plan
+        run: |
+          npx playwright --version
+          npx playwright install --dry-run chromium
+
+      - name: Install Playwright OS dependencies
+        timeout-minutes: 10
+        run: npx playwright install-deps chromium
+
+      - name: Install Playwright Chromium
+        timeout-minutes: 10
+        run: npx playwright install chromium
       
       - name: Run smoke tests
         run: npm run test:smoke
