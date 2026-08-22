@@ -25,22 +25,24 @@
 
   // ── Nav configs ────────────────────────────────────────────────────────────
   var MAIN_NAV = [
-    { href: '/',                    label: 'Home',                icon: I.home      },
-    { href: '/language-arts/',      label: 'Language Arts',       icon: I.book      },
-    { href: '/life-skills/',        label: 'Transitional Skills', icon: I.life      },
-    { href: '/classroom-resources/',label: 'Classroom Resources', icon: I.resources },
-    { href: '/toolkits/',           label: 'Toolkits',            icon: I.wrench    },
-    { href: '/teacher/',            label: 'Teacher',             icon: I.teacher   },
-    { href: '/substitute/',         label: 'Substitute',          icon: I.clip      },
-    { href: '/student/',            label: 'Student',             icon: I.student   },
+    { href: '/',                     label: 'Home',                icon: I.home      },
+    { href: '/language-arts/',       label: 'Language Arts',       icon: I.book      },
+    { href: '/life-skills/',         label: 'Transitional Skills', icon: I.life      },
+    { href: '/classroom-resources/', label: 'Classroom Resources', icon: I.resources },
+    { href: '/toolkits/',            label: 'Toolkits',            icon: I.wrench    },
+    { href: '/teacher/',             label: 'Teacher',             icon: I.teacher   },
+    { href: '/substitute/',          label: 'Substitute',          icon: I.clip      },
+    { href: '/student/',             label: 'Student',             icon: I.student   },
   ];
 
+  // Language Arts uses a focused sub-navigation just like before.
+  // Top-level sections such as Transitional Skills and Classroom Resources
+  // remain in MAIN_NAV rather than being mixed into the LA collection list.
   var LA_NAV = [
-    { href: '/',                       label: 'Home',                icon: I.home      },
-    { href: '/language-arts/',         label: 'Language Arts',       icon: I.book      },
-    { href: '/classroom-resources/',   label: 'Classroom Resources', icon: I.resources },
-    { href: '/language-arts/toolkit/', label: 'Toolkit',             icon: I.wrench    },
-    { href: '/toolkits/',              label: 'All Toolkits',        icon: I.wrench    },
+    { href: '/',                       label: 'Home',          icon: I.home   },
+    { href: '/language-arts/',         label: 'Language Arts', icon: I.book   },
+    { href: '/language-arts/toolkit/', label: 'Toolkit',       icon: I.wrench },
+    { href: '/toolkits/',              label: 'All Toolkits',  icon: I.wrench },
   ];
 
   function activeLanguageArtsCollections(units){
@@ -122,9 +124,9 @@
         '.home-classroom-resource{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;margin:18px 0 8px;padding:16px 18px;border-radius:15px;border:1px solid rgba(45,212,191,.22);border-left:3px solid rgba(45,212,191,.72);background:linear-gradient(100deg,rgba(45,212,191,.075),rgba(96,165,250,.035));color:inherit;text-decoration:none;transition:transform .18s ease,border-color .18s ease,background .18s ease;}' +
         '.home-classroom-resource:hover,.home-classroom-resource:focus-visible{transform:translateY(-2px);border-color:rgba(45,212,191,.48);background:linear-gradient(100deg,rgba(45,212,191,.12),rgba(96,165,250,.06));outline:none;}' +
         '.home-classroom-resource-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:rgba(45,212,191,.10);color:#5eead4;}' +
-        '.home-classroom-resource-kicker{font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(94,234,212,.9);margin-bottom:3px;}' +
-        '.home-classroom-resource-title{font-size:1rem;font-weight:800;color:var(--rc-ink);}' +
-        '.home-classroom-resource-desc{font-size:.82rem;color:var(--rc-ink-dim);margin-top:2px;}' +
+        '.home-classroom-resource-kicker{font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(94,234,212,.9);margin-bottom:3px;display:block;}' +
+        '.home-classroom-resource-title{font-size:1rem;font-weight:800;color:var(--rc-ink);display:block;}' +
+        '.home-classroom-resource-desc{font-size:.82rem;color:var(--rc-ink-dim);margin-top:2px;display:block;}' +
         '.home-classroom-resource-action{white-space:nowrap;font-size:.84rem;font-weight:750;color:rgba(147,197,253,.95);}' +
         '@media(max-width:700px){.home-classroom-resource{grid-template-columns:auto 1fr}.home-classroom-resource-action{grid-column:2;white-space:normal}.home-classroom-resource-desc{display:none}}';
       document.head.appendChild(style);
@@ -133,7 +135,7 @@
     var feature = document.createElement('a');
     feature.id = 'home-classroom-resources-feature';
     feature.className = 'home-classroom-resource';
-    feature.href = '/classroom-resources/classroom-playbook/';
+    feature.href = '/viewer/?src=%2Fclassroom-resources%2Fclassroom-playbook%2F&return=%2F&title=The+Classroom+Playbook';
     feature.innerHTML =
       '<span class="home-classroom-resource-icon" aria-hidden="true">' + I.resources + '</span>' +
       '<span><span class="home-classroom-resource-kicker">Featured Classroom Resource</span>' +
