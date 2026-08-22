@@ -75,3 +75,46 @@
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;scroll-behavior:auto !important;transition-duration:.001ms !important}
   .slide.active.motion-in .kicker,.slide.active.motion-in h1,.slide.active.motion-in h2,.slide.active.motion-in .lead,.slide.active.motion-in .big-quote,.slide.active.motion-in .hero-rule,.slide.active.motion-in .chips,.slide.active.motion-in .card,.slide.active.motion-in .topic,.slide.active.motion-in .course-btn,.slide.active.motion-in .rule,.slide.active.motion-in .phrase,.slide.active.motion-in .callout,.slide.active.motion-in .footer-line{opacity:1;transform:none}
 }
+
+/* ---------- ReinischClassroom presentation-shell alignment ---------- */
+.bar{
+  position:fixed;top:0;left:0;height:5px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--teal),var(--amber),var(--coral));
+  background-size:220% 100%;animation:progressShimmer 4.5s linear infinite;
+  transition:width .22s ease;
+}
+.slide{
+  padding:30px clamp(24px,4vw,58px) 72px;
+}
+.deck{
+  max-height:calc(100dvh - 96px);
+}
+.controls{
+  left:auto;right:14px;bottom:10px;transform:none;
+  gap:8px;padding:0;background:transparent;border:0;border-radius:0;
+  backdrop-filter:none;box-shadow:none;
+}
+.nav-btn{
+  min-width:auto;padding:10px 15px;border-radius:10px;
+  background:rgba(24,34,53,.88);border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 8px 22px rgba(0,0,0,.18);
+}
+.nav-btn:hover:not(:disabled),.nav-btn:focus-visible:not(:disabled){
+  background:rgba(36,48,70,.96);border-color:rgba(255,255,255,.22);
+}
+.slide-counter{
+  position:fixed;left:16px;bottom:18px;z-index:40;
+  color:#9fb0c2;font-size:.84rem;font-weight:700;
+  font-variant-numeric:tabular-nums;
+}
+@media(max-height:820px) and (min-width:721px){
+  .slide{padding-top:20px;padding-bottom:62px}
+  .deck{max-height:calc(100dvh - 76px)}
+}
+@media(max-width:720px){
+  .slide{padding:18px 12px 66px}
+  .deck{width:96vw;max-height:calc(100dvh - 78px)}
+  .controls{right:8px;bottom:7px}
+  .slide-counter{left:10px;bottom:15px}
+  .nav-btn{padding:9px 12px}
+}

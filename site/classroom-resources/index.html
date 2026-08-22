@@ -11,173 +11,116 @@
   <link rel="stylesheet" href="/web/teacher-shell.css" />
   <link rel="stylesheet" href="/assets/css/class-clock.css" />
   <link rel="stylesheet" href="/assets/css/class-mode.css" />
+
   <script src="/web/public-nav.js"></script>
   <script src="/web/sidebar-init.js"></script>
   <script defer src="/assets/js/class-clock.js" type="module"></script>
   <script defer src="/web/class-mode.js"></script>
+  <script src="/assets/js/open-in-viewer.js"></script>
+  <script defer src="/classroom-resources/classroom-resources.js"></script>
 
   <style>
-    .cr-wrap {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 1rem 1.2rem 3rem;
-    }
-
-    .cr-hero {
-      position: relative;
-      overflow: hidden;
-      padding: clamp(1.6rem, 4vw, 2.5rem);
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background:
-        radial-gradient(circle at 12% 18%, rgba(45, 212, 191, 0.13), transparent 30%),
-        radial-gradient(circle at 88% 20%, rgba(96, 165, 250, 0.10), transparent 28%),
-        rgba(255,255,255,0.035);
-      box-shadow: 0 18px 50px rgba(0,0,0,0.18);
-    }
-
-    .cr-kicker {
-      margin: 0 0 0.55rem;
-      color: rgba(94, 234, 212, 0.92);
-      font-size: 0.72rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .cr-hero h1 {
-      margin: 0;
-      font-size: clamp(2rem, 5vw, 3.4rem);
-      letter-spacing: -0.035em;
-      line-height: 1.05;
-    }
-
-    .cr-hero p {
-      max-width: 720px;
-      margin: 0.8rem 0 0;
-      color: var(--rc-ink-dim);
-      font-size: 1rem;
-      line-height: 1.6;
-    }
-
-    .cr-section-title {
-      margin: 2rem 0 0.9rem;
-      font-size: 0.78rem;
-      font-weight: 800;
-      color: var(--rc-muted);
-      letter-spacing: 0.10em;
-      text-transform: uppercase;
-    }
-
-    .cr-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-      gap: 1rem;
-    }
-
-    .cr-card {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      min-height: 260px;
-      padding: 1.5rem;
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,0.11);
-      background: linear-gradient(145deg, rgba(255,255,255,0.065), rgba(255,255,255,0.025));
-      color: inherit;
+    a.resource-card {
       text-decoration: none;
-      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+      color: inherit;
     }
 
-    .cr-card:hover,
-    .cr-card:focus-visible {
-      transform: translateY(-3px);
-      border-color: rgba(45,212,191,0.48);
-      background: linear-gradient(145deg, rgba(45,212,191,0.10), rgba(255,255,255,0.03));
-      box-shadow: 0 16px 36px rgba(0,0,0,0.22);
+    .content-wrapper {
+      padding-top: 1rem;
+    }
+
+    .content-wrapper h1 {
+      font-size: 38px;
+      font-weight: 850;
+      margin: 0 0 12px;
+      letter-spacing: -0.02em;
+      color: var(--rc-ink);
+    }
+
+    .content-wrapper > p {
+      font-size: 1.05rem;
+      color: var(--rc-ink-dim);
+      margin: 0 0 1.5rem;
+      max-width: 72ch;
+    }
+
+    .resource-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 360px));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    .resource-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-height: 118px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      backdrop-filter: blur(12px) saturate(130%);
+      -webkit-backdrop-filter: blur(12px) saturate(130%);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-left: 3px solid rgba(45,212,191,0.58);
+      border-radius: 18px;
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .resource-card:hover,
+    .resource-card:focus-visible {
+      transform: translateY(-4px);
+      border-color: rgba(45,212,191,0.38);
+      border-left-color: rgba(45,212,191,0.9);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12);
       outline: none;
     }
 
-    .cr-card-icon {
+    .resource-icon {
+      flex-shrink: 0;
       display: grid;
       place-items: center;
       width: 48px;
       height: 48px;
-      margin-bottom: 1rem;
-      border-radius: 13px;
-      background: rgba(45,212,191,0.10);
-      border: 1px solid rgba(45,212,191,0.22);
+      border-radius: 12px;
       color: #5eead4;
+      background: rgba(45,212,191,0.08);
+      border: 1px solid rgba(45,212,191,0.18);
     }
 
-    .cr-card-icon svg {
-      width: 27px;
-      height: 27px;
+    .resource-icon svg {
+      width: 28px;
+      height: 28px;
       fill: none;
       stroke: currentColor;
-      stroke-width: 1.6;
+      stroke-width: 1.5;
       stroke-linecap: round;
       stroke-linejoin: round;
     }
 
-    .cr-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.45rem;
-      margin-bottom: 0.85rem;
+    .resource-title {
+      display: block;
+      font-size: 1.1rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--rc-ink);
     }
 
-    .cr-tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.28rem 0.55rem;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.055);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: var(--rc-muted);
-      font-size: 0.68rem;
-      font-weight: 750;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .cr-card h2 {
-      margin: 0;
-      font-size: 1.45rem;
-      letter-spacing: -0.02em;
-    }
-
-    .cr-card p {
-      margin: 0.65rem 0 1.2rem;
-      color: var(--rc-ink-dim);
-      line-height: 1.55;
-      font-size: 0.94rem;
-    }
-
-    .cr-launch {
-      margin-top: auto;
-      color: rgba(147,197,253,0.95);
-      font-size: 0.9rem;
-      font-weight: 750;
-    }
-
-    .cr-note {
-      margin-top: 1rem;
-      padding: 1rem 1.1rem;
-      border-radius: 14px;
-      border: 1px dashed rgba(255,255,255,0.11);
-      background: rgba(255,255,255,0.02);
-      color: var(--rc-muted);
+    .resource-meta {
+      display: block;
+      margin-top: 5px;
       font-size: 0.86rem;
-      line-height: 1.5;
+      line-height: 1.4;
+      color: var(--rc-ink-dim);
     }
 
     @media (min-width: 1920px) {
-      .cr-wrap { max-width: 1400px; }
-      .cr-card { min-height: 320px; padding: 2rem; }
-      .cr-card h2 { font-size: 1.8rem; }
-      .cr-card p { font-size: 1.1rem; }
-      .cr-launch { font-size: 1.05rem; }
+      .content-wrapper h1 { font-size: 48px; }
+      .content-wrapper > p { font-size: 1.2rem; }
+      .resource-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 440px)); gap: 1.5rem; }
+      .resource-card { min-height: 148px; padding: 26px; }
+      .resource-title { font-size: 1.35rem; }
+      .resource-meta { font-size: 1rem; }
     }
   </style>
 </head>
@@ -185,31 +128,33 @@
   <div class="tc-app" data-page-title="Classroom Resources">
     <div class="tc-shell">
       <main class="tc-main">
-        <div class="cr-wrap">
-          <section class="cr-hero">
-            <p class="cr-kicker">Reusable • Classroom-facing • Public access</p>
-            <h1>Classroom Resources</h1>
-            <p>Presentations, routines, reference tools, and other things we use across classes — without burying them inside a weekly Language Arts or Transitional Skills lesson.</p>
-          </section>
-
-          <div class="cr-section-title">Featured Resource</div>
-          <section class="cr-grid" aria-label="Classroom resources">
-            <a class="cr-card" href="/classroom-resources/classroom-playbook/">
-              <div class="cr-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22z"></path><path d="M4 5.5v14"></path><path d="M8 7h8"></path><path d="M8 11h6"></path></svg>
-              </div>
-              <div class="cr-tags">
-                <span class="cr-tag">Presentation</span>
-                <span class="cr-tag">All Classes</span>
-                <span class="cr-tag">2026–27</span>
-              </div>
-              <h2>The Classroom Playbook</h2>
-              <p>Expectations, routines, technology, help, resets, and what to do when a day gets sideways. Built for the first day — useful whenever we need a reset.</p>
-              <div class="cr-launch">Launch presentation →</div>
+        <div class="content-wrapper">
+          <nav class="tc-context-nav" aria-label="Contextual navigation">
+            <a class="tc-context-back" href="/" aria-label="Back to Home">
+              <span aria-hidden="true">←</span><span>Back to Home</span>
             </a>
-          </section>
+          </nav>
 
-          <div class="cr-note">This section is intentionally small right now. We’ll add resources here as they become useful — not because an empty category demanded decorative filler.</div>
+          <h1>Classroom Resources</h1>
+          <p>Presentations, routines, reference tools, and other reusable materials we use across classes.</p>
+
+          <div class="resource-grid" aria-label="Classroom resources">
+            <a
+              class="resource-card"
+              href="/viewer/?src=%2Fclassroom-resources%2Fclassroom-playbook%2F&return=%2Fclassroom-resources%2F&title=The+Classroom+Playbook"
+              data-viewer-src="/classroom-resources/classroom-playbook/"
+              data-viewer-title="The Classroom Playbook"
+              aria-label="Open The Classroom Playbook presentation"
+            >
+              <span class="resource-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22z"></path><path d="M4 5.5v14"></path><path d="M8 7h8"></path><path d="M8 11h6"></path></svg>
+              </span>
+              <span>
+                <span class="resource-title">The Classroom Playbook</span>
+                <span class="resource-meta">Presentation · All Classes · Expectations, routines, technology, help, and resets</span>
+              </span>
+            </a>
+          </div>
         </div>
       </main>
     </div>
