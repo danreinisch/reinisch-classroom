@@ -1,0 +1,44 @@
+.phrase{border-left:5px solid var(--teal);background:rgba(45,212,191,.07);padding:16px 18px;border-radius:0 15px 15px 0;color:#e8fffa;font-size:clamp(1rem,1.5vw,1.3rem);font-weight:750}
+.callout{margin-top:22px;border:1px dashed rgba(251,191,36,.35);background:rgba(251,191,36,.06);border-radius:18px;padding:17px 20px;color:#fde7a6;font-size:clamp(1rem,1.3vw,1.2rem);line-height:1.45}.callout strong{color:#fff}
+.tap-hint{position:fixed;left:22px;bottom:27px;z-index:20;color:#91a5b8;font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.tap-hint b{color:var(--teal)}
+.topbar{position:fixed;left:22px;right:22px;top:18px;z-index:30;display:flex;align-items:center;gap:14px;pointer-events:none}.brand{font-size:.75rem;letter-spacing:.16em;font-weight:950;color:#d9e6ef;text-transform:uppercase}.progress{flex:1;height:7px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber),var(--coral));transition:width .2s ease}.count{font-size:.78rem;color:#c4d2de;font-weight:900;letter-spacing:.08em}
+.controls{position:fixed;z-index:40;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:rgba(10,18,31,.82);border:1px solid var(--line);border-radius:18px;padding:8px;backdrop-filter:blur(14px);box-shadow:0 12px 32px rgba(0,0,0,.28)}.nav-btn{border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;border-radius:12px;padding:12px 18px;font-weight:900;cursor:pointer;min-width:116px}.nav-btn:hover:not(:disabled),.nav-btn:focus-visible:not(:disabled){background:rgba(45,212,191,.14);border-color:rgba(45,212,191,.5);outline:none}.nav-btn:disabled{opacity:.28;cursor:not-allowed}.nav-mid{min-width:88px;text-align:center;font-weight:900;color:#cdd8e3;font-variant-numeric:tabular-nums}
+.overlay{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(4,9,17,.72);backdrop-filter:blur(10px)}.overlay.open{display:flex}.modal{width:min(820px,94vw);max-height:min(78vh,760px);overflow:auto;background:linear-gradient(145deg,#1b2940,#111c2e);border:1px solid rgba(255,255,255,.18);border-radius:26px;box-shadow:0 36px 100px rgba(0,0,0,.58);padding:30px 32px;position:relative}.modal .modal-kicker{font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;color:var(--teal);font-weight:950;margin-bottom:8px}.modal h3{font-size:clamp(1.8rem,3vw,2.7rem);letter-spacing:-.03em;margin:0 48px 18px 0}.modal .body{color:#d8e4ee;font-size:clamp(1rem,1.35vw,1.2rem);line-height:1.6}.modal .body p{color:#d8e4ee}.modal .body ul{padding-left:22px}.modal .body li{margin:.55em 0}.modal .body .best{border-left:5px solid var(--mint);background:rgba(134,239,172,.08);padding:14px 16px;border-radius:0 14px 14px 0;margin:18px 0}.modal .body .watch{border-left:5px solid var(--coral);background:rgba(251,113,133,.07);padding:14px 16px;border-radius:0 14px 14px 0;margin:18px 0}.close{position:absolute;right:18px;top:18px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;border-radius:12px;width:40px;height:40px;font-weight:950;cursor:pointer}.close:hover,.close:focus-visible{background:rgba(251,113,133,.13);border-color:rgba(251,113,133,.4);outline:none}
+.course-btn{min-height:210px;padding:28px}.course-btn .course-name{font-size:clamp(2rem,3.4vw,3.6rem);font-weight:900;letter-spacing:-.04em;display:block;margin-bottom:10px}.course-btn p{color:var(--muted);font-size:1.05rem;line-height:1.5}
+.footer-line{margin-top:24px;color:#93a4b5;font-size:.84rem}.serious{color:#fff;font-weight:850}.fun{color:var(--amber);font-weight:850}
+#presentation .slide:nth-child(9) .deck{padding-top:26px;padding-bottom:26px}
+#presentation .slide:nth-child(9) .phrase-grid{gap:10px;margin-top:18px}
+#presentation .slide:nth-child(9) .topic{margin-top:14px!important}
+
+@media(max-height:820px) and (min-width:721px){
+  .slide{padding-top:54px;padding-bottom:82px}
+  .deck{max-height:calc(100dvh - 132px);padding:22px 34px}
+  .hero .deck{padding:34px 48px}
+  h1{font-size:clamp(3rem,6vw,5.5rem);margin-bottom:14px}
+  h2{font-size:clamp(2rem,3.7vw,3.5rem);margin-bottom:16px}
+  .lead{font-size:clamp(1.02rem,1.55vw,1.4rem)}
+  .big-quote{font-size:clamp(1.4rem,2.3vw,2rem)}
+  .two,.three,.five,.scenario-grid,.course-grid{gap:10px;margin-top:16px}
+  .card,.topic,.course-btn{padding:14px 16px;border-radius:16px}
+  .topic.big{min-height:120px}.topic .num{margin-bottom:7px}
+  .topic::after,.course-btn::after{margin-top:8px;font-size:.61rem}
+  .compare{margin-top:16px;gap:12px}.compare .card{min-height:145px}
+  .rule-list{gap:8px;margin-top:16px}.rule{padding:10px 14px}.rule .step{width:34px;height:34px}
+  .flow{gap:7px;margin-top:16px}.flow .card{padding:13px;min-height:125px}
+  .phrase-grid{gap:8px;margin-top:14px}.phrase{padding:10px 13px;font-size:1rem}
+  .callout{margin-top:14px;padding:11px 15px;font-size:1rem}
+  .course-btn{min-height:160px;padding:20px}.course-btn .course-name{font-size:clamp(1.8rem,2.8vw,2.8rem)}
+  .hero-rule{margin:18px 0}.chips{margin-top:18px}.chip{padding:7px 11px}
+  .footer-line{margin-top:14px}
+}
+@media(max-width:980px){.five{grid-template-columns:repeat(2,1fr)}.scenario-grid,.three{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr 1fr}.flow .card:not(:last-child)::after{display:none}.hero-stamp{display:none}}
+@media(max-width:720px){.slide{padding:64px 14px 92px}.deck{width:96vw;border-radius:22px;padding:26px 23px}.two,.three,.five,.scenario-grid,.course-grid,.phrase-grid,.compare{grid-template-columns:1fr}.compare .vs{display:none}.topbar{left:12px;right:12px}.brand{display:none}.tap-hint{display:none}.controls{bottom:10px}.nav-btn{min-width:96px;padding:10px 13px}.deck::before{width:5px}.flow{grid-template-columns:1fr}.modal{padding:26px 22px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media print{body{overflow:visible;background:#fff;color:#111}.topbar,.controls,.tap-hint,.overlay{display:none!important}.presentation{height:auto}.slide{position:relative;display:flex!important;page-break-after:always;height:100vh;background:#0f1726}.deck{box-shadow:none}}
+
+
+/* ---------- Motion system: attention without carnival nonsense ---------- */
+.presentation::before,
+.presentation::after{
+  content:"";position:fixed;border-radius:50%;filter:blur(2px);pointer-events:none;z-index:0;opacity:.38;
+}

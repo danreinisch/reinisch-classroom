@@ -16,6 +16,7 @@
     book:   icon20('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>'),
     life:   icon20('<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path>'),
     calc:   icon20('<rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path>'),
+    resources: icon20('<path d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M8 12h8"></path><path d="M8 16h5"></path>'),
     teacher:icon20('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path>'),
     student:icon20('<path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path>'),
     wrench: icon20('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>'),
@@ -24,20 +25,22 @@
 
   // ── Nav configs ────────────────────────────────────────────────────────────
   var MAIN_NAV = [
-    { href: '/',               label: 'Home',          icon: I.home    },
-    { href: '/language-arts/', label: 'Language Arts', icon: I.book    },
-    { href: '/life-skills/',   label: 'Transitional Skills',   icon: I.life    },
-    { href: '/toolkits/',      label: 'Toolkits',      icon: I.wrench  },
-    { href: '/teacher/',       label: 'Teacher',       icon: I.teacher },
-    { href: '/substitute/',    label: 'Substitute',    icon: I.clip    },
-    { href: '/student/',       label: 'Student',       icon: I.student },
+    { href: '/',                    label: 'Home',                icon: I.home      },
+    { href: '/language-arts/',      label: 'Language Arts',       icon: I.book      },
+    { href: '/life-skills/',        label: 'Transitional Skills', icon: I.life      },
+    { href: '/classroom-resources/',label: 'Classroom Resources', icon: I.resources },
+    { href: '/toolkits/',           label: 'Toolkits',            icon: I.wrench    },
+    { href: '/teacher/',            label: 'Teacher',             icon: I.teacher   },
+    { href: '/substitute/',         label: 'Substitute',          icon: I.clip      },
+    { href: '/student/',            label: 'Student',             icon: I.student   },
   ];
 
   var LA_NAV = [
-    { href: '/',                       label: 'Home',          icon: I.home   },
-    { href: '/language-arts/',         label: 'Language Arts', icon: I.book   },
-    { href: '/language-arts/toolkit/', label: 'Toolkit',       icon: I.wrench },
-    { href: '/toolkits/',              label: 'All Toolkits',  icon: I.wrench },
+    { href: '/',                       label: 'Home',                icon: I.home      },
+    { href: '/language-arts/',         label: 'Language Arts',       icon: I.book      },
+    { href: '/classroom-resources/',   label: 'Classroom Resources', icon: I.resources },
+    { href: '/language-arts/toolkit/', label: 'Toolkit',             icon: I.wrench    },
+    { href: '/toolkits/',              label: 'All Toolkits',        icon: I.wrench    },
   ];
 
   function activeLanguageArtsCollections(units){
@@ -103,6 +106,42 @@
     } catch (_) {
       // Keep base navigation available if the registry cannot be loaded.
     }
+  }
+
+  function injectClassroomResourcesSpotlight(){
+    if (location.pathname !== '/' && location.pathname !== '/index.html') return;
+    if (document.getElementById('home-classroom-resources-feature')) return;
+
+    var ticker = document.querySelector('.ticker-bar');
+    if (!ticker) return;
+
+    if (!document.getElementById('home-classroom-resources-feature-style')) {
+      var style = document.createElement('style');
+      style.id = 'home-classroom-resources-feature-style';
+      style.textContent =
+        '.home-classroom-resource{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;margin:18px 0 8px;padding:16px 18px;border-radius:15px;border:1px solid rgba(45,212,191,.22);border-left:3px solid rgba(45,212,191,.72);background:linear-gradient(100deg,rgba(45,212,191,.075),rgba(96,165,250,.035));color:inherit;text-decoration:none;transition:transform .18s ease,border-color .18s ease,background .18s ease;}' +
+        '.home-classroom-resource:hover,.home-classroom-resource:focus-visible{transform:translateY(-2px);border-color:rgba(45,212,191,.48);background:linear-gradient(100deg,rgba(45,212,191,.12),rgba(96,165,250,.06));outline:none;}' +
+        '.home-classroom-resource-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:rgba(45,212,191,.10);color:#5eead4;}' +
+        '.home-classroom-resource-kicker{font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(94,234,212,.9);margin-bottom:3px;}' +
+        '.home-classroom-resource-title{font-size:1rem;font-weight:800;color:var(--rc-ink);}' +
+        '.home-classroom-resource-desc{font-size:.82rem;color:var(--rc-ink-dim);margin-top:2px;}' +
+        '.home-classroom-resource-action{white-space:nowrap;font-size:.84rem;font-weight:750;color:rgba(147,197,253,.95);}' +
+        '@media(max-width:700px){.home-classroom-resource{grid-template-columns:auto 1fr}.home-classroom-resource-action{grid-column:2;white-space:normal}.home-classroom-resource-desc{display:none}}';
+      document.head.appendChild(style);
+    }
+
+    var feature = document.createElement('a');
+    feature.id = 'home-classroom-resources-feature';
+    feature.className = 'home-classroom-resource';
+    feature.href = '/classroom-resources/classroom-playbook/';
+    feature.innerHTML =
+      '<span class="home-classroom-resource-icon" aria-hidden="true">' + I.resources + '</span>' +
+      '<span><span class="home-classroom-resource-kicker">Featured Classroom Resource</span>' +
+      '<span class="home-classroom-resource-title">The Classroom Playbook</span>' +
+      '<span class="home-classroom-resource-desc">Expectations, routines, technology, help, resets — and what to do when things go sideways.</span></span>' +
+      '<span class="home-classroom-resource-action">Launch Presentation →</span>';
+
+    ticker.insertAdjacentElement('afterend', feature);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -182,6 +221,7 @@
     }, 0);
 
     appendLanguageArtsCollections();
+    injectClassroomResourcesSpotlight();
   }
 
   if(document.readyState === 'loading'){

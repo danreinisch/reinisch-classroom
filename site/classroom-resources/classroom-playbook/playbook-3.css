@@ -1,0 +1,77 @@
+.presentation::before{width:220px;height:220px;left:-80px;bottom:10vh;background:radial-gradient(circle,rgba(45,212,191,.23),transparent 68%);animation:orbFloatA 10s ease-in-out infinite alternate}
+.presentation::after{width:280px;height:280px;right:-110px;top:18vh;background:radial-gradient(circle,rgba(167,139,250,.18),transparent 68%);animation:orbFloatB 13s ease-in-out infinite alternate}
+.slide{z-index:1}
+.deck{transform-origin:50% 55%}
+.deck::before{background-size:100% 220%;animation:stripeDrift 7s ease-in-out infinite alternate}
+.progress span{background-size:220% 100%;animation:progressShimmer 4.5s linear infinite}
+.hero-stamp{animation:stampFloat 4.8s ease-in-out infinite}
+.hero-rule{position:relative;overflow:hidden}
+.hero-rule::after{content:"";position:absolute;inset:0;width:40%;background:rgba(255,255,255,.7);filter:blur(7px);transform:translateX(-160%) skewX(-25deg);animation:ruleSweep 4.4s ease-in-out infinite}
+.topic h3,.course-btn .course-name{transition:transform .18s ease,color .18s ease}
+.topic:hover h3,.topic:focus-visible h3,.course-btn:hover .course-name,.course-btn:focus-visible .course-name{transform:translateX(4px)}
+.topic:active,.course-btn:active{transform:translateY(-1px) scale(.992)}
+.topic::after,.course-btn::after{animation:hintBreathe 2.6s ease-in-out infinite}
+.flow .card:not(:last-child)::after,.flow .topic:not(:last-child)::after{animation:arrowNudge 1.8s ease-in-out infinite}
+.overlay.open{animation:overlayFade .18s ease-out both}
+.overlay.open .modal{animation:modalPop .24s cubic-bezier(.2,.85,.2,1.05) both}
+.overlay.open .modal .body>*{animation:modalItem .35s ease-out both}
+.overlay.open .modal .body>*:nth-child(2){animation-delay:.05s}.overlay.open .modal .body>*:nth-child(3){animation-delay:.1s}.overlay.open .modal .body>*:nth-child(4){animation-delay:.15s}
+
+/* Slide entrance: stagger the important pieces so students' eyes have somewhere to go. */
+.slide.active.motion-in .kicker,
+.slide.active.motion-in h1,
+.slide.active.motion-in h2,
+.slide.active.motion-in .lead,
+.slide.active.motion-in .big-quote,
+.slide.active.motion-in .hero-rule,
+.slide.active.motion-in .chips,
+.slide.active.motion-in .card,
+.slide.active.motion-in .topic,
+.slide.active.motion-in .course-btn,
+.slide.active.motion-in .rule,
+.slide.active.motion-in .phrase,
+.slide.active.motion-in .callout,
+.slide.active.motion-in .footer-line{
+  opacity:0;animation:riseIn .5s cubic-bezier(.2,.78,.2,1) forwards;animation-delay:var(--stagger,0ms)
+}
+.slide.active.motion-in .hero-stamp{animation:stampIn .55s cubic-bezier(.2,.8,.2,1) var(--stagger,0ms) both,stampFloat 4.8s ease-in-out .7s infinite}
+
+@keyframes riseIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes stampIn{from{opacity:0;transform:translateY(-14px) rotate(10deg) scale(.92)}to{opacity:1;transform:translateY(0) rotate(6deg) scale(1)}}
+@keyframes stampFloat{0%,100%{transform:translateY(0) rotate(6deg)}50%{transform:translateY(-7px) rotate(4.7deg)}}
+@keyframes orbFloatA{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(80px,-55px,0) scale(1.18)}}
+@keyframes orbFloatB{from{transform:translate3d(0,0,0) scale(1.06)}to{transform:translate3d(-75px,70px,0) scale(.92)}}
+@keyframes stripeDrift{from{background-position:50% 0}to{background-position:50% 100%}}
+@keyframes progressShimmer{from{background-position:0 0}to{background-position:220% 0}}
+@keyframes ruleSweep{0%,60%{transform:translateX(-160%) skewX(-25deg)}82%,100%{transform:translateX(360%) skewX(-25deg)}}
+@keyframes hintBreathe{0%,100%{opacity:.72}50%{opacity:1}}
+@keyframes arrowNudge{0%,100%{transform:translate(0,-50%)}50%{transform:translate(5px,-50%)}}
+@keyframes overlayFade{from{opacity:0}to{opacity:1}}
+@keyframes modalPop{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes modalItem{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+
+@media (min-height:821px) and (max-height:930px) and (min-width:1100px){
+  .deck{padding:28px 46px;max-height:calc(100dvh - 142px)}
+  .hero .deck{padding:42px 58px}
+  h1{font-size:clamp(3.2rem,6.2vw,5.9rem);margin-bottom:16px}
+  h2{font-size:clamp(2.1rem,3.85vw,3.75rem);margin-bottom:18px}
+  .lead{font-size:clamp(1.05rem,1.55vw,1.35rem);line-height:1.38}
+  .big-quote{font-size:clamp(1.45rem,2.35vw,2.05rem)}
+  .two,.three,.five,.scenario-grid,.course-grid{gap:12px;margin-top:18px}
+  .card,.topic,.course-btn{padding:16px 19px;border-radius:17px}
+  .topic.big{min-height:130px}.topic .num{margin-bottom:8px}
+  .topic::after,.course-btn::after{margin-top:9px;font-size:.62rem}
+  .compare{margin-top:18px;gap:14px}.compare .card{min-height:150px}
+  .rule-list{gap:8px;margin-top:17px}.rule{padding:11px 15px}.rule .step{width:35px;height:35px}
+  .flow{gap:8px;margin-top:18px}.flow .card{padding:14px;min-height:128px}
+  .phrase-grid{gap:10px;margin-top:18px}.phrase{padding:12px 15px;font-size:1.03rem}
+  .callout{margin-top:15px;padding:12px 16px;font-size:1.02rem}
+  .hero-rule{margin:20px 0}.chips{margin-top:20px}.chip{padding:7px 11px}
+  .footer-line{margin-top:14px}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;scroll-behavior:auto !important;transition-duration:.001ms !important}
+  .slide.active.motion-in .kicker,.slide.active.motion-in h1,.slide.active.motion-in h2,.slide.active.motion-in .lead,.slide.active.motion-in .big-quote,.slide.active.motion-in .hero-rule,.slide.active.motion-in .chips,.slide.active.motion-in .card,.slide.active.motion-in .topic,.slide.active.motion-in .course-btn,.slide.active.motion-in .rule,.slide.active.motion-in .phrase,.slide.active.motion-in .callout,.slide.active.motion-in .footer-line{opacity:1;transform:none}
+}
