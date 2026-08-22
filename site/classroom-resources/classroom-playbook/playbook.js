@@ -33,7 +33,6 @@
     const next=document.getElementById('nextBtn');
     const current=document.getElementById('current');
     const total=document.getElementById('total');
-    const topCount=document.getElementById('topCount');
     const progress=document.getElementById('progressBar');
     const overlay=document.getElementById('overlay');
     const close=document.getElementById('closeModal');
@@ -60,7 +59,6 @@
       });
       index=n;
       current.textContent=n+1;
-      topCount.textContent=String(n+1).padStart(2,'0')+' / '+String(slides.length).padStart(2,'0');
       progress.style.width=((n+1)/slides.length*100)+'%';
       prev.disabled=n===0;
       next.disabled=n===slides.length-1;
@@ -135,7 +133,7 @@
       showSlide:show,
       next:()=>move(1),
       previous:()=>move(-1),
-      version:'3.1-public-resource'
+      version:'3.2-viewer-aligned'
     };
   }
 
