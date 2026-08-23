@@ -70,6 +70,16 @@ function buildItemsFromMeta(assignmentId, meta) {
               choices: q.choices,
               correct: (isFillInBlank || isWrittenResponse) ? null : q.correct,
               hint: q.hint,
+              ...(Array.isArray(q.objective_components) && q.objective_components.length > 0 ? {
+                objective_components: q.objective_components,
+                objective_components_explicit: q.objective_components_explicit === true,
+              } : {}),
+              ...(q.objective_max_unbound != null ? {
+                objective_max_unbound: q.objective_max_unbound,
+              } : {}),
+              ...(q.objective_max_invalid_raw != null ? {
+                objective_max_invalid_raw: q.objective_max_invalid_raw,
+              } : {}),
               ...(isFillInBlank ? {
                 scoring: {
                   keywords: fibKeywords,
@@ -101,6 +111,10 @@ function buildItemsFromMeta(assignmentId, meta) {
             prompt: day.prompt,
             structure: day.structure,
             hints: day.hints,
+            ...(Array.isArray(day.objective_components) && day.objective_components.length > 0 ? {
+              objective_components: day.objective_components,
+              objective_components_explicit: day.objective_components_explicit === true,
+            } : {}),
           },
         });
       }
