@@ -1,0 +1,81 @@
+/* Guided Notes & Binder Guide — Classroom Resources accent layer */
+:root{
+  --gn-cyan:#55e7f3;
+  --gn-mint:#78e9c6;
+  --gn-amber:#efbd55;
+  --gn-violet:#a68bd6;
+}
+
+/* Keep the Playbook command-center language, but give this resource its own
+   notebook/reference identity. */
+.hero h1 span{
+  color:transparent!important;
+  background:linear-gradient(103deg,#55e7f3 0%,#78e9c6 44%,#a68bd6 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  filter:drop-shadow(0 0 13px rgba(85,231,243,.14))!important;
+}
+.hero-rule{
+  background:linear-gradient(90deg,var(--gn-cyan),var(--gn-mint) 40%,var(--gn-amber) 68%,var(--gn-violet))!important;
+}
+.hero-stamp{
+  color:#f0c865!important;
+  border-color:rgba(240,200,101,.48)!important;
+}
+
+/* A faint ruled-paper cue inside the glass without turning the screen into a
+   literal notebook page. */
+.deck::after{
+  background:
+    linear-gradient(112deg,rgba(255,255,255,.095),transparent 18% 72%,rgba(185,168,215,.06)),
+    repeating-linear-gradient(to bottom,transparent 0 31px,rgba(112,183,218,.025) 32px 33px),
+    radial-gradient(circle at 5% 0%,rgba(85,231,243,.09),transparent 25%),
+    radial-gradient(circle at 98% 100%,rgba(166,139,214,.07),transparent 29%)!important;
+  opacity:.48!important;
+}
+
+.four{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-top:22px;
+}
+.scenario-grid{
+  grid-template-columns:repeat(2,1fr)!important;
+}
+.four .topic.big{min-height:176px}
+
+/* Binder/routine cards get a slightly clearer "working tool" accent. */
+.rule .step,
+.topic .num{
+  background:rgba(85,231,243,.09)!important;
+  border:1px solid rgba(85,231,243,.18)!important;
+  color:#7cebf3!important;
+}
+.phrase{
+  border-left-color:var(--gn-cyan)!important;
+  background:rgba(85,231,243,.055)!important;
+}
+.callout{
+  border-color:rgba(239,189,85,.28)!important;
+  background:rgba(239,189,85,.055)!important;
+}
+
+/* Viewer alignment. */
+.slide{padding-top:30px;padding-bottom:72px}
+.deck{max-height:calc(100dvh - 96px)}
+.controls{right:14px!important;bottom:10px!important}
+.slide-counter{left:16px!important;bottom:18px!important}
+
+@media(max-width:980px){
+  .four{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:720px){
+  .four,.scenario-grid{grid-template-columns:1fr!important}
+}
+@media(max-height:820px) and (min-width:721px){
+  .slide{padding-top:20px;padding-bottom:62px}
+  .deck{max-height:calc(100dvh - 76px)}
+  .four{gap:10px;margin-top:16px}
+  .four .topic.big{min-height:132px}
+}
