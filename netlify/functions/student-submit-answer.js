@@ -42,6 +42,11 @@ function normalizeMonetaryAnswer(str) {
 
 const { getSchoolLocalDate } = require('./_lib/school-date');
 
+const {
+  reconcileAssignmentGoalProgress,
+  reconcileAssignmentGoalDataPoints,
+} = require('./_lib/assignment-evidence-reconciliation');
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[student-submit-answer] [${requestId}] Request received`);
@@ -732,15 +737,8 @@ exports.handler = async (event) => {
                           const value = rollup.max > 0 ? Math.round((rollup.earned / rollup.max) * 10000) / 100 : 0;
 
                           try {
-                            const gpRes = await fetch(`${SUPABASE_URL}/rest/v1/goal_progress`, {
-                              method: 'POST',
-                              headers: {
-                                'apikey': SUPABASE_SERVICE_ROLE_KEY,
-                                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                                'Content-Type': 'application/json',
-                                'Prefer': 'return=minimal'
-                              },
-                              body: JSON.stringify({
+                            const gpResult = await reconcileAssignmentGoalProgress({
+                              row: {
                                 goal_id: goalId,
                                 student_id: student.id,
                                 date: today,
@@ -749,17 +747,19 @@ exports.handler = async (event) => {
                                 collected_by: 'auto',
                                 assignment_instance_id: instance_id,
                                 school_year: schoolYear
-                              })
+                              },
+                              supabaseUrl: SUPABASE_URL,
+                              serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY
                             });
 
-                            if (!gpRes.ok) {
-                              const errText = await gpRes.text();
-                              console.warn(`[student-submit-answer] [${requestId}] goal_progress insert failed for ${goalCode}: ${gpRes.status} - ${errText}`);
-                            } else {
-                              console.log(`[student-submit-answer] [${requestId}] goal_progress inserted: ${goalCode} = ${value}%`);
-                            }
+                            console.log(
+                              `[student-submit-answer] [${requestId}] goal_progress reconciled: ${goalCode} = ${value}% (${gpResult.action})`
+                            );
                           } catch (gpErr) {
-                            console.warn(`[student-submit-answer] [${requestId}] goal_progress error for ${goalCode}:`, gpErr);
+                            console.warn(
+                              `[student-submit-answer] [${requestId}] goal_progress reconciliation error for ${goalCode}:`,
+                              gpErr
+                            );
                           }
                         }
 
@@ -808,25 +808,20 @@ exports.handler = async (event) => {
 
                         if (dataPointRows.length > 0) {
                           try {
-                            const dpRes = await fetch(`${SUPABASE_URL}/rest/v1/goal_data_points`, {
-                              method: 'POST',
-                              headers: {
-                                'apikey': SUPABASE_SERVICE_ROLE_KEY,
-                                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                                'Content-Type': 'application/json',
-                                'Prefer': 'return=minimal'
-                              },
-                              body: JSON.stringify(dataPointRows)
+                            const dpResults = await reconcileAssignmentGoalDataPoints({
+                              rows: dataPointRows,
+                              supabaseUrl: SUPABASE_URL,
+                              serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY
                             });
 
-                            if (!dpRes.ok) {
-                              const errText = await dpRes.text();
-                              console.warn(`[student-submit-answer] [${requestId}] goal_data_points insert failed: ${dpRes.status} - ${errText}`);
-                            } else {
-                              console.log(`[student-submit-answer] [${requestId}] goal_data_points inserted: ${dataPointRows.length} row(s)`);
-                            }
+                            console.log(
+                              `[student-submit-answer] [${requestId}] goal_data_points reconciled: ${dpResults.length} row identity(s)`
+                            );
                           } catch (dpErr) {
-                            console.warn(`[student-submit-answer] [${requestId}] goal_data_points error (non-fatal):`, dpErr);
+                            console.warn(
+                              `[student-submit-answer] [${requestId}] goal_data_points reconciliation error (non-fatal):`,
+                              dpErr
+                            );
                           }
                         }
                       }

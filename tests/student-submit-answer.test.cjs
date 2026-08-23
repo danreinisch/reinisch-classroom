@@ -162,6 +162,34 @@ global.fetch = async (url, options) => {
     return h ? h(urlStr, options) : makeOkResponse([]);
   }
 
+  if (urlStr.includes('/goal_progress?') && method === 'GET') {
+    const h = fetchHandlers.goalProgressGet;
+    return h ? h(urlStr, options) : makeOkResponse([]);
+  }
+
+  if (urlStr.includes('/goal_progress?') && method === 'PATCH') {
+    const h = fetchHandlers.goalProgressPatch;
+    return h ? h(urlStr, options) : makeOkResponse(
+      options && options.body
+        ? [JSON.parse(options.body)]
+        : []
+    );
+  }
+
+  if (urlStr.includes('/goal_data_points?') && method === 'GET') {
+    const h = fetchHandlers.goalDataPointsGet;
+    return h ? h(urlStr, options) : makeOkResponse([]);
+  }
+
+  if (urlStr.includes('/goal_data_points?') && method === 'PATCH') {
+    const h = fetchHandlers.goalDataPointsPatch;
+    return h ? h(urlStr, options) : makeOkResponse(
+      options && options.body
+        ? [JSON.parse(options.body)]
+        : []
+    );
+  }
+
   if (basePath.endsWith('/goal_progress') && method === 'POST') {
     if (options && options.body) capturedGoalProgressPosts.push(JSON.parse(options.body));
     const h = fetchHandlers.goalProgressPost;
@@ -764,6 +792,232 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert.strictEqual(response.statusCode, 200);
     assert.strictEqual(capturedGoalProgressPosts.length, 1, 'One goal_progress entry should be inserted');
     assert.strictEqual(capturedGoalProgressPosts[0].value, 50, 'value should be 50% when half correct');
+  })();
+
+  await test('resubmission with existing assignment evidence → reconciles without duplicate POST', async () => {
+    reset();
+    setupBasicMocks({}, {
+      assignment_id: 'assignment-uuid-1',
+      status: 'Submitted'
+    });
+
+    fetchHandlers.submissionGet = () =>
+      makeOkResponse([
+        { id: 'existing-sub-id' }
+      ]);
+
+    fetchHandlers.items = () => makeOkResponse([
+      {
+        id: 'item-1',
+        item_ref: 'q1',
+        answer_type: 'mcq',
+        points: 2,
+        meta: {
+          correct: 'A',
+          text: 'Question 1'
+        },
+        goal_codes: ['READ.1']
+      },
+      {
+        id: 'item-2',
+        item_ref: 'q2',
+        answer_type: 'mcq',
+        points: 2,
+        meta: {
+          correct: 'B',
+          text: 'Question 2'
+        },
+        goal_codes: ['READ.1']
+      }
+    ]);
+
+    fetchHandlers.goals = () =>
+      makeOkResponse([
+        {
+          id: 'goal-uuid-read',
+          code: 'READ.1'
+        }
+      ]);
+
+    let progressLookups = 0;
+    const progressPatches = [];
+
+    let dataPointLookups = 0;
+    const dataPointPatches = [];
+
+    fetchHandlers.goalProgressGet = () => {
+      progressLookups += 1;
+
+      return makeOkResponse([
+        {
+          id: 'existing-gp',
+          created_at:
+            '2026-08-22T12:00:00.000Z'
+        }
+      ]);
+    };
+
+    fetchHandlers.goalProgressPatch =
+      (url, options) => {
+        const payload =
+          JSON.parse(options.body);
+
+        progressPatches.push({
+          url,
+          payload
+        });
+
+        return makeOkResponse([
+          {
+            id: 'existing-gp',
+            ...payload
+          }
+        ]);
+      };
+
+    fetchHandlers.goalDataPointsGet = () => {
+      dataPointLookups += 1;
+
+      return makeOkResponse([
+        {
+          id:
+            `existing-dp-${dataPointLookups}`,
+          created_at:
+            '2026-08-22T12:00:00.000Z'
+        }
+      ]);
+    };
+
+    fetchHandlers.goalDataPointsPatch =
+      (url, options) => {
+        const payload =
+          JSON.parse(options.body);
+
+        dataPointPatches.push({
+          url,
+          payload
+        });
+
+        return makeOkResponse([
+          {
+            id:
+              `existing-dp-patched-${dataPointPatches.length}`,
+            ...payload
+          }
+        ]);
+      };
+
+    const event = makePostEvent({
+      instance_id:
+        'instance-uuid-1',
+      student_code: 'S001',
+      answers: {
+        q1: 'A',
+        q2: 'C'
+      },
+      submit: true
+    });
+
+    const response =
+      await handler(event);
+
+    assert.strictEqual(
+      response.statusCode,
+      200
+    );
+
+    assert.strictEqual(
+      progressLookups,
+      1,
+      'resubmission must look up one parent checkpoint identity'
+    );
+
+    assert.strictEqual(
+      progressPatches.length,
+      1,
+      'existing parent checkpoint must be PATCHed once'
+    );
+
+    assert.strictEqual(
+      progressPatches[0].payload.value,
+      50,
+      'rescore must replace the checkpoint with the current result'
+    );
+
+    assert.strictEqual(
+      progressPatches[0].payload.assignment_instance_id,
+      'instance-uuid-1'
+    );
+
+    assert.ok(
+      decodeURIComponent(
+        progressPatches[0].url
+      ).includes(
+        'assignment_instance_id=eq.instance-uuid-1'
+      ),
+      'checkpoint PATCH must use assignment-instance identity'
+    );
+
+    assert.ok(
+      decodeURIComponent(
+        progressPatches[0].url
+      ).includes(
+        'goal_id=eq.goal-uuid-read'
+      ),
+      'checkpoint PATCH must use parent-goal identity'
+    );
+
+    assert.strictEqual(
+      capturedGoalProgressPosts.length,
+      0,
+      'resubmission must not append another goal_progress row'
+    );
+
+    assert.strictEqual(
+      dataPointLookups,
+      2,
+      'resubmission must look up each assignment item evidence identity'
+    );
+
+    assert.strictEqual(
+      dataPointPatches.length,
+      2,
+      'both existing item evidence rows must be PATCHed'
+    );
+
+    assert.deepStrictEqual(
+      dataPointPatches
+        .map(entry =>
+          entry.payload.item_id
+        )
+        .sort(),
+      ['item-1', 'item-2'],
+      'item reconciliation must retain independent item identities'
+    );
+
+    assert.ok(
+      dataPointPatches.every(
+        entry =>
+          entry.payload.goal_id ===
+          'goal-uuid-read'
+      ),
+      'each item identity must retain its parent goal'
+    );
+
+    assert.ok(
+      dataPointPatches.every(
+        entry =>
+          entry.payload.assignment_instance_id ===
+          'instance-uuid-1'
+      ),
+      'each item identity must retain assignment provenance'
+    );
+
+    assert.strictEqual(
+      capturedGoalDataPointsPosts.length,
+      0,
+      'resubmission must not append duplicate goal_data_points'
+    );
   })();
 
   await test('multiple goal_codes → separate goal_progress entry per goal', async () => {

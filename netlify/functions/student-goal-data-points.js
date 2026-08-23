@@ -22,6 +22,81 @@ const {
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
 
+function dedupeAssignmentGoalDataPoints(rows) {
+  const safeRows =
+    Array.isArray(rows)
+      ? rows
+      : [];
+
+  const output = [];
+  const assignmentRows =
+    new Map();
+
+  safeRows.forEach((row, index) => {
+    if (
+      !row ||
+      !row.assignment_instance_id ||
+      row.item_id === null ||
+      row.item_id === undefined ||
+      !row.goal_id
+    ) {
+      output.push({
+        index,
+        row,
+      });
+
+      return;
+    }
+
+    const key = [
+      row.assignment_instance_id,
+      row.item_id,
+      row.goal_id,
+    ].join('|');
+
+    const stamp =
+      String(row.created_at || '');
+
+    const id =
+      String(row.id || '');
+
+    const existing =
+      assignmentRows.get(key);
+
+    if (
+      !existing ||
+      stamp > existing.stamp ||
+      (
+        stamp === existing.stamp &&
+        id > existing.id
+      )
+    ) {
+      assignmentRows.set(
+        key,
+        {
+          index,
+          row,
+          stamp,
+          id,
+        },
+      );
+    }
+  });
+
+  output.push(
+    ...assignmentRows.values(),
+  );
+
+  output.sort(
+    (a, b) =>
+      a.index - b.index,
+  );
+
+  return output.map(
+    entry => entry.row,
+  );
+}
+
 async function filterInstructionalEvidenceRows(rows) {
   const safeRows = Array.isArray(rows) ? rows : [];
   const instanceIds = [
@@ -201,7 +276,7 @@ exports.handler = async (event) => {
 
     const rowsRaw = await dpResponse.json();
     const rows =
-      await filterInstructionalEvidenceRows(rowsRaw);
+      dedupeAssignmentGoalDataPoints(await filterInstructionalEvidenceRows(rowsRaw));
 
     console.log(`[student-goal-data-points] [${requestId}] Fetched ${(rows || []).length} data point(s) for student ${codeNorm}`);
 
