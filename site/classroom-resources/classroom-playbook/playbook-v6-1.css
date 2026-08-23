@@ -1,0 +1,233 @@
+/* ======================================================================
+   PLAYBOOK v6.1 — NOCTURNE TUNING
+   Pulls v6 back from full-screen neon into darker premium glass.
+   v5 + v6 remain underneath; this file only tunes intensity / color balance.
+   ====================================================================== */
+
+:root{
+  --v61-ink:#030712;
+  --v61-panel:rgba(7,20,36,.82);
+  --v61-panel-strong:rgba(5,16,31,.90);
+  --v61-card:rgba(12,31,51,.67);
+  --v61-line:rgba(174,221,244,.19);
+  --v61-cyan:#59dff2;
+  --v61-teal:#3bd8c6;
+  --v61-violet:#8e79dc;
+  --v61-amber:#efbd55;
+}
+
+html,body{background:var(--v61-ink)!important}
+body{
+  background:
+    radial-gradient(ellipse at 2% 6%,rgba(37,183,175,.12),transparent 31%),
+    radial-gradient(ellipse at 98% 8%,rgba(116,84,190,.12),transparent 32%),
+    radial-gradient(ellipse at 50% 108%,rgba(38,91,157,.12),transparent 43%),
+    linear-gradient(132deg,#020610 0%,#06101e 40%,#080e1d 68%,#0b0917 100%)!important;
+}
+
+/* Texture stays present, but no star-tunnel energy. */
+body::before{
+  opacity:.32!important;
+  mix-blend-mode:screen!important;
+  background-image:
+    radial-gradient(rgba(199,239,247,.36) .58px,transparent .84px),
+    radial-gradient(rgba(190,181,225,.25) .52px,transparent .80px)!important;
+  background-size:25px 25px,43px 43px!important;
+}
+.v6-atmosphere::after{opacity:.17!important}
+
+/* Aurora = lighting, not wallpaper. */
+.v6-aurora{
+  filter:blur(72px) saturate(122%)!important;
+}
+.v6-aurora-teal{
+  width:72vw!important;height:62vh!important;
+  left:-34vw!important;top:-13vh!important;
+  opacity:.43!important;
+  background:
+    radial-gradient(ellipse at 55% 50%,rgba(53,218,204,.48) 0 8%,rgba(40,175,171,.27) 21%,rgba(46,130,168,.11) 43%,transparent 70%),
+    linear-gradient(118deg,transparent 20%,rgba(48,194,185,.16) 43%,rgba(66,146,186,.10) 57%,transparent 74%)!important;
+}
+.v6-aurora-cyan{
+  width:62vw!important;height:48vh!important;
+  left:-8vw!important;bottom:-27vh!important;
+  opacity:.28!important;
+  filter:blur(82px) saturate(118%)!important;
+  background:radial-gradient(ellipse at 48% 38%,rgba(71,157,205,.30),rgba(44,94,157,.14) 34%,transparent 72%)!important;
+}
+.v6-aurora-violet{
+  width:72vw!important;height:64vh!important;
+  right:-35vw!important;top:-13vh!important;
+  opacity:.40!important;
+  background:
+    radial-gradient(ellipse at 46% 48%,rgba(143,111,210,.42) 0 9%,rgba(113,91,176,.25) 24%,rgba(72,82,154,.10) 45%,transparent 71%),
+    linear-gradient(244deg,transparent 18%,rgba(133,101,201,.15) 43%,rgba(86,91,163,.09) 58%,transparent 73%)!important;
+}
+.v6-ribbon{
+  opacity:.17!important;
+  filter:blur(62px) saturate(115%)!important;
+  background:linear-gradient(102deg,transparent 7%,rgba(61,125,168,.06) 26%,rgba(100,89,164,.16) 51%,rgba(129,85,174,.13) 68%,transparent 91%)!important;
+}
+.v6-bloom{
+  opacity:.20!important;
+  filter:blur(92px)!important;
+  background:radial-gradient(ellipse at center,rgba(88,154,190,.12),rgba(47,78,133,.05) 40%,transparent 72%)!important;
+}
+
+/* Floating objects become smoked glass, with just a little reflected color. */
+.v6-glass-shape{
+  opacity:.46!important;
+  border-color:rgba(174,210,232,.13)!important;
+  background:
+    linear-gradient(145deg,rgba(65,104,132,.075),rgba(79,67,123,.07)),
+    linear-gradient(120deg,rgba(255,255,255,.045),transparent 54%)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 28px 80px rgba(0,0,0,.28)!important;
+  backdrop-filter:blur(18px) saturate(110%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(110%)!important;
+}
+.v6-shape-b{opacity:.40!important}
+.v6-shape-c{opacity:.28!important}
+
+/* Main command glass: darker, smoother, brighter only at the edge. */
+.deck{
+  background:
+    linear-gradient(145deg,rgba(10,30,49,.86),rgba(5,17,32,.89)) padding-box,
+    linear-gradient(120deg,rgba(102,212,225,.48),rgba(209,233,241,.14) 29%,rgba(255,255,255,.08) 51%,rgba(134,106,198,.34) 78%,rgba(80,169,193,.26)) border-box!important;
+  box-shadow:
+    0 38px 110px rgba(0,0,0,.55),
+    -10px 0 44px rgba(55,190,181,.08),
+    12px 0 48px rgba(122,91,184,.07),
+    inset 0 1px 0 rgba(255,255,255,.13),
+    inset 0 -1px 0 rgba(102,150,190,.055)!important;
+  backdrop-filter:blur(34px) saturate(125%)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(125%)!important;
+}
+.deck::after{
+  background:
+    linear-gradient(112deg,rgba(255,255,255,.10),transparent 18% 72%,rgba(185,168,215,.065)),
+    radial-gradient(circle at 5% 0%,rgba(90,207,216,.105),transparent 25%),
+    radial-gradient(circle at 98% 100%,rgba(128,103,188,.085),transparent 29%)!important;
+  opacity:.43!important;
+}
+.hero .deck{
+  box-shadow:
+    0 42px 120px rgba(0,0,0,.58),
+    -12px 0 52px rgba(51,187,177,.10),
+    14px 0 56px rgba(124,91,181,.09),
+    inset 0 1px 0 rgba(255,255,255,.14)!important;
+}
+
+/* Fix the v6 background shorthand regression on the hero word. */
+.hero h1 span{
+  color:transparent!important;
+  background:linear-gradient(103deg,#42dfe9 0%,#54d9c7 46%,#83e6a6 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  filter:drop-shadow(0 0 12px rgba(55,190,177,.12))!important;
+}
+.kicker{
+  color:#72dcd3!important;
+  text-shadow:0 0 13px rgba(55,190,177,.16)!important;
+}
+.hero-rule{
+  background:linear-gradient(90deg,#52dce6,#79d9b1 45%,#e1b85d 74%,#997fd0)!important;
+  box-shadow:0 0 13px rgba(80,197,203,.16)!important;
+}
+
+/* Neutral glass cards. Color is an edge/reflection, not a fill. */
+.card,.topic,.course-btn,.rule,.phrase,
+.card:nth-child(even),.topic:nth-child(3n+2),.scenario-grid .topic:nth-child(3n+2),.course-btn:nth-child(2){
+  background:
+    linear-gradient(145deg,rgba(17,43,65,.68),rgba(7,24,43,.71)) padding-box,
+    linear-gradient(132deg,rgba(109,199,215,.35),rgba(255,255,255,.09) 50%,rgba(132,110,190,.27)) border-box!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.105),
+    inset 0 -1px 0 rgba(91,132,164,.045),
+    0 15px 38px rgba(0,0,0,.20)!important;
+  backdrop-filter:blur(22px) saturate(120%)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(120%)!important;
+}
+.card:nth-child(even),.topic:nth-child(3n+2),.scenario-grid .topic:nth-child(3n+2),.course-btn:nth-child(2){
+  border-color:transparent!important;
+}
+.topic:hover,.topic:focus-visible,.course-btn:hover,.course-btn:focus-visible{
+  transform:translateY(-3px) scale(1.004)!important;
+  background:
+    linear-gradient(145deg,rgba(22,51,74,.76),rgba(8,28,48,.77)) padding-box,
+    linear-gradient(132deg,rgba(119,213,225,.48),rgba(255,255,255,.11) 50%,rgba(143,120,199,.35)) border-box!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.13),
+    0 18px 42px rgba(0,0,0,.25),
+    0 0 20px rgba(76,169,184,.055)!important;
+}
+.topic::before,.course-btn::before{
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)!important;
+}
+
+.chip{
+  background:
+    linear-gradient(145deg,rgba(17,43,64,.74),rgba(7,25,44,.76)) padding-box,
+    linear-gradient(125deg,rgba(103,196,211,.32),rgba(255,255,255,.09) 52%,rgba(131,111,183,.25)) border-box!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 8px 22px rgba(0,0,0,.16)!important;
+  backdrop-filter:blur(18px) saturate(116%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(116%)!important;
+}
+.chip::before{box-shadow:0 0 8px rgba(84,194,205,.30)!important}
+.chip:nth-child(2)::before{box-shadow:0 0 8px rgba(222,178,76,.28)!important}
+.chip:nth-child(4)::before{box-shadow:0 0 8px rgba(111,209,151,.28)!important}
+.chip:nth-child(5)::before{box-shadow:0 0 8px rgba(135,112,193,.30)!important}
+
+/* Keep accent words vivid enough to guide the eye, not flood the room. */
+h1,h2{ text-shadow:0 2px 4px rgba(0,0,0,.24)!important }
+.lead{color:#dce9f1!important}
+.copy,.card p,.topic p,.course-btn p{color:#c5d3df!important}
+
+/* Progress + controls: premium instrument panel instead of neon arcade. */
+.v6-progress-track{
+  background:rgba(166,198,216,.075)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+}
+.bar{
+  background:linear-gradient(90deg,#53d3dc 0%,#74d5ad 38%,#d8b65d 64%,#8a78c7 100%)!important;
+  box-shadow:0 0 8px rgba(75,181,191,.18)!important;
+}
+.bar::after{
+  box-shadow:0 0 10px rgba(179,223,230,.30)!important;
+}
+.nav-btn{
+  background:linear-gradient(145deg,rgba(18,38,57,.86),rgba(7,22,39,.89))!important;
+  border-color:rgba(171,207,226,.15)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 10px 26px rgba(0,0,0,.24)!important;
+}
+#nextBtn{
+  background:linear-gradient(120deg,#318c95,#477cae 56%,#725aa7)!important;
+  border-color:rgba(184,221,231,.24)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 11px 28px rgba(0,0,0,.25),0 0 14px rgba(78,145,168,.10)!important;
+}
+#nextBtn:hover:not(:disabled),#nextBtn:focus-visible:not(:disabled){
+  background:linear-gradient(120deg,#389aa2,#5187ba 56%,#7a61af)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.20),0 13px 30px rgba(0,0,0,.27),0 0 16px rgba(79,151,174,.12)!important;
+}
+
+/* Modal follows the same dark-glass language. */
+.overlay{
+  background:
+    radial-gradient(circle at 14% 18%,rgba(53,157,153,.07),transparent 35%),
+    radial-gradient(circle at 86% 18%,rgba(111,87,168,.08),transparent 36%),
+    rgba(2,6,13,.78)!important;
+}
+.modal{
+  background:
+    linear-gradient(145deg,rgba(14,37,58,.94),rgba(5,18,34,.96)),
+    radial-gradient(circle at 0 0,rgba(83,187,196,.07),transparent 35%)!important;
+  border-color:rgba(177,215,232,.20)!important;
+  box-shadow:0 42px 110px rgba(0,0,0,.66),inset 0 1px 0 rgba(255,255,255,.10)!important;
+  backdrop-filter:blur(32px) saturate(120%)!important;
+  -webkit-backdrop-filter:blur(32px) saturate(120%)!important;
+}
+
+@media(prefers-reduced-motion:reduce){
+  .v6-atmosphere,.v6-aurora,.v6-ribbon,.v6-bloom,.v6-glass-shape{animation:none!important}
+}
