@@ -92,7 +92,7 @@ for (const column of REQUIRED_COLUMNS) {
 
 assert.match(
   migration,
-  /item_id[\s\S]*REFERENCES public\.assignment_items\s*\(\s*id\s*\)[\s\S]*ON DELETE CASCADE/i,
+  /item_id\s+bigint\s+NOT NULL[\s\S]*REFERENCES public\.assignment_items\s*\(\s*id\s*\)[\s\S]*ON DELETE CASCADE/i,
   'item objective mappings must cascade when their assignment item is deleted'
 );
 
@@ -124,6 +124,12 @@ assert.match(
   migration,
   /component_order\s+integer\s+NOT NULL/i,
   'component ordering must be deterministic'
+);
+
+assert.doesNotMatch(
+  migration,
+  /\bitem_id\s+uuid\b|\bp_item_id\s+uuid\b/i,
+  'assignment-item objective identity must never regress to UUID; production assignment_items.id is bigint'
 );
 
 /* -------------------------------------------------------------------------- */
@@ -166,7 +172,7 @@ assert.match(
 
 assert.match(
   migration,
-  /CREATE OR REPLACE FUNCTION public\.replace_assignment_item_objectives\s*\(\s*p_item_id\s+uuid\s*,\s*p_mappings\s+jsonb/i,
+  /CREATE OR REPLACE FUNCTION public\.replace_assignment_item_objectives\s*\(\s*p_item_id\s+bigint\s*,\s*p_mappings\s+jsonb/i,
   'atomic replacement RPC must exist'
 );
 
@@ -178,13 +184,13 @@ assert.match(
 
 assert.match(
   migration,
-  /ON FUNCTION public\.replace_assignment_item_objectives\s*\(\s*uuid\s*,\s*jsonb\s*\)[\s\S]*TO service_role/i,
+  /ON FUNCTION public\.replace_assignment_item_objectives\s*\(\s*bigint\s*,\s*jsonb\s*\)[\s\S]*TO service_role/i,
   'atomic replacement RPC must be executable by service_role'
 );
 
 assert.match(
   migration,
-  /ON FUNCTION public\.replace_assignment_item_objectives\s*\(\s*uuid\s*,\s*jsonb\s*\)[\s\S]*FROM authenticated/i,
+  /ON FUNCTION public\.replace_assignment_item_objectives\s*\(\s*bigint\s*,\s*jsonb\s*\)[\s\S]*FROM authenticated/i,
   'authenticated browser role must not execute the objective replacement RPC'
 );
 

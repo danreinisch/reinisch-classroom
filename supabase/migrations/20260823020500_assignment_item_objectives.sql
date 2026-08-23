@@ -13,7 +13,7 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS public.assignment_item_objectives (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 
-  item_id uuid NOT NULL
+  item_id bigint NOT NULL
     REFERENCES public.assignment_items(id)
     ON DELETE CASCADE,
 
@@ -83,7 +83,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE
 -- If any insert fails, PostgreSQL rolls back the preceding DELETE from the
 -- same RPC call, preserving the previously valid mapping set.
 CREATE OR REPLACE FUNCTION public.replace_assignment_item_objectives(
-  p_item_id uuid,
+  p_item_id bigint,
   p_mappings jsonb DEFAULT '[]'::jsonb
 )
 RETURNS integer
@@ -136,19 +136,19 @@ END;
 $$;
 
 REVOKE ALL PRIVILEGES
-  ON FUNCTION public.replace_assignment_item_objectives(uuid, jsonb)
+  ON FUNCTION public.replace_assignment_item_objectives(bigint, jsonb)
   FROM PUBLIC;
 
 REVOKE ALL PRIVILEGES
-  ON FUNCTION public.replace_assignment_item_objectives(uuid, jsonb)
+  ON FUNCTION public.replace_assignment_item_objectives(bigint, jsonb)
   FROM anon;
 
 REVOKE ALL PRIVILEGES
-  ON FUNCTION public.replace_assignment_item_objectives(uuid, jsonb)
+  ON FUNCTION public.replace_assignment_item_objectives(bigint, jsonb)
   FROM authenticated;
 
 GRANT EXECUTE
-  ON FUNCTION public.replace_assignment_item_objectives(uuid, jsonb)
+  ON FUNCTION public.replace_assignment_item_objectives(bigint, jsonb)
   TO service_role;
 
 COMMIT;
