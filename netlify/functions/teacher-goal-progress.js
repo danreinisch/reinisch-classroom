@@ -26,6 +26,10 @@ const {
 } = require('./_lib/supa');
 
 const {
+  reconcileAssignmentGoalProgress,
+} = require('./_lib/assignment-evidence-reconciliation');
+
+const {
   url: SUPABASE_URL,
   key: SUPABASE_SERVICE_ROLE_KEY,
 } = getSupabaseConfig();
@@ -1926,22 +1930,47 @@ async function insertProgress(
     payload.notes = notes;
   }
 
-  const inserted =
-    await insertRows(
-      [payload],
-      {
-        allowNotesRetry: true,
-      },
-    );
+  let persistedRows = [];
+  let notesPersisted = true;
+
+  if (
+    source === 'assignment' &&
+    assignmentInstanceId
+  ) {
+    const reconciled =
+      await reconcileAssignmentGoalProgress({
+        row: payload,
+        supabaseUrl: SUPABASE_URL,
+        serviceRoleKey:
+          SUPABASE_SERVICE_ROLE_KEY,
+      });
+
+    persistedRows =
+      reconciled.rows;
+  } else {
+    const inserted =
+      await insertRows(
+        [payload],
+        {
+          allowNotesRetry: true,
+        },
+      );
+
+    persistedRows =
+      inserted.rows;
+
+    notesPersisted =
+      inserted.notesPersisted;
+  }
 
   return {
     status: 200,
     body: {
       ok: true,
       progress:
-        inserted.rows[0] || payload,
+        persistedRows[0] || payload,
       notes_persisted:
-        inserted.notesPersisted,
+        notesPersisted,
     },
   };
 }
@@ -2193,16 +2222,24 @@ async function insertBatch(
     };
   }
 
-  const inserted =
-    await insertRows(rows);
+  const reconciled =
+    await Promise.all(
+      rows.map(row =>
+        reconcileAssignmentGoalProgress({
+          row,
+          supabaseUrl: SUPABASE_URL,
+          serviceRoleKey:
+            SUPABASE_SERVICE_ROLE_KEY,
+        })
+      )
+    );
 
   return {
     status: 200,
     body: {
       ok: true,
       inserted_count:
-        inserted.rows.length ||
-        rows.length,
+        reconciled.length,
       skipped_count:
         goalRollups.length -
         rows.length,

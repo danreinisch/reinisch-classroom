@@ -366,6 +366,9 @@ function mockResponse(status, data) {
       status >= 200 &&
       status < 300,
     status,
+    async json() {
+      return data;
+    },
     async text() {
       return data === null ||
         data === undefined
@@ -523,6 +526,7 @@ async function run() {
       id: assignmentId,
       class_id: progressRow.class_id,
     }],
+    existingProgressRows = [],
     allowWrite = true,
     capturePayload = null,
   } = {}) {
@@ -601,6 +605,51 @@ async function run() {
       }
 
       if (
+        target.includes(
+          '/rest/v1/goal_progress?'
+        ) &&
+        (
+          !init.method ||
+          init.method === 'GET'
+        )
+      ) {
+        return mockResponse(
+          200,
+          existingProgressRows
+        );
+      }
+
+      if (
+        target.includes(
+          '/rest/v1/goal_progress?'
+        ) &&
+        init.method === 'PATCH'
+      ) {
+        if (!allowWrite) {
+          throw new Error(
+            'Unauthorized canonical write attempted'
+          );
+        }
+
+        const payload =
+          JSON.parse(init.body);
+
+        if (capturePayload) {
+          capturePayload(payload);
+        }
+
+        return mockResponse(
+          200,
+          [{
+            id:
+              existingProgressRows[0]?.id ||
+              progressRow.id,
+            ...payload,
+          }]
+        );
+      }
+
+      if (
         target.endsWith(
           '/rest/v1/goal_progress'
         ) &&
@@ -619,9 +668,14 @@ async function run() {
           capturePayload(payload);
         }
 
+        const rows =
+          Array.isArray(payload)
+            ? payload
+            : [payload];
+
         return mockResponse(
           201,
-          payload.map(
+          rows.map(
             (row, index) => ({
               id:
                 index === 0
@@ -641,10 +695,13 @@ async function run() {
 
   function hasCanonicalWrite() {
     return calls.some(call =>
-      call.url.endsWith(
+      call.url.includes(
         '/rest/v1/goal_progress'
       ) &&
-      call.init.method === 'POST'
+      (
+        call.init.method === 'POST' ||
+        call.init.method === 'PATCH'
+      )
     );
   }
 
@@ -1858,54 +1915,190 @@ async function run() {
   );
 
   assert(
-    Array.isArray(batchPayload),
-    'batch action must insert an array payload'
+    batchPayload &&
+    !Array.isArray(batchPayload),
+    'batch action must reconcile one canonical parent checkpoint payload'
   );
 
   assert.strictEqual(
-    batchPayload[0].student_id,
+    batchPayload.student_id,
     progressRow.student_id
   );
 
   assert.strictEqual(
-    batchPayload[0].goal_id,
+    batchPayload.goal_id,
     progressRow.goal_id
   );
 
   assert.strictEqual(
-    batchPayload[0].assignment_instance_id,
+    batchPayload.assignment_instance_id,
     assignmentInstanceId
   );
 
   assert.strictEqual(
-    batchPayload[0].source,
+    batchPayload.source,
     'assignment'
   );
 
   assert.strictEqual(
-    batchPayload[0].collected_by,
+    batchPayload.collected_by,
     'system'
   );
 
   assert.strictEqual(
-    batchPayload[0].value,
+    batchPayload.value,
     88
   );
 
   assert.strictEqual(
-    batchPayload[0].class_id,
+    batchPayload.class_id,
     progressRow.class_id,
     'assignment evidence must derive canonical teacher-owned class'
   );
 
   assert.strictEqual(
-    batchPayload[0].school_year,
+    batchPayload.school_year,
     2026,
     'assignment evidence must preserve canonical school year'
   );
 
+  const batchIdentityLookup =
+    calls.find(call =>
+      call.url.includes(
+        '/rest/v1/goal_progress?'
+      ) &&
+      (
+        !call.init.method ||
+        call.init.method === 'GET'
+      )
+    );
+
+  assert.ok(
+    batchIdentityLookup,
+    'assignment batch must check the stable parent checkpoint identity before writing'
+  );
+
+  assert.ok(
+    decodeURIComponent(
+      batchIdentityLookup.url
+    ).includes(
+      `assignment_instance_id=eq.${assignmentInstanceId}`
+    ),
+    'checkpoint identity lookup must include assignment instance'
+  );
+
+  assert.ok(
+    decodeURIComponent(
+      batchIdentityLookup.url
+    ).includes(
+      `goal_id=eq.${progressRow.goal_id}`
+    ),
+    'checkpoint identity lookup must include parent goal'
+  );
+
+  assert.ok(
+    calls.some(call =>
+      call.url.endsWith(
+        '/rest/v1/goal_progress'
+      ) &&
+      call.init.method === 'POST'
+    ),
+    'missing checkpoint identity must insert one canonical row'
+  );
+
   console.log(
     '✓ assignment rollup batch retains canonical provenance'
+  );
+
+
+  calls = [];
+
+  let reconciledBatchPayload = null;
+
+  global.fetch =
+    makeWriteFetch({
+      existingProgressRows: [{
+        id: progressRow.id,
+        created_at:
+          '2026-08-23T12:00:00.000Z',
+      }],
+      capturePayload(payload) {
+        reconciledBatchPayload = payload;
+      },
+    });
+
+  const reconciledBatchResponse =
+    await handler(
+      eventFor({
+        action: 'insert_batch',
+        student_id:
+          progressRow.student_id,
+        assignment_instance_id:
+          assignmentInstanceId,
+        goal_rollups: [{
+          goal_code: 'READ.1',
+          percent_correct: 91,
+        }],
+      })
+    );
+
+  assert.strictEqual(
+    reconciledBatchResponse.statusCode,
+    200
+  );
+
+  assert(
+    reconciledBatchPayload &&
+    !Array.isArray(
+      reconciledBatchPayload
+    ),
+    'existing assignment checkpoint must reconcile one row payload'
+  );
+
+  assert.strictEqual(
+    reconciledBatchPayload.value,
+    91
+  );
+
+  const existingIdentityLookup =
+    calls.find(call =>
+      call.url.includes(
+        '/rest/v1/goal_progress?'
+      ) &&
+      (
+        !call.init.method ||
+        call.init.method === 'GET'
+      )
+    );
+
+  assert.ok(
+    existingIdentityLookup,
+    'rescore must look up the existing parent checkpoint identity'
+  );
+
+  assert.ok(
+    calls.some(call =>
+      call.url.includes(
+        '/rest/v1/goal_progress?'
+      ) &&
+      call.init.method === 'PATCH'
+    ),
+    'rescore must PATCH the existing checkpoint identity'
+  );
+
+  assert.strictEqual(
+    calls.some(call =>
+      call.url.endsWith(
+        '/rest/v1/goal_progress'
+      ) &&
+      call.init.method === 'POST'
+    ),
+    false,
+    'rescore must not append a second parent checkpoint'
+  );
+
+  console.log(
+    '✓ assignment rescore reconciles existing checkpoint without append'
   );
 
   calls = [];

@@ -19,23 +19,30 @@ const source = fs.readFileSync(
   'utf8'
 );
 
+assert.ok(
+  source.includes(
+    "require('./_lib/assignment-evidence-reconciliation')"
+  ),
+  'student submission must use shared assignment evidence reconciliation'
+);
+
 const gpStart = source.indexOf(
-  'fetch(`${SUPABASE_URL}/rest/v1/goal_progress`'
+  'reconcileAssignmentGoalProgress({'
 );
 
 assert.ok(
   gpStart >= 0,
-  'goal_progress POST block not found'
+  'goal_progress reconciliation block not found'
 );
 
 const gpEnd = source.indexOf(
-  'if (!gpRes.ok)',
+  '// Insert per-question data points',
   gpStart
 );
 
 assert.ok(
   gpEnd > gpStart,
-  'goal_progress POST block end not found'
+  'goal_progress reconciliation block end not found'
 );
 
 const gpBlock = source.slice(
@@ -51,19 +58,32 @@ assert.ok(
 );
 
 assert.ok(
-  gpBlock.includes("source: 'assignment'")
+  gpBlock.includes(
+    "source: 'assignment'"
+  )
 );
 
 assert.ok(
-  gpBlock.includes("collected_by: 'auto'")
+  gpBlock.includes(
+    "collected_by: 'auto'"
+  )
 );
 
 assert.ok(
-  gpBlock.includes('school_year: schoolYear')
+  gpBlock.includes(
+    'school_year: schoolYear'
+  )
+);
+
+assert.ok(
+  !source.includes(
+    'fetch(`${SUPABASE_URL}/rest/v1/goal_progress`'
+  ),
+  'student assignment progress must no longer append directly'
 );
 
 console.log(
-  '✓ goal_progress retains assignment_instance_id provenance'
+  '✓ goal_progress reconciles with assignment_instance_id provenance'
 );
 
 const dpStart = source.indexOf(
@@ -71,14 +91,14 @@ const dpStart = source.indexOf(
 );
 
 const dpEnd = source.indexOf(
-  'fetch(`${SUPABASE_URL}/rest/v1/goal_data_points`',
+  'reconcileAssignmentGoalDataPoints({',
   dpStart
 );
 
 assert.ok(
   dpStart >= 0 &&
   dpEnd > dpStart,
-  'goal_data_points block not found'
+  'goal_data_points construction block not found'
 );
 
 const dpBlock = source.slice(
@@ -93,8 +113,22 @@ assert.ok(
   'goal_data_points must retain assignment-instance provenance'
 );
 
+assert.ok(
+  dpBlock.includes(
+    'item_id: item.id'
+  ),
+  'goal_data_points must retain assignment-item provenance'
+);
+
+assert.ok(
+  !source.includes(
+    'fetch(`${SUPABASE_URL}/rest/v1/goal_data_points`'
+  ),
+  'student item evidence must no longer append directly'
+);
+
 console.log(
-  '✓ goal_data_points retains assignment_instance_id provenance'
+  '✓ goal_data_points reconcile by assignment + item provenance'
 );
 
 console.log('');

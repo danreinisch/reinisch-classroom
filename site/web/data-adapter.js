@@ -126,6 +126,81 @@ function deduplicateSubmissions(submissions) {
   return Array.from(byInstance.values());
 }
 
+function dedupeAssignmentGoalDataPoints(rows) {
+  const safeRows =
+    Array.isArray(rows)
+      ? rows
+      : [];
+
+  const output = [];
+  const assignmentRows =
+    new Map();
+
+  safeRows.forEach((row, index) => {
+    if (
+      !row ||
+      !row.assignment_instance_id ||
+      row.item_id === null ||
+      row.item_id === undefined ||
+      !row.goal_id
+    ) {
+      output.push({
+        index,
+        row,
+      });
+
+      return;
+    }
+
+    const key = [
+      row.assignment_instance_id,
+      row.item_id,
+      row.goal_id,
+    ].join('|');
+
+    const stamp =
+      String(row.created_at || '');
+
+    const id =
+      String(row.id || '');
+
+    const existing =
+      assignmentRows.get(key);
+
+    if (
+      !existing ||
+      stamp > existing.stamp ||
+      (
+        stamp === existing.stamp &&
+        id > existing.id
+      )
+    ) {
+      assignmentRows.set(
+        key,
+        {
+          index,
+          row,
+          stamp,
+          id,
+        },
+      );
+    }
+  });
+
+  output.push(
+    ...assignmentRows.values(),
+  );
+
+  output.sort(
+    (a, b) =>
+      a.index - b.index,
+  );
+
+  return output.map(
+    entry => entry.row,
+  );
+}
+
 async function filterInstructionalEvidenceRows(rows) {
   const safeRows = Array.isArray(rows) ? rows : [];
   const instanceIds = [
@@ -2433,7 +2508,14 @@ const remote = {
       throw error;
     }
 
-    return await filterInstructionalEvidenceRows(data || []);
+    const instructionalRows =
+      await filterInstructionalEvidenceRows(
+        data || []
+      );
+
+    return dedupeAssignmentGoalDataPoints(
+      instructionalRows
+    );
   },
 
   // ============================================================================
