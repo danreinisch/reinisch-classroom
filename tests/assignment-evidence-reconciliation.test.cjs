@@ -232,18 +232,41 @@ console.log(
 /* Slice boundaries                                                           */
 /* -------------------------------------------------------------------------- */
 
+/*
+ * Slice 3 remains the parent-evidence reconciliation foundation.
+ *
+ * Slice 5B1 now adds a separate child-objective writer to
+ * student-submit-answer.js, so the old repository-wide prohibition on
+ * objective_data_points is no longer valid.
+ *
+ * Keep the Slice 3 helper and the existing parent readers/writers free from
+ * child-objective storage concerns.
+ */
 for (const source of [
   helper,
-  studentSubmit,
   teacherProgress,
   studentGoalDataPoints,
   dataAdapter,
 ]) {
   assert.ok(
     !source.includes('objective_data_points'),
-    'Slice 3 must not introduce objective evidence'
+    'Slice 3 parent reconciliation/readers must remain free of child-objective evidence'
   );
 }
+
+assert.ok(
+  studentSubmit.includes(
+    "require('./_lib/objective-auto-evidence-writer')"
+  ),
+  'Slice 5B1 child-objective writes must remain delegated to the separate server helper'
+);
+
+assert.ok(
+  !studentSubmit.includes(
+    '/rest/v1/objective_data_points'
+  ),
+  'student-submit must not bypass the 5B1 objective reconciliation helper with direct objective_data_points REST writes'
+);
 
 assert.ok(
   !helper.includes('goal_objectives'),
@@ -252,11 +275,11 @@ assert.ok(
 
 assert.ok(
   !helper.includes('assignment_item_objectives'),
-  'Slice 3 must not activate objective item mappings'
+  'Slice 3 reconciliation must not activate objective item mappings'
 );
 
 console.log(
-  '✓ Slice 3 remains parent-evidence-only'
+  '✓ Slice 3 parent reconciliation remains isolated from the separate 5B1 child-objective writer'
 );
 
 console.log('');

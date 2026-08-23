@@ -47,6 +47,13 @@ const {
   reconcileAssignmentGoalDataPoints,
 } = require('./_lib/assignment-evidence-reconciliation');
 
+const {
+  getObjectiveCandidateItemIds,
+  fetchAssignmentItemObjectiveMappings,
+  buildAutoObjectiveEvidenceRows,
+  reconcileAssignmentObjectiveDataPoints,
+} = require('./_lib/objective-auto-evidence-writer');
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[student-submit-answer] [${requestId}] Request received`);
@@ -440,6 +447,44 @@ exports.handler = async (event) => {
               console.warn(`[student-submit-answer] [${requestId}] Failed to enrich items with mappings (non-fatal):`, mappingsErr);
             }
 
+            /*
+             * Slice 5B1:
+             * Do not touch objective tables for ordinary IG-only assignments.
+             * Only issued items carrying explicit IO metadata become candidates
+             * for normalized assignment_item_objectives lookup.
+             */
+            const objectiveCandidateItemIds =
+              getObjectiveCandidateItemIds(items);
+            let objectiveItemMappings = [];
+
+            if (objectiveCandidateItemIds.length > 0) {
+              try {
+                objectiveItemMappings =
+                  await fetchAssignmentItemObjectiveMappings({
+                    itemIds: objectiveCandidateItemIds,
+                    supabaseUrl: SUPABASE_URL,
+                    serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY
+                  });
+
+                if (objectiveItemMappings.length === 0) {
+                  console.warn(
+                    `[student-submit-answer] [${requestId}] ` +
+                    'Objective-aware item metadata found but no normalized assignment_item_objectives mappings resolved; child evidence will be skipped'
+                  );
+                }
+              } catch (objectiveMappingErr) {
+                /*
+                 * Objective evidence is additive. A child-evidence failure must
+                 * never destroy the student's academic submission.
+                 */
+                console.warn(
+                  `[student-submit-answer] [${requestId}] ` +
+                  'Objective mapping lookup failed (non-fatal):',
+                  objectiveMappingErr
+                );
+              }
+            }
+
             // Build item_ref lookup map
             const itemMap = {};
             for (const item of items) {
@@ -625,6 +670,57 @@ exports.handler = async (event) => {
                 console.error(`[student-submit-answer] [${requestId}] submission_answers upsert failed: ${subAnswersResponse.status} - ${errorText}`);
               } else {
                 console.log(`[student-submit-answer] [${requestId}] Upserted ${subAnswers.length} submission_answers`);
+
+                /*
+                 * Slice 5B1 child-objective evidence is deliberately written
+                 * BEFORE the parent Step 8 all-auto-scoreable gate.
+                 *
+                 * A mixed assignment may contain a teacher-reviewed writing
+                 * response while its separately auto-scored questions still
+                 * provide valid child-objective evidence.
+                 */
+                if (
+                  objectiveCandidateItemIds.length > 0 &&
+                  objectiveItemMappings.length > 0
+                ) {
+                  try {
+                    const objectiveEvidenceRows =
+                      buildAutoObjectiveEvidenceRows({
+                        items,
+                        submissionAnswers: subAnswers,
+                        mappings: objectiveItemMappings,
+                        studentId: student.id,
+                        assignmentInstanceId: instance_id,
+                        date: getSchoolLocalDate(),
+                        schoolYear
+                      });
+
+                    if (objectiveEvidenceRows.length > 0) {
+                      const objectiveEvidenceResults =
+                        await reconcileAssignmentObjectiveDataPoints({
+                          rows: objectiveEvidenceRows,
+                          supabaseUrl: SUPABASE_URL,
+                          serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY
+                        });
+
+                      console.log(
+                        `[student-submit-answer] [${requestId}] ` +
+                        `objective_data_points reconciled: ${objectiveEvidenceResults.length} row identity(s)`
+                      );
+                    }
+                  } catch (objectiveEvidenceErr) {
+                    /*
+                     * Preserve assignment completion even if the additive IEP
+                     * child-evidence path fails. Parent evidence behavior below
+                     * remains unchanged.
+                     */
+                    console.warn(
+                      `[student-submit-answer] [${requestId}] ` +
+                      'objective_data_points reconciliation error (non-fatal):',
+                      objectiveEvidenceErr
+                    );
+                  }
+                }
 
                 // Compute score_auto from auto-scored answers and update the parent submission
                 const autoScoredAnswers = subAnswers.filter(a => a.earned_points != null);
