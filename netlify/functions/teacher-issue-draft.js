@@ -15,6 +15,13 @@ const { requireTeacher } = require('./_lib/auth');
 const { getSupabaseConfig, lookupActiveTeacherId } = require('./_lib/supa');
 const { buildItemsFromMeta } = require('./_lib/build-items');
 const { applyExplicitMapping } = require('./_lib/apply-explicit-mapping');
+const {
+  selectAssignmentReuseCandidate,
+  hasObjectiveMetadataInAssignmentMeta,
+  preflightObjectiveItemMappings,
+  clearAssignmentObjectiveMappings,
+  replaceAssignmentItemObjectives,
+} = require('./_lib/objective-item-mapping');
 const { resolveOperationalSchoolYear } = require('./_lib/school-year');
 const { getSchoolLocalDate } = require('./_lib/school-date');
 const { parseHtmlAssignment } = require('./_lib/parse-html-assignment');
@@ -396,6 +403,15 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
           mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
         }
 
+        // Extract inline [IO: child-objective-code] tags.
+        // [IG:] remains the controlling parent mapping.
+        const ioCodes = [];
+        const ioPattern = /\[IO:\s*([^\]]+)\]/g;
+        let ioMatch;
+        while ((ioMatch = ioPattern.exec(restOfLine)) !== null) {
+          ioCodes.push(ioMatch[1].trim());
+        }
+
         // Detect inline type-hint bracket tags
         const hasTFBracket = /\[T\/F\]/i.test(restOfLine);
         const hasFIBBracket = /\[Fill\s+in\s+the\s+Blank\]/i.test(restOfLine);
@@ -409,6 +425,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
         // Strip all bracket tags and parenthetical hints from header text
         const remainingText = restOfLine
           .replace(/\[IG:\s*[^\]]+\]/g, '')
+          .replace(/\[IO:\s*[^\]]+\]/g, '')
           .replace(/\[MLS[^\]]*\]/g, '')
           .replace(/\[T\/F\]/gi, '')
           .replace(/\[Fill\s+in\s+the\s+Blank\]/gi, '')
@@ -429,6 +446,14 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
         }
         if (mlsCodes.length > 0) {
           currentQuestion.dese_codes = mlsCodes;
+        }
+        if (ioCodes.length > 0) {
+          currentQuestion.objective_components = ioCodes.map((code, index) => ({
+            code,
+            label: null,
+            max: 1,
+            order: index + 1
+          }));
         }
         currentSection = 'question';
         continue;
@@ -461,6 +486,14 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
           mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
         }
 
+        // Extract inline [IO: child-objective-code] tags.
+        const ioCodes = [];
+        const ioPattern = /\[IO:\s*([^\]]+)\]/g;
+        let ioMatch;
+        while ((ioMatch = ioPattern.exec(restOfLine)) !== null) {
+          ioCodes.push(ioMatch[1].trim());
+        }
+
         // Detect inline type-hint bracket tags: [T/F] → boolean, [Fill in the Blank] → fill_in_blank
         const hasTFBracket = /\[T\/F\]/i.test(restOfLine);
         const hasFIBBracket = /\[Fill\s+in\s+the\s+Blank\]/i.test(restOfLine);
@@ -471,6 +504,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
         // Remove all bracket tags and parenthetical type hints to get any remaining text
         const remainingText = restOfLine
           .replace(/\[IG:\s*[^\]]+\]/g, '')
+          .replace(/\[IO:\s*[^\]]+\]/g, '')
           .replace(/\[MLS[^\]]*\]/g, '')
           .replace(/\[T\/F\]/gi, '')
           .replace(/\[Fill\s+in\s+the\s+Blank\]/gi, '')
@@ -491,12 +525,59 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
         if (mlsCodes.length > 0) {
           currentQuestion.dese_codes = mlsCodes;
         }
+        if (ioCodes.length > 0) {
+          currentQuestion.objective_components = ioCodes.map((code, index) => ({
+            code,
+            label: null,
+            max: 1,
+            order: index + 1
+          }));
+        }
 
         currentSection = 'question';
         continue;
       }
 
       if (currentQuestion) {
+        // Objective Max is progress-monitoring metadata only.
+        // It never changes assignment_items.points or academic scoring.
+        const objectiveMaxLineMatch = trimmed.match(
+          /^Objective\s+Max:\s*(.*?)\s*$/i
+        );
+        if (objectiveMaxLineMatch) {
+          const objectiveMaxRaw =
+            objectiveMaxLineMatch[1].trim();
+
+          const objectiveMax =
+            Number(objectiveMaxRaw);
+
+          if (
+            !objectiveMaxRaw ||
+            !Number.isFinite(objectiveMax) ||
+            objectiveMax <= 0
+          ) {
+            // Never leak malformed teacher metadata into student-visible text.
+            // Preserve the raw value so issuance can block explicitly.
+            currentQuestion.objective_max_invalid_raw =
+              objectiveMaxRaw;
+
+            continue;
+          }
+
+          if (
+            Array.isArray(currentQuestion.objective_components) &&
+            currentQuestion.objective_components.length > 0
+          ) {
+            currentQuestion.objective_components[0].max =
+              objectiveMax;
+          } else {
+            currentQuestion.objective_max_unbound =
+              objectiveMax;
+          }
+
+          continue;
+        }
+
         // Check for choices (A), B), C), etc. or A:, B:, C:, etc. or A., B., C., etc.)
         const choiceMatch = trimmed.match(/^([A-Z])[).:]\s*(.*)$/);
         if (choiceMatch) {
@@ -613,11 +694,27 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
           mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
         }
 
+        // Extract inline [IO: child-objective-code] tags.
+        const ioCodes = [];
+        const ioPattern = /\[IO:\s*([^\]]+)\]/g;
+        let ioMatch;
+        while ((ioMatch = ioPattern.exec(restOfLine)) !== null) {
+          ioCodes.push(ioMatch[1].trim());
+        }
+
         if (igCodes.length > 0) {
           currentDay.goal_codes = (currentDay.goal_codes || []).concat(igCodes);
         }
         if (mlsCodes.length > 0) {
           currentDay.dese_codes = (currentDay.dese_codes || []).concat(mlsCodes);
+        }
+        if (ioCodes.length > 0) {
+          currentDay.objective_components = ioCodes.map((code, index) => ({
+            code,
+            label: null,
+            max: 1,
+            order: index + 1
+          }));
         }
         // Do NOT create a currentQuestion — let subsequent lines feed the writing_prompt sections
         currentQuestion = null;
@@ -658,9 +755,18 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
           mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
         }
 
+        // Extract inline [IO: child-objective-code] tags.
+        const ioCodes = [];
+        const ioPattern = /\[IO:\s*([^\]]+)\]/g;
+        let ioMatch;
+        while ((ioMatch = ioPattern.exec(restOfLine)) !== null) {
+          ioCodes.push(ioMatch[1].trim());
+        }
+
         // Remove all bracket tags and parenthetical type hints to get any remaining text
         const remainingText = restOfLine
           .replace(/\[IG:\s*[^\]]+\]/g, '')
+          .replace(/\[IO:\s*[^\]]+\]/g, '')
           .replace(/\[MLS[^\]]*\]/g, '')
           .replace(/\([^)]*\)/g, '')
           .trim();
@@ -671,11 +777,44 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
         if (mlsCodes.length > 0) {
           currentDay.dese_codes = mlsCodes;
         }
+        if (ioCodes.length > 0) {
+          currentDay.objective_components = ioCodes.map((code, index) => ({
+            code,
+            label: null,
+            max: 1,
+            order: index + 1
+          }));
+        }
         if (remainingText) {
           currentDay.prompt = remainingText;
         }
         currentSection = 'prompt';
         continue;
+      }
+
+      // Explicit multi-objective writing/performance artifact.
+      // Multiple child objectives are permitted only through this block.
+      if (/^Objective\s+Components\s*:\s*$/i.test(trimmed)) {
+        currentDay.objective_components = [];
+        currentDay.objective_components_explicit = true;
+        currentSection = 'objective_components';
+        continue;
+      }
+
+      if (currentSection === 'objective_components') {
+        const objectiveComponentMatch = trimmed.match(
+          /^\[IO:\s*([^\]]+)\]\s*(.*?)\s*\|\s*Objective\s+Max:\s*(\d+(?:\.\d+)?)\s*$/i
+        );
+
+        if (objectiveComponentMatch) {
+          currentDay.objective_components.push({
+            code: objectiveComponentMatch[1].trim(),
+            label: objectiveComponentMatch[2].trim() || null,
+            max: Number(objectiveComponentMatch[3]),
+            order: currentDay.objective_components.length + 1
+          });
+          continue;
+        }
       }
 
       // Check for structure markers:
@@ -1133,6 +1272,191 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
     }
   }
 
+  // Objective mappings are student-specific IEP metadata.
+  // Preflight them before assignment/item writes so malformed or mismatched
+  // [IO:] data blocks issuance instead of leaving silently incomplete mappings.
+  let objectiveMappingPreflight = {
+    engaged: false,
+    student_code: null,
+    by_item_ref: {},
+  };
+
+  if (parsedMeta) {
+    const preflightItems =
+      buildItemsFromMeta(
+        '__objective_preflight__',
+        parsedMeta
+      );
+
+    const hasObjectiveMetadata =
+      preflightItems.some(item => {
+        const itemMeta =
+          item &&
+          item.meta &&
+          typeof item.meta === 'object'
+            ? item.meta
+            : {};
+
+        return (
+          (
+            Array.isArray(
+              itemMeta.objective_components
+            ) &&
+            itemMeta.objective_components.length > 0
+          ) ||
+          itemMeta.objective_components_explicit === true ||
+          itemMeta.objective_max_unbound != null ||
+          itemMeta.objective_max_invalid_raw != null
+        );
+      });
+
+    if (hasObjectiveMetadata) {
+      const explicitStudentCodes = [];
+
+      if (
+        typeof draft.studentCode === 'string' &&
+        draft.studentCode.trim()
+      ) {
+        explicitStudentCodes.push(
+          draft.studentCode.trim().toUpperCase()
+        );
+      }
+
+      if (Array.isArray(draft.studentCodes)) {
+        for (const code of draft.studentCodes) {
+          if (
+            typeof code === 'string' &&
+            code.trim()
+          ) {
+            explicitStudentCodes.push(
+              code.trim().toUpperCase()
+            );
+          }
+        }
+      }
+
+      const uniqueStudentCodes =
+        Array.from(
+          new Set(explicitStudentCodes)
+        );
+
+      const hasAdditionalStudents =
+        Array.isArray(
+          draft.additionalStudentCodes
+        ) &&
+        draft.additionalStudentCodes.some(
+          code =>
+            typeof code === 'string' &&
+            code.trim()
+        );
+
+      if (
+        uniqueStudentCodes.length !== 1 ||
+        hasAdditionalStudents
+      ) {
+        return {
+          ok: false,
+          error:
+            'Objective-mapped assignments must target exactly one explicit S### student and cannot include additional students.',
+          statusCode: 422,
+        };
+      }
+
+      try {
+        objectiveMappingPreflight =
+          await preflightObjectiveItemMappings({
+            fetchFn: fetch,
+            supabaseUrl:
+              SUPABASE_URL,
+            serviceRoleKey:
+              SUPABASE_SERVICE_ROLE_KEY,
+            items:
+              preflightItems,
+            studentCode:
+              uniqueStudentCodes[0],
+          });
+
+        console.log(
+          `[teacher-issue-draft] [${requestId}] ` +
+          `Objective mapping preflight passed for student ` +
+          `${objectiveMappingPreflight.student_code}`
+        );
+      } catch (err) {
+        console.error(
+          `[teacher-issue-draft] [${requestId}] ` +
+          'Objective mapping preflight failed:',
+          err.code || err.message
+        );
+
+        return {
+          ok: false,
+          error: err.message,
+          code: err.code || null,
+          statusCode:
+            err.statusCode || 422,
+        };
+      }
+    }
+  }
+
+  // Resolve a single explicit student target for assignment identity.
+  // This does NOT make ordinary assignments student-specific. It is used only
+  // to keep objective-aware assignment rows from being reused across students,
+  // and to find the same student's prior row when IO metadata is later removed.
+  const assignmentIdentityTargetCodes = [];
+
+  if (
+    typeof draft.studentCode === 'string' &&
+    draft.studentCode.trim()
+  ) {
+    assignmentIdentityTargetCodes.push(
+      draft.studentCode.trim().toUpperCase()
+    );
+  }
+
+  if (Array.isArray(draft.studentCodes)) {
+    for (const code of draft.studentCodes) {
+      if (
+        typeof code === 'string' &&
+        code.trim()
+      ) {
+        assignmentIdentityTargetCodes.push(
+          code.trim().toUpperCase()
+        );
+      }
+    }
+  }
+
+  const assignmentIdentityUniqueCodes =
+    Array.from(
+      new Set(
+        assignmentIdentityTargetCodes
+      )
+    );
+
+  const assignmentIdentityHasAdditionalStudents =
+    Array.isArray(
+      draft.additionalStudentCodes
+    ) &&
+    draft.additionalStudentCodes.some(
+      code =>
+        typeof code === 'string' &&
+        code.trim()
+    );
+
+  const targetedStudentCode =
+    (
+      assignmentIdentityUniqueCodes.length === 1 &&
+      !assignmentIdentityHasAdditionalStudents
+    )
+      ? assignmentIdentityUniqueCodes[0]
+      : null;
+
+  const objectiveAssignmentStudentCode =
+    objectiveMappingPreflight.engaged
+      ? objectiveMappingPreflight.student_code
+      : null;
+
   // Resolve one authoritative year for the entire issuance.
   // Explicit draft year wins; otherwise July teacher preparation targets
   // the upcoming operational school year.
@@ -1143,6 +1467,8 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
   // must never be reused as the parent of a new-year assignment instance.
   let assignmentId = null;
   let isDuplicate = false;
+  let existingAssignmentMeta = null;
+  let objectiveMappingCleanupRequired = false;
 
   const duplicateCheckUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,meta&title=eq.${encodeURIComponent(draft.title)}&class_id=eq.${encodeURIComponent(targetClass.id)}&school_year=eq.${issueSchoolYear}`;
   
@@ -1158,17 +1484,46 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
   });
 
   if (duplicateCheckResponse.ok) {
-    const existingAssignments = await duplicateCheckResponse.json();
-    if (existingAssignments && existingAssignments.length > 0) {
-      assignmentId = existingAssignments[0].id;
+    const existingAssignments =
+      await duplicateCheckResponse.json();
+
+    const selectedAssignment =
+      selectAssignmentReuseCandidate({
+        candidates:
+          existingAssignments,
+        objectiveStudentCode:
+          objectiveAssignmentStudentCode,
+        targetedStudentCode,
+      });
+
+    if (selectedAssignment) {
+      assignmentId =
+        selectedAssignment.id;
+
       isDuplicate = true;
-      console.log(`[teacher-issue-draft] [${requestId}] Found duplicate assignment with ID: ${assignmentId}, reusing it`);
+
+      existingAssignmentMeta =
+        selectedAssignment.meta || null;
+
+      console.log(
+        `[teacher-issue-draft] [${requestId}] ` +
+        `Found reusable assignment with ID: ${assignmentId}` +
+        (
+          objectiveAssignmentStudentCode
+            ? ` for objective student ${objectiveAssignmentStudentCode}`
+            : targetedStudentCode &&
+              existingAssignmentMeta &&
+              existingAssignmentMeta.objective_assignment_student_code
+              ? ` for targeted student ${targetedStudentCode}`
+              : ''
+        )
+      );
 
       // Guard: if the draft carries no new parseable content AND the existing
       // assignment already has empty meta, re-issuing would create more orphaned
       // instances that the Student Portal cannot render.  Fail loudly instead of
       // silently repeating the same broken issuance.
-      if (!parsedMeta && !hasValidAssignmentMeta(existingAssignments[0].meta)) {
+      if (!parsedMeta && !hasValidAssignmentMeta(selectedAssignment.meta)) {
         const reissueErrMsg =
           `Cannot re-issue: the existing assignment (ID ${assignmentId}) has empty meta ` +
           `and no new assignment file was provided. ` +
@@ -1178,6 +1533,48 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
         return { ok: false, error: reissueErrMsg, statusCode: 422 };
       }
     }
+  }
+
+  // Objective-aware assignments keep the normal teacher-visible title, but their
+  // assignment meta carries an internal student identity so two students with the
+  // same title/class/year cannot share assignment_items or objective mappings.
+  //
+  // When IO is deliberately removed during a targeted re-upload, preserve the
+  // existing student-specific identity while clearing the now-stale mappings.
+  if (parsedMeta) {
+    if (objectiveAssignmentStudentCode) {
+      parsedMeta.objective_assignment_student_code =
+        objectiveAssignmentStudentCode;
+    } else if (
+      targetedStudentCode &&
+      existingAssignmentMeta &&
+      typeof existingAssignmentMeta
+        .objective_assignment_student_code === 'string' &&
+      existingAssignmentMeta
+        .objective_assignment_student_code
+        .trim()
+        .toUpperCase() === targetedStudentCode
+    ) {
+      parsedMeta.objective_assignment_student_code =
+        targetedStudentCode;
+    }
+  }
+
+  // A deliberate re-upload may remove all [IO:] metadata from an assignment
+  // that previously carried normalized objective mappings. Detect that lifecycle
+  // transition without querying goal_objectives.
+  if (
+    isDuplicate &&
+    parsedMeta &&
+    hasObjectiveMetadataInAssignmentMeta(existingAssignmentMeta) &&
+    !hasObjectiveMetadataInAssignmentMeta(parsedMeta)
+  ) {
+    objectiveMappingCleanupRequired = true;
+
+    console.log(
+      `[teacher-issue-draft] [${requestId}] ` +
+      'Existing assignment was objective-aware but new parsed content has no objective metadata; stale objective mappings will be cleared'
+    );
   }
 
   // Step 5: Create or update assignment in Supabase
@@ -1349,6 +1746,66 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
         } else {
           console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${mappingsToUpsert.length} assignment_item_mappings`);
         }
+      }
+
+      // Step 5c.1: Persist normalized child-objective mappings.
+      //
+      // Preflight already validated official registry identity, student ownership,
+      // parent-goal relationship, multiplicity, and Objective Max. Replacement
+      // semantics remove stale child mappings from items inside an objective-aware
+      // assignment without changing academic points or parent/DESE mappings.
+      if (objectiveMappingPreflight.engaged) {
+        for (const original of itemsToUpsert) {
+          if (!original.item_ref) continue;
+
+          const upserted =
+            upsertedMap[original.item_ref];
+
+          if (!upserted || !upserted.id) {
+            throw new Error(
+              `Objective mapping cannot resolve assignment item "${original.item_ref}".`
+            );
+          }
+
+          const resolvedMappings =
+            objectiveMappingPreflight
+              .by_item_ref[original.item_ref] || [];
+
+          await replaceAssignmentItemObjectives({
+            fetchFn: fetch,
+            supabaseUrl:
+              SUPABASE_URL,
+            serviceRoleKey:
+              SUPABASE_SERVICE_ROLE_KEY,
+            itemId:
+              upserted.id,
+            resolvedMappings,
+          });
+        }
+
+        console.log(
+          `[teacher-issue-draft] [${requestId}] ` +
+          'Persisted normalized assignment_item_objectives mappings'
+        );
+      }
+
+      if (
+        !objectiveMappingPreflight.engaged &&
+        objectiveMappingCleanupRequired
+      ) {
+        await clearAssignmentObjectiveMappings({
+          fetchFn: fetch,
+          supabaseUrl:
+            SUPABASE_URL,
+          serviceRoleKey:
+            SUPABASE_SERVICE_ROLE_KEY,
+          assignmentId,
+        });
+
+        console.log(
+          `[teacher-issue-draft] [${requestId}] ` +
+          'Cleared stale assignment_item_objectives after objective metadata removal'
+        );
       }
 
       // Step 5d: Delete stale assignment_items from previous HTML upload versions.
