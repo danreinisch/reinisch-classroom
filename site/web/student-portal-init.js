@@ -1313,6 +1313,87 @@
   /**
    * Render a single goal card
    */
+
+  /**
+   * Render the official child objectives beneath their controlling parent goal.
+   *
+   * These are read-only IEP objective details. Objective progress/scoring is
+   * intentionally not part of Slice 4.
+   */
+  function renderGoalObjectives(objectives = []) {
+    if (!Array.isArray(objectives) || objectives.length === 0) {
+      return '';
+    }
+
+    const ordered = objectives
+      .slice()
+      .sort((a, b) => {
+        const aNumber = Number(a?.objective_number) || 0;
+        const bNumber = Number(b?.objective_number) || 0;
+        return aNumber - bNumber ||
+          String(a?.code || '').localeCompare(String(b?.code || ''));
+      });
+
+    const rows = ordered.map(objective => {
+      const number = Number(objective?.objective_number) || '';
+      const code = objective?.code || '';
+      const text = objective?.objective_text || '';
+
+      const meta = [];
+
+      if (objective?.baseline != null && objective.baseline !== '') {
+        meta.push(
+          `<span><strong>Baseline:</strong> ${escapeHtml(String(objective.baseline))}</span>`
+        );
+      }
+
+      if (
+        objective?.objective_wording_criterion != null &&
+        objective.objective_wording_criterion !== ''
+      ) {
+        meta.push(
+          `<span><strong>Objective criterion:</strong> ${escapeHtml(String(objective.objective_wording_criterion))}</span>`
+        );
+      }
+
+      if (objective?.mastery_field != null && objective.mastery_field !== '') {
+        meta.push(
+          `<span><strong>Mastery:</strong> ${escapeHtml(String(objective.mastery_field))}</span>`
+        );
+      }
+
+      const metaHtml = meta.length > 0
+        ? `<div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px;font-size:11px;opacity:0.78;">${meta.join('')}</div>`
+        : '';
+
+      return `
+        <div class="st-goal-objective"
+          style="padding:8px 0;border-top:1px solid rgba(99,102,241,0.14);">
+          <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;">
+            <strong style="font-size:12px;">IEP Objective ${escapeHtml(String(number))}</strong>
+            <span style="font-size:11px;opacity:0.68;">${escapeHtml(code)}</span>
+          </div>
+          <div style="margin-top:3px;font-size:13px;line-height:1.45;">
+            ${escapeHtml(text)}
+          </div>
+          ${metaHtml}
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="st-goal-objectives"
+        role="group"
+        aria-label="Your IEP Objectives"
+        style="margin:10px 0 12px;padding:0 12px 4px;border:1px solid rgba(99,102,241,0.18);border-radius:8px;background:rgba(99,102,241,0.05);">
+        <div style="padding:9px 0 7px;font-size:12px;font-weight:700;">
+          Your IEP Objectives
+        </div>
+        ${rows}
+      </div>
+    `;
+  }
+
   function renderGoalCard(goal, progressMap, dataPointsMap, containerSuffix = '') {
     const colorCategory = goalAreaToColorCategory(goal.goal_area);
     // Clean up any "Baseline: XX%" text that leaked into the description field
@@ -1560,6 +1641,7 @@
           </div>
         </div>
         ${descHtml}
+        ${renderGoalObjectives(goal.objectives)}
         <div class="st-goal-metrics">
           <div class="st-metric">
             <span class="st-metric-label">Baseline:</span>

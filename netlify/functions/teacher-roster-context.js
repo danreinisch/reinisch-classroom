@@ -28,6 +28,10 @@ const NO_STORE_HEADERS = {
   'Cache-Control': 'no-store',
 };
 
+const {
+  getObjectivesForParentGoal,
+} = require('./_lib/goal-objective-catalog');
+
 function isSchemaError(value) {
   const text =
     typeof value === 'string'
@@ -101,10 +105,22 @@ function flattenGoals(rows, enriched) {
     const student =
       nestedStudent(goal) || {};
 
+    const objectives =
+      getObjectivesForParentGoal(
+        goal.code,
+        student.code || ''
+      );
+
+    const objectivePayload =
+      objectives.length > 0
+        ? { objectives: objectives }
+        : {};
+
     const base = {
       id: goal.id,
       student_code: student.code || '',
       code: goal.code,
+      ...objectivePayload,
       desc: goal.desc,
       target: goal.target,
       criterion_conflict:

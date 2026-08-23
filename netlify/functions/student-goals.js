@@ -15,6 +15,10 @@ const {
   requireStudent,
 } = require('./_lib/student-auth');
 
+const {
+  getObjectivesForParentGoal,
+} = require('./_lib/goal-objective-catalog');
+
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
@@ -142,13 +146,29 @@ exports.handler = async (event) => {
     }
 
     const goals = await goalsResponse.json();
+
+    const goalsWithObjectives =
+      (goals || []).map(goal => {
+        const objectives =
+          getObjectivesForParentGoal(
+            goal.code,
+            codeNorm
+          );
+
+        return objectives.length > 0
+          ? {
+              ...goal,
+              objectives: objectives,
+            }
+          : goal;
+      });
     
     console.log(`[student-goals] [${requestId}] Successfully fetched ${goals.length} active goals (active=true + status filter applied)`);
     
     return jsonResponse(
       event,
       200,
-      { ok: true, goals: goals || [] },
+      { ok: true, goals: goalsWithObjectives },
       { 'Cache-Control': 'no-store' },
       requestId
     );
