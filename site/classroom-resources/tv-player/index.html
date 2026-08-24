@@ -10,7 +10,11 @@
 <body>
 <div class="tv-app" id="tvApp">
   <header class="tv-topbar">
-    <div class="tv-lights" aria-hidden="true"><span class="tv-light red"></span><span class="tv-light yellow"></span><span class="tv-light green"></span></div>
+    <div class="tv-lights" aria-label="Display controls">
+      <button class="tv-light red" id="tvCloseDot" type="button" aria-label="Close presentation" title="Close"></button>
+      <button class="tv-light yellow" id="tvPresentationDot" type="button" aria-label="Toggle presentation view" title="Presentation view"></button>
+      <button class="tv-light green" id="tvFullscreenDot" type="button" aria-label="Toggle fullscreen" title="Fullscreen"></button>
+    </div>
     <div class="tv-title" id="tvTitle">Classroom Resource</div>
     <div class="tv-count" id="tvCount">— / —</div>
   </header>
