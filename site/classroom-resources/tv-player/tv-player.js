@@ -16,6 +16,9 @@
   const prevBtn = document.getElementById('tvPrev');
   const nextBtn = document.getElementById('tvNext');
   const closeBtn = document.getElementById('tvClose');
+  const closeDot = document.getElementById('tvCloseDot');
+  const presentationDot = document.getElementById('tvPresentationDot');
+  const fullscreenDot = document.getElementById('tvFullscreenDot');
   const overlay = document.getElementById('tvOverlay');
   const modalTitle = document.getElementById('tvModalTitle');
   const modalBody = document.getElementById('tvModalBody');
@@ -26,6 +29,26 @@
   let slides = [];
   let index = 0;
   let loadTimer = null;
+
+  function closePlayer() {
+    window.location.href = '/classroom-resources/';
+  }
+
+  function togglePresentationView() {
+    app.classList.toggle('presentation-view');
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (error) {
+      console.warn('[Classroom Display] Fullscreen request was not available:', error);
+    }
+  }
 
   function setStatus(message, isError) {
     statusEl.textContent = message || '';
@@ -42,9 +65,7 @@
       el.removeAttribute('hidden');
       el.removeAttribute('aria-hidden');
       el.removeAttribute('tabindex');
-      if (el.classList) {
-        el.classList.remove('active', 'motion-in');
-      }
+      if (el.classList) el.classList.remove('active', 'motion-in');
     });
     clone.querySelectorAll('script,style,link,iframe').forEach(function (el) { el.remove(); });
     return clone;
@@ -63,15 +84,9 @@
     nextBtn.disabled = index === slides.length - 1;
 
     slideHost.querySelectorAll('[data-detail]').forEach(function (trigger) {
-      trigger.addEventListener('click', function () {
-        openDetail(trigger.getAttribute('data-detail'));
-      });
+      trigger.addEventListener('click', function () { openDetail(trigger.getAttribute('data-detail')); });
     });
-
-    slideHost.querySelectorAll('button:not([data-detail])').forEach(function (button) {
-      button.type = 'button';
-    });
-
+    slideHost.querySelectorAll('button:not([data-detail])').forEach(function (button) { button.type = 'button'; });
     slideHost.scrollTop = 0;
   }
 
@@ -88,13 +103,7 @@
     const source = sourceDoc.getElementById(id);
     if (!source) return;
 
-    let root;
-    if (source.tagName === 'TEMPLATE') {
-      root = source.content.cloneNode(true);
-    } else {
-      root = source.cloneNode(true);
-    }
-
+    const root = source.tagName === 'TEMPLATE' ? source.content.cloneNode(true) : source.cloneNode(true);
     const titleNode = root.querySelector ? root.querySelector('[data-title]') : null;
     const bodyNode = root.querySelector ? root.querySelector('[data-body]') : null;
 
@@ -149,18 +158,17 @@
   }
 
   titleEl.textContent = requestedTitle;
-  sourceFrame.addEventListener('load', function () {
-    pollForSlides(0);
-  }, { once: true });
+  sourceFrame.addEventListener('load', function () { pollForSlides(0); }, { once: true });
   sourceFrame.src = src;
 
   prevBtn.addEventListener('click', function () { move(-1); });
   nextBtn.addEventListener('click', function () { move(1); });
-  closeBtn.addEventListener('click', function () { window.location.href = '/classroom-resources/'; });
+  closeBtn.addEventListener('click', closePlayer);
+  closeDot.addEventListener('click', closePlayer);
+  presentationDot.addEventListener('click', togglePresentationView);
+  fullscreenDot.addEventListener('click', toggleFullscreen);
   modalClose.addEventListener('click', closeModal);
-  overlay.addEventListener('click', function (event) {
-    if (event.target === overlay) closeModal();
-  });
+  overlay.addEventListener('click', function (event) { if (event.target === overlay) closeModal(); });
 
   document.addEventListener('keydown', function (event) {
     if (!overlay.hidden) {
@@ -176,7 +184,7 @@
     } else if (event.key === 'End') {
       event.preventDefault(); index = slides.length - 1; renderSlide();
     } else if (event.key === 'Escape') {
-      window.location.href = '/classroom-resources/';
+      closePlayer();
     }
   });
 
