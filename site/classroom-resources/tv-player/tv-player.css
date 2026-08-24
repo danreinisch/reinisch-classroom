@@ -7,8 +7,12 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);c
 body{background:linear-gradient(135deg,#07101e 0%,#0b1730 55%,#16132c 100%)}
 button{font:inherit}
 .tv-app{height:100vh;display:grid;grid-template-rows:54px minmax(0,1fr) 72px;background:transparent}
+.tv-app.presentation-view{grid-template-rows:54px minmax(0,1fr) 0}
+.tv-app.presentation-view .tv-controls{display:none}
+.tv-app.presentation-view .tv-stage{padding:8px}
+.tv-app.presentation-view .tv-slide-host{border-radius:14px}
 .tv-topbar{display:grid;grid-template-columns:120px minmax(0,1fr) 110px;align-items:center;gap:12px;padding:0 16px;background:#101a2a;border-bottom:1px solid #30445d}
-.tv-lights{display:flex;gap:10px;align-items:center}.tv-light{width:15px;height:15px;border-radius:50%;display:block}.red{background:#ff5f57}.yellow{background:#ffbd2e}.green{background:#28c840}
+.tv-lights{display:flex;gap:10px;align-items:center}.tv-light{width:15px;height:15px;border-radius:50%;display:block;border:0;padding:0;appearance:none;-webkit-appearance:none}.red{background:#ff5f57}.yellow{background:#ffbd2e}.green{background:#28c840}
 .tv-title{text-align:center;font-weight:700;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tv-count{text-align:right;font-weight:700;color:#cfe0ee;font-size:16px}
 .tv-stage{min-height:0;padding:20px 28px 16px;overflow:hidden}.tv-slide-host{height:100%;overflow:auto;border:1px solid #4c7892;border-radius:24px;background:#0b1729;padding:28px 34px;box-shadow:0 10px 24px rgba(0,0,0,.35)}
 .tv-slide-host>.deck,.tv-slide-host>div{min-height:100%;position:relative}.tv-slide-host .deck{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;overflow:visible!important;max-height:none!important;backdrop-filter:none!important;filter:none!important;transform:none!important}
