@@ -63,7 +63,7 @@
 
       const link = doc.createElement('link');
       link.rel = 'stylesheet';
-      link.href = '/classroom-resources/display-compat.css?v=20260824';
+      link.href = '/classroom-resources/display-compat.css?v=20260824-2';
       link.setAttribute('data-rc-display-compat', 'safe');
       link.addEventListener('load', function () {
         requestAnimationFrame(function () {
