@@ -709,6 +709,64 @@ const local = {
   // ============================================================================
   // Phase 1: Goal Progress (Local fallback)
   // ============================================================================
+  async listObjectiveProgress({
+    studentCode,
+    quarter,
+    start,
+    end
+  } = {}) {
+    const params = new URLSearchParams();
+
+    params.set(
+      'student_code',
+      String(studentCode || '')
+    );
+    params.set(
+      'quarter',
+      String(quarter || '')
+    );
+    params.set(
+      'start',
+      String(start || '')
+    );
+    params.set(
+      'end',
+      String(end || '')
+    );
+
+    const response = await fetch(
+      '/.netlify/functions/teacher-objective-progress?' +
+        params.toString(),
+      {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          Accept: 'application/json'
+        }
+      }
+    );
+
+    const result = await response
+      .json()
+      .catch(() => ({
+        ok: false,
+        error: `HTTP ${response.status}`
+      }));
+
+    if (
+      !response.ok ||
+      result.ok !== true
+    ) {
+      throw new Error(
+        result.error ||
+        `Teacher objective progress request failed: ${response.status}`
+      );
+    }
+
+    return result;
+  },
+
   async listGoalProgress({ studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit, includeAllYears = false } = {}) {
     console.log('[goal-progress] listGoalProgress (local mode)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
     const currentYear = getCurrentSchoolYear();
@@ -2406,6 +2464,64 @@ const remote = {
   // ============================================================================
   // Phase 1: Goal Progress (Remote via Supabase)
   // ============================================================================
+  async listObjectiveProgress({
+    studentCode,
+    quarter,
+    start,
+    end
+  } = {}) {
+    const params = new URLSearchParams();
+
+    params.set(
+      'student_code',
+      String(studentCode || '')
+    );
+    params.set(
+      'quarter',
+      String(quarter || '')
+    );
+    params.set(
+      'start',
+      String(start || '')
+    );
+    params.set(
+      'end',
+      String(end || '')
+    );
+
+    const response = await fetch(
+      '/.netlify/functions/teacher-objective-progress?' +
+        params.toString(),
+      {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          Accept: 'application/json'
+        }
+      }
+    );
+
+    const result = await response
+      .json()
+      .catch(() => ({
+        ok: false,
+        error: `HTTP ${response.status}`
+      }));
+
+    if (
+      !response.ok ||
+      result.ok !== true
+    ) {
+      throw new Error(
+        result.error ||
+        `Teacher objective progress request failed: ${response.status}`
+      );
+    }
+
+    return result;
+  },
+
   async listGoalProgress({
     studentCodes,
     goalCodes,
