@@ -132,6 +132,68 @@ html.rc-display-safe .nav-btn:last-child {
   background: linear-gradient(100deg, #238a9d 0%, #3473b7 52%, #7555a8 100%) !important;
 }
 
+/* ----------------------------------------------------------------------
+   V2 HARD-VISIBLE STATE
+   The base presentation system starts staggered entrance targets at opacity:0.
+   Disabling animation alone can strand those elements invisibly on embedded
+   Chromium. In classroom-display mode, active-slide content is fully painted
+   from the first frame and never depends on an animation completing.
+   ---------------------------------------------------------------------- */
+html.rc-display-safe .slide:not(.active) {
+  display: none !important;
+}
+
+html.rc-display-safe .slide.active {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+html.rc-display-safe .slide.active .deck,
+html.rc-display-safe .slide.active .deck * {
+  animation: none !important;
+  transition: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  filter: none !important;
+  will-change: auto !important;
+}
+
+html.rc-display-safe .slide.active .chips,
+html.rc-display-safe .slide.active .chip,
+html.rc-display-safe .slide.active .kicker,
+html.rc-display-safe .slide.active h1,
+html.rc-display-safe .slide.active h2,
+html.rc-display-safe .slide.active .lead,
+html.rc-display-safe .slide.active .big-quote,
+html.rc-display-safe .slide.active .hero-rule,
+html.rc-display-safe .slide.active .hero-stamp,
+html.rc-display-safe .slide.active .card,
+html.rc-display-safe .slide.active .topic,
+html.rc-display-safe .slide.active .course-btn,
+html.rc-display-safe .slide.active .rule,
+html.rc-display-safe .slide.active .phrase,
+html.rc-display-safe .slide.active .callout,
+html.rc-display-safe .slide.active .footer-line {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+html.rc-display-safe .overlay.open,
+html.rc-display-safe .overlay.open .modal,
+html.rc-display-safe .overlay.open .modal * {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  animation: none !important;
+  will-change: auto !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html.rc-display-safe *,
   html.rc-display-safe *::before,
