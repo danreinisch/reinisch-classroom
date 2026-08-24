@@ -5,7 +5,7 @@ html.rc-display-safe .pv-bar {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: 0 1px 0 rgba(0,0,0,.45) !important;
-  isolation: isolate;
+  isolation: auto !important;
 }
 
 html.rc-display-safe .pv-traffic-lights,
@@ -43,4 +43,112 @@ html.rc-display-safe .viewer-frame {
 
 html.rc-display-safe .viewer-iframe {
   transition: none !important;
+}
+
+/* ----------------------------------------------------------------------
+   V2 FLAT VIEWER SHELL
+   Remove the collapsible sidebar from the classroom-display path entirely.
+   This prevents the viewer bar from being translated/clipped by shell state
+   changes while the Newline is opening and closing iframe content.
+   ---------------------------------------------------------------------- */
+html.rc-display-safe,
+html.rc-display-safe body,
+html.rc-display-safe .tc-app,
+html.rc-display-safe .tc-shell {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+html.rc-display-safe .tc-shell {
+  display: block !important;
+  position: relative !important;
+  transform: none !important;
+}
+
+html.rc-display-safe .tc-sidebar {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+}
+
+html.rc-display-safe .tc-shell > div {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  transform: none !important;
+}
+
+html.rc-display-safe #viewerControls,
+html.rc-display-safe .pv-bar {
+  position: relative !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  transform: none !important;
+  overflow: visible !important;
+  contain: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 20 !important;
+}
+
+html.rc-display-safe .pv-traffic-lights {
+  display: flex !important;
+  flex: 0 0 53px !important;
+  min-width: 53px !important;
+  width: 53px !important;
+  gap: 7px !important;
+  margin: 0 !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+
+html.rc-display-safe .pv-dot {
+  display: block !important;
+  position: relative !important;
+  flex: 0 0 13px !important;
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  min-height: 13px !important;
+  margin: 0 !important;
+  transform: none !important;
+  contain: none !important;
+  will-change: auto !important;
+}
+
+html.rc-display-safe .viewer-btn-sidebar {
+  display: none !important;
+}
+
+html.rc-display-safe .viewer-frame {
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  left: 0 !important;
+  transform: none !important;
+  contain: none !important;
+}
+
+html.rc-display-safe .viewer-iframe {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  transform: none !important;
+  contain: none !important;
+  will-change: auto !important;
 }
