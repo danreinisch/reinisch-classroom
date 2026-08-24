@@ -33,7 +33,7 @@
     params.set('src', src);
     params.set('title', title || 'Classroom Resource');
     params.set('return', '/classroom-resources/?display=tv');
-    params.set('rev', '20260824-3');
+    params.set('rev', '20260824-4');
     return '/classroom-resources/tv-player/?' + params.toString();
   }
 
