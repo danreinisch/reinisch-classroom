@@ -947,6 +947,65 @@ const local = {
   },
 
   /**
+   * Local/demo mirror for Review component state.
+   * Production objective identity remains server-owned.
+   */
+  async updateObjectiveComponents({
+    submissionId,
+    itemId,
+    components
+  }) {
+    const answers =
+      store.get(
+        'submissionAnswers',
+        []
+      );
+
+    const existing =
+      answers.find(
+        answer =>
+          answer.submission_id ===
+            submissionId &&
+          (
+            answer.assignment_item_id ===
+              itemId ||
+            String(
+              answer.assignment_item_id
+            ) === String(itemId) ||
+            answer.item_id === itemId ||
+            String(answer.item_id) ===
+              String(itemId)
+          )
+      );
+
+    if (existing) {
+      existing.objective_components =
+        (components || []).map(
+          component => ({
+            component_order:
+              Number(
+                component.componentOrder
+              ),
+            objective_earned:
+              Number(
+                component.earned
+              ),
+          })
+        );
+
+      store.set(
+        'submissionAnswers',
+        answers
+      );
+    }
+
+    return {
+      ok: true
+    };
+  },
+
+
+  /**
    * Finalize a submission with scores and set review status to 'finalized'
    * @param {string} submissionId - Submission ID
    * @param {Object} params - { scoreAuto, scoreManual, scoreTotal }
@@ -2584,6 +2643,58 @@ const remote = {
     const result = await response.json();
     return result.data;
   },
+
+  /**
+   * Save independently scored IEP objective components for one reviewed item.
+   * Browser supplies only component order + earned value; the signed server
+   * resolves authoritative objective identity, label, and maximum.
+   */
+  async updateObjectiveComponents({
+    submissionId,
+    itemId,
+    components,
+    teacherNote
+  }) {
+    const response =
+      await fetch(
+        '/.netlify/functions/teacher-review-save',
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            action:
+              'save_objective_components',
+            submissionId,
+            itemId:
+              String(itemId),
+            components,
+            teacherNote:
+              teacherNote || ''
+          })
+        }
+      );
+
+    if (!response.ok) {
+      const error =
+        await response
+          .json()
+          .catch(() => ({
+            error:
+              'Unknown error'
+          }));
+
+      throw new Error(
+        error.error ||
+        'Failed to save objective components'
+      );
+    }
+
+    return response.json();
+  },
+
 
   /**
    * Finalize a submission with scores and set review status to 'reviewed'

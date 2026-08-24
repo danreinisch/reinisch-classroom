@@ -65,6 +65,15 @@ async function readAuthorizationRows(path, label, requestId) {
   };
 }
 
+const {
+  fetchAssignmentItemObjectiveMappings,
+  reconcileAssignmentObjectiveDataPoints,
+  validateReviewObjectiveComponents,
+  buildReviewObjectiveEvidenceRows,
+} = require(
+  './_lib/objective-review-evidence-writer'
+);
+
 async function authorizeReviewMutation(body, teacherId, requestId) {
   const submissionId = body && body.submissionId;
 
@@ -223,7 +232,12 @@ async function authorizeReviewMutation(body, teacherId, requestId) {
     };
   }
 
-  if (body.action === 'save_score') {
+  let authorizedItem = null;
+
+  if (
+    body.action === 'save_score' ||
+    body.action === 'save_objective_components'
+  ) {
     if (!body.itemId || typeof body.itemId !== 'string') {
       return {
         ok: false,
@@ -234,7 +248,7 @@ async function authorizeReviewMutation(body, teacherId, requestId) {
 
     const itemResult = await readAuthorizationRows(
       '/rest/v1/assignment_items' +
-        '?select=id,assignment_id' +
+        '?select=id,assignment_id,item_ref,meta' +
         `&id=eq.${encodeURIComponent(body.itemId)}` +
         `&assignment_id=eq.${encodeURIComponent(assignmentId)}` +
         '&limit=1',
@@ -251,6 +265,9 @@ async function authorizeReviewMutation(body, teacherId, requestId) {
         error: 'Submission not found',
       };
     }
+
+    authorizedItem =
+      itemResult.rows[0];
   }
 
   return {
@@ -261,6 +278,7 @@ async function authorizeReviewMutation(body, teacherId, requestId) {
       studentId,
       assignmentId,
       classId,
+      item: authorizedItem,
     },
   };
 }
@@ -417,6 +435,309 @@ async function handleSaveGrade(body, requestId) {
 
   console.log(`[teacher-review-save] [${requestId}] save_grade OK submission=${submissionId}`);
   return { statusCode: 200, data: { ok: true } };
+}
+
+
+function getReviewSchoolDate() {
+  const parts =
+    new Intl.DateTimeFormat(
+      'en-US',
+      {
+        timeZone:
+          'America/Chicago',
+        year:
+          'numeric',
+        month:
+          '2-digit',
+        day:
+          '2-digit',
+      }
+    ).formatToParts(new Date());
+
+  const values =
+    Object.fromEntries(
+      parts.map(part => [
+        part.type,
+        part.value,
+      ])
+    );
+
+  return (
+    values.year +
+    '-' +
+    values.month +
+    '-' +
+    values.day
+  );
+}
+
+function getReviewSchoolYear(date) {
+  const [
+    yearText,
+    monthText,
+  ] = String(date)
+    .split('-');
+
+  const year =
+    Number(yearText);
+
+  const month =
+    Number(monthText);
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month)
+  ) {
+    return null;
+  }
+
+  const startYear =
+    month >= 8
+      ? year
+      : year - 1;
+
+  return (
+    String(startYear) +
+    '-' +
+    String(startYear + 1)
+  );
+}
+
+function getReviewQuestionText(item) {
+  const meta =
+    item &&
+    item.meta &&
+    typeof item.meta === 'object' &&
+    !Array.isArray(item.meta)
+      ? item.meta
+      : {};
+
+  return (
+    meta.question ||
+    meta.prompt ||
+    meta.writing_prompt ||
+    item?.item_ref ||
+    null
+  );
+}
+
+// Action: save_objective_components
+// Reconcile teacher-entered child-objective evidence separately from academic score.
+async function handleSaveObjectiveComponents(
+  body,
+  requestId
+) {
+  const {
+    submissionId,
+    itemId,
+    components,
+    teacherNote,
+    studentId,
+    instanceId,
+    item,
+  } = body;
+
+  if (
+    !submissionId ||
+    typeof submissionId !== 'string'
+  ) {
+    return {
+      statusCode: 400,
+      error: 'submissionId is required',
+    };
+  }
+
+  if (
+    !itemId ||
+    typeof itemId !== 'string'
+  ) {
+    return {
+      statusCode: 400,
+      error: 'itemId is required',
+    };
+  }
+
+  if (
+    !Array.isArray(components)
+  ) {
+    return {
+      statusCode: 400,
+      error: 'components are required',
+    };
+  }
+
+  if (
+    !studentId ||
+    typeof studentId !== 'string' ||
+    !instanceId ||
+    typeof instanceId !== 'string'
+  ) {
+    return {
+      statusCode: 500,
+      error: 'Authorized objective context is unavailable',
+    };
+  }
+
+  const numericItemId =
+    Number(itemId);
+
+  if (
+    !Number.isSafeInteger(numericItemId) ||
+    numericItemId <= 0
+  ) {
+    return {
+      statusCode: 400,
+      error: 'Invalid itemId',
+    };
+  }
+
+  let mappings;
+
+  try {
+    mappings =
+      await fetchAssignmentItemObjectiveMappings({
+        itemIds:
+          [numericItemId],
+        supabaseUrl:
+          SUPABASE_URL,
+        serviceRoleKey:
+          SUPABASE_SERVICE_ROLE_KEY,
+        fetchImpl:
+          fetch,
+      });
+  } catch (error) {
+    console.error(
+      `[teacher-review-save] [${requestId}] objective mapping lookup failed:`,
+      error
+    );
+
+    return {
+      statusCode: 500,
+      error: 'Failed to load objective component mappings',
+    };
+  }
+
+  let validated;
+
+  try {
+    validated =
+      validateReviewObjectiveComponents({
+        mappings,
+        components,
+      });
+  } catch (error) {
+    return {
+      statusCode: 400,
+      error:
+        error &&
+        error.message
+          ? error.message
+          : 'Invalid objective components',
+    };
+  }
+
+  const answerRes =
+    await supaFetch(
+      '/rest/v1/submission_answers' +
+        `?submission_id=eq.${encodeURIComponent(submissionId)}` +
+        `&assignment_item_id=eq.${encodeURIComponent(itemId)}` +
+        '&select=raw_answer' +
+        '&limit=1'
+    );
+
+  if (!answerRes.ok) {
+    console.error(
+      `[teacher-review-save] [${requestId}] objective source-answer lookup failed:`,
+      answerRes.status,
+      answerRes.data
+    );
+
+    return {
+      statusCode: 500,
+      error: 'Failed to load source response',
+    };
+  }
+
+  const answer =
+    Array.isArray(answerRes.data)
+      ? answerRes.data[0]
+      : null;
+
+  if (!answer) {
+    return {
+      statusCode: 409,
+      error: 'Student response is not available for objective evidence',
+    };
+  }
+
+  const date =
+    getReviewSchoolDate();
+
+  const rows =
+    buildReviewObjectiveEvidenceRows({
+      validatedComponents:
+        validated,
+      studentId,
+      assignmentInstanceId:
+        instanceId,
+      itemId:
+        numericItemId,
+      questionText:
+        getReviewQuestionText(item),
+      studentAnswer:
+        answer.raw_answer,
+      teacherNote:
+        teacherNote || '',
+      date,
+      schoolYear:
+        getReviewSchoolYear(date),
+    });
+
+  try {
+    await reconcileAssignmentObjectiveDataPoints({
+      rows,
+      supabaseUrl:
+        SUPABASE_URL,
+      serviceRoleKey:
+        SUPABASE_SERVICE_ROLE_KEY,
+      fetchImpl:
+        fetch,
+    });
+  } catch (error) {
+    console.error(
+      `[teacher-review-save] [${requestId}] objective evidence reconciliation failed:`,
+      error
+    );
+
+    return {
+      statusCode: 500,
+      error: 'Failed to save objective component evidence',
+    };
+  }
+
+  console.log(
+    `[teacher-review-save] [${requestId}] save_objective_components OK submission=${submissionId} item=${itemId} components=${validated.length}`
+  );
+
+  return {
+    statusCode: 200,
+    data: {
+      ok: true,
+      objective_components:
+        validated.map(
+          component => ({
+            component_order:
+              component.component_order,
+            component_label:
+              component.component_label,
+            objective_max:
+              component.objective_max,
+            objective_earned:
+              component.objective_earned,
+          })
+        ),
+    },
+  };
 }
 
 // Action: finalize
@@ -751,6 +1072,7 @@ exports.handler = async (event) => {
 
   const allowedActions = new Set([
     'save_score',
+    'save_objective_components',
     'save_grade',
     'finalize',
     'reopen',
@@ -787,12 +1109,20 @@ exports.handler = async (event) => {
     ...body,
     submissionId: authorization.context.submissionId,
     instanceId: authorization.context.instanceId,
+    studentId: authorization.context.studentId,
+    item: authorization.context.item,
   };
 
   let result;
   switch (action) {
     case 'save_score':
       result = await handleSaveScore(authorizedBody, requestId);
+      break;
+    case 'save_objective_components':
+      result = await handleSaveObjectiveComponents(
+        authorizedBody,
+        requestId
+      );
       break;
     case 'save_grade':
       result = await handleSaveGrade(authorizedBody, requestId);

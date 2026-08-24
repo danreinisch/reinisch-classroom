@@ -5,7 +5,7 @@
   if (!location.pathname.startsWith("/teacher/review")) return;
 
   // Import data adapter for Supabase/localStorage abstraction
-  const { db, isRemote } = await import('/web/data-adapter.js?v=2026080601');
+  const { db, isRemote } = await import('/web/data-adapter.js?v=2026082401');
   const { getSupabase, getSupabaseConfig } = await import('/web/supabase-client.js');
   const { getAssignmentItems } = await import('/web/assignment-mapping-db.js');
   const { CANON_CLASSES, CLASS_DISPLAY } = await import('/web/constants.js');
@@ -672,6 +672,117 @@
     return item.answer_type === 'constructed' && !isFillInBlankConstructed(item);
   }
 
+
+  function getObjectiveComponentSpecs(item) {
+    const meta =
+      item &&
+      item.meta &&
+      typeof item.meta === 'object' &&
+      !Array.isArray(item.meta)
+        ? item.meta
+        : {};
+
+    return Array.isArray(meta.objective_components)
+      ? meta.objective_components
+      : [];
+  }
+
+  function itemRequiresObjectiveComponents(item) {
+    return (
+      isManualGradeItem(item) &&
+      getObjectiveComponentSpecs(item).length > 0
+    );
+  }
+
+  function getObjectiveComponentDisplayState(item, answer) {
+    const current =
+      Array.isArray(answer?.objective_components)
+        ? answer.objective_components
+        : [];
+
+    if (current.length > 0) {
+      return current
+        .slice()
+        .sort(
+          (a, b) =>
+            Number(a.component_order) -
+            Number(b.component_order)
+        );
+    }
+
+    return getObjectiveComponentSpecs(item)
+      .map(component => ({
+        component_order:
+          Number(component.order),
+        component_label:
+          component.label ||
+          'Objective component',
+        objective_max:
+          Number(component.max),
+        objective_earned:
+          null,
+      }))
+      .sort(
+        (a, b) =>
+          a.component_order -
+          b.component_order
+      );
+  }
+
+  function isReviewCompleteItem(item, answers) {
+    if (!isAutoScoredItem(item, answers)) {
+      return false;
+    }
+
+    if (!itemRequiresObjectiveComponents(item)) {
+      return true;
+    }
+
+    const expected =
+      getObjectiveComponentSpecs(item);
+
+    const answer =
+      (answers || []).find(
+        row =>
+          String(row.item_id) ===
+          String(item.id)
+      );
+
+    const current =
+      Array.isArray(answer?.objective_components)
+        ? answer.objective_components
+        : [];
+
+    if (current.length !== expected.length) {
+      return false;
+    }
+
+    return current.every(component => {
+      if (
+        component.objective_earned === null ||
+        component.objective_earned === undefined ||
+        component.objective_max === null ||
+        component.objective_max === undefined
+      ) {
+        return false;
+      }
+
+      const earned =
+        Number(component.objective_earned);
+
+      const maximum =
+        Number(component.objective_max);
+
+      return (
+        Number.isFinite(earned) &&
+        Number.isFinite(maximum) &&
+        maximum > 0 &&
+        earned >= 0 &&
+        earned <= maximum
+      );
+    });
+  }
+
   /**
    * Reconstruct virtual answer objects from raw submission.answers JSONB for display.
    * Used when submission_answers rows are absent (backfill not yet run).
@@ -803,7 +914,7 @@
       const answers = submissionAnswersCache[submission.id] || [];
       // A constructed item counts as scored if it is auto-scored (earned_points != null),
       // whether by the keyword engine or by a teacher rubric.
-      const allScored = constructedItems.every(item => isAutoScoredItem(item, answers));
+      const allScored = constructedItems.every(item => isReviewCompleteItem(item, answers));
       if (allScored) finalizableCount++;
     }
 
@@ -1242,7 +1353,14 @@
     // Written responses section
     let writtenSection = '';
     if (constructedItems.length > 0) {
-      const allScored = manualScored === manualTotal;
+      const allScored =
+        constructedItems.every(
+          item =>
+            isReviewCompleteItem(
+              item,
+              displayAnswers
+            )
+        );
       const statusLabel = allScored ? `${CHECK_SVG} Scored` : `${CLOCK_SVG} Needs Scoring (${manualScored}/${manualTotal})`;
       
       const responseCards = constructedItems.map(item => {
@@ -1258,6 +1376,54 @@
         const scoreDisplay = isScored ? String(currentScore) : '___';
         const currentNote = answer?.teacher_note || '';
         const maxPoints = item.points || 5;
+
+        const objectiveRequired =
+          itemRequiresObjectiveComponents(item);
+
+        const objectiveComponents =
+          getObjectiveComponentDisplayState(
+            item,
+            answer
+          );
+
+        const objectiveComponentsHtml =
+          objectiveRequired
+            ? `
+              <div class="rv-objective-evidence">
+                <strong>IEP Objective Evidence</strong>
+                <div class="rv-hint">
+                  These scores are separate from the academic item score.
+                </div>
+
+                ${objectiveComponents.map(component => `
+                  <div class="rv-score-input-group">
+                    <label>${escapeHtml(
+                      component.component_label ||
+                      'Objective component'
+                    )}:</label>
+
+                    <input
+                      type="number"
+                      class="rv-score-input rv-objective-component-input"
+                      min="0"
+                      max="${escapeHtml(component.objective_max)}"
+                      step="any"
+                      value="${
+                        component.objective_earned === null ||
+                        component.objective_earned === undefined
+                          ? ''
+                          : escapeHtml(component.objective_earned)
+                      }"
+                      data-component-order="${escapeHtml(component.component_order)}"
+                      data-item-id="${escapeHtml(item.id)}"
+                      data-submission-id="${escapeHtml(submission.id)}">
+
+                    <span>/ ${escapeHtml(component.objective_max)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            `
+            : '';
         
         // Extract display text from raw_answer (may be stored as { value: "..." } object)
         const responseText = (typeof studentResponse === 'object' && studentResponse !== null && studentResponse.value !== undefined)
@@ -1293,6 +1459,7 @@
             
             ${codesHtml}
             <div>Max Points: ${escapeHtml(maxPoints)}</div>
+            ${objectiveComponentsHtml}
             
             <details class="rv-rubric-details">
               <summary>${RULER_SVG} Scoring Guide</summary>
@@ -1437,7 +1604,14 @@
     `;
 
     // Action buttons
-    const allConstructedScored = manualScored === manualTotal;
+    const allConstructedScored =
+      constructedItems.every(
+        item =>
+          isReviewCompleteItem(
+            item,
+            displayAnswers
+          )
+      );
     const finalizeDisabled = constructedItems.length > 0 && !allConstructedScored;
 
     let actionsSection;
@@ -1766,7 +1940,7 @@
       if (constructedItems.length === 0) continue;
       const answers = submissionAnswersCache[submission.id] || [];
       // A constructed item counts as scored if keyword-auto-scored or teacher-scored
-      const allScored = constructedItems.every(item => isAutoScoredItem(item, answers));
+      const allScored = constructedItems.every(item => isReviewCompleteItem(item, answers));
       if (allScored) finalizable.push(submission);
     }
 
@@ -1854,7 +2028,7 @@
       if (constructedItems.length > 0) {
         const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
         // Only skip if there are truly unscored constructed items (not keyword-auto-scored)
-        const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
+        const hasUnscored = constructedItems.some(item => !isReviewCompleteItem(item, answers));
         if (hasUnscored) {
           skipped.push(submission);
           continue;
@@ -1938,6 +2112,24 @@
           if (syntheticAssignmentIds.has(assignmentId)) continue;
           const items = assignmentItemsCache[assignmentId] || [];
           const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
+
+          const incompleteReviewItems =
+            items
+              .filter(
+                item =>
+                  isManualGradeItem(item)
+              )
+              .filter(
+                item =>
+                  !isReviewCompleteItem(
+                    item,
+                    answers
+                  )
+              );
+
+          if (incompleteReviewItems.length > 0) {
+            continue;
+          }
           const scoreAuto = answers.length > 0
             ? items.filter(i => isAutoScoredItem(i, answers))
                 .reduce((sum, item) => {
@@ -2080,7 +2272,7 @@
 
     if (!await rcConfirm(
       'Auto-Grade All',
-      `Auto-grade ${toAutoGrade.length} submission${toAutoGrade.length !== 1 ? 's' : ''} using AI? This will suggest scores for written responses and generate overall feedback. Submissions will move to the Reviewed tab where you can adjust before finalizing.`,
+      `Auto-grade ${toAutoGrade.length} submission${toAutoGrade.length !== 1 ? 's' : ''} using AI? This will suggest academic scores for written responses and generate overall feedback. Submissions that require IEP objective component scores will remain in progress until you score those components.`,
       'Auto-Grade'
     )) return;
 
@@ -2196,6 +2388,35 @@
 
           // Step 2: Build item summaries for the feedback endpoint
           const latestAnswers = submissionAnswersCache[submission.id] || answers;
+
+          const reviewComplete =
+            constructedItems.every(
+              item =>
+                isReviewCompleteItem(
+                  item,
+                  latestAnswers
+                )
+            );
+
+          if (!reviewComplete) {
+            submission.review_status =
+              'in_progress';
+
+            try {
+              await db.setSubmissionInProgress(
+                submission.id
+              );
+            } catch (statusErr) {
+              console.warn(
+                '[tc-review] Could not preserve in_progress while awaiting objective component scores:',
+                statusErr
+              );
+            }
+
+            processed++;
+            continue;
+          }
+
           const itemSummaries = items.map(item => {
             const answer = latestAnswers.find(a => a.item_id === item.id);
             return {
@@ -2586,7 +2807,13 @@
           const latestAnswers = submissionAnswersCache[submissionId] || [];
           const constructedItems = items.filter(it => it.answer_type === 'constructed' || it.answer_type === 'written_response');
           const allScored = constructedItems.length > 0 &&
-            constructedItems.every(it => isAutoScoredItem(it, latestAnswers));
+            constructedItems.every(
+              it =>
+                isReviewCompleteItem(
+                  it,
+                  latestAnswers
+                )
+            );
 
           if (allScored) {
             // All constructed items are scored — generate overall feedback and save grade
@@ -2805,6 +3032,113 @@
         rationale: aiRationale,
         aiSuggestedScore,
       });
+
+
+      const submissionForObjective =
+        submissionsData.find(
+          row =>
+            row.id === submissionId
+        );
+
+      const assignmentIdForObjective =
+        submissionForObjective
+          ? resolveAssignmentId(
+              submissionForObjective
+            )
+          : null;
+
+      const objectiveItem =
+        assignmentIdForObjective
+          ? (
+              assignmentItemsCache[
+                assignmentIdForObjective
+              ] || []
+            ).find(
+              row =>
+                String(row.id) ===
+                  String(resolvedItemId) ||
+                String(row.id) ===
+                  String(itemId)
+            )
+          : null;
+
+      if (
+        objectiveItem &&
+        itemRequiresObjectiveComponents(
+          objectiveItem
+        )
+      ) {
+        const card =
+          button.closest(
+            '.rv-response-card'
+          );
+
+        const componentInputs =
+          card
+            ? Array.from(
+                card.querySelectorAll(
+                  '.rv-objective-component-input'
+                )
+              )
+            : [];
+
+        const expectedCount =
+          getObjectiveComponentSpecs(
+            objectiveItem
+          ).length;
+
+        if (
+          componentInputs.length !==
+          expectedCount
+        ) {
+          throw new Error(
+            'Objective component scoring is unavailable for this item'
+          );
+        }
+
+        const allEntered =
+          componentInputs.every(
+            input =>
+              input.value !== ''
+          );
+
+        if (allEntered) {
+          const components =
+            componentInputs.map(
+              input => {
+                const earned =
+                  Number(input.value);
+
+                const componentOrder =
+                  Number(
+                    input.dataset.componentOrder
+                  );
+
+                if (
+                  !Number.isFinite(earned) ||
+                  !Number.isInteger(componentOrder)
+                ) {
+                  throw new Error(
+                    'Invalid IEP objective component score'
+                  );
+                }
+
+                return {
+                  componentOrder,
+                  earned,
+                };
+              }
+            );
+
+          await db.updateObjectiveComponents({
+            submissionId,
+            itemId:
+              String(resolvedItemId),
+            components,
+            teacherNote,
+          });
+        }
+      }
       
       // Clear cache to force reload
       delete submissionAnswersCache[submissionId];
@@ -2880,6 +3214,28 @@
       // Load fresh data
       const items = await getAssignmentItemsForAssignment(assignmentId);
       const answers = await getSubmissionAnswers(submissionId);
+
+      const incompleteReviewItems =
+        items
+          .filter(
+            item =>
+              isManualGradeItem(item)
+          )
+          .filter(
+            item =>
+              !isReviewCompleteItem(
+                item,
+                answers
+              )
+          );
+
+      if (incompleteReviewItems.length > 0) {
+        await rcAlert(
+          'Objective Evidence Required',
+          'Score the academic response and every required IEP objective component before finalizing.'
+        );
+        return;
+      }
       
       // Calculate manual score — only true writing-prompt items (not keyword-auto-scored fill-in-blank)
       let scoreManual = 0;
@@ -3283,7 +3639,11 @@
     const submission = submissionsData.find(s => s.id === submissionId);
     if (!submission) return;
     const items = assignmentItemsCache[resolveAssignmentId(submission)] || [];
-    const answers = submissionAnswersCache[submissionId] || [];
+    const answers =
+      submissionAnswersCache[submissionId] ||
+      await getSubmissionAnswers(
+        submissionId
+      );
     const constructedItems = items.filter(item => item.answer_type === 'constructed' || item.answer_type === 'written_response');
     let scoreManual = 0;
     constructedItems.forEach(item => {
@@ -3301,6 +3661,24 @@
         }, 0)
       : (Number(submission.score_auto) || 0);
     const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
+
+    const allConstructedScored =
+      constructedItems.every(
+        item =>
+          isReviewCompleteItem(
+            item,
+            answers
+          )
+      );
+
+    if (!allConstructedScored) {
+      showToast(
+        'Score every required IEP objective component before marking this submission Reviewed.',
+        '#f59e0b',
+        '#0b1220'
+      );
+      return;
+    }
 
     button.disabled = true;
     try {
@@ -3330,7 +3708,6 @@
       // Trigger goal progress updates when all items have been scored.
       // isAutoScoredItem covers both keyword-auto-scored fill-in-blank and
       // teacher-scored writing prompts (earned_points != null).
-      const allConstructedScored = constructedItems.every(item => isAutoScoredItem(item, answers));
       if (allConstructedScored) {
         try {
           await triggerGoalProgressUpdates(submission, items, answers);
