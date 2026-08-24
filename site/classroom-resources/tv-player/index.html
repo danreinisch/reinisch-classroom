@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#07101e"/>
+<title>Classroom Display | ReinischClassroom</title>
+<link rel="stylesheet" href="/classroom-resources/tv-player/tv-player.css?v=20260824-1"/>
+</head>
+<body>
+<div class="tv-app" id="tvApp">
+  <header class="tv-topbar">
+    <div class="tv-lights" aria-label="Display controls">
+      <button class="tv-light red" id="tvCloseDot" type="button" aria-label="Close presentation" title="Close"></button>
+      <button class="tv-light yellow" id="tvPresentationDot" type="button" aria-label="Toggle presentation view" title="Presentation view"></button>
+      <button class="tv-light green" id="tvFullscreenDot" type="button" aria-label="Toggle fullscreen" title="Fullscreen"></button>
+    </div>
+    <div class="tv-title" id="tvTitle">Classroom Resource</div>
+    <div class="tv-count" id="tvCount">— / —</div>
+  </header>
+  <main class="tv-stage"><div class="tv-status" id="tvStatus">Preparing presentation…</div><div class="tv-slide-host" id="slideHost"></div></main>
+  <footer class="tv-controls">
+    <button class="tv-btn tv-close" id="tvClose" type="button">✕ Close</button>
+    <div class="tv-nav"><button class="tv-btn" id="tvPrev" type="button">← Back</button><button class="tv-btn primary" id="tvNext" type="button">Next →</button></div>
+    <div></div>
+  </footer>
+</div>
+<iframe class="tv-source-frame" id="sourceFrame" title="Presentation source" sandbox="allow-scripts allow-same-origin"></iframe>
+<div class="tv-overlay" id="tvOverlay" hidden>
+  <div class="tv-modal" role="dialog" aria-modal="true" aria-labelledby="tvModalTitle">
+    <button class="tv-modal-close" id="tvModalClose" type="button" aria-label="Close example">×</button>
+    <div class="modal-kicker">Example / Situation</div>
+    <h3 id="tvModalTitle">Example</h3>
+    <div id="tvModalBody"></div>
+  </div>
+</div>
+<script src="/classroom-resources/tv-player/tv-player.js?v=20260824-1"></script>
+</body>
+</html>
