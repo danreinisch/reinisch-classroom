@@ -9,7 +9,6 @@
     !src.startsWith('/classroom-resources/tv-player');
 
   const app = document.getElementById('tvApp');
-  const sourceFrame = document.getElementById('sourceFrame');
   const slideHost = document.getElementById('slideHost');
   const titleEl = document.getElementById('tvTitle');
   const countEl = document.getElementById('tvCount');
@@ -28,7 +27,6 @@
   let sourceDoc = null;
   let slides = [];
   let index = 0;
-  let loadTimer = null;
 
   function closePlayer() {
     window.location.href = '/classroom-resources/';
@@ -56,9 +54,42 @@
     statusEl.hidden = !message;
   }
 
+  async function fetchText(url) {
+    const response = await fetch(url, { cache: 'no-store', credentials: 'same-origin' });
+    if (!response.ok) throw new Error(url + ' returned ' + response.status);
+    return response.text();
+  }
+
+  function parseDocument(html) {
+    return new DOMParser().parseFromString(html, 'text/html');
+  }
+
+  async function loadPlaybookDocument() {
+    const base = '/classroom-resources/classroom-playbook/';
+    const slideParts = ['slides-1.html', 'slides-2.html', 'slides-3.html'];
+    const exampleParts = ['examples-1.html', 'examples-2.html', 'examples-3.html'];
+    const [slideHtml, exampleHtml] = await Promise.all([
+      Promise.all(slideParts.map(function (name) { return fetchText(base + name); })),
+      Promise.all(exampleParts.map(function (name) { return fetchText(base + name); }))
+    ]);
+
+    const doc = document.implementation.createHTMLDocument('The Classroom Playbook');
+    doc.body.innerHTML = '<main id="tvSourceSlides">' + slideHtml.join('\n') + '</main>' +
+      '<div id="tvSourceTemplates">' + exampleHtml.join('\n') + '</div>';
+    return doc;
+  }
+
+  async function loadSourceDocument() {
+    if (src.startsWith('/classroom-resources/classroom-playbook/')) {
+      return loadPlaybookDocument();
+    }
+    const html = await fetchText(src);
+    return parseDocument(html);
+  }
+
   function cleanClone(node) {
     const clone = node.cloneNode(true);
-    const all = [clone, ...clone.querySelectorAll('*')];
+    const all = [clone].concat(Array.from(clone.querySelectorAll('*')));
     all.forEach(function (el) {
       el.removeAttribute('style');
       el.removeAttribute('id');
@@ -67,7 +98,7 @@
       el.removeAttribute('tabindex');
       if (el.classList) el.classList.remove('active', 'motion-in');
     });
-    clone.querySelectorAll('script,style,link,iframe').forEach(function (el) { el.remove(); });
+    clone.querySelectorAll('script,style,link,iframe,video,audio,canvas').forEach(function (el) { el.remove(); });
     return clone;
   }
 
@@ -78,7 +109,7 @@
     const clone = cleanClone(deck);
 
     slideHost.replaceChildren(clone);
-    titleEl.textContent = requestedTitle || sourceDoc.title || 'Classroom Resource';
+    titleEl.textContent = requestedTitle || (sourceDoc && sourceDoc.title) || 'Classroom Resource';
     countEl.textContent = (index + 1) + ' / ' + slides.length;
     prevBtn.disabled = index === 0;
     nextBtn.disabled = index === slides.length - 1;
@@ -121,45 +152,29 @@
     modalBody.innerHTML = '';
   }
 
-  function findSlides() {
-    try {
-      sourceDoc = sourceFrame.contentDocument;
-      if (!sourceDoc) return false;
-      slides = Array.from(sourceDoc.querySelectorAll('section.slide'));
-      if (!slides.length) slides = Array.from(sourceDoc.querySelectorAll('.slide'));
-      return slides.length > 0;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  function finishLoad() {
-    if (!findSlides()) return false;
-    window.clearTimeout(loadTimer);
-    sourceFrame.setAttribute('aria-hidden', 'true');
-    setStatus('');
-    app.classList.add('ready');
-    renderSlide();
-    return true;
-  }
-
-  function pollForSlides(attempt) {
-    if (finishLoad()) return;
-    if (attempt >= 30) {
-      setStatus('This presentation could not be prepared for Classroom Display mode.', true);
+  async function init() {
+    if (!allowed) {
+      setStatus('Classroom Display mode received an invalid presentation source.', true);
       return;
     }
-    loadTimer = window.setTimeout(function () { pollForSlides(attempt + 1); }, 100);
-  }
 
-  if (!allowed) {
-    setStatus('Classroom Display mode received an invalid presentation source.', true);
-    return;
-  }
+    titleEl.textContent = requestedTitle;
+    setStatus('Preparing presentation…');
 
-  titleEl.textContent = requestedTitle;
-  sourceFrame.addEventListener('load', function () { pollForSlides(0); }, { once: true });
-  sourceFrame.src = src;
+    try {
+      sourceDoc = await loadSourceDocument();
+      slides = Array.from(sourceDoc.querySelectorAll('section.slide'));
+      if (!slides.length) slides = Array.from(sourceDoc.querySelectorAll('.slide'));
+      if (!slides.length) throw new Error('No slides found in source');
+
+      setStatus('');
+      app.classList.add('ready');
+      renderSlide();
+    } catch (error) {
+      console.error('[Classroom Display] Could not prepare presentation:', error);
+      setStatus('This presentation could not be prepared for Classroom Display mode. Refresh Classroom Resources and try again.', true);
+    }
+  }
 
   prevBtn.addEventListener('click', function () { move(-1); });
   nextBtn.addEventListener('click', function () { move(1); });
@@ -198,4 +213,6 @@
     touchX = null;
     if (Math.abs(dx) > 90) move(dx < 0 ? 1 : -1);
   }, { passive: true });
+
+  init();
 })();
