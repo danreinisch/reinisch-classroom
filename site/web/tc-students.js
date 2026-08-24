@@ -837,6 +837,7 @@
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
   let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
+  let objectiveProgressCache = new Map(); // Map<studentCode:quarter:start:end, signed objective progress bundle>
   let progressTabQuarterMap = new Map(); // Map<studentCode, quarterKey> - Per-student quarter selection on Progress tab
   let _cachedSchedulePeriods = []; // Cached bell schedule periods for observation config UI
   let offlineBannerEl = null; // Reference to the persistent offline warning banner
@@ -1893,6 +1894,113 @@
     });
   }
 
+  function objectiveQuarterDateIso(value) {
+    if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+      return null;
+    }
+
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  function hasCanonicalObjectiveParents(studentGoals) {
+    return (studentGoals || []).some(goal =>
+      Array.isArray(goal.objectives) &&
+      goal.objectives.length > 0
+    );
+  }
+
+  async function loadObjectiveProgressForStudent(
+    studentCode,
+    studentGoals
+  ) {
+    /*
+     * Exact zero-fanout compatibility:
+     * if none of this student's visible parent goals has official
+     * child objectives, never call the signed objective endpoint.
+     */
+    if (!hasCanonicalObjectiveParents(studentGoals)) {
+      return {
+        ok: true,
+        available: true,
+        parents: []
+      };
+    }
+
+    const quarter =
+      selectedQuarter || getCurrentQuarter();
+
+    const range =
+      getQuarterDateRange(quarter);
+
+    const start =
+      range
+        ? objectiveQuarterDateIso(range.start)
+        : null;
+
+    const end =
+      range
+        ? objectiveQuarterDateIso(range.end)
+        : null;
+
+    if (!range || !start || !end) {
+      return {
+        ok: true,
+        available: false,
+        reason: 'quarter_range_required',
+        quarter,
+        parents: []
+      };
+    }
+
+    const cacheKey =
+      `${studentCode}:${quarter}:${start}:${end}`;
+
+    if (objectiveProgressCache.has(cacheKey)) {
+      return objectiveProgressCache.get(cacheKey);
+    }
+
+    try {
+      const result =
+        await db.listObjectiveProgress({
+          studentCode,
+          quarter,
+          start,
+          end
+        });
+
+      objectiveProgressCache.set(
+        cacheKey,
+        result
+      );
+
+      return result;
+    } catch (error) {
+      console.warn(
+        '[tc-students] Objective progress load unavailable:',
+        error
+      );
+
+      const unavailable = {
+        ok: true,
+        available: false,
+        reason: 'query_failed',
+        quarter,
+        parents: []
+      };
+
+      objectiveProgressCache.set(
+        cacheKey,
+        unavailable
+      );
+
+      return unavailable;
+    }
+  }
+
   function getLastProgressDate(studentCode, goalCode) {
     const entries = getProgressForGoal(studentCode, goalCode);
     if (entries.length === 0) return null;
@@ -2917,6 +3025,7 @@
       deseRollupCache.clear();
       deseEvidenceCache.clear();
       iepGoalGenerationInFlight.clear();
+      objectiveProgressCache.clear();
 
       // Load schedule periods for observation config UI (best-effort, don't block on failure)
       getSchedule().then(s => {
@@ -3657,9 +3766,30 @@
       ? {}
       : await checkActiveTokens(student.code);
 
-    // Mark goals with active tokens
+    const objectiveProgressState = deferOptionalEnrichment
+      ? null
+      : await loadObjectiveProgressForStudent(
+          student.code,
+          studentGoals
+        );
+
+    const objectiveParents = new Map(
+      Array.isArray(objectiveProgressState?.parents)
+        ? objectiveProgressState.parents.map(parent => [
+            parent.parent_goal_code,
+            parent
+          ])
+        : []
+    );
+
+    // Mark goals with active tokens and optional objective progress.
+    // Automatic boot expansion receives null progress state and performs
+    // no objective request.
     studentGoals.forEach(goal => {
       goal._hasActiveToken = !!activeTokens[goal.code];
+      goal._objectiveProgressState = objectiveProgressState;
+      goal._objectiveProgress =
+        objectiveParents.get(goal.code) || null;
     });
 
     let inContextGoals = studentGoals;
@@ -4263,6 +4393,7 @@
     try {
       allProgressEntries = await loadProgressEntries(allGoals, allStudents);
       buildProgressLookupMap();
+      objectiveProgressCache.clear();
       return true;
     } catch (err) {
       console.warn('[tc-students] reloadProgressEntries failed:', err);
@@ -5562,7 +5693,11 @@
    * - no objective score, status, trend, or mastery calculation is performed
    * - objectives do not enter parent-goal counts or progress logic
    */
-  function renderGoalObjectives(objectives = []) {
+  function renderGoalObjectives(
+    objectives = [],
+    objectiveProgress = null,
+    objectiveState = null
+  ) {
     if (!Array.isArray(objectives) || objectives.length === 0) {
       return '';
     }
@@ -5576,10 +5711,78 @@
           String(a?.code || '').localeCompare(String(b?.code || ''));
       });
 
+    const progressObjectives =
+      Array.isArray(objectiveProgress?.objectives)
+        ? objectiveProgress.objectives
+        : [];
+
+    const progressByCode =
+      new Map(
+        progressObjectives.map(objective => [
+          objective.code,
+          objective
+        ])
+      );
+
+    const stateAvailable =
+      objectiveState?.available === true;
+
+    const stateUnavailable =
+      objectiveState?.available === false;
+
+    const hasParentProgress =
+      stateAvailable &&
+      objectiveProgress &&
+      typeof objectiveProgress === 'object';
+
+    const formatPercentage = value => {
+      const number = Number(value);
+
+      if (!Number.isFinite(number)) {
+        return null;
+      }
+
+      return `${Math.round(number * 100) / 100}%`;
+    };
+
     const rows = ordered.map(objective => {
       const number = Number(objective?.objective_number) || '';
       const code = objective?.code || '';
       const text = objective?.objective_text || '';
+
+      const progress =
+        progressByCode.get(code) || null;
+
+      const evidenceCount =
+        Number(progress?.evidence_count);
+
+      const hasEvidence =
+        Number.isFinite(evidenceCount) &&
+        evidenceCount > 0 &&
+        Number.isFinite(
+          Number(progress?.percentage)
+        );
+
+      const percentage =
+        hasEvidence
+          ? formatPercentage(progress.percentage)
+          : null;
+
+      const progressBadgeHtml =
+        hasParentProgress
+          ? `<span style="margin-left:auto;font-size:12px;font-weight:700;white-space:nowrap;">${
+              percentage || 'No Data'
+            }</span>`
+          : '';
+
+      let evidenceHtml = '';
+
+      if (hasParentProgress) {
+        evidenceHtml =
+          evidenceCount > 0
+            ? `<div style="margin-top:4px;font-size:11px;opacity:0.72;">${evidenceCount} evidence point${evidenceCount === 1 ? '' : 's'} this quarter</div>`
+            : `<div style="margin-top:4px;font-size:11px;opacity:0.72;">No evidence this quarter</div>`;
+      }
 
       const meta = [];
 
@@ -5594,7 +5797,7 @@
         objective.objective_wording_criterion !== ''
       ) {
         meta.push(
-          `<span><strong>Objective criterion:</strong> ${escapeHtml(String(objective.objective_wording_criterion))}</span>`
+          `<span><strong>Criterion:</strong> ${escapeHtml(String(objective.objective_wording_criterion))}</span>`
         );
       }
 
@@ -5614,14 +5817,91 @@
           <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;">
             <strong style="font-size:12px;">IEP Objective ${escapeHtml(String(number))}</strong>
             <span style="font-size:11px;opacity:0.68;">${escapeHtml(code)}</span>
+            ${progressBadgeHtml}
           </div>
           <div style="margin-top:3px;font-size:13px;line-height:1.45;">
             ${escapeHtml(text)}
           </div>
           ${metaHtml}
+          ${evidenceHtml}
         </div>
       `;
     }).join('');
+
+    let progressSummaryHtml = '';
+
+    if (stateUnavailable) {
+      const reason =
+        objectiveState?.reason || 'query_failed';
+
+      const knownUnavailable =
+        reason === 'schema_unavailable' ||
+        reason === 'registry_not_activated' ||
+        reason === 'registry_mismatch' ||
+        reason === 'quarter_range_required' ||
+        reason === 'query_failed';
+
+      if (knownUnavailable) {
+        progressSummaryHtml = `
+          <div style="padding:0 0 8px;font-size:11px;opacity:0.72;">
+            Objective progress is unavailable right now. Official objective wording remains visible.
+          </div>
+        `;
+      }
+    } else if (hasParentProgress) {
+      const coverage =
+        objectiveProgress.coverage || {};
+
+      const withData =
+        Number.isInteger(
+          coverage.objectives_with_data
+        )
+          ? coverage.objectives_with_data
+          : 0;
+
+      const total =
+        Number.isInteger(
+          coverage.total_objectives
+        )
+          ? coverage.total_objectives
+          : ordered.length;
+
+      const quarterLabel =
+        objectiveState?.quarter
+          ? `${escapeHtml(objectiveState.quarter)} · `
+          : '';
+
+      const parentPercentage =
+        formatPercentage(
+          objectiveProgress.percentage
+        );
+
+      let parentLine = '';
+
+      if (
+        objectiveProgress.source === 'objective_rollup' &&
+        parentPercentage
+      ) {
+        parentLine =
+          `<div style="margin-top:4px;"><strong>Objective-aware parent:</strong> ${escapeHtml(parentPercentage)}</div>`;
+      } else if (
+        objectiveProgress.source === 'existing_parent' &&
+        parentPercentage
+      ) {
+        parentLine =
+          `<div style="margin-top:4px;"><strong>Parent fallback:</strong> ${escapeHtml(parentPercentage)} <span style="opacity:0.72;">— no child objective evidence this quarter yet</span></div>`;
+      } else {
+        parentLine =
+          `<div style="margin-top:4px;"><strong>Parent objective progress:</strong> No Data this quarter</div>`;
+      }
+
+      progressSummaryHtml = `
+        <div style="padding:0 0 8px;font-size:11px;line-height:1.45;">
+          <div><strong>${quarterLabel}${withData} of ${total} objectives with data</strong></div>
+          ${parentLine}
+        </div>
+      `;
+    }
 
     return `
       <div class="st-goal-objectives"
@@ -5631,6 +5911,7 @@
         <div style="padding:9px 0 7px;font-size:12px;font-weight:700;">
           IEP Objectives
         </div>
+        ${progressSummaryHtml}
         ${rows}
       </div>
     `;
@@ -5894,7 +6175,11 @@
         ${masteryBannerHtml}${alertStripHtml}
         <div class="st-goal-body">
           ${descHtml}
-        ${renderGoalObjectives(goal.objectives)}
+        ${renderGoalObjectives(
+          goal.objectives,
+          goal._objectiveProgress,
+          goal._objectiveProgressState
+        )}
           ${criterionMetricsHtml}
           <div class="st-goal-data-status">
             <div class="st-data-status-item">
