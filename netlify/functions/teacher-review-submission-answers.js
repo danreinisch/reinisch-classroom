@@ -205,6 +205,12 @@ async function fetchAnswers(
   );
 }
 
+const {
+  getObjectiveCandidateItemIds,
+} = require(
+  './_lib/objective-auto-evidence-writer'
+);
+
 async function fetchMappings(itemIds) {
   if (itemIds.length === 0) {
     return [];
@@ -241,6 +247,252 @@ async function fetchMappings(itemIds) {
     ? body
     : [];
 }
+
+async function fetchObjectiveMappings(
+  itemIds
+) {
+  if (itemIds.length === 0) {
+    return [];
+  }
+
+  const response =
+    await rest(
+      '/rest/v1/assignment_item_objectives' +
+        '?select=' +
+        [
+          'item_id',
+          'objective_id',
+          'component_label',
+          'objective_max',
+          'component_order',
+        ].join(',') +
+        '&item_id=in.(' +
+        itemIds
+          .map(id =>
+            encodeURIComponent(
+              String(id)
+            )
+          )
+          .join(',') +
+        ')' +
+        '&order=component_order.asc'
+    );
+
+  if (
+    !response ||
+    response.ok !== true
+  ) {
+    console.warn(
+      '[teacher-review-submission-answers] ' +
+      'Objective mapping enrichment failed'
+    );
+
+    return [];
+  }
+
+  const body =
+    await response
+      .json()
+      .catch(() => []);
+
+  return Array.isArray(body)
+    ? body
+    : [];
+}
+
+async function fetchObjectiveEvidence(
+  instanceId,
+  itemIds
+) {
+  if (itemIds.length === 0) {
+    return [];
+  }
+
+  const response =
+    await rest(
+      '/rest/v1/objective_data_points' +
+        '?select=' +
+        [
+          'item_id',
+          'objective_id',
+          'objective_earned',
+          'objective_max',
+          'component_label',
+        ].join(',') +
+        `&assignment_instance_id=eq.${encodeURIComponent(instanceId)}` +
+        '&source=eq.assignment' +
+        '&item_id=in.(' +
+        itemIds
+          .map(id =>
+            encodeURIComponent(
+              String(id)
+            )
+          )
+          .join(',') +
+        ')'
+    );
+
+  if (
+    !response ||
+    response.ok !== true
+  ) {
+    console.warn(
+      '[teacher-review-submission-answers] ' +
+      'Objective evidence enrichment failed'
+    );
+
+    return [];
+  }
+
+  const body =
+    await response
+      .json()
+      .catch(() => []);
+
+  return Array.isArray(body)
+    ? body
+    : [];
+}
+
+async function enrichObjectiveComponents(
+  answers,
+  instanceId
+) {
+  const safeAnswers =
+    Array.isArray(answers)
+      ? answers
+      : [];
+
+  const candidateItems =
+    safeAnswers.map(answer => ({
+      id:
+        answer.item_id,
+      meta:
+        answer.meta,
+    }));
+
+  const objectiveCandidateItemIds =
+    getObjectiveCandidateItemIds(
+      candidateItems
+    );
+
+  if (
+    !(
+      objectiveCandidateItemIds.length > 0
+    )
+  ) {
+    return safeAnswers;
+  }
+
+  const [
+    objectiveMappings,
+    objectiveEvidence,
+  ] =
+    await Promise.all([
+      fetchObjectiveMappings(
+        objectiveCandidateItemIds
+      ),
+      fetchObjectiveEvidence(
+        instanceId,
+        objectiveCandidateItemIds
+      ),
+    ]);
+
+  const mappingsByItem =
+    new Map();
+
+  for (
+    const mapping
+    of objectiveMappings
+  ) {
+    const key =
+      String(mapping.item_id);
+
+    if (!mappingsByItem.has(key)) {
+      mappingsByItem.set(
+        key,
+        []
+      );
+    }
+
+    mappingsByItem
+      .get(key)
+      .push(mapping);
+  }
+
+  const evidenceByIdentity =
+    new Map();
+
+  for (
+    const evidence
+    of objectiveEvidence
+  ) {
+    evidenceByIdentity.set(
+      String(evidence.item_id) +
+        ':' +
+        String(evidence.objective_id),
+      evidence
+    );
+  }
+
+  return safeAnswers.map(answer => {
+    const mappingRows =
+      mappingsByItem.get(
+        String(answer.item_id)
+      ) || [];
+
+    if (mappingRows.length === 0) {
+      return answer;
+    }
+
+    const objective_components =
+      mappingRows
+        .slice()
+        .sort(
+          (a, b) =>
+            Number(a.component_order) -
+            Number(b.component_order)
+        )
+        .map(mapping => {
+          const evidence =
+            evidenceByIdentity.get(
+              String(mapping.item_id) +
+                ':' +
+                String(mapping.objective_id)
+            );
+
+          return {
+            component_order:
+              Number(
+                mapping.component_order
+              ),
+            component_label:
+              mapping.component_label ||
+              null,
+            objective_max:
+              Number(
+                mapping.objective_max
+              ),
+            objective_earned:
+              evidence &&
+              evidence.objective_earned !==
+                null &&
+              evidence.objective_earned !==
+                undefined
+                ? Number(
+                    evidence.objective_earned
+                  )
+                : null,
+          };
+        });
+
+    return {
+      ...answer,
+      objective_components,
+    };
+  });
+}
+
 
 function flattenAnswers(
   rows,
@@ -557,11 +809,17 @@ exports.handler =
           itemIds
         );
 
-      const answers =
-        flattenAnswers(
+      let answers =
+      flattenAnswers(
           answerRows,
           mappings
         );
+
+    answers =
+      await enrichObjectiveComponents(
+        answers,
+        submission.instance_id
+      );
 
       console.log(
         '[teacher-review-submission-answers] ' +

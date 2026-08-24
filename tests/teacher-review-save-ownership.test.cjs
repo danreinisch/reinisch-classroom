@@ -112,6 +112,7 @@ function jsonResponse(body, status = 200) {
   return {
     ok: status >= 200 && status < 300,
     status,
+    json: async () => body,
     text: async () => JSON.stringify(body),
     headers: {
       get: () => null,
@@ -230,6 +231,44 @@ global.fetch = async (url, options = {}) => {
           }]
         : []
     );
+  }
+
+  // 5B2 normalized objective mapping lookup.
+  if (
+    method === 'GET' &&
+    url.includes('/rest/v1/assignment_item_objectives')
+  ) {
+    return jsonResponse([{
+      item_id: Number(ITEM_ID),
+      objective_id:
+        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      component_label:
+        'Teacher-reviewed objective',
+      objective_max: 1,
+      component_order: 1,
+    }]);
+  }
+
+  // 5B2 current objective evidence reconciliation lookup.
+  if (
+    method === 'GET' &&
+    url.includes('/rest/v1/objective_data_points')
+  ) {
+    return jsonResponse([]);
+  }
+
+  // 5B2 source response lookup.
+  if (
+    method === 'GET' &&
+    url.includes('/rest/v1/submission_answers') &&
+    url.includes('select=raw_answer')
+  ) {
+    return jsonResponse([{
+      raw_answer: {
+        value:
+          'Teacher Review source response',
+      },
+    }]);
   }
 
   // Existing save_score lookup.
@@ -511,6 +550,7 @@ test(
   async () => {
     const actions = [
       'save_score',
+      'save_objective_components',
       'save_grade',
       'finalize',
       'reopen',
@@ -552,6 +592,7 @@ test(
   async () => {
     const actions = [
       'save_score',
+      'save_objective_components',
       'save_grade',
       'finalize',
       'reopen',
@@ -677,6 +718,52 @@ test(
 );
 
 test(
+  'save_objective_components rejects item from another assignment before objective access',
+  async () => {
+    reset({
+      itemMatchesAssignment: false,
+    });
+
+    const result =
+      await handler(
+        event({
+          action:
+            'save_objective_components',
+          submissionId:
+            SUBMISSION_ID,
+          itemId:
+            ITEM_ID,
+          components: [{
+            componentOrder: 1,
+            earned: 1,
+          }],
+        })
+      );
+
+    assert.strictEqual(
+      result.statusCode,
+      404
+    );
+
+    assert.ok(
+      !calls.some(
+        (call) =>
+          call.url.includes(
+            '/rest/v1/assignment_item_objectives'
+          ) ||
+          call.url.includes(
+            '/rest/v1/objective_data_points'
+          ) ||
+          call.url.includes(
+            '/rest/v1/submission_answers'
+          )
+      ),
+      'mismatched item must be rejected before objective/source-answer access'
+    );
+  }
+);
+
+test(
   'save_score accepts item belonging to authorized assignment',
   async () => {
     reset();
@@ -704,6 +791,72 @@ test(
           )
       ),
       'authorized score must reach answer mutation'
+    );
+  }
+);
+
+test(
+  'save_objective_components reaches normalized mapping and reconciled evidence after authorization',
+  async () => {
+    reset();
+
+    const result =
+      await handler(
+        event({
+          action:
+            'save_objective_components',
+          submissionId:
+            SUBMISSION_ID,
+          itemId:
+            ITEM_ID,
+          components: [{
+            componentOrder: 1,
+            earned: 1,
+          }],
+          // Caller-controlled context must remain non-authoritative.
+          instanceId:
+            WRONG_INSTANCE_ID,
+          studentId:
+            OTHER_TEACHER_ID,
+        })
+      );
+
+    assert.strictEqual(
+      result.statusCode,
+      200
+    );
+
+    assert.ok(
+      calls.some(
+        (call) =>
+          call.url.includes(
+            '/rest/v1/assignment_item_objectives'
+          )
+      ),
+      'authorized objective save must resolve normalized item-objective mapping'
+    );
+
+    assert.ok(
+      calls.some(
+        (call) =>
+          call.url.includes(
+            '/rest/v1/submission_answers'
+          ) &&
+          call.url.includes(
+            'select=raw_answer'
+          )
+      ),
+      'authorized objective save must load source student response'
+    );
+
+    assert.ok(
+      calls.some(
+        (call) =>
+          call.url.includes(
+            '/rest/v1/objective_data_points'
+          )
+      ),
+      'authorized objective save must reach objective evidence reconciliation'
     );
   }
 );
@@ -748,13 +901,21 @@ test(
 );
 
 test(
-  'all seven actions pass exact-class authorization before mutation',
+  'all eight actions pass exact-class authorization before mutation',
   async () => {
     const actionBodies = [
       {
         action: 'save_score',
         itemId: ITEM_ID,
         earnedPoints: 1,
+      },
+      {
+        action: 'save_objective_components',
+        itemId: ITEM_ID,
+        components: [{
+          componentOrder: 1,
+          earned: 1,
+        }],
       },
       {
         action: 'save_grade',

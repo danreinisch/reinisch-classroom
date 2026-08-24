@@ -145,28 +145,38 @@ assert.ok(
 );
 
 /* -------------------------------------------------------------------------- */
-/* 5B2 stays out                                                              */
+/* 5B1 auto scoring remains isolated from 5B2 Teacher Review scoring          */
 /* -------------------------------------------------------------------------- */
 
 assert.ok(
   !teacherReview.includes(
     'objective-auto-evidence-writer'
   ),
-  'Teacher Review component scoring belongs to 5B2, not 5B1'
+  'Teacher Review must not reuse the 5B1 auto-evidence writer'
 );
 
 assert.ok(
-  !teacherReview.includes(
-    'objective_earned'
+  teacherReview.includes(
+    'objective-review-evidence-writer'
   ),
-  'Teacher Review must not gain objective component writes in 5B1'
+  'Teacher Review child-objective writes must use the separate 5B2 review writer'
+);
+
+assert.ok(
+  !studentSubmit.includes(
+    'objective-review-evidence-writer'
+  ) &&
+  !studentSubmit.includes(
+    'save_objective_components'
+  ),
+  '5B1 student auto-scoring must not acquire 5B2 Teacher Review component behavior'
 );
 
 assert.ok(
   !tcReview.includes(
-    'objective_earned'
+    'objective-auto-evidence-writer'
   ),
-  'Teacher Review UI must remain unchanged in 5B1'
+  'Teacher Review UI must never invoke the 5B1 server auto-evidence writer'
 );
 
 console.log(
@@ -188,7 +198,7 @@ console.log(
   '✓ parent evidence path remains separate'
 );
 console.log(
-  '✓ Teacher Review objective components remain reserved for 5B2'
+  '✓ 5B1 auto evidence remains isolated from separate 5B2 Teacher Review scoring'
 );
 console.log('');
 console.log(

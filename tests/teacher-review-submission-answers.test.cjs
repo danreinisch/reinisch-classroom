@@ -43,6 +43,9 @@ const submissionId =
 const instanceId =
   '55555555-5555-4555-8555-555555555555';
 
+const objectiveId =
+  '77777777-7777-4777-8777-777777777777';
+
 let authResult;
 let restCalls;
 let restHandler;
@@ -452,6 +455,191 @@ async function test(
             )
         ),
         'owned submission must reach answer read'
+      );
+
+      assert.ok(
+        !restCalls.some(
+          ({ url }) =>
+            url.startsWith(
+              '/rest/v1/assignment_item_objectives?'
+            ) ||
+            url.startsWith(
+              '/rest/v1/objective_data_points?'
+            )
+        ),
+        'ordinary no-IO Review answer read must make zero objective-table requests'
+      );
+    }
+  );
+
+  await test(
+    'objective-aware owned submission returns mapped current component evidence',
+    async () => {
+      const baseRestHandler =
+        restHandler;
+
+      restHandler =
+        async (url, init) => {
+          if (
+            url.startsWith(
+              '/rest/v1/submission_answers?'
+            )
+          ) {
+            return response(
+              200,
+              [{
+                id:
+                  '66666666-6666-4666-8666-666666666666',
+                submission_id:
+                  submissionId,
+                assignment_item_id:
+                  701,
+                raw_answer: {
+                  value:
+                    'A written response',
+                },
+                is_correct:
+                  null,
+                earned_points:
+                  4,
+                max_points:
+                  5,
+                teacher_note:
+                  'Academic feedback',
+                scored_at:
+                  '2026-09-01T15:30:00.000Z',
+                assignment_items: {
+                  id:
+                    701,
+                  item_ref:
+                    'WP_1',
+                  answer_type:
+                    'written_response',
+                  points:
+                    5,
+                  meta: {
+                    question:
+                      'Write one paragraph.',
+                    objective_codes: [
+                      'S001.CG1.O1',
+                    ],
+                    objective_components_explicit:
+                      true,
+                    objective_components: [{
+                      code:
+                        'S001.CG1.O1',
+                      label:
+                        'Key detail',
+                      max:
+                        2,
+                      order:
+                        1,
+                    }],
+                  },
+                },
+              }]
+            );
+          }
+
+          if (
+            url.startsWith(
+              '/rest/v1/assignment_item_objectives?'
+            )
+          ) {
+            return response(
+              200,
+              [{
+                item_id:
+                  701,
+                objective_id:
+                  objectiveId,
+                component_label:
+                  'Key detail',
+                objective_max:
+                  2,
+                component_order:
+                  1,
+              }]
+            );
+          }
+
+          if (
+            url.startsWith(
+              '/rest/v1/objective_data_points?'
+            )
+          ) {
+            return response(
+              200,
+              [{
+                item_id:
+                  701,
+                objective_id:
+                  objectiveId,
+                objective_earned:
+                  1,
+                objective_max:
+                  2,
+                component_label:
+                  'Key detail',
+              }]
+            );
+          }
+
+          return baseRestHandler(
+            url,
+            init
+          );
+        };
+
+      const result =
+        await loadHandler()(
+          event({
+            submission_id:
+              submissionId,
+          })
+        );
+
+      assert.strictEqual(
+        result.statusCode,
+        200
+      );
+
+      const payload =
+        body(result);
+
+      assert.deepStrictEqual(
+        payload.answers[0]
+          .objective_components,
+        [{
+          component_order:
+            1,
+          component_label:
+            'Key detail',
+          objective_max:
+            2,
+          objective_earned:
+            1,
+        }]
+      );
+
+      assert.ok(
+        restCalls.some(
+          ({ url }) =>
+            url.startsWith(
+              '/rest/v1/assignment_item_objectives?'
+            )
+        ),
+        'objective-aware Review read must resolve normalized objective mapping'
+      );
+
+      assert.ok(
+        restCalls.some(
+          ({ url }) =>
+            url.startsWith(
+              '/rest/v1/objective_data_points?'
+            )
+        ),
+        'objective-aware Review read must load current component evidence'
       );
     }
   );
