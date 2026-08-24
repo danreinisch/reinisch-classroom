@@ -4,6 +4,7 @@
   const params = new URLSearchParams(window.location.search);
   const src = params.get('src') || '';
   const requestedTitle = params.get('title') || 'Classroom Resource';
+  const requestedReturn = params.get('return') || '/classroom-resources/display/';
 
   const allowed = /^\/classroom-resources\/[a-z0-9-]+\/?(?:[?#].*)?$/i.test(src) &&
     !src.startsWith('/classroom-resources/tv-player');
@@ -16,7 +17,7 @@
   const nextBtn = document.getElementById('tvNext');
   const closeBtn = document.getElementById('tvClose');
   const closeDot = document.getElementById('tvCloseDot');
-  const presentationDot = document.getElementById('tvPresentationDot');
+  const topDot = document.getElementById('tvPresentationDot');
   const fullscreenDot = document.getElementById('tvFullscreenDot');
   const overlay = document.getElementById('tvOverlay');
   const modalTitle = document.getElementById('tvModalTitle');
@@ -28,12 +29,25 @@
   let slides = [];
   let index = 0;
 
-  function closePlayer() {
-    window.location.href = '/classroom-resources/';
+  function safeReturnPath() {
+    const valid = /^\/classroom-resources\/(?:display\/?)?(?:[?#].*)?$/i.test(requestedReturn);
+    return valid ? requestedReturn : '/classroom-resources/display/';
   }
 
-  function togglePresentationView() {
-    app.classList.toggle('presentation-view');
+  function closePlayer() {
+    window.location.href = safeReturnPath();
+  }
+
+  function scrollDocumentToTop() {
+    try { window.scrollTo(0, 0); } catch (error) { /* no-op */ }
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    slideHost.scrollTop = 0;
+  }
+
+  function jumpToTop() {
+    closeModal();
+    scrollDocumentToTop();
   }
 
   async function toggleFullscreen() {
@@ -118,7 +132,8 @@
       trigger.addEventListener('click', function () { openDetail(trigger.getAttribute('data-detail')); });
     });
     slideHost.querySelectorAll('button:not([data-detail])').forEach(function (button) { button.type = 'button'; });
-    slideHost.scrollTop = 0;
+
+    window.requestAnimationFrame(scrollDocumentToTop);
   }
 
   function move(delta) {
@@ -144,12 +159,15 @@
       el.removeAttribute('style');
       el.removeAttribute('id');
     });
+    document.body.classList.add('modal-open');
     overlay.hidden = false;
+    overlay.scrollTop = 0;
   }
 
   function closeModal() {
     overlay.hidden = true;
     modalBody.innerHTML = '';
+    document.body.classList.remove('modal-open');
   }
 
   async function init() {
@@ -180,7 +198,7 @@
   nextBtn.addEventListener('click', function () { move(1); });
   closeBtn.addEventListener('click', closePlayer);
   closeDot.addEventListener('click', closePlayer);
-  presentationDot.addEventListener('click', togglePresentationView);
+  topDot.addEventListener('click', jumpToTop);
   fullscreenDot.addEventListener('click', toggleFullscreen);
   modalClose.addEventListener('click', closeModal);
   overlay.addEventListener('click', function (event) { if (event.target === overlay) closeModal(); });
@@ -204,14 +222,26 @@
   });
 
   let touchX = null;
+  let touchY = null;
+
   slideHost.addEventListener('touchstart', function (event) {
-    if (event.changedTouches && event.changedTouches.length) touchX = event.changedTouches[0].clientX;
+    if (!event.changedTouches || !event.changedTouches.length) return;
+    touchX = event.changedTouches[0].clientX;
+    touchY = event.changedTouches[0].clientY;
   }, { passive: true });
+
   slideHost.addEventListener('touchend', function (event) {
-    if (touchX === null || !event.changedTouches || !event.changedTouches.length || !overlay.hidden) return;
+    if (touchX === null || touchY === null || !event.changedTouches || !event.changedTouches.length || !overlay.hidden) return;
     const dx = event.changedTouches[0].clientX - touchX;
+    const dy = event.changedTouches[0].clientY - touchY;
     touchX = null;
-    if (Math.abs(dx) > 90) move(dx < 0 ? 1 : -1);
+    touchY = null;
+
+    // Only treat a clearly horizontal gesture as slide navigation. Vertical
+    // movement remains native document scrolling on the Newline.
+    if (Math.abs(dx) > 90 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+      move(dx < 0 ? 1 : -1);
+    }
   }, { passive: true });
 
   init();
