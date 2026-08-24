@@ -1,0 +1,142 @@
+/* ======================================================================
+   REINISCHCLASSROOM — CLASSROOM DISPLAY COMPATIBILITY PROFILE
+   Applied by the canonical viewer on embedded Android / touch displays.
+   Keeps the visual language while avoiding fragile GPU compositor effects.
+   ====================================================================== */
+
+html.rc-display-safe,
+html.rc-display-safe body {
+  background:
+    radial-gradient(ellipse at 4% 18%, rgba(45,196,205,.18), transparent 31%),
+    radial-gradient(ellipse at 96% 20%, rgba(149,101,221,.16), transparent 34%),
+    radial-gradient(ellipse at 52% 112%, rgba(55,104,177,.13), transparent 44%),
+    linear-gradient(132deg,#020611 0%,#06101f 43%,#081020 70%,#0b0918 100%) !important;
+}
+
+html.rc-display-safe *,
+html.rc-display-safe *::before,
+html.rc-display-safe *::after {
+  animation: none !important;
+  transition: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+html.rc-display-safe body::before {
+  filter: none !important;
+  opacity: .10 !important;
+  background-image: radial-gradient(rgba(220,246,255,.42) .55px, transparent .75px) !important;
+  background-size: 24px 24px !important;
+}
+
+html.rc-display-safe body::after {
+  display: none !important;
+}
+
+html.rc-display-safe .v6-atmosphere,
+html.rc-display-safe .v6-progress-track {
+  display: none !important;
+}
+
+html.rc-display-safe .slide,
+html.rc-display-safe .slide.active,
+html.rc-display-safe .slide.motion-in {
+  animation: none !important;
+}
+
+html.rc-display-safe .deck {
+  border: 1px solid rgba(111,207,226,.34) !important;
+  background:
+    radial-gradient(circle at 2% 2%, rgba(53,183,193,.08), transparent 28%),
+    radial-gradient(circle at 98% 98%, rgba(137,104,203,.07), transparent 30%),
+    linear-gradient(151deg, rgba(10,28,51,.98), rgba(5,16,32,.985)) !important;
+  box-shadow:
+    0 26px 68px rgba(0,0,0,.52),
+    inset 0 1px 0 rgba(255,255,255,.12) !important;
+  filter: none !important;
+}
+
+html.rc-display-safe .deck::after {
+  opacity: .28 !important;
+  filter: none !important;
+}
+
+html.rc-display-safe .hero .deck {
+  box-shadow:
+    0 28px 74px rgba(0,0,0,.56),
+    inset 0 1px 0 rgba(255,255,255,.13) !important;
+}
+
+html.rc-display-safe .card,
+html.rc-display-safe .topic,
+html.rc-display-safe .course-btn,
+html.rc-display-safe .rule,
+html.rc-display-safe .phrase,
+html.rc-display-safe .chip,
+html.rc-display-safe .hero-stamp {
+  border-color: rgba(125,199,220,.24) !important;
+  background: linear-gradient(151deg, rgba(18,43,68,.94), rgba(7,24,45,.95)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.09),
+    0 10px 24px rgba(0,0,0,.22) !important;
+  filter: none !important;
+}
+
+html.rc-display-safe .topic:hover,
+html.rc-display-safe .topic:focus-visible,
+html.rc-display-safe .course-btn:hover,
+html.rc-display-safe .course-btn:focus-visible {
+  transform: none !important;
+  border-color: rgba(92,218,222,.42) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 10px 24px rgba(0,0,0,.24) !important;
+}
+
+html.rc-display-safe .overlay {
+  background: rgba(2,6,13,.94) !important;
+  filter: none !important;
+}
+
+html.rc-display-safe .modal {
+  background: linear-gradient(151deg, rgba(12,29,51,.99), rgba(7,18,34,.995)) !important;
+  border: 1px solid rgba(126,204,222,.28) !important;
+  box-shadow: 0 28px 70px rgba(0,0,0,.60), inset 0 1px 0 rgba(255,255,255,.10) !important;
+  filter: none !important;
+}
+
+html.rc-display-safe h1,
+html.rc-display-safe h2,
+html.rc-display-safe h3,
+html.rc-display-safe .hero h1 span {
+  filter: none !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,.30) !important;
+}
+
+html.rc-display-safe .bar {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+html.rc-display-safe .controls,
+html.rc-display-safe .slide-counter {
+  filter: none !important;
+}
+
+html.rc-display-safe .nav-btn {
+  background: linear-gradient(180deg, #16233a, #0f1b30) !important;
+  box-shadow: 0 8px 18px rgba(0,0,0,.28) !important;
+  filter: none !important;
+}
+
+html.rc-display-safe .nav-btn:last-child {
+  background: linear-gradient(100deg, #238a9d 0%, #3473b7 52%, #7555a8 100%) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.rc-display-safe *,
+  html.rc-display-safe *::before,
+  html.rc-display-safe *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
