@@ -3317,7 +3317,78 @@
 
       /* ── Hide .print-header when not printing ── */
       .print-header { display: none; }
-    </style>
+          /* ── Manual child-objective evidence entry ───────────────────────────── */
+      .st-objective-manual-entry {
+        margin-top: 8px;
+      }
+
+      .st-objective-manual-form {
+        margin-top: 8px;
+        padding: 10px;
+        border: 1px solid rgba(99, 102, 241, 0.20);
+        border-radius: 8px;
+        background: rgba(99, 102, 241, 0.04);
+      }
+
+      .st-objective-manual-form[hidden] {
+        display: none;
+      }
+
+      .st-objective-manual-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 10px;
+      }
+
+      .st-objective-manual-grid label,
+      .st-objective-manual-wide {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .st-objective-manual-grid input,
+      .st-objective-manual-grid select,
+      .st-objective-manual-wide input,
+      .st-objective-manual-wide textarea {
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 34px;
+        padding: 6px 8px;
+        border: 1px solid rgba(100, 116, 139, 0.30);
+        border-radius: 6px;
+        font: inherit;
+        background: var(--surface, #fff);
+        color: inherit;
+      }
+
+      .st-objective-manual-wide {
+        margin-top: 8px;
+      }
+
+      .st-objective-manual-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .st-objective-manual-status {
+        min-height: 16px;
+        margin-top: 6px;
+        font-size: 11px;
+        opacity: 0.78;
+      }
+
+      @media (max-width: 700px) {
+        .st-objective-manual-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+</style>
   </head>
   <body>
     <div class="tc-app">
@@ -3604,7 +3675,7 @@
     <script defer src="/web/teacher-shell.js?v=20260331"></script>
     <script src="/web/rc-modal.js?v=20260418-catalog"></script>
     <script type="module" src="/web/staleness-utils.js?v=20260408"></script>
-    <script type="module" src="/web/tc-students.js?v=20260824-5c2"></script>
+    <script type="module" src="/web/tc-students.js?v=202608251810"></script>
     <script type="module" src="/web/tc-observation.js?v=20260808-03b-r1"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
     <script>
