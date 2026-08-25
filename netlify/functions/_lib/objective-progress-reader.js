@@ -256,6 +256,12 @@ function projectEvidence(row) {
         'boolean'
         ? row.is_correct
         : null,
+    answer_review_available:
+      typeof row
+        ?.answer_review_available ===
+        'boolean'
+        ? row.answer_review_available
+        : null,
     component_label:
       row?.component_label ?? null,
     support_level:
@@ -733,6 +739,7 @@ async function readObjectiveProgress({
   parentGoals,
   parentProgressRows,
   quarterRange,
+  evidenceRowsTransform = null,
   fetchImpl = global.fetch,
   supabaseUrl =
     process.env.SUPABASE_URL || '',
@@ -982,12 +989,42 @@ async function readObjectiveProgress({
     };
   }
 
-  const evidenceRows =
+  const evidenceRowsRaw =
     Array.isArray(
       evidenceResult.data
     )
       ? evidenceResult.data
       : [];
+
+  /*
+   * Optional caller-owned raw evidence transform.
+   *
+   * Default = exact 5C1 behavior.
+   *
+   * Student-facing callers may use this before browser-safe projection
+   * to enforce assignment release rules while assignment-instance
+   * provenance is still available.
+   */
+  const evidenceRows =
+    typeof evidenceRowsTransform ===
+      'function'
+      ? await evidenceRowsTransform(
+          evidenceRowsRaw
+        )
+      : evidenceRowsRaw;
+
+  if (
+    !Array.isArray(
+      evidenceRows
+    )
+  ) {
+    return {
+      available: false,
+      reason:
+        'evidence_transform_failed',
+      parents: [],
+    };
+  }
 
   return buildObjectiveProgressBundle({
     parentGoals: parents,
