@@ -935,6 +935,76 @@ const local = {
     return entry;
   },
 
+  /**
+   * Save explicit manual/binder child-objective evidence.
+   *
+   * Objective evidence is server-only even when other adapter features are
+   * operating in local-development mode. There is intentionally no browser
+   * persistence fallback for IEP objective evidence.
+   */
+  async saveManualObjectiveEvidence({
+    student_code,
+    parent_goal_code,
+    objective_code,
+    date,
+    objective_earned,
+    objective_max,
+    evidence_type,
+    support_level = null,
+    notes = null
+  }) {
+    const response = await fetch(
+      '/.netlify/functions/teacher-manual-objective-evidence',
+      {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          student_code,
+          parent_goal_code,
+          objective_code,
+          date,
+          objective_earned,
+          objective_max,
+          evidence_type,
+          support_level,
+          notes
+        })
+      }
+    );
+
+    let result = null;
+
+    try {
+      result = await response.json();
+    } catch (_error) {
+      result = {
+        ok: false,
+        error: 'Invalid manual objective evidence response'
+      };
+    }
+
+    if (result?.available === false) {
+      return result;
+    }
+
+    if (!response.ok) {
+      const error = new Error(
+        result?.error ||
+        `Manual objective evidence save failed (${response.status})`
+      );
+
+      error.status = response.status;
+      throw error;
+    }
+
+    return result;
+  },
+
   // ============================================================================
   // Review Tab: Submission Answers
   // ============================================================================

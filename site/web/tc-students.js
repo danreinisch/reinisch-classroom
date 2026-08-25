@@ -3734,6 +3734,14 @@
     }
     container.appendChild(contentDiv);
 
+    if (selectedDetailTab === 'goals') {
+      initManualObjectiveEvidenceForms(
+        contentDiv,
+        student.code,
+        expandController.signal
+      );
+    }
+
     // Wire up observation config show/hide for any inline edit forms rendered
     container.querySelectorAll('.st-goal-edit-form').forEach(form => {
       initObservationFields(form);
@@ -5686,6 +5694,505 @@
 
 
   /**
+   * Return YYYY-MM-DD for an instant on the Reinisch Classroom school
+   * calendar. Date-only instructional evidence must use America/Chicago,
+   * not UTC, so an evening Teacher entry stays on the correct school day.
+   */
+  function getSchoolLocalObjectiveEvidenceDate(
+    dateLike = new Date()
+  ) {
+    const date =
+      dateLike instanceof Date
+        ? dateLike
+        : new Date(dateLike);
+
+    if (Number.isNaN(date.getTime())) {
+      throw new TypeError(
+        'School-local objective evidence date requires a valid date'
+      );
+    }
+
+    const parts =
+      new Intl.DateTimeFormat(
+        'en-US',
+        {
+          timeZone: 'America/Chicago',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }
+      ).formatToParts(date);
+
+    const values = {};
+
+    for (const part of parts) {
+      if (
+        part.type === 'year' ||
+        part.type === 'month' ||
+        part.type === 'day'
+      ) {
+        values[part.type] =
+          part.value;
+      }
+    }
+
+    if (
+      !values.year ||
+      !values.month ||
+      !values.day
+    ) {
+      throw new Error(
+        'Could not resolve school-local objective evidence date'
+      );
+    }
+
+    return (
+      `${values.year}-` +
+      `${values.month}-` +
+      `${values.day}`
+    );
+  }
+
+
+  /**
+   * Build one manual/binder evidence control beneath an official child
+   * objective. Only public codes are transported; UUID identity remains
+   * server-owned.
+   */
+  function buildManualObjectiveEvidenceForm({
+    student_code,
+    parent_goal_code,
+    objective_code
+  }) {
+    const dateValue = getSchoolLocalObjectiveEvidenceDate();
+
+    return `
+      <div
+        class="st-objective-manual-entry"
+        data-student-code="${escapeHtml(student_code)}"
+        data-parent-goal-code="${escapeHtml(parent_goal_code)}"
+        data-objective-code="${escapeHtml(objective_code)}"
+      >
+        <button
+          type="button"
+          class="st-btn st-btn-small st-btn-secondary st-objective-manual-toggle"
+          aria-expanded="false"
+        >
+          Record Evidence
+        </button>
+
+        <form class="st-objective-manual-form" hidden>
+          <input
+            type="hidden"
+            name="student_code"
+            value="${escapeHtml(student_code)}"
+          />
+          <input
+            type="hidden"
+            name="parent_goal_code"
+            value="${escapeHtml(parent_goal_code)}"
+          />
+          <input
+            type="hidden"
+            name="objective_code"
+            value="${escapeHtml(objective_code)}"
+          />
+
+          <div class="st-objective-manual-grid">
+            <label>
+              <span>Date</span>
+              <input
+                type="date"
+                name="date"
+                value="${escapeHtml(dateValue)}"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Evidence type</span>
+              <select name="evidence_type" required>
+                <option value="binder">Binder</option>
+                <option value="manual_probe">Manual probe</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Earned</span>
+              <input
+                type="number"
+                name="objective_earned"
+                min="0"
+                step="any"
+                inputmode="decimal"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Out of</span>
+              <input
+                type="number"
+                name="objective_max"
+                min="0.000001"
+                step="any"
+                inputmode="decimal"
+                required
+              />
+            </label>
+          </div>
+
+          <label class="st-objective-manual-wide">
+            <span>Support / prompting</span>
+            <input
+              type="text"
+              name="support_level"
+              maxlength="250"
+              placeholder="Optional — e.g. verbal prompt, visual support"
+            />
+          </label>
+
+          <label class="st-objective-manual-wide">
+            <span>Optional note</span>
+            <textarea
+              name="notes"
+              maxlength="4000"
+              rows="2"
+              placeholder="Brief teacher context for this evidence point"
+            ></textarea>
+          </label>
+
+          <div class="st-objective-manual-actions">
+            <button
+              type="submit"
+              class="st-btn st-btn-small st-btn-primary st-objective-manual-save"
+            >
+              Save Evidence
+            </button>
+
+            <button
+              type="button"
+              class="st-btn st-btn-small st-btn-secondary st-objective-manual-cancel"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <div
+            class="st-objective-manual-status"
+            role="status"
+            aria-live="polite"
+          ></div>
+        </form>
+      </div>
+    `;
+  }
+
+
+  async function handleManualObjectiveEvidenceSave(
+    form,
+    studentCode
+  ) {
+    const statusEl =
+      form.querySelector(
+        '.st-objective-manual-status'
+      );
+
+    const saveButton =
+      form.querySelector(
+        '.st-objective-manual-save'
+      );
+
+    const studentCodeValue =
+      form.querySelector(
+        '[name="student_code"]'
+      )?.value || '';
+
+    const parentGoalCode =
+      form.querySelector(
+        '[name="parent_goal_code"]'
+      )?.value || '';
+
+    const objectiveCode =
+      form.querySelector(
+        '[name="objective_code"]'
+      )?.value || '';
+
+    const date =
+      form.querySelector(
+        '[name="date"]'
+      )?.value || '';
+
+    const earnedRaw =
+      form.querySelector(
+        '[name="objective_earned"]'
+      )?.value ?? '';
+
+    const maxRaw =
+      form.querySelector(
+        '[name="objective_max"]'
+      )?.value ?? '';
+
+    const evidenceType =
+      form.querySelector(
+        '[name="evidence_type"]'
+      )?.value || '';
+
+    const supportLevel =
+      form.querySelector(
+        '[name="support_level"]'
+      )?.value?.trim() || null;
+
+    const notes =
+      form.querySelector(
+        '[name="notes"]'
+      )?.value?.trim() || null;
+
+    if (
+      !studentCodeValue ||
+      !parentGoalCode ||
+      !objectiveCode
+    ) {
+      if (statusEl) {
+        statusEl.textContent =
+          'Objective identity is unavailable. Refresh and try again.';
+      }
+
+      return;
+    }
+
+    if (!date) {
+      if (statusEl) {
+        statusEl.textContent =
+          'Choose a date for this evidence point.';
+      }
+
+      return;
+    }
+
+    if (
+      earnedRaw === '' ||
+      maxRaw === ''
+    ) {
+      if (statusEl) {
+        statusEl.textContent =
+          'Enter both Earned and Out of.';
+      }
+
+      return;
+    }
+
+    const objectiveEarned =
+      Number(earnedRaw);
+
+    const objectiveMax =
+      Number(maxRaw);
+
+    if (
+      !Number.isFinite(objectiveEarned) ||
+      !Number.isFinite(objectiveMax) ||
+      objectiveEarned < 0 ||
+      objectiveMax <= 0 ||
+      objectiveEarned > objectiveMax
+    ) {
+      if (statusEl) {
+        statusEl.textContent =
+          'Enter a valid objective score: Earned must be between 0 and Out of.';
+      }
+
+      return;
+    }
+
+    if (
+      evidenceType !== 'binder' &&
+      evidenceType !== 'manual_probe'
+    ) {
+      if (statusEl) {
+        statusEl.textContent =
+          'Choose Binder or Manual probe.';
+      }
+
+      return;
+    }
+
+    if (saveButton) {
+      saveButton.disabled = true;
+    }
+
+    if (statusEl) {
+      statusEl.textContent =
+        'Saving evidence…';
+    }
+
+    try {
+      const result =
+        await db.saveManualObjectiveEvidence({
+          student_code:
+            studentCodeValue,
+          parent_goal_code:
+            parentGoalCode,
+          objective_code:
+            objectiveCode,
+          date,
+          objective_earned:
+            objectiveEarned,
+          objective_max:
+            objectiveMax,
+          evidence_type:
+            evidenceType,
+          support_level:
+            supportLevel,
+          notes
+        });
+
+      if (
+        !result ||
+        result.available !== true
+      ) {
+        if (statusEl) {
+          statusEl.textContent =
+            'Objective tracking is not available yet.';
+        }
+
+        return;
+      }
+
+      showToast(
+        `Evidence saved for ${objectiveCode}`
+      );
+
+      objectiveProgressCache.clear();
+
+      await renderExpandedDetail(studentCode);
+    } catch (error) {
+      console.error(
+        '[tc-students] Manual objective evidence save failed:',
+        error
+      );
+
+      if (statusEl) {
+        statusEl.textContent =
+          error?.message ||
+          'Failed to save objective evidence.';
+      }
+
+      await rcAlert(
+        'Error',
+        error?.message ||
+        'Failed to save objective evidence'
+      );
+    } finally {
+      if (
+        saveButton &&
+        saveButton.isConnected
+      ) {
+        saveButton.disabled = false;
+      }
+    }
+  }
+
+
+  function initManualObjectiveEvidenceForms(
+    container,
+    studentCode,
+    signal
+  ) {
+    if (!container) return;
+
+    const listenerOptions =
+      signal
+        ? { signal }
+        : undefined;
+
+    container
+      .querySelectorAll(
+        '.st-objective-manual-entry'
+      )
+      .forEach(entry => {
+        const toggle =
+          entry.querySelector(
+            '.st-objective-manual-toggle'
+          );
+
+        const form =
+          entry.querySelector(
+            '.st-objective-manual-form'
+          );
+
+        const cancel =
+          entry.querySelector(
+            '.st-objective-manual-cancel'
+          );
+
+        if (!toggle || !form) {
+          return;
+        }
+
+        toggle.addEventListener(
+          'click',
+          () => {
+            const opening =
+              form.hidden === true;
+
+            form.hidden =
+              !opening;
+
+            toggle.setAttribute(
+              'aria-expanded',
+              String(opening)
+            );
+
+            if (opening) {
+              form
+                .querySelector(
+                  '[name="objective_earned"]'
+                )
+                ?.focus();
+            }
+          },
+          listenerOptions
+        );
+
+        cancel?.addEventListener(
+          'click',
+          () => {
+            form.reset();
+            form.hidden = true;
+
+            toggle.setAttribute(
+              'aria-expanded',
+              'false'
+            );
+
+            const statusEl =
+              form.querySelector(
+                '.st-objective-manual-status'
+              );
+
+            if (statusEl) {
+              statusEl.textContent = '';
+            }
+          },
+          listenerOptions
+        );
+
+        form.addEventListener(
+          'submit',
+          async event => {
+            event.preventDefault();
+
+            await handleManualObjectiveEvidenceSave(
+              form,
+              studentCode
+            );
+          },
+          listenerOptions
+        );
+      });
+  }
+
+
+  /**
    * Render official child objectives beneath their controlling parent IEP goal.
    *
    * Slice 4 is visibility-only:
@@ -5696,7 +6203,9 @@
   function renderGoalObjectives(
     objectives = [],
     objectiveProgress = null,
-    objectiveState = null
+    objectiveState = null,
+    studentCode = '',
+    parentGoalCode = ''
   ) {
     if (!Array.isArray(objectives) || objectives.length === 0) {
       return '';
@@ -5727,6 +6236,8 @@
     const stateAvailable =
       objectiveState?.available === true;
 
+    const canRecordManualEvidence = objectiveState?.available === true;
+
     const stateUnavailable =
       objectiveState?.available === false;
 
@@ -5749,6 +6260,22 @@
       const number = Number(objective?.objective_number) || '';
       const code = objective?.code || '';
       const text = objective?.objective_text || '';
+
+      const manualEntryHtml =
+        canRecordManualEvidence
+          ? buildManualObjectiveEvidenceForm({
+              student_code:
+                studentCode ||
+                objective?.student_code ||
+                '',
+              parent_goal_code:
+                parentGoalCode ||
+                objective?.parent_goal_code ||
+                '',
+              objective_code:
+                code
+            })
+          : '';
 
       const progress =
         progressByCode.get(code) || null;
@@ -5824,6 +6351,7 @@
           </div>
           ${metaHtml}
           ${evidenceHtml}
+          ${manualEntryHtml}
         </div>
       `;
     }).join('');
@@ -6178,7 +6706,9 @@
         ${renderGoalObjectives(
           goal.objectives,
           goal._objectiveProgress,
-          goal._objectiveProgressState
+          goal._objectiveProgressState,
+          goal.student_code,
+          goal.code
         )}
           ${criterionMetricsHtml}
           <div class="st-goal-data-status">
