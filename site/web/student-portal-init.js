@@ -1314,79 +1314,1410 @@
    * Render a single goal card
    */
 
+  const GOAL_EVIDENCE_PREVIEW_LIMIT = 3;
+
   /**
-   * Render the official child objectives beneath their controlling parent goal.
-   *
-   * These are read-only IEP objective details. Objective progress/scoring is
-   * intentionally not part of Slice 4.
+   * Format a quarter-utils Date without introducing UTC date drift.
    */
-  function renderGoalObjectives(objectives = []) {
-    if (!Array.isArray(objectives) || objectives.length === 0) {
+  function formatQuarterDateForApi(value) {
+    const date =
+      value instanceof Date
+        ? value
+        : new Date(value);
+
+    if (
+      !date ||
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return null;
+    }
+
+    const year =
+      date.getFullYear();
+
+    const month =
+      String(
+        date.getMonth() + 1
+      ).padStart(2, '0');
+
+    const day =
+      String(
+        date.getDate()
+      ).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * One request covers every active goal/objective for the authorized quarter.
+   * Failure is progressive-enhancement only: official IEP wording still renders.
+   */
+  async function loadStudentGoalExplanations(studentCode) {
+    const unavailable =
+      reason => ({
+        ok: true,
+        available: false,
+        reason,
+        goals: [],
+      });
+
+    if (!quarterUtils) {
+      return unavailable(
+        'quarter_utils_unavailable'
+      );
+    }
+
+    try {
+      const quarter =
+        quarterUtils
+          .getCurrentQuarter();
+
+      const range =
+        quarterUtils
+          .getQuarterDateRange(
+            quarter
+          );
+
+      if (!range) {
+        return unavailable(
+          'quarter_range_unavailable'
+        );
+      }
+
+      const start =
+        formatQuarterDateForApi(
+          range.start
+        );
+
+      const end =
+        formatQuarterDateForApi(
+          range.end
+        );
+
+      if (
+        !quarter ||
+        !start ||
+        !end
+      ) {
+        return unavailable(
+          'quarter_range_unavailable'
+        );
+      }
+
+      const explanationUrl =
+        `/.netlify/functions/student-goal-explanations?code=${encodeURIComponent(studentCode)}` +
+        `&quarter=${encodeURIComponent(quarter)}` +
+        `&start=${encodeURIComponent(start)}` +
+        `&end=${encodeURIComponent(end)}`;
+
+      const response =
+        await fetch(
+          explanationUrl,
+          {
+            cache: 'no-store',
+          }
+        );
+
+      if (!response.ok) {
+        return unavailable(
+          `http_${response.status}`
+        );
+      }
+
+      const data =
+        await response.json();
+
+      if (
+        data?.ok !== true ||
+        data?.available !== true
+      ) {
+        return unavailable(
+          data?.reason ||
+          'unavailable'
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.warn(
+        LOG_PREFIX,
+        'Student goal explanations unavailable:',
+        error
+      );
+
+      return unavailable(
+        'request_failed'
+      );
+    }
+  }
+
+  function formatExplanationPercent(value) {
+    if (value == null) {
+      return 'No Data';
+    }
+
+    const number =
+      Number(value);
+
+    if (!Number.isFinite(number)) {
+      return 'No Data';
+    }
+
+    return `${Math.round(number * 10) / 10}%`;
+  }
+
+  function readableChoiceValue(choice) {
+    if (
+      choice === null ||
+      choice === undefined
+    ) {
       return '';
     }
 
-    const ordered = objectives
-      .slice()
-      .sort((a, b) => {
-        const aNumber = Number(a?.objective_number) || 0;
-        const bNumber = Number(b?.objective_number) || 0;
-        return aNumber - bNumber ||
-          String(a?.code || '').localeCompare(String(b?.code || ''));
-      });
+    if (
+      typeof choice === 'string' ||
+      typeof choice === 'number'
+    ) {
+      return String(choice);
+    }
 
-    const rows = ordered.map(objective => {
-      const number = Number(objective?.objective_number) || '';
-      const code = objective?.code || '';
-      const text = objective?.objective_text || '';
+    if (
+      typeof choice === 'object'
+    ) {
+      for (
+        const key of [
+          'text',
+          'label',
+          'value',
+          'answer',
+        ]
+      ) {
+        if (
+          choice[key] !== null &&
+          choice[key] !== undefined
+        ) {
+          return String(
+            choice[key]
+          );
+        }
+      }
+    }
 
-      const meta = [];
+    return '';
+  }
 
-      if (objective?.baseline != null && objective.baseline !== '') {
-        meta.push(
-          `<span><strong>Baseline:</strong> ${escapeHtml(String(objective.baseline))}</span>`
+  function normalizeEvidenceChoices(choices) {
+    if (Array.isArray(choices)) {
+      return choices
+        .map(
+          (choice, index) => ({
+            key:
+              String.fromCharCode(
+                65 + index
+              ),
+            text:
+              readableChoiceValue(
+                choice
+              ),
+          })
+        )
+        .filter(
+          choice =>
+            choice.text
         );
+    }
+
+    if (
+      choices &&
+      typeof choices === 'object'
+    ) {
+      return Object
+        .entries(choices)
+        .map(
+          ([key, value]) => ({
+            key,
+            text:
+              readableChoiceValue(
+                value
+              ),
+          })
+        )
+        .filter(
+          choice =>
+            choice.text
+        );
+    }
+
+    return [];
+  }
+
+  function renderEvidenceChoices(
+    choices,
+    studentAnswer,
+    correctAnswer,
+    answerReviewAvailable,
+  ) {
+    const normalized =
+      normalizeEvidenceChoices(
+        choices
+      );
+
+    if (
+      normalized.length === 0
+    ) {
+      return '';
+    }
+
+    const student =
+      studentAnswer == null
+        ? null
+        : String(
+            studentAnswer
+          ).trim();
+
+    const correct =
+      correctAnswer == null
+        ? null
+        : String(
+            correctAnswer
+          ).trim();
+
+    const items =
+      normalized
+        .map(choice => {
+          const key =
+            String(
+              choice.key || ''
+            ).trim();
+
+          const text =
+            String(
+              choice.text || ''
+            ).trim();
+
+          const studentMatch =
+            student &&
+            (
+              student === key ||
+              student === text
+            );
+
+          const correctMatch =
+            answerReviewAvailable === true &&
+            correct &&
+            (
+              correct === key ||
+              correct === text
+            );
+
+          const classes = [
+            'st-goal-evidence-choice',
+            studentMatch
+              ? 'st-goal-evidence-choice--student'
+              : '',
+            correctMatch
+              ? 'st-goal-evidence-choice--correct'
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
+
+          const marks = [];
+
+          if (studentMatch) {
+            marks.push(
+              'Your choice'
+            );
+          }
+
+          if (correctMatch) {
+            marks.push(
+              'Correct'
+            );
+          }
+
+          return `
+            <li class="${classes}">
+              <span class="st-goal-evidence-choice__key">${escapeHtml(key)}</span>
+              <span>${escapeHtml(text)}</span>
+              ${
+                marks.length > 0
+                  ? `<span class="st-goal-evidence-choice__mark">${escapeHtml(marks.join(' · '))}</span>`
+                  : ''
+              }
+            </li>
+          `;
+        })
+        .join('');
+
+    return `
+      <ul class="st-goal-evidence-choices">
+        ${items}
+      </ul>
+    `;
+  }
+
+  function newestExplanationDate(explanation) {
+    if (!explanation) {
+      return null;
+    }
+
+    const dates = [];
+
+    const inputs =
+      explanation
+        ?.calculation
+        ?.inputs;
+
+    if (Array.isArray(inputs)) {
+      inputs.forEach(input => {
+        if (input?.date) {
+          dates.push(
+            input.date
+          );
+        }
+      });
+    }
+
+    const objectives =
+      Array.isArray(
+        explanation.objectives
+      )
+        ? explanation.objectives
+        : [];
+
+    objectives.forEach(
+      objective => {
+        const evidence =
+          Array.isArray(
+            objective?.evidence
+          )
+            ? objective.evidence
+            : [];
+
+        evidence.forEach(row => {
+          if (row?.date) {
+            dates.push(
+              row.date
+            );
+          }
+        });
+      }
+    );
+
+    if (dates.length === 0) {
+      return null;
+    }
+
+    return dates
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(b) -
+          new Date(a)
+      )[0];
+  }
+
+  function buildGoalQuarterStatusText(
+    explanation,
+    explanationState,
+  ) {
+    if (
+      explanationState?.available !==
+      true
+    ) {
+      return 'Progress details temporarily unavailable';
+    }
+
+    if (!explanation) {
+      return 'No data this quarter';
+    }
+
+    if (
+      explanation.source ===
+      'objective_rollup'
+    ) {
+      const withData =
+        Number(
+          explanation
+            ?.coverage
+            ?.with_data
+        ) || 0;
+
+      const total =
+        Number(
+          explanation
+            ?.coverage
+            ?.total
+        ) || 0;
+
+      return `${withData} of ${total} objectives measured this quarter`;
+    }
+
+    const count =
+      Number(
+        explanation
+          ?.calculation
+          ?.checkpoint_count
+      ) || 0;
+
+    if (count === 0) {
+      return 'No data this quarter';
+    }
+
+    return `${count} progress ${count === 1 ? 'check' : 'checks'} this quarter`;
+  }
+
+  function buildGoalSummaryHtml(
+    explanation,
+    explanationState,
+  ) {
+    if (
+      explanationState?.available !==
+      true
+    ) {
+      return `
+        <section class="st-goal-explanation-section">
+          <h4>Summary</h4>
+          <div class="st-goal-explanation-unavailable" role="status">
+            <strong>Progress details temporarily unavailable</strong>
+            <span>Your official IEP goal is still shown above. Try again later for the quarter calculation and evidence.</span>
+          </div>
+        </section>
+      `;
+    }
+
+    if (!explanation) {
+      return `
+        <section class="st-goal-explanation-section">
+          <h4>Summary</h4>
+          <div class="st-goal-quarter-summary">
+            <span class="st-goal-quarter-summary__label">This Quarter</span>
+            <strong class="st-goal-quarter-summary__value">No Data</strong>
+          </div>
+        </section>
+      `;
+    }
+
+    const percentage =
+      formatExplanationPercent(
+        explanation.percentage
+      );
+
+    let context =
+      'This is the progress percentage recorded for the active school quarter.';
+
+    if (
+      explanation.source ===
+      'objective_rollup'
+    ) {
+      const withData =
+        Number(
+          explanation
+            ?.coverage
+            ?.with_data
+        ) || 0;
+
+      const total =
+        Number(
+          explanation
+            ?.coverage
+            ?.total
+        ) || 0;
+
+      context =
+        `${withData} of ${total} objectives measured this quarter. Only objectives with evidence are included.`;
+    } else if (
+      explanation.source ===
+      'existing_parent'
+    ) {
+      context =
+        'There is not child-objective evidence yet this quarter, so the latest valid parent-goal progress check is being shown.';
+    } else if (
+      explanation.source ===
+      'no_data'
+    ) {
+      context =
+        'No progress checks have been recorded for this goal in the active quarter yet.';
+    }
+
+    const objectiveUnavailable =
+      explanation
+        ?.objective_status
+        ?.available === false
+        ? `
+          <div class="st-goal-objective-unavailable" role="status">
+            <strong>Objective progress unavailable</strong>
+            <span>The official objective wording is still shown, but child-objective percentages are not available right now.</span>
+          </div>
+        `
+        : '';
+
+    return `
+      <section class="st-goal-explanation-section">
+        <h4>Summary</h4>
+        <div class="st-goal-quarter-summary">
+          <span class="st-goal-quarter-summary__label">This Quarter</span>
+          <strong class="st-goal-quarter-summary__value">${escapeHtml(percentage)}</strong>
+          <span class="st-goal-quarter-summary__context">${escapeHtml(context)}</span>
+        </div>
+        ${objectiveUnavailable}
+      </section>
+    `;
+  }
+
+  function buildGoalCalculationHtml(
+    explanation,
+    explanationState,
+  ) {
+    if (
+      explanationState?.available !==
+      true
+    ) {
+      return `
+        <section class="st-goal-explanation-section">
+          <h4>How this number was calculated</h4>
+          <p class="st-goal-explanation-empty">The calculation is temporarily unavailable.</p>
+        </section>
+      `;
+    }
+
+    if (
+      !explanation ||
+      !explanation.calculation
+    ) {
+      return `
+        <section class="st-goal-explanation-section">
+          <h4>How this number was calculated</h4>
+          <p class="st-goal-explanation-empty">No quarter calculation is available yet.</p>
+        </section>
+      `;
+    }
+
+    const calculation =
+      explanation.calculation;
+
+    const inputs =
+      Array.isArray(
+        calculation.inputs
+      )
+        ? calculation.inputs
+        : [];
+
+    if (
+      calculation.kind ===
+      'quarter_checkpoint_mean'
+    ) {
+      if (inputs.length === 0) {
+        return `
+          <section class="st-goal-explanation-section">
+            <h4>How this number was calculated</h4>
+            <p class="st-goal-explanation-empty">No progress checks were recorded in this quarter.</p>
+          </section>
+        `;
+      }
+
+      const rows =
+        inputs
+          .map(input => `
+            <li>
+              <span>${escapeHtml(input?.date ? formatDate(input.date) : 'Progress check')}</span>
+              <strong>${escapeHtml(formatExplanationPercent(input?.value))}</strong>
+            </li>
+          `)
+          .join('');
+
+      return `
+        <section class="st-goal-explanation-section">
+          <h4>How this number was calculated</h4>
+          <p>The quarter percentage is the average of these ${inputs.length} progress ${inputs.length === 1 ? 'check' : 'checks'}.</p>
+          <ul class="st-goal-calculation-list">
+            ${rows}
+          </ul>
+        </section>
+      `;
+    }
+
+    if (
+      calculation.kind ===
+      'objective_equal_weight_mean'
+    ) {
+      const rows =
+        inputs
+          .map(
+            (input, index) => `
+              <li>
+                <span>IEP Objective ${escapeHtml(String(input?.objective_number || index + 1))}</span>
+                <strong>${escapeHtml(formatExplanationPercent(input?.percentage))}</strong>
+              </li>
+            `
+          )
+          .join('');
+
+      const withData =
+        Number(
+          explanation
+            ?.coverage
+            ?.with_data
+        ) || inputs.length;
+
+      const total =
+        Number(
+          explanation
+            ?.coverage
+            ?.total
+        ) || inputs.length;
+
+      return `
+        <section class="st-goal-explanation-section">
+          <h4>How this number was calculated</h4>
+          <p>
+            The parent-goal percentage is the equal-weight average of the child objectives that have evidence this quarter.
+            ${escapeHtml(`${withData} of ${total} objectives measured this quarter.`)}
+          </p>
+          <ul class="st-goal-calculation-list">
+            ${rows}
+          </ul>
+        </section>
+      `;
+    }
+
+    if (
+      calculation.kind ===
+      'same_quarter_parent_fallback'
+    ) {
+      const checkpoint =
+        inputs[0] || null;
+
+      return `
+        <section class="st-goal-explanation-section">
+          <h4>How this number was calculated</h4>
+          <p>
+            No child-objective evidence has been recorded yet this quarter, so this uses the latest valid parent-goal progress check from this quarter.
+          </p>
+          ${
+            checkpoint
+              ? `
+                <ul class="st-goal-calculation-list">
+                  <li>
+                    <span>${escapeHtml(checkpoint.date ? formatDate(checkpoint.date) : 'Latest progress check')}</span>
+                    <strong>${escapeHtml(formatExplanationPercent(checkpoint.value))}</strong>
+                  </li>
+                </ul>
+              `
+              : '<p class="st-goal-explanation-empty">No same-quarter parent progress check is available.</p>'
+          }
+        </section>
+      `;
+    }
+
+    return `
+      <section class="st-goal-explanation-section">
+        <h4>How this number was calculated</h4>
+        <p class="st-goal-explanation-empty">No quarter calculation is available yet.</p>
+      </section>
+    `;
+  }
+
+  function collectGoalEvidenceItems(
+    explanation
+  ) {
+    if (!explanation) {
+      return [];
+    }
+
+    const items = [];
+
+    if (
+      explanation.source ===
+      'objective_rollup'
+    ) {
+      const objectives =
+        Array.isArray(
+          explanation.objectives
+        )
+          ? explanation.objectives
+          : [];
+
+      objectives.forEach(
+        objective => {
+          const evidence =
+            Array.isArray(
+              objective?.evidence
+            )
+              ? objective.evidence
+              : [];
+
+          evidence.forEach(row => {
+            items.push({
+              kind: 'objective',
+              date:
+                row?.date || null,
+              objective,
+              evidence: row,
+            });
+          });
+        }
+      );
+    } else {
+      const inputs =
+        Array.isArray(
+          explanation
+            ?.calculation
+            ?.inputs
+        )
+          ? explanation
+              .calculation
+              .inputs
+          : [];
+
+      inputs.forEach(
+        checkpoint => {
+          const evidence =
+            Array.isArray(
+              checkpoint?.evidence
+            )
+              ? checkpoint.evidence
+              : [];
+
+          if (
+            evidence.length === 0
+          ) {
+            items.push({
+              kind:
+                checkpoint?.source ===
+                'manual'
+                  ? 'manual_checkpoint'
+                  : 'checkpoint',
+              date:
+                checkpoint?.date ||
+                null,
+              checkpoint,
+            });
+
+            return;
+          }
+
+          evidence.forEach(row => {
+            items.push({
+              kind:
+                'assignment',
+              date:
+                row?.date ||
+                checkpoint?.date ||
+                null,
+              checkpoint,
+              evidence: row,
+            });
+          });
+        }
+      );
+    }
+
+    return items.sort(
+      (a, b) =>
+        new Date(
+          b?.date || 0
+        ) -
+        new Date(
+          a?.date || 0
+        )
+    );
+  }
+
+  function humanizeGoalEvidenceMeta(value) {
+    if (
+      value === null ||
+      value === undefined
+    ) {
+      return '';
+    }
+
+    const text =
+      String(value)
+        .trim()
+        .replace(
+          /[_-]+/g,
+          ' '
+        );
+
+    if (!text) {
+      return '';
+    }
+
+    return (
+      text.charAt(0).toUpperCase() +
+      text.slice(1)
+    );
+  }
+
+  function buildGoalEvidenceItemHtml(
+    item,
+    index,
+  ) {
+    if (
+      item.kind ===
+      'manual_checkpoint' ||
+      item.kind ===
+      'checkpoint'
+    ) {
+      const checkpoint =
+        item.checkpoint || {};
+
+      const label =
+        item.kind ===
+        'manual_checkpoint'
+          ? 'Teacher progress check'
+          : 'Progress check';
+
+      return `
+        <article class="st-goal-evidence-card">
+          <div class="st-goal-evidence-card__header">
+            <strong>${escapeHtml(label)}</strong>
+            ${
+              item.date
+                ? `<span>${escapeHtml(formatDate(item.date))}</span>`
+                : ''
+            }
+          </div>
+          <div class="st-goal-evidence-score">
+            <span>Quarter calculation input</span>
+            <strong>${escapeHtml(formatExplanationPercent(checkpoint.value))}</strong>
+          </div>
+          <p class="st-goal-evidence-note">
+            ${
+              item.kind ===
+              'manual_checkpoint'
+                ? 'This teacher progress check counts in the quarter calculation. No question-level work is claimed because no exact work-item link is stored.'
+                : 'This progress check counts in the quarter calculation. No question-level work is linked to it.'
+            }
+          </p>
+        </article>
+      `;
+    }
+
+    const evidence =
+      item.evidence || {};
+
+    const answerReviewAvailable =
+      evidence
+        .answer_review_available ===
+      true;
+
+    const question =
+      evidence
+        .question_text ||
+      (
+        item.kind ===
+        'objective'
+          ? 'Objective evidence'
+          : 'Assignment evidence'
+      );
+
+    const choicesHtml =
+      renderEvidenceChoices(
+        evidence.choices,
+        evidence.student_answer,
+        evidence.correct_answer,
+        answerReviewAvailable
+      );
+
+    const studentAnswerHtml =
+      evidence.student_answer != null &&
+      String(
+        evidence.student_answer
+      ).trim() !== ''
+        ? `
+          <div class="st-goal-evidence-answer">
+            <span>Your answer</span>
+            <strong>${escapeHtml(String(evidence.student_answer))}</strong>
+          </div>
+        `
+        : '';
+
+    let reviewedHtml = '';
+
+    if (
+      answerReviewAvailable === true
+    ) {
+      const parts = [];
+
+      if (
+        evidence.correct_answer != null &&
+        String(
+          evidence.correct_answer
+        ).trim() !== ''
+      ) {
+        parts.push(`
+          <div class="st-goal-evidence-answer">
+            <span>Correct answer</span>
+            <strong>${escapeHtml(String(evidence.correct_answer))}</strong>
+          </div>
+        `);
       }
 
       if (
-        objective?.objective_wording_criterion != null &&
-        objective.objective_wording_criterion !== ''
+        evidence.score != null &&
+        Number.isFinite(
+          Number(
+            evidence.score
+          )
+        )
       ) {
-        meta.push(
-          `<span><strong>Objective criterion:</strong> ${escapeHtml(String(objective.objective_wording_criterion))}</span>`
-        );
+        parts.push(`
+          <div class="st-goal-evidence-answer">
+            <span>Reviewed item score</span>
+            <strong>${escapeHtml(formatExplanationPercent(evidence.score))}</strong>
+          </div>
+        `);
       }
 
-      if (objective?.mastery_field != null && objective.mastery_field !== '') {
-        meta.push(
-          `<span><strong>Mastery:</strong> ${escapeHtml(String(objective.mastery_field))}</span>`
-        );
+      if (
+        typeof evidence.is_correct ===
+        'boolean'
+      ) {
+        parts.push(`
+          <div class="st-goal-evidence-answer">
+            <span>Reviewed result</span>
+            <strong>${evidence.is_correct ? 'Correct' : 'Needs more work'}</strong>
+          </div>
+        `);
       }
 
-      const metaHtml = meta.length > 0
-        ? `<div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px;font-size:11px;opacity:0.78;">${meta.join('')}</div>`
-        : '';
+      reviewedHtml =
+        parts.join('');
+    }
 
-      return `
-        <div class="st-goal-objective"
-          style="padding:8px 0;border-top:1px solid rgba(99,102,241,0.14);">
-          <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;">
-            <strong style="font-size:12px;">IEP Objective ${escapeHtml(String(number))}</strong>
-            <span style="font-size:11px;opacity:0.68;">${escapeHtml(code)}</span>
+    let scoreHtml = '';
+
+    if (
+      item.kind ===
+      'objective'
+    ) {
+      const earned =
+        Number(
+          evidence
+            .objective_earned
+        );
+
+      const max =
+        Number(
+          evidence
+            .objective_max
+        );
+
+      if (
+        Number.isFinite(earned) &&
+        Number.isFinite(max) &&
+        max > 0
+      ) {
+        const percent =
+          earned /
+          max *
+          100;
+
+        scoreHtml = `
+          <div class="st-goal-evidence-score">
+            <span>IEP objective score</span>
+            <strong>${escapeHtml(`${earned} / ${max} (${formatExplanationPercent(percent)})`)}</strong>
           </div>
-          <div style="margin-top:3px;font-size:13px;line-height:1.45;">
-            ${escapeHtml(text)}
-          </div>
-          ${metaHtml}
+        `;
+      }
+    } else if (
+      item.checkpoint?.value != null
+    ) {
+      scoreHtml = `
+        <div class="st-goal-evidence-score">
+          <span>Progress check</span>
+          <strong>${escapeHtml(formatExplanationPercent(item.checkpoint.value))}</strong>
         </div>
       `;
-    }).join('');
+    }
+
+    const evidenceMeta = [];
+
+    if (
+      item.kind ===
+      'objective' &&
+      evidence.component_label != null &&
+      String(
+        evidence.component_label
+      ).trim() !== ''
+    ) {
+      evidenceMeta.push(
+        `<span><strong>Teacher-scored component:</strong> ${escapeHtml(String(evidence.component_label))}</span>`
+      );
+    }
+
+    if (
+      item.kind ===
+      'objective' &&
+      evidence.evidence_type != null &&
+      String(
+        evidence.evidence_type
+      ).trim() !== ''
+    ) {
+      evidenceMeta.push(
+        `<span><strong>Evidence:</strong> ${escapeHtml(humanizeGoalEvidenceMeta(evidence.evidence_type))}</span>`
+      );
+    }
+
+    if (
+      item.kind ===
+      'objective' &&
+      evidence.support_level != null &&
+      String(
+        evidence.support_level
+      ).trim() !== ''
+    ) {
+      evidenceMeta.push(
+        `<span><strong>Support:</strong> ${escapeHtml(humanizeGoalEvidenceMeta(evidence.support_level))}</span>`
+      );
+    }
+
+    const evidenceMetaHtml =
+      evidenceMeta.length > 0
+        ? `
+          <div class="st-goal-evidence-meta">
+            ${evidenceMeta.join('')}
+          </div>
+        `
+        : '';
+
+    const objectiveLabel =
+      item.kind ===
+      'objective'
+        ? `
+          <span class="st-goal-evidence-objective-label">
+            IEP Objective ${escapeHtml(String(item.objective?.objective_number || ''))}
+          </span>
+        `
+        : '';
 
     return `
-      <div class="st-goal-objectives"
+      <article class="st-goal-evidence-card" data-evidence-index="${index}">
+        <div class="st-goal-evidence-card__header">
+          <strong>${escapeHtml(question)}</strong>
+          ${
+            item.date
+              ? `<span>${escapeHtml(formatDate(item.date))}</span>`
+              : ''
+          }
+        </div>
+        ${objectiveLabel}
+        ${evidenceMetaHtml}
+        ${scoreHtml}
+        ${choicesHtml}
+        ${studentAnswerHtml}
+        ${reviewedHtml}
+      </article>
+    `;
+  }
+
+  function buildGoalEvidenceHtml(
+    explanation,
+    explanationState,
+  ) {
+    if (
+      explanationState?.available !==
+      true
+    ) {
+      return `
+        <section class="st-goal-explanation-section">
+          <h4>Evidence behind the number</h4>
+          <p class="st-goal-explanation-empty">Evidence details are temporarily unavailable.</p>
+        </section>
+      `;
+    }
+
+    const items =
+      collectGoalEvidenceItems(
+        explanation
+      );
+
+    if (
+      items.length === 0
+    ) {
+      return `
+        <section class="st-goal-explanation-section">
+          <h4>Evidence behind the number</h4>
+          <p class="st-goal-explanation-empty">No evidence has been recorded for this quarter yet.</p>
+        </section>
+      `;
+    }
+
+    const visible =
+      items.slice(
+        0,
+        GOAL_EVIDENCE_PREVIEW_LIMIT
+      );
+
+    const remaining =
+      items.slice(
+        GOAL_EVIDENCE_PREVIEW_LIMIT
+      );
+
+    const visibleHtml =
+      visible
+        .map(
+          (item, index) =>
+            buildGoalEvidenceItemHtml(
+              item,
+              index
+            )
+        )
+        .join('');
+
+    const remainingHtml =
+      remaining.length > 0
+        ? `
+          <details class="st-goal-evidence-more">
+            <summary>Show all ${items.length}</summary>
+            <div class="st-goal-evidence-list">
+              ${
+                remaining
+                  .map(
+                    (item, index) =>
+                      buildGoalEvidenceItemHtml(
+                        item,
+                        index +
+                        GOAL_EVIDENCE_PREVIEW_LIMIT
+                      )
+                  )
+                  .join('')
+              }
+            </div>
+          </details>
+        `
+        : '';
+
+    return `
+      <section class="st-goal-explanation-section">
+        <h4>Evidence behind the number</h4>
+        <div class="st-goal-evidence-list">
+          ${visibleHtml}
+        </div>
+        ${remainingHtml}
+      </section>
+    `;
+  }
+
+  function buildGoalExplanationHtml(
+    goal,
+    explanation,
+    explanationState,
+    containerSuffix = '',
+  ) {
+    return `
+      <div
+        class="st-goal-explanation"
+        data-goal-code="${escapeHtml(goal?.code || '')}"
+        data-container="${escapeHtml(containerSuffix)}"
+      >
+        ${buildGoalSummaryHtml(
+          explanation,
+          explanationState
+        )}
+        ${buildGoalCalculationHtml(
+          explanation,
+          explanationState
+        )}
+        ${buildGoalEvidenceHtml(
+          explanation,
+          explanationState
+        )}
+      </div>
+    `;
+  }
+
+  /**
+   * Render official child-objective wording plus quarter progress when available.
+   */
+  function renderGoalObjectives(
+    objectives = [],
+    objectiveProgress = [],
+    objectiveState = null,
+  ) {
+    if (
+      !Array.isArray(objectives) ||
+      objectives.length === 0
+    ) {
+      return '';
+    }
+
+    const progressByCode =
+      new Map(
+        (
+          Array.isArray(
+            objectiveProgress
+          )
+            ? objectiveProgress
+            : []
+        )
+          .filter(
+            row => row?.code
+          )
+          .map(
+            row => [
+              String(row.code),
+              row,
+            ]
+          )
+      );
+
+    const ordered =
+      objectives
+        .slice()
+        .sort((a, b) => {
+          const aNumber =
+            Number(
+              a?.objective_number
+            ) || 0;
+
+          const bNumber =
+            Number(
+              b?.objective_number
+            ) || 0;
+
+          return (
+            aNumber -
+              bNumber ||
+            String(
+              a?.code || ''
+            ).localeCompare(
+              String(
+                b?.code || ''
+              )
+            )
+          );
+        });
+
+    const rows =
+      ordered
+        .map(objective => {
+          const number =
+            Number(
+              objective
+                ?.objective_number
+            ) || '';
+
+          const code =
+            objective?.code || '';
+
+          const objectiveText =
+            objective
+              ?.objective_text ||
+            '';
+
+          const progress =
+            progressByCode.get(
+              String(code)
+            ) || null;
+
+          let progressBadge = '';
+
+          if (
+            objectiveState
+              ?.available === false
+          ) {
+            progressBadge = `
+              <span class="st-goal-objective-progress st-goal-objective-progress--unavailable">
+                Objective progress unavailable
+              </span>
+            `;
+          } else {
+            progressBadge = `
+              <span class="st-goal-objective-progress">
+                This Quarter:
+                <strong>${escapeHtml(formatExplanationPercent(progress?.percentage))}</strong>
+              </span>
+            `;
+          }
+
+          const meta = [];
+
+          if (
+            objective?.baseline != null &&
+            objective.baseline !== ''
+          ) {
+            meta.push(
+              `<span><strong>Baseline:</strong> ${escapeHtml(String(objective.baseline))}</span>`
+            );
+          }
+
+          if (
+            objective?.objective_wording_criterion != null &&
+            objective
+              .objective_wording_criterion !==
+              ''
+          ) {
+            meta.push(
+              `<span><strong>Criterion:</strong> ${escapeHtml(String(objective.objective_wording_criterion))}</span>`
+            );
+          }
+
+          if (
+            objective?.mastery_field != null &&
+            objective.mastery_field !== ''
+          ) {
+            meta.push(
+              `<span><strong>Mastery:</strong> ${escapeHtml(String(objective.mastery_field))}</span>`
+            );
+          }
+
+          if (
+            progress?.percentage != null &&
+            Number.isFinite(
+              Number(
+                progress?.earned
+              )
+            ) &&
+            Number.isFinite(
+              Number(
+                progress?.max
+              )
+            ) &&
+            Number(
+              progress.max
+            ) > 0
+          ) {
+            meta.push(
+              `<span><strong>IEP objective score:</strong> ${escapeHtml(`${progress.earned} / ${progress.max}`)}</span>`
+            );
+          }
+
+          const metaHtml =
+            meta.length > 0
+              ? `<div class="st-goal-objective-meta">${meta.join('')}</div>`
+              : '';
+
+          return `
+            <div class="st-goal-objective">
+              <div class="st-goal-objective__heading">
+                <div>
+                  <strong>IEP Objective ${escapeHtml(String(number))}</strong>
+                  <span class="st-goal-objective__code">${escapeHtml(code)}</span>
+                </div>
+                ${progressBadge}
+              </div>
+              <div class="st-goal-objective__text">
+                ${escapeHtml(objectiveText)}
+              </div>
+              ${metaHtml}
+            </div>
+          `;
+        })
+        .join('');
+
+    return `
+      <div
+        class="st-goal-objectives"
         role="group"
         aria-label="Your IEP Objectives"
-        style="margin:10px 0 12px;padding:0 12px 4px;border:1px solid rgba(99,102,241,0.18);border-radius:8px;background:rgba(99,102,241,0.05);">
-        <div style="padding:9px 0 7px;font-size:12px;font-weight:700;">
+      >
+        <div class="st-goal-objectives__title">
           Your IEP Objectives
         </div>
         ${rows}
@@ -1394,105 +2725,116 @@
     `;
   }
 
-  function renderGoalCard(goal, progressMap, dataPointsMap, containerSuffix = '') {
-    const colorCategory = goalAreaToColorCategory(goal.goal_area);
-    // Clean up any "Baseline: XX%" text that leaked into the description field
-    let fullDesc = (goal.desc || goal.goal_text || '(No goal description provided)').replace(/\s*Baseline:?\s*\d+%?\s*$/i, '').trim();
-    
-    // Truncate description to MAX_DESC_LENGTH chars
+  /**
+   * Render one official parent goal with server-owned quarter explanation.
+   */
+  function renderGoalCard(
+    goal,
+    explanationMap,
+    explanationState,
+    containerSuffix = '',
+  ) {
+    const isDashboardSnapshot =
+      containerSuffix === 'dash';
+
+    const colorCategory =
+      goalAreaToColorCategory(
+        goal.goal_area
+      );
+
+    let fullDesc =
+      (
+        goal.desc ||
+        goal.goal_text ||
+        '(No goal description provided)'
+      )
+        .replace(
+          /\s*Baseline:?\s*\d+%?\s*$/i,
+          ''
+        )
+        .trim();
+
     let descHtml = '';
-    if (fullDesc.length > MAX_DESC_LENGTH) {
-      const truncated = fullDesc.substring(0, MAX_DESC_LENGTH);
+
+    if (
+      fullDesc.length >
+      MAX_DESC_LENGTH
+    ) {
+      const truncated =
+        fullDesc.substring(
+          0,
+          MAX_DESC_LENGTH
+        );
+
       descHtml = `
         <div class="st-goal-desc">
           <span class="st-goal-desc-short">${escapeHtml(truncated)}...</span>
           <button class="st-goal-show-more" data-goal-id="${goal.id}">Show more</button>
-          <span class="st-goal-desc-full" style="display: none;">${escapeHtml(fullDesc)}</span>
+          <span class="st-goal-desc-full" style="display:none;">${escapeHtml(fullDesc)}</span>
         </div>
       `;
     } else {
-      descHtml = `<div class="st-goal-desc">${escapeHtml(fullDesc)}</div>`;
-    }
-    
-    // Get progress data for this goal
-    const progressEntries = progressMap.get(goal.id) || [];
-    
-    // Calculate this quarter's data points using school-year quarters from quarter-utils.
-    // Falls back to calendar quarters (Jan/Apr/Jul/Oct) if quarter-utils is unavailable.
-    let thisQuarterEntries = [];
-    if (quarterUtils) {
-      try {
-        const currentQ = quarterUtils.getCurrentQuarter();
-        const range = quarterUtils.getQuarterDateRange(currentQ);
-        if (range) {
-          thisQuarterEntries = progressEntries.filter(entry => {
-            const entryDate = new Date(entry.date);
-            return entryDate >= range.start && entryDate <= range.end;
-          });
-        }
-      } catch (e) {
-        console.warn(LOG_PREFIX, 'quarter-utils error, falling back to calendar quarters:', e);
-      }
-    }
-    // Fallback: use calendar quarters only if quarter-utils could not be loaded
-    if (!quarterUtils) {
-      const now = new Date();
-      const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER, 1);
-      thisQuarterEntries = progressEntries.filter(entry => {
-        const entryDate = new Date(entry.date);
-        return entryDate >= quarterStart;
-      });
-    }
-    
-    // Get last data collection date
-    let lastDate = 'Never';
-    if (progressEntries.length > 0) {
-      const sortedEntries = [...progressEntries].sort((a, b) => 
-        new Date(b.date) - new Date(a.date)
-      );
-      lastDate = formatDate(sortedEntries[0].date);
-    }
-    
-    // Count per-question data points for this quarter (from goal_data_points)
-    const goalDataPointsAll = dataPointsMap ? (dataPointsMap.get(goal.id) || []) : [];
-    let thisQuarterDataPoints = [];
-    if (quarterUtils) {
-      try {
-        const currentQ = quarterUtils.getCurrentQuarter();
-        const range = quarterUtils.getQuarterDateRange(currentQ);
-        if (range) {
-          thisQuarterDataPoints = goalDataPointsAll.filter(dp => {
-            const d = new Date(dp.date);
-            return d >= range.start && d <= range.end;
-          });
-        }
-      } catch (e) { /* fallback below */ }
-    }
-    if (thisQuarterDataPoints.length === 0 && !quarterUtils) {
-      const now = new Date();
-      const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER, 1);
-      thisQuarterDataPoints = goalDataPointsAll.filter(dp => new Date(dp.date) >= quarterStart);
+      descHtml =
+        `<div class="st-goal-desc">${escapeHtml(fullDesc)}</div>`;
     }
 
-    const dpCount = thisQuarterDataPoints.length;
-    const statusSvg = (dpCount > 0 || thisQuarterEntries.length > 0)
-      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>'
-      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
-    const statusText = dpCount > 0
-      ? `${dpCount} data ${dpCount === 1 ? 'point' : 'points'} this quarter`
-      : (thisQuarterEntries.length > 0
-          ? `${thisQuarterEntries.length} data ${thisQuarterEntries.length === 1 ? 'point' : 'points'} this quarter`
-          : 'No data this quarter');
-    
-    // Measurement badge: show map-pin SVG + text, or hide if no measurement type
-    const measurementBadgeHtml = goal.measurement_type
-      ? `<span class="st-badge st-badge-measurement"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:middle;margin-right:3px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(goal.measurement_type)}</span>`
-      : '';
-    
-    // Preserve both official criterion fields. A source conflict is
-    // explicit metadata; it is never inferred from unequal values alone.
-    const criterionConflict =
-      goal.criterion_conflict === true;
+    const explanation =
+      explanationMap instanceof Map
+        ? (
+            explanationMap.get(
+              String(
+                goal.code || ''
+              )
+            ) || null
+          )
+        : null;
+
+    const objectiveProgress =
+      Array.isArray(
+        explanation?.objectives
+      )
+        ? explanation.objectives
+        : [];
+
+    let objectiveState = null;
+
+    if (
+      Array.isArray(
+        goal.objectives
+      ) &&
+      goal.objectives.length > 0
+    ) {
+      if (
+        explanation
+          ?.objective_status
+      ) {
+        objectiveState =
+          explanation
+            .objective_status;
+      } else if (
+        explanationState?.available ===
+        true
+      ) {
+        objectiveState = {
+          available: true,
+          reason: null,
+        };
+      } else {
+        objectiveState = {
+          available: false,
+          reason:
+            explanationState?.reason ||
+            'unavailable',
+        };
+      }
+    }
+
+    const measurementBadgeHtml =
+      goal.measurement_type
+        ? `<span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type)}</span>`
+        : '';
+
+    const criterionConflict = goal.criterion_conflict === true;
 
     const masteryLabel =
       criterionConflict
@@ -1505,13 +2847,27 @@
         : 'Target:';
 
     const baselineHtml =
-      (goal.baseline != null && goal.baseline !== '')
-        ? escapeHtml(String(goal.baseline))
+      (
+        goal.baseline != null &&
+        goal.baseline !== ''
+      )
+        ? escapeHtml(
+            String(
+              goal.baseline
+            )
+          )
         : '<span class="st-metric-empty">Not yet set</span>';
 
     const masteryHtml =
-      (goal.mastery != null && goal.mastery !== '')
-        ? escapeHtml(String(goal.mastery))
+      (
+        goal.mastery != null &&
+        goal.mastery !== ''
+      )
+        ? escapeHtml(
+            String(
+              goal.mastery
+            )
+          )
         : (
             !criterionConflict &&
             goal.target != null &&
@@ -1526,10 +2882,17 @@
           : '<span class="st-metric-empty">Not yet set</span>';
 
     const targetHtml =
-      (goal.target != null && goal.target !== '')
+      (
+        goal.target != null &&
+        goal.target !== ''
+      )
         ? (
             criterionConflict
-              ? escapeHtml(String(goal.target))
+              ? escapeHtml(
+                  String(
+                    goal.target
+                  )
+                )
               : escapeHtml(
                   formatProgressValue(
                     goal.target,
@@ -1541,138 +2904,155 @@
 
     const criterionReviewHtml =
       criterionConflict
-        ? `<div class="st-goal-criterion-review" role="note">
+        ? `
+          <div class="st-goal-criterion-review" role="note">
             <strong>Manual Criterion Review Required</strong>
             <span>Your IEP lists different values for Header Mastery and Goal-Text Target. Reinisch Classroom will show your progress but will not automatically decide whether this goal is met.</span>
-          </div>`
+          </div>
+        `
         : '';
-    
-    // Build progress detail section (if there are entries to show)
-    const progressDetailId = `st-goal-progress-${(goal.code ?? goal.id).replace(/[^a-z0-9]/gi, '_')}${containerSuffix ? '-' + containerSuffix : ''}`;
-    let progressDetailHtml = '';
-    // Note: progressTowardTargetHtml intentionally omitted — the dot-grid chart
-    // replaces the "You're at X% → Target Y%" bar.
-    if (progressEntries.length > 0) {
-      const sortedForDisplay = [...progressEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
-      const latestEntry = sortedForDisplay[0];
-      const latestNumeric = parseFloat(latestEntry.value);
 
-      const chartHtml = buildProgressSVG(progressEntries, goal);
+    const progressDetailId =
+      `st-goal-progress-${(goal.code ?? goal.id).replace(/[^a-z0-9]/gi, '_')}${containerSuffix ? '-' + containerSuffix : ''}`;
 
-      // Quarter average
-      const qAvgVal = thisQuarterEntries.length > 0
-        ? thisQuarterEntries.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / thisQuarterEntries.length
-        : null;
+    const progressDetailHtml = `
+      <div
+        class="st-goal-progress-detail"
+        id="${progressDetailId}"
+        ${isDashboardSnapshot ? 'hidden' : ''}
+        aria-hidden="${isDashboardSnapshot ? 'true' : 'false'}"
+      >
+        ${buildGoalExplanationHtml(
+          goal,
+          explanation,
+          explanationState,
+          containerSuffix
+        )}
+      </div>
+    `;
 
-      // SPED-friendly status banner and summary stats.
-      // Conflicted goals retain raw progress and trend data, but no
-      // automatic target-based judgment is allowed.
-      const targetNumeric =
-        !criterionConflict &&
-        goal.target != null
-          ? parseFloat(goal.target)
-          : null;
+    const toggleBtn = `
+      <button
+        class="st-goal-progress-toggle"
+        data-progress-id="${progressDetailId}"
+        aria-expanded="${isDashboardSnapshot ? 'false' : 'true'}"
+        aria-controls="${progressDetailId}"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          style="pointer-events:none;${isDashboardSnapshot ? '' : 'transform:rotate(180deg)'}"
+        >
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+          <polyline points="17 6 23 6 23 12"></polyline>
+        </svg>
+        <span class="st-goal-progress-toggle-label" style="pointer-events:none">
+          ${isDashboardSnapshot ? 'View Progress' : 'Hide Progress'}
+        </span>
+      </button>
+    `;
 
-      const baselineNumeric =
-        goal.baseline != null
-          ? parseFloat(goal.baseline)
-          : null;
+    const statusText =
+      buildGoalQuarterStatusText(
+        explanation,
+        explanationState
+      );
 
-      const sortedAsc =
-        [...progressEntries].sort(
-          (a, b) =>
-            new Date(a.date) -
-            new Date(b.date)
-        );
+    const latestDate =
+      newestExplanationDate(
+        explanation
+      );
 
-      const trend =
-        computeTrendArrow(
-          sortedAsc
-        );
-
-      const statusBannerHtml =
-        buildStatusBannerHtml(
-          latestNumeric,
-          targetNumeric,
-          baselineNumeric,
-          goal.measurement_type,
-          criterionConflict
-        );
-
-      const statsRowHtml =
-        buildStatsRowHtml(
-          latestNumeric,
-          qAvgVal,
-          targetNumeric,
-          trend,
-          goal.measurement_type,
-          criterionConflict
-        );
-
-      // Dot grid chart (per-question data points)
-      const goalDataPoints = dataPointsMap ? (dataPointsMap.get(goal.id) || []) : [];
-      const { html: dotGridHtml, hasData: hasDotGrid, groups: _dotGridGroups } = buildDotGridChart(goalDataPoints, goal.id, containerSuffix);
-      // When per-question dot-grid data exists, show it instead of the legacy line chart
-      const chartSectionHtml = hasDotGrid
-        ? dotGridHtml
-        : `<div class="st-goal-chart-container">${chartHtml}</div>`;
-
-      progressDetailHtml = `
-        <div class="st-goal-progress-detail" id="${progressDetailId}">
-          ${statusBannerHtml}
-          ${statsRowHtml}
-          ${chartSectionHtml}
-        </div>`;
-    }
-
-    // Toggle button starts as "Hide Progress" since the panel is expanded by default (Item 2)
-    const toggleBtn = progressEntries.length > 0
-      ? `<button class="st-goal-progress-toggle" data-progress-id="${progressDetailId}" aria-expanded="true" aria-controls="${progressDetailId}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;transform:rotate(180deg)"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg><span class="st-goal-progress-toggle-label" style="pointer-events:none">Hide Progress</span></button>`
-      : '';
+    const lastHtml =
+      latestDate
+        ? `
+          <div class="st-data-status-item">
+            <span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </span>
+            <span>Last: ${escapeHtml(formatDate(latestDate))}</span>
+          </div>
+        `
+        : '';
 
     return `
-      <div class="st-goal-card" data-goal-id="${goal.id}" data-area="${colorCategory}">
+      <div
+        class="st-goal-card"
+        data-goal-id="${goal.id}"
+        data-area="${colorCategory}"
+      >
         <div class="st-goal-header">
           <div class="st-goal-title-line">
-            <span class="st-goal-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></span>
+            <span class="st-goal-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+              </svg>
+            </span>
             <span class="st-goal-area-name">${escapeHtml(goal.goal_area || 'Goal')}</span>
             <span class="st-goal-code">${escapeHtml(goal.code || '')}</span>
             ${measurementBadgeHtml}
           </div>
         </div>
+
         ${descHtml}
-        ${renderGoalObjectives(goal.objectives)}
+
+        ${renderGoalObjectives(
+          goal.objectives,
+          objectiveProgress,
+          objectiveState
+        )}
+
         <div class="st-goal-metrics">
           <div class="st-metric">
             <span class="st-metric-label">Baseline:</span>
             <span class="st-metric-value">${baselineHtml}</span>
           </div>
+
           <div class="st-metric">
             <span class="st-metric-label">${masteryLabel}</span>
             <span class="st-metric-value">${masteryHtml}</span>
           </div>
+
           <div class="st-metric">
             <span class="st-metric-label">${targetLabel}</span>
             <span class="st-metric-value">${targetHtml}</span>
           </div>
         </div>
+
         ${criterionReviewHtml}
+
         <div class="st-goal-data-status">
           <div class="st-data-status-item">
-            <span>${statusSvg}</span>
-            <span>${statusText}</span>
+            <span aria-hidden="true">📊</span>
+            <span>${escapeHtml(statusText)}</span>
           </div>
-          <div class="st-data-status-item">
-            <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
-            <span>Last: ${lastDate}</span>
+
+          ${lastHtml}
+
+          <div class="st-data-status-item st-data-status-item--toggle">
+            ${toggleBtn}
           </div>
-          ${toggleBtn ? `<div class="st-data-status-item st-data-status-item--toggle">${toggleBtn}</div>` : ''}
         </div>
+
         ${progressDetailHtml}
       </div>
     `;
   }
-  
+
   /**
    * Attach event listeners to "Show more" and progress toggle buttons.
    * Uses event delegation on stable tab-panel containers (#tabGoals and
@@ -9726,51 +11106,6 @@
       console.log(LOG_PREFIX, 'Filtered goals:', goals.length, '->', activeGoals.length, 'active');
 
       tabState.goalsData = activeGoals;
-      
-      // Fetch progress data
-      let progressMap = new Map();
-      try {
-        const progressUrl = `/.netlify/functions/student-goal-progress?code=${encodeURIComponent(studentCode)}`;
-        const progressResponse = await fetch(progressUrl);
-        
-        if (progressResponse.ok) {
-          const progressData = await progressResponse.json();
-          if (progressData.ok && progressData.progress) {
-            // Build map of goal_id -> progress entries
-            progressData.progress.forEach(entry => {
-              if (!progressMap.has(entry.goal_id)) {
-                progressMap.set(entry.goal_id, []);
-              }
-              progressMap.get(entry.goal_id).push(entry);
-            });
-          }
-        }
-      } catch (err) {
-        console.warn(LOG_PREFIX, 'Failed to load progress data:', err);
-        // Continue without progress data
-      }
-
-      // Fetch per-question data points for the dot grid chart
-      let dataPointsMap = new Map();
-      try {
-        const dpUrl = `/.netlify/functions/student-goal-data-points?code=${encodeURIComponent(studentCode)}`;
-        const dpResponse = await fetch(dpUrl);
-        if (dpResponse.ok) {
-          const dpData = await dpResponse.json();
-          if (dpData.ok && dpData.data_points && dpData.data_points.length > 0) {
-            dpData.data_points.forEach(pt => {
-              if (!dataPointsMap.has(pt.goal_id)) {
-                dataPointsMap.set(pt.goal_id, []);
-              }
-              dataPointsMap.get(pt.goal_id).push(pt);
-            });
-          }
-        }
-      } catch (err) {
-        console.warn(LOG_PREFIX, 'Failed to load goal data points:', err);
-        // Continue without data points — dot grid will be omitted
-      }
-
       // Load quarter-utils for school-year quarter date ranges (lazy, once)
       if (!quarterUtils) {
         try {
@@ -9785,6 +11120,46 @@
         dashGoalsCount.textContent = activeGoals.length;
       }
       
+      // One server-owned explanation bundle for all active goals/objectives.
+      const explanationData =
+        await loadStudentGoalExplanations(
+          studentCode
+        );
+
+      const explanationState = {
+        available:
+          explanationData?.available ===
+          true,
+        reason:
+          explanationData?.reason ||
+          null,
+      };
+
+      const explanationMap =
+        new Map(
+          (
+            Array.isArray(
+              explanationData?.goals
+            )
+              ? explanationData.goals
+              : []
+          )
+            .filter(
+              row => row?.goal_code
+            )
+            .map(
+              row => [
+                String(
+                  row.goal_code
+                ),
+                row,
+              ]
+            )
+        );
+
+      tabState.goalExplanationData =
+        explanationData;
+
       // Render goals in Goals tab
       if (activeGoals.length === 0) {
         goalsContainer.innerHTML = `
@@ -9794,7 +11169,7 @@
           </div>
         `;
       } else {
-        goalsContainer.innerHTML = activeGoals.map(goal => renderGoalCard(goal, progressMap, dataPointsMap, 'goals')).join('');
+        goalsContainer.innerHTML = activeGoals.map(goal => renderGoalCard(goal, explanationMap, explanationState, 'goals')).join('');
       }
       
       // Render goals snapshot for dashboard (max 3)
@@ -9803,7 +11178,7 @@
         if (snapshot.length === 0) {
           dashGoalsSnapshot.innerHTML = '<p style="opacity:0.7;">No goals yet</p>';
         } else {
-          dashGoalsSnapshot.innerHTML = snapshot.map(goal => renderGoalCard(goal, progressMap, dataPointsMap, 'dash')).join('');
+          dashGoalsSnapshot.innerHTML = snapshot.map(goal => renderGoalCard(goal, explanationMap, explanationState, 'dash')).join('');
         }
       }
       
