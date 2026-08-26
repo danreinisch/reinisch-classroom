@@ -635,12 +635,56 @@
     const out = [];
 
     for (const line of lines) {
-      // Evaluate the visible text as well as the raw line so line-oriented
-      // HTML previews receive the same protection without touching HTML tags.
-      const visibleLine = line
-        .replace(/<[^>]*>/g, "")
-        .replace(/&nbsp;/gi, " ")
-        .trim();
+      // Derive visible text only for metadata classification.
+      // This is deliberately not an HTML sanitizer: Student Preview output
+      // is still encoded by renderStudentPreviewHtml() before insertion.
+      // Avoid regex-based tag stripping because malformed markup can make
+      // multi-character sanitization incomplete.
+      const visibleLine = (() => {
+        let text = "";
+        let insideTag = false;
+        let quote = "";
+
+        for (const character of line) {
+          if (!insideTag) {
+            if (character === "<") {
+              insideTag = true;
+              quote = "";
+            } else {
+              text += character;
+            }
+
+            continue;
+          }
+
+          if (quote) {
+            if (character === quote) {
+              quote = "";
+            }
+
+            continue;
+          }
+
+          if (
+            character === '"' ||
+            character === "'"
+          ) {
+            quote = character;
+            continue;
+          }
+
+          if (character === ">") {
+            insideTag = false;
+          }
+        }
+
+        return text
+          .split("&nbsp;")
+          .join(" ")
+          .split("\u00a0")
+          .join(" ")
+          .trim();
+      })();
 
       if (
         labeledTeacherMetadataRe.test(
