@@ -605,32 +605,98 @@
   function stripTeacherTags(text) {
     const raw = String(text || "");
     const lines = raw.split(/\r?\n/);
-    // Enhanced regex to catch ALL tag formats:
+
+    // Student Preview hides teacher-only mapping metadata while preserving
+    // ordinary student directions and the complete stored draft source.
+    //
+    // Inline tags:
     // - [MLS: code], [MLS.code]
     // - [DESE: code], [DESE: MLS.code]
     // - [IG: code], [IEP: code]
-    const tagRe = /\[\s*(?:(?:DESE|MLS)\s*[.:]\s*[^\]]+|(?:IG|IEP)\s*:\s*[^\]]+)\s*\]/gi;
+    // - [IO: child-objective-code]
+    const tagRe =
+      /\[\s*(?:(?:DESE|MLS)\s*[.:]\s*[^\]]+|(?:IG|IEP|IO)\s*:\s*[^\]]+)\s*\]/gi;
+
+    // Explicit child-objective blocks are teacher-only. Match only the
+    // structural heading/component shapes so normal student-facing prose
+    // containing words such as "objective" remains untouched.
+    const objectiveComponentHeadingRe =
+      /^\s*Objective\s+Components?\s*:\s*$/i;
+
+    const objectiveComponentLineRe =
+      /^\s*(?:[-*]\s*)?\[\s*IO\s*:\s*[^\]]+\]\s*.*$/i;
+
+    const objectiveMaxLineRe =
+      /^\s*Objective\s+Max\s*:\s*.*$/i;
+
+    const labeledTeacherMetadataRe =
+      /^\s*(?:DESE\s+Standards?(?:\(s\))?|IEP\s+Goal(?:\s+Codes?)?(?:\(s\))?)\s*:/i;
+
     const out = [];
+
     for (const line of lines) {
-      // Skip entire line if it's a labeled format (DESE Standard(s): or IEP Goal Code(s): or IEP Goal(s):)
-      if (/^\s*(?:DESE\s+Standards?(?:\(s\))?|IEP\s+Goal(?:\s+Codes?)?(?:\(s\))?)\s*:/i.test(line)) {
-        continue; // Skip this line entirely
+      // Evaluate the visible text as well as the raw line so line-oriented
+      // HTML previews receive the same protection without touching HTML tags.
+      const visibleLine = line
+        .replace(/<[^>]*>/g, "")
+        .replace(/&nbsp;/gi, " ")
+        .trim();
+
+      if (
+        labeledTeacherMetadataRe.test(
+          visibleLine
+        ) ||
+        objectiveComponentHeadingRe.test(
+          visibleLine
+        ) ||
+        objectiveComponentLineRe.test(
+          visibleLine
+        ) ||
+        objectiveMaxLineRe.test(
+          visibleLine
+        )
+      ) {
+        continue;
       }
-      
+
       let cleaned = line
-        .replace(tagRe, "")
-        .replace(/[ \t]{2,}/g, " ")
+        .replace(
+          tagRe,
+          ""
+        )
+        .replace(
+          /[ \t]{2,}/g,
+          " "
+        )
         .trimEnd();
-      // Student View: strip common inline answer markers at end of option lines (✓/✔)
-      if (/^\s*[a-dA-D][.)]\s+/.test(cleaned))
-        cleaned = cleaned.replace(/[ \t]*\(?[✓✔]\)?\s*$/, "");
-      out.push(cleaned);
+
+      // Student View: strip common inline answer markers at the end of
+      // multiple-choice option lines.
+      if (
+        /^\s*[a-dA-D][.)]\s+/.test(
+          cleaned
+        )
+      ) {
+        cleaned = cleaned.replace(
+          /[ \t]*\(?[✓✔]\)?\s*$/,
+          ""
+        );
+      }
+
+      out.push(
+        cleaned
+      );
     }
+
     return out
       .join("\n")
-      .replace(/\n{4,}/g, "\n\n\n")
+      .replace(
+        /\n{4,}/g,
+        "\n\n\n"
+      )
       .trim();
   }
+
   // Join tag-only lines onto the preceding question line so auto-mapping can see them.
   // BUG 6 FIX: Make __rc_joinTagOnlyLines() more flexible - scan upward past blank lines
   function __rc_joinTagOnlyLines(text) {
