@@ -4304,6 +4304,64 @@
         color: #93c5fd;
       }
 
+      /* Activities */
+      .st-activity-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 360px));
+        gap: 18px;
+      }
+
+      .st-activity-card {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 190px;
+        padding: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.045);
+        color: inherit;
+        text-decoration: none;
+        transition:
+          transform 0.15s ease,
+          border-color 0.15s ease,
+          background 0.15s ease;
+      }
+
+      .st-activity-card:hover,
+      .st-activity-card:focus-visible {
+        transform: translateY(-2px);
+        border-color: rgba(96, 165, 250, 0.55);
+        background: rgba(96, 165, 250, 0.09);
+      }
+
+      .st-activity-card:focus-visible {
+        outline: 3px solid rgba(96, 165, 250, 0.38);
+        outline-offset: 3px;
+      }
+
+      .st-activity-card__icon {
+        font-size: 38px;
+        line-height: 1;
+      }
+
+      .st-activity-card__title {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      .st-activity-card__description {
+        margin: 0;
+        opacity: 0.78;
+        line-height: 1.5;
+      }
+
+      .st-activity-card__open {
+        margin-top: auto;
+        font-weight: 700;
+        color: #93c5fd;
+      }
+
       /* Tab System */
       .st-tab-nav {
         display: flex;
@@ -6377,6 +6435,7 @@
             <a href="#" data-tab="assignments"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg></span><span class="tc-label">Assignments</span></a>
             <a href="#" data-tab="library"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"></path><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"></path></svg></span><span class="tc-label">Library</span></a>
             <a href="#" data-tab="resources"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span><span class="tc-label">Resources</span></a>
+            <a href="#" data-tab="activities"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg></span><span class="tc-label">Activities</span></a>
             <a href="#" data-tab="grades"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span><span class="tc-label">Grades</span></a>
             <a href="#" data-tab="goals"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></span><span class="tc-label">Goals</span></a>
             <a href="#" data-tab="settings"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span><span class="tc-label">Settings</span></a>
@@ -6483,6 +6542,7 @@
               <button class="st-tab-link" data-tab="assignments"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Assignments</button>
               <button class="st-tab-link" data-tab="library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"></path><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"></path></svg> Library</button>
               <button class="st-tab-link" data-tab="resources"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> Resources</button>
+              <button class="st-tab-link" data-tab="activities"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg> Activities</button>
               <button class="st-tab-link" data-tab="grades"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Grades</button>
               <button class="st-tab-link" data-tab="goals"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg> Goals</button>
               <button class="st-tab-link" data-tab="settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Settings</button>
@@ -6655,6 +6715,37 @@
               </div>
             </div>
 
+            <!-- Tab: Activities -->
+            <div id="tabActivities" class="st-tab-panel">
+              <div class="st-dashboard-content">
+                <h1 style="margin-top:0;">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:middle;margin-right:10px;">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                  </svg>
+                  Activities
+                </h1>
+
+                <p style="opacity:0.8; margin-bottom:24px;">
+                  Optional classroom activities for practice, focus, and a little fun.
+                </p>
+
+                <div class="st-activity-grid">
+                  <a
+                    class="st-activity-card"
+                    href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-03%2F&amp;return=%2Fstudent%2F%3Ftab%3Dactivities&amp;title=Word%20Search&amp;activity=1"
+                  >
+                    <div class="st-activity-card__icon" aria-hidden="true">🔎</div>
+                    <h2 class="st-activity-card__title">Word Search</h2>
+                    <p class="st-activity-card__description">
+                      Choose from 30 themes and hunt for hidden words. Works with a mouse, touchscreen, or Chromebook.
+                    </p>
+                    <span class="st-activity-card__open">Open Word Search →</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
             <!-- Tab: Grades -->
             <div id="tabGrades" class="st-tab-panel">
               <div class="st-dashboard-content">
@@ -6717,6 +6808,6 @@
     <script src="/web/rc-modal.js?v=20260418-catalog"></script>
     <script src="/assets/vendor/jszip/jszip.min.js"></script>
     <script src="/assets/vendor/epubjs/epub.min.js"></script>
-    <script defer src="/web/student-portal-init.js?v=202608251228"></script>
+    <script defer src="/web/student-portal-init.js?v=20260826"></script>
   </body>
 </html>
