@@ -5643,6 +5643,15 @@
       // Setup tab switching
       setupTabSwitching();
 
+      // Honor an explicit requested tab, such as a Viewer return
+      // to Student Portal Activities.
+      const requestedTab =
+        new URLSearchParams(window.location.search).get('tab');
+
+      if (requestedTab) {
+        switchToTab(requestedTab);
+      }
+
       // Setup student settings (change password)
       initStudentSettings();
       
@@ -5697,6 +5706,7 @@
       'assignments': 'tabAssignments',
       'library': 'tabLibrary',
       'resources': 'tabResources',
+      'activities': 'tabActivities',
       'grades': 'tabGrades',
       'settings': 'tabSettings'
     };

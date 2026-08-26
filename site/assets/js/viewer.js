@@ -9,6 +9,7 @@
   // Elements
   const iframe = document.getElementById('contentIframe');
   const closeBtn = document.getElementById('closeBtn');
+  const exitActivityBtn = document.getElementById('exitActivityBtn');
   const presentationModeBtn = document.getElementById('presentationModeBtn');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
   const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
@@ -57,6 +58,23 @@
     const params = new URLSearchParams(window.location.search);
     let src = params.get('src');
     returnUrl = params.get('return');
+
+    // Activities and Word Search get a large touch-friendly exit.
+    // Word Search receives it even when opened from the teacher/toolkit
+    // route so classroom displays are never trapped in the activity.
+    const isActivity =
+      params.get('activity') === '1';
+
+    const isWordSearch =
+      src &&
+      src.startsWith(
+        '/presentations/language-arts-toolkit/presentation-03/'
+      );
+
+    if (exitActivityBtn) {
+      exitActivityBtn.hidden =
+        !(isActivity || isWordSearch);
+    }
 
     if (!src) {
       showError('No content source provided', 'Please provide a src parameter in the URL.');
@@ -170,6 +188,11 @@
 
     // Close button
     closeBtn.addEventListener('click', handleClose);
+
+    // Large touch-friendly activity exit control
+    if (exitActivityBtn) {
+      exitActivityBtn.addEventListener('click', handleClose);
+    }
 
     // Presentation mode button
     presentationModeBtn.addEventListener('click', togglePresentationMode);

@@ -9,6 +9,7 @@ html.rc-display-safe .pv-bar {
 }
 
 html.rc-display-safe .pv-traffic-lights,
+html.rc-display-safe .viewer-exit-activity,
 html.rc-display-safe .pv-title,
 html.rc-display-safe .pv-clock,
 html.rc-display-safe .viewer-btn-sidebar {
@@ -29,6 +30,12 @@ html.rc-display-safe .pv-dot {
 html.rc-display-safe .pv-dot-red { background: #ff5f57 !important; }
 html.rc-display-safe .pv-dot-yellow { background: #ffbd2e !important; }
 html.rc-display-safe .pv-dot-green { background: #28c840 !important; }
+
+html.rc-display-safe .viewer-exit-activity {
+  background: #172033 !important;
+  border-color: rgba(255,255,255,.22) !important;
+  transition: none !important;
+}
 
 html.rc-display-safe .viewer-btn-sidebar {
   background: #172033 !important;
