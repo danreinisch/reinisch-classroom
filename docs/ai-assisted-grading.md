@@ -2,16 +2,19 @@
 
 ## Overview
 
-The Review page has four AI-assisted features that work together to streamline grading:
+The Review page has five AI-assisted features that work together to streamline grading and evidence review:
 
-1. **✨ Suggest Grade** — Per-item AI scoring for constructed-response questions
-2. **✨ Suggest Feedback** — AI-generated holistic assignment feedback in the Grade section
-3. **🤖 Auto-Grade All** — Batch AI grading for all "Needs Review" submissions in one click
-4. **✅ Finalize All Reviewed** — Batch finalize for all submissions in the "Reviewed" tab
+1. **✨ Suggest Grade** — Per-item academic AI scoring for constructed-response questions
+2. **✨ Suggest IEP Evidence** — Per-item child-objective evidence suggestions for already-mapped components
+3. **✨ Suggest Feedback** — AI-generated holistic assignment feedback in the Grade section
+4. **🤖 Auto-Grade All** — Batch academic AI grading for all "Needs Review" submissions in one click
+5. **✅ Finalize All Reviewed** — Batch finalize for all submissions in the "Reviewed" tab
 
-**Key design principle:** AI suggestions never auto-save without explicit teacher action. Teachers
-always have the final word. The Auto-Grade All and Finalize All Reviewed actions each require a
-confirmation step before proceeding.
+**Key design principle:** AI assistance never replaces teacher judgment. Existing academic
+workflows may persist academic suggestions as described below, but **Suggest IEP Evidence is
+strictly non-mutating**: it first displays suggestions, then requires **Apply Suggestions** to copy
+them into the existing Review controls, and objective evidence is not persisted until the teacher
+uses the normal item **Save** action.
 
 ### Two-Layer Feedback Model
 
@@ -86,9 +89,55 @@ Backend builds IEP-aware prompt → calls gpt-4o-mini → parses JSON response
         ↓
 Returns { suggested_score, suggested_note, rationale }
         ↓
-tc-review.js populates Score input + Teacher Note textarea
-  (teacher edits and saves manually — no auto-save)
+tc-review.js populates Score input + Teacher Note textarea.
+The current academic Suggest Grade workflow may auto-save the suggested academic score through
+teacher-review-save. The teacher can still edit and re-save that academic result. This behavior is
+separate from child-objective evidence and never writes objective-component evidence.
 ```
+
+### ✨ Suggest IEP Evidence (per-item objective evidence)
+
+This button appears only inside the **IEP Objective Evidence** section of a written-response item that already has authoritative child-objective mappings.
+
+```
+Teacher clicks "✨ Suggest IEP Evidence"
+        ↓
+Browser sends ONLY:
+  • submissionId
+  • itemId
+        ↓
+POST /.netlify/functions/teacher-ai-suggest-objective-evidence
+        ↓
+Server independently verifies teacher ownership and resolves:
+  • submission → assignment instance → student
+  • teacher-owned class + active enrollment
+  • exact assignment item
+  • authoritative assignment_item_objectives mappings
+  • official goal_objectives wording / criteria / measurement context
+        ↓
+Server sends scrubbed response text + mapped objective context to OpenAI
+        ↓
+Review displays one validated suggestion per component_order
+        ↓
+Teacher clicks "Apply Suggestions"
+        ↓
+Existing objective score / Not Scorable controls are populated locally
+        ↓
+Teacher reviews or edits those controls
+        ↓
+Teacher clicks the existing item Save button
+        ↓
+Only then can objective evidence or disposition be persisted
+```
+
+Safeguards:
+
+- AI cannot create or infer objective mappings.
+- The browser cannot supply objective UUID, max, label, wording, or criteria.
+- A measured `0` is legitimate scored evidence; **Not Scorable is never converted to 0**.
+- Conflicting official criterion fields remain separate; AI does not choose which criterion controls.
+- **Suggest IEP Evidence and Apply Suggestions perform no database write.**
+- **Auto-Grade All never invokes objective-evidence AI.**
 
 ### ✨ Suggest Feedback (overall assignment)
 
@@ -199,6 +248,20 @@ Only the following data is sent to the OpenAI API:
 | Rubric tier definitions | `"5 — Exemplary: Thorough, evidence-based"` |
 | Item label | `"Q6"` |
 | IEP goal descriptions | `"Math Computation — Student will identify slope and intercept"` |
+
+**Suggest IEP Evidence (per-item):**
+
+| Data sent | Example |
+|---|---|
+| Scrubbed student response text | `"The character changes because…"` |
+| Item label / question text | `"Q6 — Explain the character's decision"` |
+| Pseudonymous official objective code | `S###.CG#.O#` |
+| Official objective wording | `"Provide three supporting details"` |
+| Separate objective/mastery/parent criterion fields | Preserved separately |
+| Component label and evidence scale | `"Supporting Details", 0–3` |
+
+The endpoint does **not** send submission UUIDs, assignment-instance UUIDs, student UUIDs,
+objective UUIDs, class information, or teacher identity to OpenAI.
 
 **Suggest Feedback / Auto-Grade (overall):**
 

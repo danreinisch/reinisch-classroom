@@ -1464,6 +1464,42 @@
                     </div>
                   `;
                 }).join('')}
+
+                <div
+                  class="rv-objective-ai-tools"
+                  style="margin-top:12px;padding-top:12px;border-top:1px solid var(--rc-glass-border);">
+
+                  <button
+                    class="rv-btn rv-btn-suggest rv-btn-suggest-objective-evidence"
+                    data-item-id="${escapeHtml(item.id)}"
+                    data-submission-id="${escapeHtml(submission.id)}"
+                    aria-label="Get AI suggestions for IEP objective evidence">
+                    ✨ Suggest IEP Evidence
+                  </button>
+
+                  <div
+                    class="rv-objective-ai-suggestions"
+                    data-item-id="${escapeHtml(item.id)}"
+                    data-submission-id="${escapeHtml(submission.id)}"
+                    aria-live="polite"
+                    style="margin-top:10px;">
+
+                    <div class="rv-objective-ai-suggestion-list"></div>
+
+                    <button
+                      class="rv-btn rv-btn-apply-objective-suggestions"
+                      data-item-id="${escapeHtml(item.id)}"
+                      data-submission-id="${escapeHtml(submission.id)}"
+                      hidden>
+                      Apply Suggestions
+                    </button>
+
+                    <div
+                      class="rv-objective-ai-status rv-hint"
+                      role="status"
+                      style="margin-top:8px;"></div>
+                  </div>
+                </div>
               </div>
             `
             : '';
@@ -1900,7 +1936,35 @@
           return;
         }
         
-        // Handle AI suggest button click
+        // Handle objective-evidence AI suggestion separately from
+        // the existing academic Suggest Grade path.
+        const objectiveSuggestBtn =
+          e.target.closest(
+            '.rv-btn-suggest-objective-evidence'
+          );
+
+        if (objectiveSuggestBtn) {
+          await handleAiSuggestObjectiveEvidence(
+            objectiveSuggestBtn
+          );
+          return;
+        }
+
+        // Applying AI objective suggestions only fills the existing
+        // teacher controls. Persistence still requires the normal Save.
+        const applyObjectiveSuggestionsBtn =
+          e.target.closest(
+            '.rv-btn-apply-objective-suggestions'
+          );
+
+        if (applyObjectiveSuggestionsBtn) {
+          handleApplyObjectiveEvidenceSuggestions(
+            applyObjectiveSuggestionsBtn
+          );
+          return;
+        }
+
+        // Handle existing academic AI suggest button click.
         const suggestBtn = e.target.closest('.rv-btn-suggest');
         if (suggestBtn) {
           if (suggestBtn.classList.contains('rv-btn-suggest-feedback')) {
@@ -2613,6 +2677,737 @@
       : `Auto-graded ${processed} submission${processed !== 1 ? 's' : ''}`;
     showToast(summaryMsg, failed > 0 ? '#f59e0b' : '#22c55e', '#0b1220');
     await render();
+  }
+
+  function validateObjectiveAiSuggestionsForCard(
+    card,
+    suggestions
+  ) {
+    if (!card) {
+      throw new Error(
+        'Objective evidence response card is unavailable'
+      );
+    }
+
+    const componentInputs =
+      Array.from(
+        card.querySelectorAll(
+          '.rv-objective-component-input'
+        )
+      );
+
+    const dispositionInputs =
+      Array.from(
+        card.querySelectorAll(
+          '.rv-objective-not-scorable-input'
+        )
+      );
+
+    if (
+      componentInputs.length === 0 ||
+      componentInputs.length !==
+        dispositionInputs.length
+    ) {
+      throw new Error(
+        'Objective evidence controls are incomplete'
+      );
+    }
+
+    if (
+      !Array.isArray(suggestions) ||
+      suggestions.length !==
+        componentInputs.length
+    ) {
+      throw new Error(
+        'AI suggestion set does not match mapped components'
+      );
+    }
+
+    const scoreByOrder =
+      new Map(
+        componentInputs.map(
+          input => [
+            Number(
+              input.dataset.componentOrder
+            ),
+            input,
+          ]
+        )
+      );
+
+    const dispositionByOrder =
+      new Map(
+        dispositionInputs.map(
+          input => [
+            Number(
+              input.dataset.componentOrder
+            ),
+            input,
+          ]
+        )
+      );
+
+    const seen =
+      new Set();
+
+    const normalized =
+      suggestions.map(
+        suggestion => {
+          if (
+            !suggestion ||
+            typeof suggestion !==
+              'object' ||
+            Array.isArray(suggestion)
+          ) {
+            throw new Error(
+              'Invalid AI objective suggestion'
+            );
+          }
+
+          const componentOrder =
+            Number(
+              suggestion.component_order
+            );
+
+          if (
+            !Number.isInteger(
+              componentOrder
+            ) ||
+            seen.has(componentOrder)
+          ) {
+            throw new Error(
+              'Invalid AI objective component order'
+            );
+          }
+
+          seen.add(componentOrder);
+
+          const scoreInput =
+            scoreByOrder.get(
+              componentOrder
+            );
+
+          const dispositionInput =
+            dispositionByOrder.get(
+              componentOrder
+            );
+
+          if (
+            !scoreInput ||
+            !dispositionInput
+          ) {
+            throw new Error(
+              'AI suggestion references an unknown objective component'
+            );
+          }
+
+          const authoritativeMax =
+            Number(
+              scoreInput.max
+            );
+
+          const responseMax =
+            Number(
+              suggestion.objective_max
+            );
+
+          if (
+            !Number.isFinite(
+              authoritativeMax
+            ) ||
+            authoritativeMax <= 0 ||
+            !Number.isFinite(
+              responseMax
+            ) ||
+            responseMax !==
+              authoritativeMax
+          ) {
+            throw new Error(
+              'AI objective max does not match the Review control'
+            );
+          }
+
+          const disposition =
+            suggestion
+              .suggested_disposition;
+
+          if (
+            disposition !==
+              'scored' &&
+            disposition !==
+              'not_scorable'
+          ) {
+            throw new Error(
+              'Invalid AI objective disposition'
+            );
+          }
+
+          let suggestedEarned =
+            null;
+
+          if (
+            disposition ===
+            'not_scorable'
+          ) {
+            if (
+              suggestion.suggested_earned !==
+                null &&
+              suggestion.suggested_earned !==
+                undefined
+            ) {
+              throw new Error(
+                'Not Scorable AI suggestion cannot contain a score'
+              );
+            }
+          } else {
+            suggestedEarned =
+              Number(
+                suggestion
+                  .suggested_earned
+              );
+
+            if (
+              !Number.isFinite(
+                suggestedEarned
+              ) ||
+              suggestedEarned < 0 ||
+              suggestedEarned >
+                authoritativeMax
+            ) {
+              throw new Error(
+                'AI objective score is outside the Review range'
+              );
+            }
+          }
+
+          return {
+            component_order:
+              componentOrder,
+            component_label:
+              String(
+                suggestion
+                  .component_label ||
+                'Objective component'
+              ),
+            objective_max:
+              authoritativeMax,
+            suggested_disposition:
+              disposition,
+            suggested_earned:
+              suggestedEarned,
+            evidence_excerpt:
+              String(
+                suggestion
+                  .evidence_excerpt ||
+                ''
+              ),
+            rationale:
+              String(
+                suggestion
+                  .rationale ||
+                ''
+              ),
+          };
+        }
+      )
+      .sort(
+        (a, b) =>
+          a.component_order -
+          b.component_order
+      );
+
+    if (
+      normalized.length !==
+        scoreByOrder.size ||
+      normalized.some(
+        suggestion =>
+          !scoreByOrder.has(
+            suggestion
+              .component_order
+          )
+      )
+    ) {
+      throw new Error(
+        'AI suggestion coverage is incomplete'
+      );
+    }
+
+    return normalized;
+  }
+
+  function renderObjectiveAiSuggestions(
+    card,
+    suggestions
+  ) {
+    const panel =
+      card &&
+      card.querySelector(
+        '.rv-objective-ai-suggestions'
+      );
+
+    const list =
+      panel &&
+      panel.querySelector(
+        '.rv-objective-ai-suggestion-list'
+      );
+
+    const applyButton =
+      panel &&
+      panel.querySelector(
+        '.rv-btn-apply-objective-suggestions'
+      );
+
+    const status =
+      panel &&
+      panel.querySelector(
+        '.rv-objective-ai-status'
+      );
+
+    if (
+      !panel ||
+      !list ||
+      !applyButton ||
+      !status
+    ) {
+      throw new Error(
+        'Objective AI suggestion panel is unavailable'
+      );
+    }
+
+    const normalized =
+      validateObjectiveAiSuggestionsForCard(
+        card,
+        suggestions
+      );
+
+    list.replaceChildren();
+
+    for (
+      const suggestion
+      of normalized
+    ) {
+      const row =
+        document.createElement(
+          'div'
+        );
+
+      row.className =
+        'rv-objective-ai-suggestion-row';
+
+      row.style.cssText =
+        'margin:8px 0;padding:10px 12px;' +
+        'background:rgba(255,255,255,0.04);' +
+        'border:1px solid var(--rc-glass-border);' +
+        'border-radius:var(--rc-radius-sm);';
+
+      const heading =
+        document.createElement(
+          'div'
+        );
+
+      heading.style.fontWeight =
+        '600';
+
+      const resultLabel =
+        suggestion
+          .suggested_disposition ===
+          'not_scorable'
+          ? 'Not Scorable'
+          : (
+              `${suggestion.suggested_earned}` +
+              ` / ${suggestion.objective_max}`
+            );
+
+      heading.textContent =
+        `${suggestion.component_label}: ${resultLabel}`;
+
+      row.appendChild(
+        heading
+      );
+
+      if (
+        suggestion
+          .evidence_excerpt
+      ) {
+        const evidence =
+          document.createElement(
+            'div'
+          );
+
+        evidence.className =
+          'rv-hint';
+
+        evidence.style.marginTop =
+          '6px';
+
+        evidence.textContent =
+          `Evidence observed: ${suggestion.evidence_excerpt}`;
+
+        row.appendChild(
+          evidence
+        );
+      }
+
+      if (
+        suggestion.rationale
+      ) {
+        const rationale =
+          document.createElement(
+            'div'
+          );
+
+        rationale.className =
+          'rv-hint';
+
+        rationale.style.marginTop =
+          '4px';
+
+        rationale.textContent =
+          `AI rationale: ${suggestion.rationale}`;
+
+        row.appendChild(
+          rationale
+        );
+      }
+
+      list.appendChild(
+        row
+      );
+    }
+
+    panel._objectiveAiSuggestions =
+      normalized;
+
+    applyButton.hidden =
+      false;
+
+    status.textContent =
+      'AI suggestion only — review these judgments before applying them to the controls.';
+  }
+
+  async function handleAiSuggestObjectiveEvidence(
+    button
+  ) {
+    const submissionId =
+      button.dataset.submissionId;
+
+    const itemId =
+      button.dataset.itemId;
+
+    const card =
+      button.closest(
+        '.rv-response-card'
+      );
+
+    const panel =
+      card &&
+      card.querySelector(
+        '.rv-objective-ai-suggestions'
+      );
+
+    const list =
+      panel &&
+      panel.querySelector(
+        '.rv-objective-ai-suggestion-list'
+      );
+
+    const applyButton =
+      panel &&
+      panel.querySelector(
+        '.rv-btn-apply-objective-suggestions'
+      );
+
+    const status =
+      panel &&
+      panel.querySelector(
+        '.rv-objective-ai-status'
+      );
+
+    if (
+      !submissionId ||
+      !itemId ||
+      !card ||
+      !panel ||
+      !list ||
+      !applyButton ||
+      !status
+    ) {
+      return;
+    }
+
+    panel._objectiveAiSuggestions =
+      null;
+
+    list.replaceChildren();
+
+    applyButton.hidden =
+      true;
+
+    status.textContent =
+      'Requesting evidence suggestions…';
+
+    const originalText =
+      button.textContent.trim();
+
+    button.textContent =
+      '⏳ Reviewing IEP Evidence...';
+
+    button.disabled =
+      true;
+
+    try {
+      const response =
+        await fetch(
+          '/.netlify/functions/teacher-ai-suggest-objective-evidence',
+          {
+            method:
+              'POST',
+            credentials:
+              'same-origin',
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+            body:
+              JSON.stringify({
+                submissionId,
+                itemId:
+                  String(itemId),
+              }),
+          }
+        );
+
+      const data =
+        await response
+          .json()
+          .catch(
+            () => null
+          );
+
+      if (!response.ok) {
+        if (
+          response.status ===
+          503
+        ) {
+          throw new Error(
+            'AI suggestions are not configured.'
+          );
+        }
+
+        throw new Error(
+          data &&
+          typeof data.error ===
+            'string'
+            ? data.error
+            : 'Could not get IEP evidence suggestions.'
+        );
+      }
+
+      renderObjectiveAiSuggestions(
+        card,
+        data &&
+        data.suggestions
+      );
+    } catch (error) {
+      console.error(
+        '[tc-review] IEP evidence suggestion error:',
+        error
+      );
+
+      panel._objectiveAiSuggestions =
+        null;
+
+      list.replaceChildren();
+
+      applyButton.hidden =
+        true;
+
+      status.textContent =
+        error &&
+        error.message
+          ? error.message
+          : 'Could not get IEP evidence suggestions. Review manually.';
+    } finally {
+      button.textContent =
+        originalText;
+
+      button.disabled =
+        false;
+    }
+  }
+
+  function handleApplyObjectiveEvidenceSuggestions(
+    button
+  ) {
+    const card =
+      button.closest(
+        '.rv-response-card'
+      );
+
+    const panel =
+      button.closest(
+        '.rv-objective-ai-suggestions'
+      );
+
+    const status =
+      panel &&
+      panel.querySelector(
+        '.rv-objective-ai-status'
+      );
+
+    if (
+      !card ||
+      !panel ||
+      !status ||
+      !Array.isArray(
+        panel._objectiveAiSuggestions
+      )
+    ) {
+      return;
+    }
+
+    let suggestions;
+
+    try {
+      suggestions =
+        validateObjectiveAiSuggestionsForCard(
+          card,
+          panel._objectiveAiSuggestions
+        );
+    } catch (error) {
+      console.error(
+        '[tc-review] Could not apply IEP evidence suggestions:',
+        error
+      );
+
+      status.textContent =
+        'Suggestions no longer match the Review controls. Request them again.';
+
+      return;
+    }
+
+    const scoreByOrder =
+      new Map(
+        Array.from(
+          card.querySelectorAll(
+            '.rv-objective-component-input'
+          )
+        ).map(
+          input => [
+            Number(
+              input.dataset.componentOrder
+            ),
+            input,
+          ]
+        )
+      );
+
+    const dispositionByOrder =
+      new Map(
+        Array.from(
+          card.querySelectorAll(
+            '.rv-objective-not-scorable-input'
+          )
+        ).map(
+          input => [
+            Number(
+              input.dataset.componentOrder
+            ),
+            input,
+          ]
+        )
+      );
+
+    for (
+      const suggestion
+      of suggestions
+    ) {
+      const scoreInput =
+        scoreByOrder.get(
+          suggestion
+            .component_order
+        );
+
+      const dispositionInput =
+        dispositionByOrder.get(
+          suggestion
+            .component_order
+        );
+
+      if (
+        !scoreInput ||
+        !dispositionInput
+      ) {
+        status.textContent =
+          'Suggestions no longer match the Review controls. Request them again.';
+        return;
+      }
+
+      if (
+        suggestion
+          .suggested_disposition ===
+        'not_scorable'
+      ) {
+        dispositionInput.checked =
+          true;
+
+        scoreInput.value =
+          '';
+
+        scoreInput.disabled =
+          true;
+      } else {
+        dispositionInput.checked =
+          false;
+
+        scoreInput.disabled =
+          false;
+
+        scoreInput.value =
+          String(
+            suggestion
+              .suggested_earned
+          );
+      }
+
+      scoreInput.classList.add(
+        'rv-ai-suggested'
+      );
+
+      dispositionInput
+        .closest(
+          '.objective-review-not-scorable'
+        )
+        ?.classList.add(
+          'rv-ai-suggested'
+        );
+
+      setTimeout(
+        () => {
+          scoreInput.classList.remove(
+            'rv-ai-suggested'
+          );
+
+          dispositionInput
+            .closest(
+              '.objective-review-not-scorable'
+            )
+            ?.classList.remove(
+              'rv-ai-suggested'
+            );
+        },
+        2000
+      );
+    }
+
+    status.textContent =
+      'Applied to the Review controls — inspect or edit them, then use the existing Save button when you are ready.';
+
+    showToast(
+      'IEP evidence suggestions applied to the controls. Review before saving.',
+      '#22c55e',
+      '#0b1220'
+    );
   }
 
   // Handle AI-suggested overall feedback for a submission
