@@ -1915,7 +1915,8 @@
 
   async function loadObjectiveProgressForStudent(
     studentCode,
-    studentGoals
+    studentGoals,
+    quarterOverride = null
   ) {
     /*
      * Exact zero-fanout compatibility:
@@ -1931,7 +1932,9 @@
     }
 
     const quarter =
-      selectedQuarter || getCurrentQuarter();
+      quarterOverride ||
+      selectedQuarter ||
+      getCurrentQuarter();
 
     const range =
       getQuarterDateRange(quarter);
@@ -4305,6 +4308,407 @@
   }
 
   /**
+   * Build read-only child-objective visibility for one parent goal
+   * on the Progress tab.
+   *
+   * Legacy parent progress remains unchanged above this panel.
+   * This panel consumes only the existing signed objective-progress
+   * bundle and never writes objective evidence.
+   */
+  function buildProgressObjectiveSummaryEl(
+    goal,
+    entries,
+    objectiveParent,
+    objectiveState
+  ) {
+    const definitions =
+      Array.isArray(goal?.objectives)
+        ? goal.objectives
+            .slice()
+            .sort((a, b) => {
+              const aNumber =
+                Number(a?.objective_number) || 0;
+              const bNumber =
+                Number(b?.objective_number) || 0;
+
+              return (
+                aNumber - bNumber ||
+                String(a?.code || '')
+                  .localeCompare(
+                    String(b?.code || '')
+                  )
+              );
+            })
+        : [];
+
+    if (definitions.length === 0) {
+      return null;
+    }
+
+    const panel =
+      stEl(
+        'div',
+        'dt-progress-objectives'
+      );
+
+    panel.style.cssText =
+      'margin:10px 0 12px;padding:10px 12px;' +
+      'border:1px solid rgba(99,102,241,0.22);' +
+      'border-radius:8px;background:rgba(99,102,241,0.05);';
+
+    const heading =
+      stEl(
+        'div',
+        null,
+        'IEP Objective Progress'
+      );
+
+    heading.style.cssText =
+      'font-size:13px;font-weight:700;margin-bottom:7px;';
+
+    panel.appendChild(heading);
+
+    const formatPercent = value => {
+      const number = Number(value);
+
+      return Number.isFinite(number)
+        ? `${Math.round(number * 100) / 100}%`
+        : null;
+    };
+
+    /*
+     * Explicitly show legacy parent progress as its own metric.
+     * It is NOT the child-objective rollup.
+     */
+    const legacyCurrent =
+      entries.length > 0
+        ? Number(
+            entries[
+              entries.length - 1
+            ]?.value
+          )
+        : null;
+
+    const legacyDisplay =
+      Number.isFinite(legacyCurrent)
+        ? formatGoalValue(
+            legacyCurrent,
+            goal.measurement_type,
+            goal
+          )
+        : 'N/A';
+
+    const legacyLine =
+      stEl('div');
+
+    legacyLine.style.cssText =
+      'font-size:12px;margin-bottom:3px;';
+
+    const legacyLabel =
+      stEl(
+        'strong',
+        null,
+        'Legacy Parent Progress: '
+      );
+
+    legacyLine.appendChild(
+      legacyLabel
+    );
+
+    legacyLine.appendChild(
+      document.createTextNode(
+        legacyDisplay
+      )
+    );
+
+    panel.appendChild(
+      legacyLine
+    );
+
+    const stateAvailable =
+      objectiveState?.available === true;
+
+    const progressObjectives =
+      Array.isArray(
+        objectiveParent?.objectives
+      )
+        ? objectiveParent.objectives
+        : [];
+
+    const progressByCode =
+      new Map(
+        progressObjectives.map(
+          objective => [
+            String(
+              objective?.code || ''
+            )
+              .trim()
+              .toUpperCase(),
+            objective
+          ]
+        )
+      );
+
+    const measuredRaw =
+      Number(
+        objectiveParent
+          ?.coverage
+          ?.objectives_with_data
+      );
+
+    const totalRaw =
+      Number(
+        objectiveParent
+          ?.coverage
+          ?.total_objectives
+      );
+
+    const measured =
+      Number.isFinite(measuredRaw)
+        ? measuredRaw
+        : 0;
+
+    const total =
+      Number.isFinite(totalRaw) &&
+      totalRaw > 0
+        ? totalRaw
+        : definitions.length;
+
+    const rollupNumber =
+      Number(
+        objectiveParent?.percentage
+      );
+
+    const hasObjectiveRollup =
+      stateAvailable &&
+      objectiveParent?.source ===
+        'objective_rollup' &&
+      Number.isFinite(
+        rollupNumber
+      );
+
+    const rollupLine =
+      stEl('div');
+
+    rollupLine.style.cssText =
+      'font-size:12px;margin-bottom:8px;';
+
+    const rollupLabel =
+      stEl(
+        'strong',
+        null,
+        'Objective Rollup: '
+      );
+
+    rollupLine.appendChild(
+      rollupLabel
+    );
+
+    if (!stateAvailable) {
+      rollupLine.appendChild(
+        document.createTextNode(
+          'Unavailable'
+        )
+      );
+    } else {
+      const rollupText =
+        hasObjectiveRollup
+          ? formatPercent(
+              rollupNumber
+            )
+          : 'No Data';
+
+      rollupLine.appendChild(
+        document.createTextNode(
+          `${rollupText} — ` +
+          `${measured} of ${total} ` +
+          `objective${total === 1 ? '' : 's'} measured`
+        )
+      );
+    }
+
+    panel.appendChild(
+      rollupLine
+    );
+
+    if (!stateAvailable) {
+      const unavailable =
+        stEl(
+          'div',
+          null,
+          'Objective progress is currently unavailable; official objective definitions remain visible below.'
+        );
+
+      unavailable.style.cssText =
+        'font-size:11px;opacity:0.7;margin-bottom:6px;';
+
+      panel.appendChild(
+        unavailable
+      );
+    }
+
+    for (
+      const definition
+      of definitions
+    ) {
+      const code =
+        String(
+          definition?.code || ''
+        )
+          .trim()
+          .toUpperCase();
+
+      const progress =
+        progressByCode.get(code) ||
+        null;
+
+      const evidenceCount =
+        Number(
+          progress?.evidence_count
+        );
+
+      const hasEvidence =
+        stateAvailable &&
+        Number.isFinite(
+          evidenceCount
+        ) &&
+        evidenceCount > 0 &&
+        Number.isFinite(
+          Number(
+            progress?.percentage
+          )
+        );
+
+      const row =
+        stEl('div');
+
+      row.style.cssText =
+        'padding:7px 0;border-top:' +
+        '1px solid rgba(99,102,241,0.13);';
+
+      const top =
+        stEl('div');
+
+      top.style.cssText =
+        'display:flex;align-items:baseline;' +
+        'gap:6px;flex-wrap:wrap;';
+
+      const label =
+        stEl(
+          'strong',
+          null,
+          `O${Number(
+            definition?.objective_number
+          ) || ''}`
+        );
+
+      label.style.fontSize =
+        '12px';
+
+      top.appendChild(label);
+
+      const textEl =
+        stEl(
+          'span',
+          null,
+          definition?.objective_text ||
+            ''
+        );
+
+      textEl.style.fontSize =
+        '12px';
+
+      top.appendChild(textEl);
+
+      const codeEl =
+        stEl(
+          'span',
+          null,
+          code
+        );
+
+      codeEl.style.cssText =
+        'font-size:11px;opacity:0.58;';
+
+      top.appendChild(codeEl);
+
+      const value =
+        stEl('span');
+
+      value.style.cssText =
+        'margin-left:auto;font-size:12px;' +
+        'font-weight:700;white-space:nowrap;';
+
+      if (!stateAvailable) {
+        value.textContent =
+          'Unavailable';
+      } else if (!hasEvidence) {
+        value.textContent =
+          'No Data';
+      } else {
+        const earned =
+          Number(
+            progress?.earned
+          );
+
+        const max =
+          Number(
+            progress?.max
+          );
+
+        const fraction =
+          Number.isFinite(earned) &&
+          Number.isFinite(max)
+            ? ` · ${earned}/${max}`
+            : '';
+
+        value.textContent =
+          `${formatPercent(
+            progress.percentage
+          )}${fraction}`;
+      }
+
+      top.appendChild(value);
+      row.appendChild(top);
+
+      const detail =
+        stEl('div');
+
+      detail.style.cssText =
+        'margin-top:3px;font-size:11px;opacity:0.7;';
+
+      if (!stateAvailable) {
+        detail.textContent =
+          definition?.baseline != null
+            ? `Baseline: ${definition.baseline}`
+            : 'No objective progress available';
+      } else if (hasEvidence) {
+        detail.textContent =
+          `${evidenceCount} evidence point` +
+          `${evidenceCount === 1 ? '' : 's'} this quarter` +
+          (
+            definition?.baseline != null
+              ? ` · Baseline: ${definition.baseline}`
+              : ''
+          );
+      } else {
+        detail.textContent =
+          'No evidence this quarter' +
+          (
+            definition?.baseline != null
+              ? ` · Baseline: ${definition.baseline}`
+              : ''
+          );
+      }
+
+      row.appendChild(detail);
+      panel.appendChild(row);
+    }
+
+    return panel;
+  }
+
+  /**
    * Build a complete goal row element for the Progress tab.
    * ALL user-controlled data goes through textContent/setAttribute — no innerHTML with user data.
    * @param {Object} goal
@@ -4313,7 +4717,14 @@
    * @param {number} idx       Numeric index for sparkline gradient IDs
    * @returns {HTMLElement}
    */
-  function buildProgressGoalRowEl(goal, entries, studentCode, idx) {
+  function buildProgressGoalRowEl(
+    goal,
+    entries,
+    studentCode,
+    idx,
+    objectiveParent = null,
+    objectiveState = null
+  ) {
     const row = stEl('div', 'dt-goal-row');
     row.dataset.goal = goal.code;
     row.dataset.student = studentCode;
@@ -4366,8 +4777,23 @@
 
     row.appendChild(meta);
 
-    // Stats row
+    // Stats row — existing legacy parent-goal progress remains unchanged.
     row.appendChild(buildProgressStatsEl(goal, entries));
+
+    // Child-objective progress is shown separately from legacy parent progress.
+    const objectiveSummary =
+      buildProgressObjectiveSummaryEl(
+        goal,
+        entries,
+        objectiveParent,
+        objectiveState
+      );
+
+    if (objectiveSummary) {
+      row.appendChild(
+        objectiveSummary
+      );
+    }
 
     // Sparkline (numeric SVG — safe)
     if (goal.measurement_type !== 'Observation') {
@@ -4683,6 +5109,29 @@
     const activeGoals = studentGoals.filter(g => g.status !== 'archived');
     const quarter = progressTabQuarterMap.get(student.code) || getCurrentQuarter();
 
+    const objectiveState =
+      await loadObjectiveProgressForStudent(
+        student.code,
+        activeGoals,
+        quarter
+      );
+
+    const objectiveParentsByCode =
+      new Map(
+        (
+          Array.isArray(objectiveState?.parents)
+            ? objectiveState.parents
+            : []
+        ).map(parent => [
+          String(
+            parent?.parent_goal_code || ''
+          )
+            .trim()
+            .toUpperCase(),
+          parent
+        ])
+      );
+
     const wrapper = document.createElement('div');
     wrapper.dataset.progressStudent = student.code;
 
@@ -4729,8 +5178,30 @@
     }
 
     activeGoals.forEach((goal, idx) => {
-      const entries = getProgressEntriesForTab(student.code, goal.code, quarter);
-      const rowEl = buildProgressGoalRowEl(goal, entries, student.code, idx);
+      const entries =
+        getProgressEntriesForTab(
+          student.code,
+          goal.code,
+          quarter
+        );
+
+      const objectiveParent =
+        objectiveParentsByCode.get(
+          String(goal.code || '')
+            .trim()
+            .toUpperCase()
+        ) || null;
+
+      const rowEl =
+        buildProgressGoalRowEl(
+          goal,
+          entries,
+          student.code,
+          idx,
+          objectiveParent,
+          objectiveState
+        );
+
       wrapper.appendChild(rowEl);
     });
 

@@ -132,9 +132,15 @@ assert(
 
 assert(
   students.includes(
-    'selectedQuarter || getCurrentQuarter()'
-  ),
-  'objective enrichment must use selected quarter, with current-quarter fallback'
+    'quarterOverride'
+  ) &&
+    students.includes(
+      'selectedQuarter ||'
+    ) &&
+    students.includes(
+      'getCurrentQuarter()'
+    ),
+  'objective enrichment must support a Progress-tab quarter override while preserving selected/current-quarter fallback'
 );
 
 assert(
@@ -240,6 +246,84 @@ assert(
       'evidence'
     ),
   'Teacher objective row should show understandable evidence count/context'
+);
+
+/*
+ * Students → Progress reuses the same signed objective bundle.
+ *
+ * Legacy parent progress remains visible and separate. Child-objective
+ * percentages/earned-max values are display-only and never feed the
+ * existing parent progress calculations.
+ */
+const progressObjectiveRenderer =
+  functionSlice(
+    students,
+    'buildProgressObjectiveSummaryEl',
+    'buildProgressGoalRowEl'
+  );
+
+assert(
+  progressObjectiveRenderer.includes(
+    'Legacy Parent Progress'
+  ),
+  'Progress objective panel must clearly label legacy parent progress'
+);
+
+assert(
+  progressObjectiveRenderer.includes(
+    'Objective Rollup'
+  ),
+  'Progress objective panel must separately label the child-objective rollup'
+);
+
+assert(
+  progressObjectiveRenderer.includes(
+    'No Data'
+  ),
+  'Progress objective panel must preserve No Data semantics'
+);
+
+assert(
+  progressObjectiveRenderer.includes(
+    'evidence_count'
+  ) &&
+    progressObjectiveRenderer.includes(
+      'earned'
+    ) &&
+    progressObjectiveRenderer.includes(
+      'max'
+    ),
+  'Progress objective rows must display server-derived evidence context'
+);
+
+const progressTabRenderer =
+  functionSlice(
+    students,
+    'renderStudentProgressTab'
+  );
+
+assert(
+  progressTabRenderer.includes(
+    'loadObjectiveProgressForStudent'
+  ),
+  'Progress tab must reuse the existing signed objective-progress loader'
+);
+
+assert(
+  progressTabRenderer.includes(
+    'activeGoals'
+  ) &&
+    progressTabRenderer.includes(
+      'quarter'
+    ),
+  'Progress objective read must be scoped to the expanded student goals and selected Progress quarter'
+);
+
+assert(
+  progressTabRenderer.includes(
+    'objectiveParentsByCode'
+  ),
+  'Progress tab must distribute signed parent objective bundles by canonical parent goal code'
 );
 
 /*
