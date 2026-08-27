@@ -354,6 +354,59 @@ async function fetchObjectiveEvidence(
     : [];
 }
 
+
+async function fetchObjectiveDispositions(
+  instanceId,
+  itemIds
+) {
+  if (itemIds.length === 0) {
+    return [];
+  }
+
+  const response =
+    await rest(
+      '/rest/v1/objective_review_dispositions' +
+        '?select=' +
+        [
+          'item_id',
+          'objective_id',
+          'disposition',
+        ].join(',') +
+        `&assignment_instance_id=eq.${encodeURIComponent(instanceId)}` +
+        '&item_id=in.(' +
+        itemIds
+          .map(id =>
+            encodeURIComponent(
+              String(id)
+            )
+          )
+          .join(',') +
+        ')'
+    );
+
+  if (
+    !response ||
+    response.ok !== true
+  ) {
+    console.warn(
+      '[teacher-review-submission-answers] ' +
+      'Objective disposition enrichment failed'
+    );
+
+    return [];
+  }
+
+  const body =
+    await response
+      .json()
+      .catch(() => []);
+
+  return Array.isArray(body)
+    ? body
+    : [];
+}
+
+
 async function enrichObjectiveComponents(
   answers,
   instanceId
@@ -387,12 +440,17 @@ async function enrichObjectiveComponents(
   const [
     objectiveMappings,
     objectiveEvidence,
+    objectiveDispositions,
   ] =
     await Promise.all([
       fetchObjectiveMappings(
         objectiveCandidateItemIds
       ),
       fetchObjectiveEvidence(
+        instanceId,
+        objectiveCandidateItemIds
+      ),
+      fetchObjectiveDispositions(
         instanceId,
         objectiveCandidateItemIds
       ),
@@ -435,6 +493,21 @@ async function enrichObjectiveComponents(
     );
   }
 
+  const dispositionsByIdentity =
+    new Map();
+
+  for (
+    const disposition
+    of objectiveDispositions
+  ) {
+    dispositionsByIdentity.set(
+      String(disposition.item_id) +
+        ':' +
+        String(disposition.objective_id),
+      disposition
+    );
+  }
+
   return safeAnswers.map(answer => {
     const mappingRows =
       mappingsByItem.get(
@@ -454,11 +527,19 @@ async function enrichObjectiveComponents(
             Number(b.component_order)
         )
         .map(mapping => {
+          const identity =
+            String(mapping.item_id) +
+            ':' +
+            String(mapping.objective_id);
+
           const evidence =
             evidenceByIdentity.get(
-              String(mapping.item_id) +
-                ':' +
-                String(mapping.objective_id)
+              identity
+            );
+
+          const persistedDisposition =
+            dispositionsByIdentity.get(
+              identity
             );
 
           return {
@@ -483,6 +564,16 @@ async function enrichObjectiveComponents(
                     evidence.objective_earned
                   )
                 : null,
+            disposition:
+              evidence
+                ? 'scored'
+                : (
+                    persistedDisposition &&
+                    persistedDisposition.disposition ===
+                      'not_scorable'
+                      ? 'not_scorable'
+                      : null
+                  ),
           };
         });
 

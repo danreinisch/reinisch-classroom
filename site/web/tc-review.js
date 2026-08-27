@@ -721,6 +721,8 @@
           Number(component.max),
         objective_earned:
           null,
+        disposition:
+          null,
       }))
       .sort(
         (a, b) =>
@@ -758,6 +760,13 @@
     }
 
     return current.every(component => {
+      if (
+        component.disposition ===
+        'not_scorable'
+      ) {
+        return true;
+      }
+
       if (
         component.objective_earned === null ||
         component.objective_earned === undefined ||
@@ -1391,40 +1400,74 @@
             ? `
               <div class="rv-objective-evidence">
                 <strong>IEP Objective Evidence</strong>
+
                 <div class="rv-hint">
-                  These scores are separate from the academic item score.
+                  These judgments are separate from the academic item score.
+                  Not Scorable means this response does not provide usable
+                  evidence for that objective; it does not count as 0%.
                 </div>
 
-                ${objectiveComponents.map(component => `
-                  <div class="rv-score-input-group">
-                    <label>${escapeHtml(
-                      component.component_label ||
-                      'Objective component'
-                    )}:</label>
+                ${objectiveComponents.map(component => {
+                  const notScorable =
+                    component.disposition ===
+                    'not_scorable';
 
-                    <input
-                      type="number"
-                      class="rv-score-input rv-objective-component-input"
-                      min="0"
-                      max="${escapeHtml(component.objective_max)}"
-                      step="any"
-                      value="${
-                        component.objective_earned === null ||
-                        component.objective_earned === undefined
-                          ? ''
-                          : escapeHtml(component.objective_earned)
-                      }"
-                      data-component-order="${escapeHtml(component.component_order)}"
-                      data-item-id="${escapeHtml(item.id)}"
-                      data-submission-id="${escapeHtml(submission.id)}">
+                  return `
+                    <div class="rv-score-input-group rv-objective-component-row">
+                      <label>${escapeHtml(
+                        component.component_label ||
+                        'Objective component'
+                      )}:</label>
 
-                    <span>/ ${escapeHtml(component.objective_max)}</span>
-                  </div>
-                `).join('')}
+                      <input
+                        type="number"
+                        class="rv-score-input rv-objective-component-input"
+                        min="0"
+                        max="${escapeHtml(component.objective_max)}"
+                        step="any"
+                        value="${
+                          notScorable ||
+                          component.objective_earned === null ||
+                          component.objective_earned === undefined
+                            ? ''
+                            : escapeHtml(component.objective_earned)
+                        }"
+                        ${
+                          notScorable
+                            ? 'disabled'
+                            : ''
+                        }
+                        data-component-order="${escapeHtml(component.component_order)}"
+                        data-item-id="${escapeHtml(item.id)}"
+                        data-submission-id="${escapeHtml(submission.id)}">
+
+                      <span>/ ${escapeHtml(component.objective_max)}</span>
+
+                      <label
+                        class="objective-review-not-scorable"
+                        style="display:inline-flex;align-items:center;gap:6px;margin-left:12px;font-weight:500;white-space:nowrap;">
+
+                        <input
+                          type="checkbox"
+                          class="rv-objective-not-scorable-input"
+                          ${
+                            notScorable
+                              ? 'checked'
+                              : ''
+                          }
+                          data-component-order="${escapeHtml(component.component_order)}"
+                          data-item-id="${escapeHtml(item.id)}"
+                          data-submission-id="${escapeHtml(submission.id)}">
+
+                        Not Scorable
+                      </label>
+                    </div>
+                  `;
+                }).join('')}
               </div>
             `
             : '';
-        
+
         // Extract display text from raw_answer (may be stored as { value: "..." } object)
         const responseText = (typeof studentResponse === 'object' && studentResponse !== null && studentResponse.value !== undefined)
           ? studentResponse.value
@@ -1479,7 +1522,7 @@
               <div class="rv-score-input-group">
                 <label>Score:</label>
                 <input type="number" 
-                       class="rv-score-input" 
+                       class="rv-score-input rv-academic-score-input"
                        min="0" 
                        value="${escapeHtml(currentScore)}"
                        data-item-id="${escapeHtml(item.id)}"
@@ -1686,6 +1729,48 @@
 
   // Event handlers
   function setupEventListeners() {
+    document.addEventListener(
+      'change',
+      event => {
+        const target =
+          event &&
+          event.target;
+
+        if (
+          !target ||
+          !target.classList ||
+          !target.classList.contains(
+            'rv-objective-not-scorable-input'
+          )
+        ) {
+          return;
+        }
+
+        const row =
+          target.closest(
+            '.rv-objective-component-row'
+          );
+
+        const scoreInput =
+          row
+            ? row.querySelector(
+                '.rv-objective-component-input'
+              )
+            : null;
+
+        if (!scoreInput) {
+          return;
+        }
+
+        scoreInput.disabled =
+          target.checked;
+
+        if (target.checked) {
+          scoreInput.value = '';
+        }
+      }
+    );
+
     // Class filter buttons
     const classFilterContainer = $('rvClassFilters');
     if (classFilterContainer) {
@@ -2639,7 +2724,7 @@
     // Find DOM elements within the same card
     const card = button.closest('.rv-response-card');
     const responseTextEl = card && card.querySelector('.rv-response-text');
-    const scoreInput = card && card.querySelector(`input.rv-score-input[data-item-id="${itemId}"]`);
+    const scoreInput = card && card.querySelector(`input.rv-academic-score-input[data-item-id="${itemId}"]`);
     const noteInput = card && card.querySelector(`textarea.rv-note-input[data-item-id="${itemId}"]`);
 
     if (!responseTextEl || !scoreInput) return;
@@ -2944,11 +3029,30 @@
     const itemId = button.dataset.itemId;
     const submissionId = button.dataset.submissionId;
     
-    // Find the score and note inputs
-    const scoreInput = document.querySelector(`input.rv-score-input[data-item-id="${itemId}"]`);
-    const noteInput = document.querySelector(`textarea.rv-note-input[data-item-id="${itemId}"]`);
-    const statusSpan = document.querySelector(`.rv-save-status[data-item-id="${itemId}"]`);
-    
+    // Scope editable fields to the exact response card whose Save button
+    // was clicked. assignment_item IDs are shared across student submissions.
+    const card =
+      button.closest(
+        '.rv-response-card'
+      );
+
+    if (!card) return;
+
+    const scoreInput =
+      card.querySelector(
+        `input.rv-academic-score-input[data-item-id="${itemId}"]`
+      );
+
+    const noteInput =
+      card.querySelector(
+        `textarea.rv-note-input[data-item-id="${itemId}"]`
+      );
+
+    const statusSpan =
+      card.querySelector(
+        `.rv-save-status[data-item-id="${itemId}"]`
+      );
+
     if (!scoreInput) return;
     
     const earnedPoints = parseFloat(scoreInput.value) || 0;
@@ -3068,16 +3172,20 @@
           objectiveItem
         )
       ) {
-        const card =
-          button.closest(
-            '.rv-response-card'
-          );
-
         const componentInputs =
           card
             ? Array.from(
                 card.querySelectorAll(
                   '.rv-objective-component-input'
+                )
+              )
+            : [];
+
+        const dispositionInputs =
+          card
+            ? Array.from(
+                card.querySelectorAll(
+                  '.rv-objective-not-scorable-input'
                 )
               )
             : [];
@@ -3089,34 +3197,90 @@
 
         if (
           componentInputs.length !==
-          expectedCount
+            expectedCount ||
+          dispositionInputs.length !==
+            expectedCount
         ) {
           throw new Error(
-            'Objective component scoring is unavailable for this item'
+            'Objective component review is unavailable for this item'
           );
         }
 
-        const allEntered =
-          componentInputs.every(
-            input =>
-              input.value !== ''
+        const dispositionByOrder =
+          new Map(
+            dispositionInputs.map(
+              input => [
+                Number(
+                  input.dataset.componentOrder
+                ),
+                input,
+              ]
+            )
           );
 
-        if (allEntered) {
+        const allResolved =
+          componentInputs.every(
+            input => {
+              const componentOrder =
+                Number(
+                  input.dataset.componentOrder
+                );
+
+              const dispositionInput =
+                dispositionByOrder.get(
+                  componentOrder
+                );
+
+              return Boolean(
+                dispositionInput &&
+                (
+                  dispositionInput.checked ||
+                  input.value !== ''
+                )
+              );
+            }
+          );
+
+        if (allResolved) {
           const components =
             componentInputs.map(
               input => {
-                const earned =
-                  Number(input.value);
-
                 const componentOrder =
                   Number(
                     input.dataset.componentOrder
                   );
 
+                const dispositionInput =
+                  dispositionByOrder.get(
+                    componentOrder
+                  );
+
                 if (
-                  !Number.isFinite(earned) ||
-                  !Number.isInteger(componentOrder)
+                  !Number.isInteger(
+                    componentOrder
+                  ) ||
+                  !dispositionInput
+                ) {
+                  throw new Error(
+                    'Invalid IEP objective component review'
+                  );
+                }
+
+                if (
+                  dispositionInput.checked
+                ) {
+                  return {
+                    componentOrder,
+                    disposition:
+                      'not_scorable',
+                  };
+                }
+
+                const earned =
+                  Number(input.value);
+
+                if (
+                  !Number.isFinite(earned)
                 ) {
                   throw new Error(
                     'Invalid IEP objective component score'
@@ -3125,6 +3289,8 @@
 
                 return {
                   componentOrder,
+                  disposition:
+                    'scored',
                   earned,
                 };
               }

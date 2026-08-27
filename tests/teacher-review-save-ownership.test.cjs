@@ -755,6 +755,9 @@ test(
             '/rest/v1/objective_data_points'
           ) ||
           call.url.includes(
+            '/rest/v1/rpc/reconcile_objective_review_outcomes'
+          ) ||
+          call.url.includes(
             '/rest/v1/submission_answers'
           )
       ),
@@ -796,7 +799,7 @@ test(
 );
 
 test(
-  'save_objective_components reaches normalized mapping and reconciled evidence after authorization',
+  'save_objective_components reaches normalized mapping and atomic objective outcome reconciliation after authorization',
   async () => {
     reset();
 
@@ -849,14 +852,80 @@ test(
       'authorized objective save must load source student response'
     );
 
-    assert.ok(
-      calls.some(
+    const outcomeReconciliation =
+      calls.find(
         (call) =>
+          call.method === 'POST' &&
           call.url.includes(
-            '/rest/v1/objective_data_points'
+            '/rest/v1/rpc/reconcile_objective_review_outcomes'
           )
+      );
+
+    assert.ok(
+      outcomeReconciliation,
+      'authorized objective save must reach atomic objective outcome reconciliation'
+    );
+
+    assert.strictEqual(
+      outcomeReconciliation.body
+        .p_assignment_instance_id,
+      INSTANCE_ID,
+      'atomic reconciliation must use canonical instance from authorized submission'
+    );
+
+    assert.strictEqual(
+      outcomeReconciliation.body
+        .p_student_id,
+      STUDENT_ID,
+      'atomic reconciliation must use canonical student from authorized submission'
+    );
+
+    assert.strictEqual(
+      outcomeReconciliation.body
+        .p_item_id,
+      Number(ITEM_ID),
+      'atomic reconciliation must use the authorized assignment item'
+    );
+
+    assert.ok(
+      !JSON.stringify(
+        outcomeReconciliation.body
+      ).includes(
+        WRONG_INSTANCE_ID
       ),
-      'authorized objective save must reach objective evidence reconciliation'
+      'caller-controlled wrong instanceId must not reach objective reconciliation'
+    );
+
+    assert.ok(
+      !JSON.stringify(
+        outcomeReconciliation.body
+      ).includes(
+        OTHER_TEACHER_ID
+      ),
+      'caller-controlled studentId must not reach objective reconciliation'
+    );
+
+    assert.strictEqual(
+      outcomeReconciliation.body
+        .p_outcomes.length,
+      1,
+      'authorized one-component review must reconcile exactly one outcome'
+    );
+
+    assert.strictEqual(
+      outcomeReconciliation.body
+        .p_outcomes[0]
+        .objective_id,
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'objective identity must come from the authoritative normalized mapping'
+    );
+
+    assert.strictEqual(
+      outcomeReconciliation.body
+        .p_outcomes[0]
+        .disposition,
+      'scored',
+      'legacy numeric-only browser payload must reconcile as scored'
     );
   }
 );
