@@ -218,7 +218,7 @@ assert.ok(
   !aiBlock.includes(
     'save_objective_components'
   ),
-  'AI suggest must not fill or save objective component scores'
+  'academic Suggest Grade must not fill or save objective component scores'
 );
 
 console.log(
@@ -234,7 +234,7 @@ console.log(
   '✓ objective-aware writing cannot finalize until teacher components are complete'
 );
 console.log(
-  '✓ AI suggestion remains academic-only'
+  '✓ academic Suggest Grade remains independent from objective AI'
 );
 
 console.log('');
