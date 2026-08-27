@@ -1,0 +1,19 @@
+-- MIGRATION-HISTORY MARKER ONLY — NO EXECUTABLE SQL
+--
+-- Production migration version:
+--   20260819155526
+--
+-- Production migration name:
+--   temp_allow_kragdon_recap_media_upload
+--
+-- Historical event:
+--   Production temporarily allowed upload of specific Kragdon recap media
+--   objects. That temporary storage policy was removed minutes later by
+--   migration 20260819155953.
+--
+-- Current-state verification on 2026-08-27 confirmed that the temporary
+-- policy is absent from production.
+--
+-- This local file intentionally performs NO SQL. Its only purpose is to
+-- preserve truthful migration-version history in the repository without
+-- recreating an obsolete temporary permission.
