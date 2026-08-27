@@ -45,6 +45,38 @@ assert.ok(
 
 assert.ok(
   tcReview.includes(
+    'rv-academic-score-input'
+  ),
+  'academic score input must have a selector identity distinct from objective component inputs'
+);
+
+assert.ok(
+  !tcReview.includes(
+    'input.rv-score-input[data-item-id='
+  ),
+  'academic handlers must never use the generic rv-score-input selector on objective-aware cards'
+);
+
+const academicSelectorCount =
+  tcReview.split(
+    'input.rv-academic-score-input[data-item-id='
+  ).length - 1;
+
+assert.strictEqual(
+  academicSelectorCount,
+  2,
+  'Suggest Grade and manual Save must both target the dedicated academic score input'
+);
+
+assert.ok(
+  tcReview.includes(
+    'rv-score-input rv-objective-component-input'
+  ),
+  'objective component score inputs must remain independently identifiable'
+);
+
+assert.ok(
+  tcReview.includes(
     'objective_components'
   ),
   'Review UI must consume server-projected objective component state'
@@ -107,6 +139,67 @@ assert.ok(
   aiStart >= 0 &&
   manualSaveStart > aiStart,
   'AI and manual save boundaries must remain identifiable'
+);
+
+const manualSaveEnd =
+  tcReview.indexOf(
+    '// Handle finalizing a submission',
+    manualSaveStart
+  );
+
+assert.ok(
+  manualSaveEnd > manualSaveStart,
+  'manual Save boundary must remain identifiable'
+);
+
+const manualSaveBlock =
+  tcReview.slice(
+    manualSaveStart,
+    manualSaveEnd
+  );
+
+assert.ok(
+  manualSaveBlock.includes(
+    "button.closest(\n        '.rv-response-card'"
+  ) ||
+  manualSaveBlock.includes(
+    "button.closest('.rv-response-card')"
+  ),
+  'manual Save must resolve the exact response card that owns the clicked button'
+);
+
+assert.ok(
+  manualSaveBlock.includes(
+    'card.querySelector(\n        `input.rv-academic-score-input'
+  ),
+  'manual Save must read academic Score from the clicked submission card'
+);
+
+assert.ok(
+  manualSaveBlock.includes(
+    'card.querySelector(\n        `textarea.rv-note-input'
+  ),
+  'manual Save must read Teacher Note from the clicked submission card'
+);
+
+assert.ok(
+  manualSaveBlock.includes(
+    'card.querySelector(\n        `.rv-save-status'
+  ),
+  'manual Save status must belong to the clicked submission card'
+);
+
+assert.ok(
+  !manualSaveBlock.includes(
+    'document.querySelector(`input.rv-academic-score-input'
+  ) &&
+  !manualSaveBlock.includes(
+    'document.querySelector(`textarea.rv-note-input'
+  ) &&
+  !manualSaveBlock.includes(
+    'document.querySelector(`.rv-save-status'
+  ),
+  'manual Save must never use submission-agnostic global field selectors'
 );
 
 const aiBlock =

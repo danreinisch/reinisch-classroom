@@ -67,9 +67,10 @@ async function readAuthorizationRows(path, label, requestId) {
 
 const {
   fetchAssignmentItemObjectiveMappings,
-  reconcileAssignmentObjectiveDataPoints,
   validateReviewObjectiveComponents,
   buildReviewObjectiveEvidenceRows,
+  validateReviewObjectiveOutcomes,
+  buildReviewObjectiveOutcomeRows,
 } = require(
   './_lib/objective-review-evidence-writer'
 );
@@ -557,9 +558,7 @@ async function handleSaveObjectiveComponents(
     };
   }
 
-  if (
-    !Array.isArray(components)
-  ) {
+  if (!Array.isArray(components)) {
     return {
       statusCode: 400,
       error: 'components are required',
@@ -574,7 +573,8 @@ async function handleSaveObjectiveComponents(
   ) {
     return {
       statusCode: 500,
-      error: 'Authorized objective context is unavailable',
+      error:
+        'Authorized objective context is unavailable',
     };
   }
 
@@ -582,7 +582,9 @@ async function handleSaveObjectiveComponents(
     Number(itemId);
 
   if (
-    !Number.isSafeInteger(numericItemId) ||
+    !Number.isSafeInteger(
+      numericItemId
+    ) ||
     numericItemId <= 0
   ) {
     return {
@@ -613,7 +615,8 @@ async function handleSaveObjectiveComponents(
 
     return {
       statusCode: 500,
-      error: 'Failed to load objective component mappings',
+      error:
+        'Failed to load objective component mappings',
     };
   }
 
@@ -621,7 +624,7 @@ async function handleSaveObjectiveComponents(
 
   try {
     validated =
-      validateReviewObjectiveComponents({
+      validateReviewObjectiveOutcomes({
         mappings,
         components,
       });
@@ -654,7 +657,8 @@ async function handleSaveObjectiveComponents(
 
     return {
       statusCode: 500,
-      error: 'Failed to load source response',
+      error:
+        'Failed to load source response',
     };
   }
 
@@ -666,16 +670,17 @@ async function handleSaveObjectiveComponents(
   if (!answer) {
     return {
       statusCode: 409,
-      error: 'Student response is not available for objective evidence',
+      error:
+        'Student response is not available for objective evidence',
     };
   }
 
   const date =
     getReviewSchoolDate();
 
-  const rows =
-    buildReviewObjectiveEvidenceRows({
-      validatedComponents:
+  const outcomes =
+    buildReviewObjectiveOutcomeRows({
+      validatedOutcomes:
         validated,
       studentId,
       assignmentInstanceId:
@@ -693,30 +698,54 @@ async function handleSaveObjectiveComponents(
         getReviewSchoolYear(date),
     });
 
-  try {
-    await reconcileAssignmentObjectiveDataPoints({
-      rows,
-      supabaseUrl:
-        SUPABASE_URL,
-      serviceRoleKey:
-        SUPABASE_SERVICE_ROLE_KEY,
-      fetchImpl:
-        fetch,
-    });
-  } catch (error) {
+  const reconcileRes =
+    await supaFetch(
+      '/rest/v1/rpc/reconcile_objective_review_outcomes',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          p_assignment_instance_id:
+            instanceId,
+          p_item_id:
+            numericItemId,
+          p_student_id:
+            studentId,
+          p_outcomes:
+            outcomes,
+        }),
+      }
+    );
+
+  if (!reconcileRes.ok) {
     console.error(
-      `[teacher-review-save] [${requestId}] objective evidence reconciliation failed:`,
-      error
+      `[teacher-review-save] [${requestId}] objective outcome reconciliation failed:`,
+      reconcileRes.status,
+      reconcileRes.data
     );
 
     return {
       statusCode: 500,
-      error: 'Failed to save objective component evidence',
+      error:
+        'Failed to save objective review outcomes',
     };
   }
 
+  const scoredCount =
+    validated.filter(
+      component =>
+        component.disposition ===
+        'scored'
+    ).length;
+
+  const notScorableCount =
+    validated.filter(
+      component =>
+        component.disposition ===
+        'not_scorable'
+    ).length;
+
   console.log(
-    `[teacher-review-save] [${requestId}] save_objective_components OK submission=${submissionId} item=${itemId} components=${validated.length}`
+    `[teacher-review-save] [${requestId}] save_objective_components OK submission=${submissionId} item=${itemId} scored=${scoredCount} not_scorable=${notScorableCount}`
   );
 
   return {
@@ -733,7 +762,12 @@ async function handleSaveObjectiveComponents(
             objective_max:
               component.objective_max,
             objective_earned:
-              component.objective_earned,
+              component.disposition ===
+                'scored'
+                ? component.objective_earned
+                : null,
+            disposition:
+              component.disposition,
           })
         ),
     },
