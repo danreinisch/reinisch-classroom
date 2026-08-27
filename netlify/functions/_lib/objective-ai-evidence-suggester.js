@@ -1,3 +1,4 @@
+/* eslint-env node */
 'use strict';
 
 const SERVER_OWNED_SUGGESTION_FIELDS =
@@ -45,6 +46,7 @@ function cleanText(
 
   return String(value)
     .replace(
+      // eslint-disable-next-line no-control-regex -- intentional removal of ASCII control characters from AI-bound text
       /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,
       ' '
     )
@@ -88,6 +90,17 @@ function scrubPii(
     );
 
   return text;
+}
+
+function safePromptText(
+  value,
+  maxLength
+) {
+  return scrubPii(value)
+    .slice(
+      0,
+      maxLength
+    );
 }
 
 function authoritativeMappings(
@@ -388,18 +401,19 @@ function buildObjectiveEvidencePrompt({
   objectives,
 }) {
   const safeResponse =
-    scrubPii(
-      studentResponse
+    safePromptText(
+      studentResponse,
+      12000
     );
 
   const safeQuestion =
-    cleanText(
+    safePromptText(
       questionText,
       2000
     );
 
   const safeLabel =
-    cleanText(
+    safePromptText(
       itemLabel,
       120
     );
@@ -484,14 +498,14 @@ function buildObjectiveEvidencePrompt({
     lines.push(
       '',
       `Component ${order}`,
-      `Label: ${cleanText(objective.component_label, 300)}`,
+      `Label: ${safePromptText(objective.component_label, 300)}`,
       `Evidence scale: 0-${maximum}`,
-      `Objective code: ${cleanText(objective.code, 100)}`,
-      `Official objective wording: ${cleanText(objective.objective_text, 1500)}`,
-      `Objective wording criterion: ${cleanText(objective.objective_wording_criterion || 'Not separately stated', 500)}`,
-      `Separate mastery field: ${cleanText(objective.mastery_field || 'Not separately stated', 500)}`,
-      `Parent-goal criterion: ${cleanText(objective.parent_goal_criterion || 'Not separately stated', 500)}`,
-      `Measurement method: ${cleanText(objective.measurement_method || 'Not separately stated', 500)}`
+      `Objective code: ${safePromptText(objective.code, 100)}`,
+      `Official objective wording: ${safePromptText(objective.objective_text, 1500)}`,
+      `Objective wording criterion: ${safePromptText(objective.objective_wording_criterion || 'Not separately stated', 500)}`,
+      `Separate mastery field: ${safePromptText(objective.mastery_field || 'Not separately stated', 500)}`,
+      `Parent-goal criterion: ${safePromptText(objective.parent_goal_criterion || 'Not separately stated', 500)}`,
+      `Measurement method: ${safePromptText(objective.measurement_method || 'Not separately stated', 500)}`
     );
   }
 

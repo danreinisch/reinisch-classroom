@@ -443,3 +443,80 @@ assert.ok(
 console.log(
   '✓ objective AI common-pattern PII scrubbing'
 );
+
+/*
+ * Comprehensive prompt privacy contract:
+ * every variable field that can be included in the OpenAI prompt
+ * must pass through the PII scrubber.
+ */
+const {
+  buildObjectiveEvidencePrompt,
+} = helper;
+
+const allContextPrompt =
+  buildObjectiveEvidencePrompt({
+    studentResponse:
+      'Response email student1@example.com.',
+    questionText:
+      'Question contact teacher2@example.com at 636-555-1001.',
+    itemLabel:
+      '123 Label Avenue',
+    objectives: [
+      {
+        component_order: 1,
+        component_label:
+          'Call 636-555-1002',
+        objective_max: 1,
+        code:
+          'S999.CG1.O1',
+        objective_text:
+          'Objective contact objective@example.com',
+        objective_wording_criterion:
+          'Criterion address 321 Criterion Road',
+        mastery_field:
+          'Mastery 123-45-6789',
+        parent_goal_criterion:
+          'Parent contact 636-555-1003',
+        measurement_method:
+          'Measure at 444 Measure Street',
+      },
+    ],
+  });
+
+for (const rawPii of [
+  'student1@example.com',
+  'teacher2@example.com',
+  '636-555-1001',
+  '123 Label Avenue',
+  '636-555-1002',
+  'objective@example.com',
+  '321 Criterion Road',
+  '123-45-6789',
+  '636-555-1003',
+  '444 Measure Street',
+]) {
+  assert.ok(
+    !allContextPrompt.includes(
+      rawPii
+    ),
+    `AI prompt must not contain raw PII: ${rawPii}`
+  );
+}
+
+for (const token of [
+  '[EMAIL REDACTED]',
+  '[PHONE REDACTED]',
+  '[ADDRESS REDACTED]',
+  '[ID REDACTED]',
+]) {
+  assert.ok(
+    allContextPrompt.includes(
+      token
+    ),
+    `AI prompt should preserve explicit redaction token ${token}`
+  );
+}
+
+console.log(
+  '✓ objective AI scrubs all variable prompt context'
+);

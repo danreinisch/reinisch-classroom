@@ -1,3 +1,4 @@
+/* eslint-env node */
 'use strict';
 
 // Teacher-only, non-mutating child-objective evidence suggestion endpoint.

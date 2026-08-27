@@ -564,7 +564,7 @@ async function runObjectiveAiEndpointRuntimeContract() {
               5,
             meta: {
               question:
-                'Write a short response.',
+                'Write a short response and email question@example.com.',
             },
           },
         ]);
@@ -608,7 +608,7 @@ async function runObjectiveAiEndpointRuntimeContract() {
             objective_id:
               OBJ1,
             component_label:
-              'Topic/Claim',
+              'Topic/Claim 636-555-2010',
             objective_max:
               1,
             component_order:
@@ -642,13 +642,13 @@ async function runObjectiveAiEndpointRuntimeContract() {
             code:
               'S999.CG1.O1',
             objective_text:
-              'State a topic or claim',
+              'State a topic or claim at 700 Objective Road',
             objective_wording_criterion:
               null,
             mastery_field:
               null,
             parent_goal_criterion:
-              '80% overall',
+              '80% overall; contact criterion@example.com',
             measurement_method:
               'Work samples',
             active:
@@ -963,15 +963,21 @@ async function runObjectiveAiEndpointRuntimeContract() {
       ''
     );
 
-  assert.ok(
-    !aiBody.includes(
-      'student@example.com'
-    ) &&
-    !aiBody.includes(
-      '123 Main Street'
-    ),
-    'raw common-pattern PII must not reach OpenAI'
-  );
+  for (const rawPii of [
+    'student@example.com',
+    '123 Main Street',
+    'question@example.com',
+    '636-555-2010',
+    '700 Objective Road',
+    'criterion@example.com',
+  ]) {
+    assert.ok(
+      !aiBody.includes(
+        rawPii
+      ),
+      `raw AI-bound context PII must not reach OpenAI: ${rawPii}`
+    );
+  }
 
   assert.ok(
     aiBody.includes(
