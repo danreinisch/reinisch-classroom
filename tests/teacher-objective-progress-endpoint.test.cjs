@@ -62,14 +62,27 @@ mustContain(
 );
 
 mustContain(
-  "require('./_lib/goal-objective-catalog')",
-  'endpoint must preflight canonical child-objective candidates before DB fanout'
+  "require('./_lib/goal-objective-registry-reader')",
+  'endpoint must preflight child-objective candidates from the live server-only registry reader'
 );
 
-mustContain(
-  'getObjectivesForParentGoal',
-  'endpoint must identify candidate parent goals from the canonical catalog'
+mustNotContain(
+  "require('./_lib/goal-objective-catalog')",
+  'endpoint must no longer depend on the stale 35-row static objective catalog'
 );
+
+for (
+  const required of [
+    'buildObjectiveRegistryPath',
+    'indexObjectiveRegistryRowsByParent',
+    'getBrowserObjectivesForParent',
+  ]
+) {
+  mustContain(
+    required,
+    `endpoint live-registry prefilter must use ${required}`
+  );
+}
 
 mustContain(
   "'Cache-Control': 'no-store'",
@@ -159,7 +172,7 @@ mustNotContain(
  */
 mustContain(
   'candidate',
-  'endpoint must have an explicit canonical candidate preflight'
+  'endpoint must have an explicit live-registry candidate preflight'
 );
 
 mustContain(
@@ -258,10 +271,10 @@ const supaAbsolute =
     'netlify/functions/_lib/supa.js'
   );
 
-const catalogAbsolute =
+const registryReaderAbsolute =
   path.join(
     root,
-    'netlify/functions/_lib/goal-objective-catalog.js'
+    'netlify/functions/_lib/goal-objective-registry-reader.js'
   );
 
 const readerAbsolute =
@@ -295,7 +308,7 @@ function parseResponse(response) {
 async function loadHandler({
   authorized = true,
   rowsForPath = () => [],
-  objectivesForGoal = () => [],
+  registryRows = [],
   readerResult = {
     available: true,
     parents: [],
@@ -308,7 +321,7 @@ async function loadHandler({
     httpAbsolute,
     authAbsolute,
     supaAbsolute,
-    catalogAbsolute,
+    registryReaderAbsolute,
     readerAbsolute,
   ];
 
@@ -404,25 +417,62 @@ async function loadHandler({
           ok: true,
           status: 200,
           data:
-            rowsForPath(
-              response.__testPath
-            ),
+            response.__testPath.startsWith(
+              '/rest/v1/goal_objectives?'
+            )
+              ? registryRows
+              : rowsForPath(
+                  response.__testPath
+                ),
         };
       },
     }
   );
 
   cacheStub(
-    catalogAbsolute,
+    registryReaderAbsolute,
     {
-      getObjectivesForParentGoal(
-        goalCode,
+      buildObjectiveRegistryPath({
+        studentId,
+      } = {}) {
+        return (
+          '/rest/v1/goal_objectives' +
+          '?select=test' +
+          '&active=eq.true' +
+          `&student_id=eq.${encodeURIComponent(studentId)}`
+        );
+      },
+
+      indexObjectiveRegistryRowsByParent(
+        rows
+      ) {
+        return Array.isArray(rows)
+          ? rows
+          : [];
+      },
+
+      getBrowserObjectivesForParent(
+        index,
+        parentGoalCode,
         studentCode
       ) {
-        return objectivesForGoal(
-          goalCode,
-          studentCode
-        );
+        return (
+          Array.isArray(index)
+            ? index
+            : []
+        )
+          .filter(row =>
+            row &&
+            row.active === true &&
+            row.parent_goal_code ===
+              parentGoalCode &&
+            row.student_code ===
+              studentCode
+          )
+          .map(row => ({
+            code:
+              row.code,
+          }));
       },
     }
   );
@@ -586,8 +636,9 @@ async function runBehaviorContracts() {
   );
 
   /*
-   * 3. No canonical child objectives:
-   * student + goals may be read, but no goal_progress and no 5C1 query.
+   * 3. No live-registry child objectives:
+   * student + goals + one candidate-registry read may occur,
+   * but no goal_progress and no 5C1 query.
    */
   {
     const runtime =
@@ -628,9 +679,7 @@ async function runBehaviorContracts() {
           );
         },
 
-        objectivesForGoal() {
-          return [];
-        },
+        registryRows: [],
       });
 
     try {
@@ -664,7 +713,7 @@ async function runBehaviorContracts() {
       assert.strictEqual(
         runtime.readerCalls.length,
         0,
-        'zero canonical objective parents must not invoke 5C1'
+        'zero live-registry objective parents must not invoke the shared progress reader'
       );
 
       assert.strictEqual(
@@ -674,7 +723,7 @@ async function runBehaviorContracts() {
           )
         ),
         false,
-        'zero canonical objective parents must not query parent progress'
+        'zero live-registry objective parents must not query parent progress'
       );
     } finally {
       runtime.cleanup();
@@ -682,7 +731,7 @@ async function runBehaviorContracts() {
   }
 
   console.log(
-    '✓ zero canonical objective parents short-circuit before objective fanout'
+    '✓ zero live-registry objective parents short-circuit before progress/evidence fanout'
   );
 
   /*
@@ -763,19 +812,16 @@ async function runBehaviorContracts() {
           );
         },
 
-        objectivesForGoal(
-          goalCode,
-          studentCode
-        ) {
-          return (
-            goalCode === 'S001.CG1' &&
-            studentCode === 'S001'
-          )
-            ? [{
-                code: 'S001.CG1.O1',
-              }]
-            : [];
-        },
+        registryRows: [{
+          student_code:
+            'S001',
+          parent_goal_code:
+            'S001.CG1',
+          code:
+            'S001.CG1.O1',
+          active:
+            true,
+        }],
 
         readerResult: {
           available: true,
@@ -834,6 +880,31 @@ async function runBehaviorContracts() {
       assert.strictEqual(
         args.parentGoals[0].code,
         'S001.CG1'
+      );
+
+
+      assert.strictEqual(
+        runtime.restCalls.filter(
+          call =>
+            call.path.startsWith(
+              '/rest/v1/goal_objectives?'
+            )
+        ).length,
+        1,
+        'candidate detection must perform exactly one student-scoped live registry read'
+      );
+
+      assert(
+        runtime.restCalls.some(
+          call =>
+            call.path.startsWith(
+              '/rest/v1/goal_objectives?'
+            ) &&
+            call.path.includes(
+              `student_id=eq.${studentId}`
+            )
+        ),
+        'candidate registry read must use the resolved student UUID'
       );
 
       assert.strictEqual(
@@ -960,11 +1031,16 @@ async function runBehaviorContracts() {
           );
         },
 
-        objectivesForGoal() {
-          return [{
-            code: 'S001.CG1.O1',
-          }];
-        },
+        registryRows: [{
+          student_code:
+            'S001',
+          parent_goal_code:
+            'S001.CG1',
+          code:
+            'S001.CG1.O1',
+          active:
+            true,
+        }],
       });
 
     try {
@@ -1063,11 +1139,16 @@ async function runBehaviorContracts() {
           );
         },
 
-        objectivesForGoal() {
-          return [{
-            code: 'S001.CG1.O1',
-          }];
-        },
+        registryRows: [{
+          student_code:
+            'S001',
+          parent_goal_code:
+            'S001.CG1',
+          code:
+            'S001.CG1.O1',
+          active:
+            true,
+        }],
 
         readerResult: {
           available: false,
