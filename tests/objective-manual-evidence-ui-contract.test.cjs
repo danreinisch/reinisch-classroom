@@ -582,7 +582,7 @@ for (
 
 assert.ok(
   html.includes(
-    '/web/tc-students.js?v=202608272340'
+    '/web/tc-students.js?v=202608280055-onboard'
   ),
   'Teacher Students page must publish the current tc-students cache key'
 );
