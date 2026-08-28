@@ -46,6 +46,77 @@ console.log(
 
 
 /* -------------------------------------------------------------------------- */
+/* Date-only evidence must remain on its recorded calendar date                */
+/* -------------------------------------------------------------------------- */
+
+const formatDateMatch =
+  studentUi.match(
+    /function formatDate\(dateStr\) \{[\s\S]*?\n {2}\}/
+  );
+
+assert.ok(
+  formatDateMatch,
+  'Student Portal formatDate helper must remain discoverable'
+);
+
+const formatDateForTest =
+  new Function(
+    `return (${formatDateMatch[0]});`
+  )();
+
+const originalTz =
+  process.env.TZ;
+
+try {
+  process.env.TZ =
+    'America/Chicago';
+
+  assert.strictEqual(
+    formatDateForTest(
+      '2026-08-27'
+    ),
+    'Aug 27, 2026',
+    'date-only objective evidence must not drift to Aug 26 in Central Time'
+  );
+
+  assert.strictEqual(
+    formatDateForTest(
+      '2026-08-27T00:00:00.000Z'
+    ),
+    'Aug 26, 2026',
+    'full UTC timestamps must retain normal instant/timezone semantics'
+  );
+
+  assert.strictEqual(
+    formatDateForTest(
+      'not-a-date'
+    ),
+    'N/A',
+    'invalid display dates must retain the existing fallback'
+  );
+} finally {
+  if (
+    originalTz === undefined
+  ) {
+    delete process.env.TZ;
+  } else {
+    process.env.TZ =
+      originalTz;
+  }
+}
+
+assert.match(
+  formatDateMatch[0],
+  /T00:00:00/,
+  'date-only display must use an explicit local-midnight parse'
+);
+
+console.log(
+  '✓ date-only evidence stays on its recorded calendar date without changing timestamp semantics'
+);
+
+
+/* -------------------------------------------------------------------------- */
 /* One authoritative quarter-scoped explanation request                       */
 /* -------------------------------------------------------------------------- */
 
