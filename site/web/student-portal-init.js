@@ -296,10 +296,29 @@
    */
   function formatDate(dateStr) {
     if (!dateStr) return 'N/A';
+
     try {
-      const date = new Date(dateStr);
+      const raw = String(dateStr).trim();
+
+      // A bare YYYY-MM-DD is a calendar date, not a UTC timestamp.
+      // Parse it at local midnight so negative-offset timezones do not
+      // display the previous calendar day. Full timestamps keep their
+      // existing instant/timezone semantics.
+      const date =
+        /^\d{4}-\d{2}-\d{2}$/.test(raw)
+          ? new Date(`${raw}T00:00:00`)
+          : new Date(raw);
+
       if (isNaN(date.getTime())) return 'N/A';
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      return date.toLocaleDateString(
+        'en-US',
+        {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        }
+      );
     } catch (err) {
       return 'N/A';
     }
