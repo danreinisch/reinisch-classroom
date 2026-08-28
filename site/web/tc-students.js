@@ -9666,10 +9666,6 @@
                 <input type="text" name="code" value="${escapeHtml(studentData.code || '')}" required>
               </div>
               <div class="form-group">
-                <label>Password:</label>
-                <input type="text" name="password" value="${escapeHtml(studentData.password || '')}" required>
-              </div>
-              <div class="form-group">
                 <label>Primary Case Manager:</label>
                 <input type="text" name="primary_case_manager" value="${escapeHtml(studentData.primary_case_manager || '')}">
               </div>
@@ -9741,7 +9737,6 @@
             if (step === 1) {
               const formData = new FormData(form);
               studentData.code = formData.get('code');
-              studentData.password = formData.get('password');
               studentData.primary_case_manager = formData.get('primary_case_manager');
               step++;
               renderStep();
@@ -9769,27 +9764,69 @@
 
   async function handleCreateStudent(data) {
     try {
-      await db.upsertStudent({
-        code: data.code,
-        password_hash: data.password,
-        primary_case_manager: data.primary_case_manager,
-        status: 'active'
-      });
+      const response =
+        await fetch(
+          '/.netlify/functions/teacher-student-onboard',
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+            body:
+              JSON.stringify({
+                code:
+                  data.code,
+                primary_case_manager:
+                  data.primary_case_manager || null,
+                class_names:
+                  data.enrollments || [],
+              }),
+          }
+        );
 
-      for (const className of data.enrollments || []) {
-        const supabase = await getSupabase();
-        if (!supabase) continue;
-        await supabase
-          .from('enrollments')
-          .insert({ student_code: data.code, class_name: className });
+      const result =
+        await response
+          .json()
+          .catch(() => ({}));
+
+      if (
+        !response.ok ||
+        !result.ok
+      ) {
+        throw new Error(
+          result.error ||
+          `Student onboarding failed: ${response.status}`
+        );
       }
 
-      console.log('[tc-students] Created student:', data.code);
+      console.log(
+        '[tc-students] Created student:',
+        result.student?.code || data.code
+      );
+
+      showToast(
+        `Student created with ${result.enrollment_count || 0} class enrollment(s)`
+      );
+
       await loadData();
-      selectStudent(data.code);
+
+      selectStudent(
+        result.student?.code ||
+        data.code
+      );
     } catch (error) {
-      console.error('[tc-students] Error creating student:', error);
-      await rcAlert('Error', 'Failed to create student');
+      console.error(
+        '[tc-students] Error creating student:',
+        error
+      );
+
+      await rcAlert(
+        'Error',
+        error.message ||
+        'Failed to create student'
+      );
     }
   }
 
