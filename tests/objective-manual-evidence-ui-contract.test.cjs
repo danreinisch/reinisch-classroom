@@ -582,9 +582,9 @@ for (
 
 assert.ok(
   html.includes(
-    '/web/tc-students.js?v=202608251810'
+    '/web/tc-students.js?v=202608272340'
   ),
-  'Teacher Students page must publish a new 5D2 tc-students cache key'
+  'Teacher Students page must publish the current tc-students cache key'
 );
 
 console.log(
