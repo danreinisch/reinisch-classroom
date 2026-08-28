@@ -6,8 +6,8 @@
  * This module is intentionally server-only and read-only.
  *
  * Responsibilities:
- * - preflight parent goals against the canonical objective catalog
- * - resolve normalized goal_objectives UUID identity
+ * - resolve child-objective definitions from the live goal_objectives registry
+ * - validate normalized goal_objectives UUID/parent/student identity
  * - read normalized objective_data_points evidence
  * - apply one explicit quarter calculation window
  * - reuse Slice 5A objective math
@@ -32,8 +32,10 @@ const {
 } = require('./objective-progress');
 
 const {
-  getObjectivesForParentGoal,
-} = require('./goal-objective-catalog');
+  REGISTRY_SELECT_FIELDS,
+  normalizeObjectiveRegistryRows,
+  projectBrowserObjective,
+} = require('./goal-objective-registry-reader');
 
 const DATE_PATTERN =
   /^\d{4}-\d{2}-\d{2}$/;
@@ -274,57 +276,217 @@ function projectEvidence(row) {
 function canonicalParents(
   parentGoals,
 ) {
-  return (
-    Array.isArray(parentGoals)
-      ? parentGoals
-      : []
-  )
-    .map(parent => {
-      if (
-        !parent ||
-        typeof parent.id !== 'string' ||
-        typeof parent.student_id !==
-          'string'
-      ) {
-        return null;
-      }
+  const parents =
+    (
+      Array.isArray(parentGoals)
+        ? parentGoals
+        : []
+    )
+      .map(parent => {
+        if (
+          !parent ||
+          typeof parent.id !== 'string' ||
+          typeof parent.student_id !==
+            'string'
+        ) {
+          return null;
+        }
 
-      const studentCode =
-        String(
-          parent.student_code || ''
-        )
-          .trim()
-          .toUpperCase();
+        const studentCode =
+          String(
+            parent.student_code || ''
+          )
+            .trim()
+            .toUpperCase();
 
-      const parentCode =
-        String(
-          parent.code || ''
-        )
-          .trim()
-          .toUpperCase();
+        const parentCode =
+          String(
+            parent.code || ''
+          )
+            .trim()
+            .toUpperCase();
 
-      const objectives =
-        getObjectivesForParentGoal(
-          parentCode,
-          studentCode
-        );
+        if (
+          !/^S\d{3}$/.test(
+            studentCode
+          ) ||
+          !/^S\d{3}\.CG\d+$/.test(
+            parentCode
+          )
+        ) {
+          return null;
+        }
 
-      if (objectives.length === 0) {
-        return null;
-      }
+        return {
+          id:
+            parent.id,
+          student_id:
+            parent.student_id,
+          student_code:
+            studentCode,
+          code:
+            parentCode,
+        };
+      })
+      .filter(Boolean);
 
+  const seenIds =
+    new Set();
+
+  for (const parent of parents) {
+    if (seenIds.has(parent.id)) {
+      throw new Error(
+        `OBJECTIVE_PARENT_DUPLICATE:${parent.id}`
+      );
+    }
+
+    seenIds.add(
+      parent.id
+    );
+  }
+
+  return parents;
+}
+
+function resolveRegistryParents(
+  parentGoals,
+  registryRows,
+) {
+  let parents;
+
+  try {
+    parents =
+      canonicalParents(
+        parentGoals
+      );
+  } catch (_) {
+    return {
+      ok: false,
+      reason:
+        'registry_mismatch',
+      parents: [],
+      registryRows: [],
+    };
+  }
+
+  if (parents.length === 0) {
+    return {
+      ok: true,
+      parents: [],
+      registryRows: [],
+    };
+  }
+
+  let normalizedRegistry;
+
+  try {
+    normalizedRegistry =
+      normalizeObjectiveRegistryRows(
+        registryRows
+      );
+  } catch (_) {
+    return {
+      ok: false,
+      reason:
+        'registry_mismatch',
+      parents: [],
+      registryRows: [],
+    };
+  }
+
+  /*
+   * A live registry may legitimately contain no objectives
+   * for the supplied parent goals.
+   */
+  if (
+    normalizedRegistry.length === 0
+  ) {
+    return {
+      ok: true,
+      parents: [],
+      registryRows: [],
+    };
+  }
+
+  const parentById =
+    new Map(
+      parents.map(parent => [
+        parent.id,
+        parent,
+      ])
+    );
+
+  const rowsByParentId =
+    new Map();
+
+  for (
+    const row
+    of normalizedRegistry
+  ) {
+    const parent =
+      parentById.get(
+        row.parent_goal_id
+      );
+
+    if (
+      !parent ||
+      row.student_id !==
+        parent.student_id ||
+      row.student_code !==
+        parent.student_code ||
+      row.parent_goal_code !==
+        parent.code
+    ) {
       return {
-        id: parent.id,
-        student_id:
-          parent.student_id,
-        student_code:
-          studentCode,
-        code:
-          parentCode,
-        objectives,
+        ok: false,
+        reason:
+          'registry_mismatch',
+        parents: [],
+        registryRows: [],
       };
-    })
-    .filter(Boolean);
+    }
+
+    if (
+      !rowsByParentId.has(
+        parent.id
+      )
+    ) {
+      rowsByParentId.set(
+        parent.id,
+        []
+      );
+    }
+
+    rowsByParentId
+      .get(parent.id)
+      .push(row);
+  }
+
+  const resolvedParents =
+    parents
+      .filter(parent =>
+        rowsByParentId.has(
+          parent.id
+        )
+      )
+      .map(parent => ({
+        ...parent,
+
+        objectives:
+          rowsByParentId
+            .get(parent.id)
+            .map(
+              projectBrowserObjective
+            ),
+      }));
+
+  return {
+    ok: true,
+    parents:
+      resolvedParents,
+    registryRows:
+      normalizedRegistry,
+  };
 }
 
 function buildObjectiveProgressBundle({
@@ -339,15 +501,26 @@ function buildObjectiveProgressBundle({
       quarterRange
     );
 
-  const parents =
-    canonicalParents(
-      parentGoals
+  const registryResolution =
+    resolveRegistryParents(
+      parentGoals,
+      registryRows
     );
 
+  if (!registryResolution.ok) {
+    return {
+      available: false,
+      reason:
+        registryResolution.reason,
+      parents: [],
+    };
+  }
+
+  const parents =
+    registryResolution.parents;
+
   const safeRegistry =
-    Array.isArray(registryRows)
-      ? registryRows
-      : [];
+    registryResolution.registryRows;
 
   const quarterEvidence =
     range
@@ -621,120 +794,6 @@ function serverHeaders(
   return headers;
 }
 
-function validateRegistry(
-  parents,
-  registryRows,
-) {
-  const expected = [];
-
-  for (const parent of parents) {
-    for (
-      const definition
-      of parent.objectives
-    ) {
-      expected.push({
-        parent,
-        definition,
-      });
-    }
-  }
-
-  if (
-    !Array.isArray(registryRows) ||
-    registryRows.length === 0
-  ) {
-    return {
-      ok: false,
-      reason:
-        'registry_not_activated',
-    };
-  }
-
-  if (
-    registryRows.length !==
-    expected.length
-  ) {
-    return {
-      ok: false,
-      reason:
-        'registry_mismatch',
-    };
-  }
-
-  const byCode =
-    new Map();
-
-  for (const row of registryRows) {
-    const code =
-      String(row?.code || '')
-        .trim()
-        .toUpperCase();
-
-    if (
-      !code ||
-      byCode.has(code)
-    ) {
-      return {
-        ok: false,
-        reason:
-          'registry_mismatch',
-      };
-    }
-
-    byCode.set(code, row);
-  }
-
-  for (
-    const {
-      parent,
-      definition,
-    }
-    of expected
-  ) {
-    const row =
-      byCode.get(
-        definition.code
-      );
-
-    if (
-      !row ||
-      row.active !== true ||
-      row.student_id !==
-        parent.student_id ||
-      row.parent_goal_id !==
-        parent.id ||
-      String(
-        row.student_code || ''
-      )
-        .trim()
-        .toUpperCase() !==
-          parent.student_code ||
-      String(
-        row.parent_goal_code || ''
-      )
-        .trim()
-        .toUpperCase() !==
-          parent.code ||
-      Number(
-        row.objective_number
-      ) !==
-        Number(
-          definition.objective_number
-        )
-    ) {
-      return {
-        ok: false,
-        reason:
-          'registry_mismatch',
-      };
-    }
-  }
-
-  return {
-    ok: true,
-  };
-}
-
 async function readObjectiveProgress({
   parentGoals,
   parentProgressRows,
@@ -754,9 +813,8 @@ async function readObjectiveProgress({
     );
 
   /*
-   * Exact no-objective compatibility:
-   * if none of the authorized parent goals has canonical children,
-   * do not touch dormant objective tables at all.
+   * With no authorized active parent goals, there is
+   * nothing to resolve through the objective registry.
    */
   if (parents.length === 0) {
     return {
@@ -801,16 +859,7 @@ async function readObjectiveProgress({
 
   registryParams.set(
     'select',
-    [
-      'id',
-      'student_id',
-      'parent_goal_id',
-      'student_code',
-      'parent_goal_code',
-      'code',
-      'objective_number',
-      'active',
-    ].join(',')
+    REGISTRY_SELECT_FIELDS.join(',')
   );
 
   registryParams.set(
@@ -876,23 +925,40 @@ async function readObjectiveProgress({
       ? registryResult.data
       : [];
 
-  const registryCheck =
-    validateRegistry(
+  const registryResolution =
+    resolveRegistryParents(
       parents,
       registryRows
     );
 
-  if (!registryCheck.ok) {
+  if (!registryResolution.ok) {
     return {
       available: false,
       reason:
-        registryCheck.reason,
+        registryResolution.reason,
       parents: [],
     };
   }
 
+  /*
+   * No child rows for these active parent goals is an
+   * authoritative successful empty result.
+   */
+  if (
+    registryResolution.parents.length ===
+    0
+  ) {
+    return {
+      available: true,
+      parents: [],
+    };
+  }
+
+  const resolvedRegistryRows =
+    registryResolution.registryRows;
+
   const objectiveIds =
-    registryRows.map(
+    resolvedRegistryRows.map(
       row => row.id
     );
 
@@ -1027,8 +1093,10 @@ async function readObjectiveProgress({
   }
 
   return buildObjectiveProgressBundle({
-    parentGoals: parents,
-    registryRows,
+    parentGoals:
+      registryResolution.parents,
+    registryRows:
+      resolvedRegistryRows,
     evidenceRows,
     parentProgressRows,
     quarterRange: range,

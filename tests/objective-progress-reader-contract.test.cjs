@@ -42,9 +42,30 @@ assert(
 
 assert(
   helper.includes(
+    "require('./goal-objective-registry-reader')"
+  ),
+  'shared objective progress reader must derive objective definitions from the live server-only registry reader'
+);
+
+assert(
+  !helper.includes(
     "require('./goal-objective-catalog')"
   ),
-  '5C1 reader must preflight against canonical objective definitions'
+  'shared objective progress reader must no longer depend on the stale 35-row static catalog'
+);
+
+assert(
+  helper.includes(
+    'REGISTRY_SELECT_FIELDS'
+  ),
+  'shared reader must request the complete browser-safe objective definition fields from goal_objectives'
+);
+
+assert(
+  helper.includes(
+    'normalizeObjectiveRegistryRows'
+  ),
+  'shared reader must fail loudly on malformed live objective identity'
 );
 
 assert(
@@ -62,17 +83,17 @@ assert(
 );
 
 assert(
-  helper.includes(
+  !helper.includes(
     'registry_not_activated'
   ),
-  'empty dormant registry must be explicit'
+  'live registry readers must no longer treat an empty parent-specific result as an unactivated global registry'
 );
 
 assert(
   helper.includes(
     'registry_mismatch'
   ),
-  'partial/mismatched registry must fail closed'
+  'malformed or parent/student-mismatched live registry identity must fail closed'
 );
 
 assert(
