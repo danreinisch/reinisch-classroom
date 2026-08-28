@@ -111,7 +111,7 @@ function isCriterionConflictSchemaError(result) {
 
 async function fetchActiveGoalsForContext(requestId) {
   var querySuffix =
-    '&active=eq.true&order=code.asc';
+    '&active=eq.true&addressed_in_class=eq.true&order=code.asc';
 
   var enrichedRes =
     await rest(
