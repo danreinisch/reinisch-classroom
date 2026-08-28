@@ -16,8 +16,10 @@ const {
 } = require('./_lib/student-auth');
 
 const {
-  getObjectivesForParentGoal,
-} = require('./_lib/goal-objective-catalog');
+  buildObjectiveRegistryPath,
+  indexObjectiveRegistryRowsByParent,
+  getBrowserObjectivesForParent,
+} = require('./_lib/goal-objective-registry-reader');
 
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
@@ -147,10 +149,76 @@ exports.handler = async (event) => {
 
     const goals = await goalsResponse.json();
 
+    /*
+     * Child objectives are server-only production registry data.
+     * The browser receives only the established safe projection.
+     */
+    const objectiveRegistryUrl =
+      `${SUPABASE_URL}${
+        buildObjectiveRegistryPath({
+          studentId,
+        })
+      }`;
+
+    const objectiveRegistryResponse =
+      await fetch(
+        objectiveRegistryUrl,
+        {
+          method: 'GET',
+          headers: {
+            'apikey':
+              SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization':
+              `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type':
+              'application/json',
+          },
+        }
+      );
+
+    if (!objectiveRegistryResponse.ok) {
+      const errorBody =
+        await objectiveRegistryResponse
+          .text();
+
+      console.error(
+        `[student-goals] [${requestId}] Objective registry query failed: ${objectiveRegistryResponse.status}`,
+        errorBody
+      );
+
+      throw new Error(
+        `Objective registry query failed: ${objectiveRegistryResponse.status}`
+      );
+    }
+
+    const objectiveRegistryRows =
+      await objectiveRegistryResponse
+        .json();
+
+    if (
+      !Array.isArray(
+        objectiveRegistryRows
+      )
+    ) {
+      throw new Error(
+        'Objective registry query returned invalid response'
+      );
+    }
+
+    const objectiveIndex =
+      indexObjectiveRegistryRowsByParent(
+        objectiveRegistryRows,
+        {
+          studentCode:
+            codeNorm,
+        }
+      );
+
     const goalsWithObjectives =
       (goals || []).map(goal => {
         const objectives =
-          getObjectivesForParentGoal(
+          getBrowserObjectivesForParent(
+            objectiveIndex,
             goal.code,
             codeNorm
           );
@@ -158,7 +226,7 @@ exports.handler = async (event) => {
         return objectives.length > 0
           ? {
               ...goal,
-              objectives: objectives,
+              objectives,
             }
           : goal;
       });
