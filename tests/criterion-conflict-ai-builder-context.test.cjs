@@ -351,6 +351,13 @@ async function conflictCase() {
 
   assert.ok(
     goalCalls[0].includes(
+      'addressed_in_class=eq.true'
+    ),
+    'AI Builder goal context must include only goals addressed in class'
+  );
+
+  assert.ok(
+    goalCalls[0].includes(
       'target'
     )
   );
@@ -418,6 +425,16 @@ async function schemaFallbackCase() {
   assert.strictEqual(
     goalCalls.length,
     2
+  );
+
+  assert.ok(
+    goalCalls.every(
+      value =>
+        value.includes(
+          'addressed_in_class=eq.true'
+        )
+    ),
+    'both primary and compatibility goal queries must remain in-class-only'
   );
 
   assert.ok(
