@@ -135,11 +135,33 @@ assert.match(
 
 assert.match(
   endpoint,
+  /teacherAuth\.user\.teacherId/
+);
+
+assert.match(
+  endpoint,
+  /isUuid\(teacherId\)/
+);
+
+assert.match(
+  endpoint,
   /resolveOwnedClasses/
 );
 
+assert.ok(
+  !endpoint.includes(
+    'resolveTeacherId'
+  )
+);
+
+assert.ok(
+  !endpoint.includes(
+    '/rest/v1/teacher'
+  )
+);
+
 console.log(
-  '✓ signed teacher ownership and class ownership are explicit'
+  '✓ signed teacherId directly scopes canonical class ownership'
 );
 
 assert.match(
