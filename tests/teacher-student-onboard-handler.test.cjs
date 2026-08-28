@@ -20,6 +20,12 @@ const authPath =
 const realAuth =
   require(authPath);
 
+const SYNTHETIC_TEACHER_ID =
+  '11111111-1111-4111-8111-111111111111';
+
+let signedTeacherId =
+  SYNTHETIC_TEACHER_ID;
+
 require.cache[authPath].exports = {
   ...realAuth,
 
@@ -31,6 +37,9 @@ require.cache[authPath].exports = {
       user: {
         username:
           'synthetic-teacher',
+
+        teacherId:
+          signedTeacherId,
       },
     };
   },
@@ -250,22 +259,6 @@ function makeBackend({
     if (
       call.method === 'GET' &&
       call.path ===
-        '/rest/v1/teacher'
-    ) {
-      return mockResponse(
-        200,
-        [{
-          id:
-            'teacher-1',
-          username:
-            'synthetic-teacher',
-        }]
-      );
-    }
-
-    if (
-      call.method === 'GET' &&
-      call.path ===
         '/rest/v1/classes'
     ) {
       return mockResponse(
@@ -278,7 +271,7 @@ function makeBackend({
           name:
             'Language Arts 1 SC',
           teacher_id:
-            'teacher-1',
+            SYNTHETIC_TEACHER_ID,
         }]
       );
     }
@@ -502,7 +495,7 @@ async function newStudentCase() {
     );
 
   assert.ok(
-    firstWrite >= 4
+    firstWrite >= 3
   );
 
   assert.ok(
@@ -516,6 +509,35 @@ async function newStudentCase() {
           call.method ===
           'GET'
       )
+  );
+
+  assert.equal(
+    backend.calls.some(
+      call =>
+        call.path ===
+          '/rest/v1/teacher'
+    ),
+    false
+  );
+
+  const classRead =
+    backend.calls.find(
+      call =>
+        call.method === 'GET' &&
+        call.path ===
+          '/rest/v1/classes'
+    );
+
+  assert.ok(
+    classRead
+  );
+
+  assert.match(
+    classRead.search,
+    new RegExp(
+      'teacher_id=eq\\.' +
+      SYNTHETIC_TEACHER_ID
+    )
   );
 
   const studentWrite =
@@ -748,6 +770,50 @@ async function reuseExistingLoginCase() {
   );
 }
 
+async function missingSignedTeacherIdCase() {
+  const backend =
+    makeBackend();
+
+  global.fetch =
+    backend.fetchMock;
+
+  signedTeacherId =
+    null;
+
+  try {
+    const result =
+      await handler(
+        onboardingEvent()
+      );
+
+    assert.equal(
+      result.statusCode,
+      403
+    );
+
+    assert.equal(
+      writes(backend).length,
+      0
+    );
+
+    assert.equal(
+      backend.calls.some(
+        call =>
+          call.path ===
+            '/rest/v1/teacher'
+      ),
+      false
+    );
+  } finally {
+    signedTeacherId =
+      SYNTHETIC_TEACHER_ID;
+  }
+
+  console.log(
+    '✓ missing signed teacherId fails closed before writes'
+  );
+}
+
 async function inactiveStudentCase() {
   const backend =
     makeBackend({
@@ -961,6 +1027,7 @@ async function repairedStudentRollbackCase() {
     await newStudentCase();
     await repairMissingLoginCase();
     await reuseExistingLoginCase();
+    await missingSignedTeacherIdCase();
     await inactiveStudentCase();
     await orphanLoginCase();
     await malformedExistingLoginCase();

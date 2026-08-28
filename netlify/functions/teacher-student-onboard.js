@@ -76,6 +76,15 @@ const CODE_PATTERN =
 
 const MAX_CLASSES = 16;
 
+function isUuid(value) {
+  return (
+    typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value
+    )
+  );
+}
+
 class OnboardError extends Error {
   constructor(
     statusCode,
@@ -496,29 +505,6 @@ function validateReusableLogin({
       'The existing student login is linked to a different student record.'
     );
   }
-}
-
-async function resolveTeacherId(
-  username
-) {
-  const rows =
-    await queryRows(
-      '/rest/v1/teacher' +
-      '?select=id,username' +
-      `&username=eq.${encodeURIComponent(username)}` +
-      '&limit=2',
-      'Teacher identity'
-    );
-
-  if (
-    rows.length !== 1
-  ) {
-    throw new Error(
-      'Teacher ownership identity could not be resolved'
-    );
-  }
-
-  return rows[0].id;
 }
 
 async function resolveOwnedClasses({
@@ -1017,24 +1003,19 @@ exports.handler =
           request.code,
       });
 
-      const teacherUsername =
-        String(
-          teacherAuth.user
-            ?.username || ''
-        ).trim();
+      const teacherId =
+        teacherAuth.user &&
+        teacherAuth.user.teacherId;
 
-      if (!teacherUsername) {
-        throw new Error(
-          'Teacher username is unavailable'
+      if (!isUuid(teacherId)) {
+        throw new OnboardError(
+          403,
+          'Verified teacher session has no usable teacher identity'
         );
       }
 
-      // Resolve every requested class before the first write.
-      const teacherId =
-        await resolveTeacherId(
-          teacherUsername
-        );
-
+      // Resolve every requested class against the signed teacher identity
+      // before the first write.
       const ownedClasses =
         await resolveOwnedClasses({
           teacherId,
