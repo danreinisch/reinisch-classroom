@@ -36,8 +36,10 @@ const {
 } = require('./_lib/supa');
 
 const {
-  getObjectivesForParentGoal,
-} = require('./_lib/goal-objective-catalog');
+  buildObjectiveRegistryPath,
+  indexObjectiveRegistryRowsByParent,
+  getBrowserObjectivesForParent,
+} = require('./_lib/goal-objective-registry-reader');
 
 const {
   readObjectiveProgress,
@@ -388,11 +390,36 @@ exports.handler =
           'Goal query'
         );
 
+      /*
+       * Candidate parent identity comes from the same active
+       * production goal_objectives registry used by the shared
+       * objective-progress reader. This prevents newly imported
+       * objectives from being hidden by the retired 35-row catalog.
+       */
+      const objectiveRegistryRows =
+        await readRows(
+          buildObjectiveRegistryPath({
+            studentId:
+              student.id,
+          }),
+          'Objective registry candidate query'
+        );
+
+      const objectiveIndex =
+        indexObjectiveRegistryRowsByParent(
+          objectiveRegistryRows,
+          {
+            studentCode:
+              student_code,
+          }
+        );
+
       const candidateParents =
         goals
           .filter(goal => {
             const objectives =
-              getObjectivesForParentGoal(
+              getBrowserObjectivesForParent(
+                objectiveIndex,
                 goal.code,
                 student_code
               );
@@ -409,8 +436,8 @@ exports.handler =
           }));
 
       /*
-       * Canonical no-objective student:
-       * do not touch goal_progress or either dormant objective table.
+       * Live-registry no-objective student:
+       * no parent fallback or objective-evidence fanout is needed.
        */
       if (candidateParents.length === 0) {
         return successfulEmptyResponse(

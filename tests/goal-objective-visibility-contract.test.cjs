@@ -95,7 +95,7 @@ console.log(
 );
 
 /* -------------------------------------------------------------------------- */
-/* Migration remains dormant                                                   */
+/* Migration replay remains non-activating                                    */
 /* -------------------------------------------------------------------------- */
 
 const migration =
@@ -114,11 +114,11 @@ assert.ok(
   !/SELECT\s+(?:public\.)?sync_goal_objective_registry\s*\(/i.test(
     migration
   ),
-  'Slice 4 must not activate the objective registry through migration replay'
+  'migration replay must not auto-activate the objective registry'
 );
 
 console.log(
-  '✓ dormant objective registry remains non-activated'
+  '✓ migration replay remains non-activating'
 );
 
 /* -------------------------------------------------------------------------- */
@@ -132,9 +132,37 @@ const teacherReader =
 
 assert.ok(
   teacherReader.includes(
+    "require('./_lib/goal-objective-registry-reader')"
+  ),
+  'teacher roster reader must use the server-only production objective registry reader'
+);
+
+assert.ok(
+  !teacherReader.includes(
     "require('./_lib/goal-objective-catalog')"
   ),
-  'teacher roster reader must use the server-side objective catalog'
+  'teacher roster reader must no longer depend on the stale static objective catalog'
+);
+
+assert.ok(
+  teacherReader.includes(
+    'buildObjectiveRegistryPath'
+  ),
+  'teacher roster reader must read the active production objective registry'
+);
+
+assert.ok(
+  teacherReader.includes(
+    'indexObjectiveRegistryRowsByParent'
+  ),
+  'teacher roster reader must index registry rows by student + parent identity'
+);
+
+assert.ok(
+  teacherReader.includes(
+    'getBrowserObjectivesForParent'
+  ),
+  'teacher roster reader must expose only the established browser-safe objective projection'
 );
 
 assert.ok(
@@ -144,15 +172,8 @@ assert.ok(
   'teacher goal payload must attach child objectives to the parent goal'
 );
 
-assert.ok(
-  teacherReader.includes(
-    'getObjectivesForParentGoal'
-  ),
-  'teacher reader must scope objectives through exact parent identity'
-);
-
 console.log(
-  '✓ Teacher Center signed goal transport carries parent-scoped objectives'
+  '✓ Teacher Center signed goal transport reads parent-scoped objectives from production registry'
 );
 
 /* -------------------------------------------------------------------------- */
@@ -166,27 +187,48 @@ const studentReader =
 
 assert.ok(
   studentReader.includes(
+    "require('./_lib/goal-objective-registry-reader')"
+  ),
+  'student goals endpoint must use the server-only production objective registry reader'
+);
+
+assert.ok(
+  !studentReader.includes(
     "require('./_lib/goal-objective-catalog')"
   ),
-  'student goals endpoint must use the server-side objective catalog'
+  'student goals endpoint must no longer depend on the stale static objective catalog'
 );
 
 assert.ok(
   studentReader.includes(
-    'objectives:'
+    'buildObjectiveRegistryPath'
+  ),
+  'student endpoint must perform a student-scoped production registry read'
+);
+
+assert.ok(
+  studentReader.includes(
+    'indexObjectiveRegistryRowsByParent'
+  ),
+  'student endpoint must index registry rows by signed student + parent identity'
+);
+
+assert.ok(
+  studentReader.includes(
+    'getBrowserObjectivesForParent'
+  ),
+  'student endpoint must expose only the established browser-safe objective projection'
+);
+
+assert.ok(
+  studentReader.includes(
+    'objectives'
   ),
   'student goal payload must attach child objectives to the parent goal'
 );
 
-assert.ok(
-  studentReader.includes(
-    'getObjectivesForParentGoal'
-  ),
-  'student endpoint must scope objectives through exact signed student + parent identity'
-);
-
 console.log(
-  '✓ Student Portal signed goal transport carries only applicable objectives'
+  '✓ Student Portal signed goal transport reads applicable objectives from production registry'
 );
 
 /* -------------------------------------------------------------------------- */

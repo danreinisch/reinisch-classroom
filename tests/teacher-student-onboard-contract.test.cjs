@@ -359,7 +359,7 @@ assert.strictEqual(
 
 assert.strictEqual(
   cacheRefs[0][1],
-  '202608280055-onboard'
+  '202608290245-objective-registry'
 );
 
 console.log(

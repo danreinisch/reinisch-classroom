@@ -29,8 +29,10 @@ const NO_STORE_HEADERS = {
 };
 
 const {
-  getObjectivesForParentGoal,
-} = require('./_lib/goal-objective-catalog');
+  buildObjectiveRegistryPath,
+  indexObjectiveRegistryRowsByParent,
+  getBrowserObjectivesForParent,
+} = require('./_lib/goal-objective-registry-reader');
 
 function isSchemaError(value) {
   const text =
@@ -100,13 +102,18 @@ function nestedStudent(row) {
   return row.students || null;
 }
 
-function flattenGoals(rows, enriched) {
+function flattenGoals(
+  rows,
+  enriched,
+  objectiveIndex,
+) {
   return (rows || []).map((goal) => {
     const student =
       nestedStudent(goal) || {};
 
     const objectives =
-      getObjectivesForParentGoal(
+      getBrowserObjectivesForParent(
+        objectiveIndex,
         goal.code,
         student.code || ''
       );
@@ -126,6 +133,10 @@ function flattenGoals(rows, enriched) {
       criterion_conflict:
         goal.criterion_conflict === true,
       status: goal.status,
+      addressed_in_class:
+        goal.addressed_in_class === true,
+      individual_delivery:
+        goal.individual_delivery === true,
     };
 
     if (!enriched) {
@@ -338,6 +349,29 @@ exports.handler =
         );
       }
 
+      /*
+       * Child-objective identity is authoritative in the server-only
+       * production goal_objectives registry.
+       */
+      const objectiveRegistryResult =
+        await readRows(
+          buildObjectiveRegistryPath()
+        );
+
+      if (
+        objectiveRegistryResult.ok === false
+      ) {
+        throw new Error(
+          `objective registry query failed with status ` +
+          `${objectiveRegistryResult.status}`
+        );
+      }
+
+      const objectiveIndex =
+        indexObjectiveRegistryRowsByParent(
+          objectiveRegistryResult.data
+        );
+
       const enrollmentResult =
         await readRows(
           '/rest/v1/class_enrollments' +
@@ -379,7 +413,8 @@ exports.handler =
           goals:
             flattenGoals(
               goalsResult.data,
-              enrichedGoals
+              enrichedGoals,
+              objectiveIndex
             ),
           class_enrollments:
             enrollmentResult.ok

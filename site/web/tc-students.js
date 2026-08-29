@@ -6676,7 +6676,9 @@
     objectiveProgress = null,
     objectiveState = null,
     studentCode = '',
-    parentGoalCode = ''
+    parentGoalCode = '',
+    parentAddressedInClass = null,
+    parentIndividualDelivery = null
   ) {
     if (!Array.isArray(objectives) || objectives.length === 0) {
       return '';
@@ -6707,7 +6709,10 @@
     const stateAvailable =
       objectiveState?.available === true;
 
-    const canRecordManualEvidence = objectiveState?.available === true;
+    const canRecordManualEvidence =
+      stateAvailable &&
+      parentAddressedInClass === true &&
+      parentIndividualDelivery === false;
 
     const stateUnavailable =
       objectiveState?.available === false;
@@ -7179,7 +7184,9 @@
           goal._objectiveProgress,
           goal._objectiveProgressState,
           goal.student_code,
-          goal.code
+          goal.code,
+          goal.addressed_in_class,
+          goal.individual_delivery
         )}
           ${criterionMetricsHtml}
           <div class="st-goal-data-status">

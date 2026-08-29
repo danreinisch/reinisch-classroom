@@ -74,17 +74,84 @@ const parentGoals = [{
   code: 'S053.CG2',
 }];
 
+const objectiveDefinitions = [
+  {
+    goal_area:
+      'Written Expression',
+    objective_text:
+      'Compound sentences',
+    baseline:
+      '40%',
+    objective_wording_criterion:
+      null,
+    mastery_field:
+      '80%',
+    parent_goal_criterion:
+      '80% overall',
+  },
+  {
+    goal_area:
+      'Written Expression',
+    objective_text:
+      'Use Transitional words independently',
+    baseline:
+      '68%',
+    objective_wording_criterion:
+      null,
+    mastery_field:
+      '80%',
+    parent_goal_criterion:
+      '80% overall',
+  },
+  {
+    goal_area:
+      'Written Expression',
+    objective_text:
+      'Include a conclusion sentence for each topic',
+    baseline:
+      '50%',
+    objective_wording_criterion:
+      null,
+    mastery_field:
+      '80%',
+    parent_goal_criterion:
+      '80% overall',
+  },
+  {
+    goal_area:
+      'Written Expression',
+    objective_text:
+      'Use adjectives within his sentences',
+    baseline:
+      '40%',
+    objective_wording_criterion:
+      null,
+    mastery_field:
+      '80%',
+    parent_goal_criterion:
+      '80% overall',
+  },
+];
+
 const registryRows =
   objectiveIds.map(
     (id, index) => ({
       id,
-      student_id: studentId,
-      parent_goal_id: parentId,
-      student_code: 'S053',
-      parent_goal_code: 'S053.CG2',
-      code: `S053.CG2.O${index + 1}`,
-      objective_number: index + 1,
-      active: true,
+      student_id:
+        studentId,
+      parent_goal_id:
+        parentId,
+      student_code:
+        'S053',
+      parent_goal_code:
+        'S053.CG2',
+      code:
+        `S053.CG2.O${index + 1}`,
+      objective_number:
+        index + 1,
+      ...objectiveDefinitions[index],
+      active:
+        true,
     })
   );
 
@@ -276,6 +343,161 @@ assert.strictEqual(
 assert.strictEqual(
   bundle.parents.length,
   1
+);
+
+
+/*
+ * Live-registry expansion control:
+ * this parent/objective set does not exist in the old
+ * 35-row static catalog.
+ */
+const liveOnlyParentId =
+  '66666666-6666-4666-8666-666666666661';
+
+const liveOnlyStudentId =
+  '77777777-7777-4777-8777-777777777771';
+
+const liveOnlyParentGoals = [{
+  id:
+    liveOnlyParentId,
+  student_id:
+    liveOnlyStudentId,
+  student_code:
+    'S069',
+  code:
+    'S069.CG1',
+}];
+
+const liveOnlyRegistryRows = [
+  {
+    id:
+      '88888888-8888-4888-8888-888888888881',
+    student_id:
+      liveOnlyStudentId,
+    parent_goal_id:
+      liveOnlyParentId,
+    student_code:
+      'S069',
+    parent_goal_code:
+      'S069.CG1',
+    code:
+      'S069.CG1.O1',
+    goal_area:
+      'Reading Comprehension',
+    objective_number:
+      1,
+    objective_text:
+      'Determine the meaning of unfamiliar academic and domain-specific words and phrases using context clues, prefixes/suffixes, and reference tools.',
+    baseline:
+      'MAP Reading Vocabulary RIT 211',
+    objective_wording_criterion:
+      'MAP Reading Vocabulary RIT 216',
+    mastery_field:
+      '216',
+    parent_goal_criterion:
+      'Parent Reading goal target: MAP Reading RIT 220',
+    active:
+      true,
+  },
+  {
+    id:
+      '88888888-8888-4888-8888-888888888882',
+    student_id:
+      liveOnlyStudentId,
+    parent_goal_id:
+      liveOnlyParentId,
+    student_code:
+      'S069',
+    parent_goal_code:
+      'S069.CG1',
+    code:
+      'S069.CG1.O2',
+    goal_area:
+      'Reading Comprehension',
+    objective_number:
+      2,
+    objective_text:
+      'Identify main ideas and supporting details and make inferences in informational text.',
+    baseline:
+      'MAP Reading Informational Text RIT 218',
+    objective_wording_criterion:
+      'MAP Reading Informational Text RIT 222',
+    mastery_field:
+      '222',
+    parent_goal_criterion:
+      'Parent Reading goal target: MAP Reading RIT 220',
+    active:
+      true,
+  },
+  {
+    id:
+      '88888888-8888-4888-8888-888888888883',
+    student_id:
+      liveOnlyStudentId,
+    parent_goal_id:
+      liveOnlyParentId,
+    student_code:
+      'S069',
+    parent_goal_code:
+      'S069.CG1',
+    code:
+      'S069.CG1.O3',
+    goal_area:
+      'Reading Comprehension',
+    objective_number:
+      3,
+    objective_text:
+      'Analyze plot, character development, and theme in literary text.',
+    baseline:
+      'MAP Reading Literary Text RIT 219',
+    objective_wording_criterion:
+      'MAP Reading Literary Text RIT 223',
+    mastery_field:
+      '223',
+    parent_goal_criterion:
+      'Parent Reading goal target: MAP Reading RIT 220',
+    active:
+      true,
+  },
+];
+
+const liveOnlyBundle =
+  buildObjectiveProgressBundle({
+    parentGoals:
+      liveOnlyParentGoals,
+    registryRows:
+      liveOnlyRegistryRows,
+    evidenceRows: [],
+    parentProgressRows: [],
+  });
+
+assert.strictEqual(
+  liveOnlyBundle.available,
+  true
+);
+
+assert.deepStrictEqual(
+  liveOnlyBundle.parents[0]
+    .objectives
+    .map(objective => objective.code),
+  [
+    'S069.CG1.O1',
+    'S069.CG1.O2',
+    'S069.CG1.O3',
+  ],
+  'shared reader must support live registry objectives absent from the legacy static catalog'
+);
+
+assert.deepStrictEqual(
+  liveOnlyBundle.parents[0].coverage,
+  {
+    objectives_with_data: 0,
+    total_objectives: 3,
+  }
+);
+
+console.log(
+  '✓ live registry definitions support newly imported objectives absent from static catalog'
 );
 
 const parent =
@@ -624,10 +846,28 @@ async function runReaderTests() {
       }],
       parentProgressRows: [],
       quarterRange: Q1_RANGE,
-      fetchImpl: async (...args) => {
-        calls.push(args);
+      fetchImpl: async (url) => {
+        const target =
+          String(url);
+
+        calls.push(target);
+
+        if (
+          target.includes(
+            '/rest/v1/goal_objectives?'
+          )
+        ) {
+          return {
+            ok: true,
+            status: 200,
+            async text() {
+              return '[]';
+            },
+          };
+        }
+
         throw new Error(
-          'No objective table request expected'
+          `Unexpected URL: ${target}`
         );
       },
     });
@@ -638,12 +878,29 @@ async function runReaderTests() {
       available: true,
       parents: [],
     },
-    'parents with no canonical child objectives require zero objective DB reads'
+    'parent with zero live registry children must return an authoritative successful empty result'
   );
 
   assert.strictEqual(
-    calls.length,
-    0
+    calls.filter(
+      url =>
+        url.includes(
+          '/rest/v1/goal_objectives?'
+        )
+    ).length,
+    1,
+    'zero-child determination requires exactly one live registry read'
+  );
+
+  assert.strictEqual(
+    calls.some(
+      url =>
+        url.includes(
+          '/rest/v1/objective_data_points?'
+        )
+    ),
+    false,
+    'zero-child parent must not fan out to objective evidence'
   );
 
   calls = [];
@@ -692,16 +949,19 @@ async function runReaderTests() {
 
   calls = [];
 
-  const registryNotActivated =
+  const emptyRegistry =
     await readObjectiveProgress({
       parentGoals,
       parentProgressRows,
       quarterRange: Q1_RANGE,
       fetchImpl: async (url) => {
-        calls.push(String(url));
+        const target =
+          String(url);
+
+        calls.push(target);
 
         if (
-          String(url).includes(
+          target.includes(
             '/rest/v1/goal_objectives?'
           )
         ) {
@@ -715,19 +975,18 @@ async function runReaderTests() {
         }
 
         throw new Error(
-          `Unexpected URL: ${url}`
+          `Unexpected URL: ${target}`
         );
       },
     });
 
   assert.deepStrictEqual(
-    registryNotActivated,
+    emptyRegistry,
     {
-      available: false,
-      reason: 'registry_not_activated',
+      available: true,
       parents: [],
     },
-    'empty canonical registry must not masquerade as No Data'
+    'empty parent-scoped live registry result is authoritative: this parent has no child objectives'
   );
 
   assert.strictEqual(
@@ -737,21 +996,25 @@ async function runReaderTests() {
           '/rest/v1/objective_data_points'
         )
     ),
-    false
+    false,
+    'empty parent registry must not query objective evidence'
   );
 
   calls = [];
 
-  const partialRegistry =
+  const threeChildRegistry =
     await readObjectiveProgress({
       parentGoals,
       parentProgressRows,
       quarterRange: Q1_RANGE,
       fetchImpl: async (url) => {
-        calls.push(String(url));
+        const target =
+          String(url);
+
+        calls.push(target);
 
         if (
-          String(url).includes(
+          target.includes(
             '/rest/v1/goal_objectives?'
           )
         ) {
@@ -766,20 +1029,145 @@ async function runReaderTests() {
           };
         }
 
+        if (
+          target.includes(
+            '/rest/v1/objective_data_points?'
+          )
+        ) {
+          return {
+            ok: true,
+            status: 200,
+            async text() {
+              return '[]';
+            },
+          };
+        }
+
         throw new Error(
-          `Unexpected URL: ${url}`
+          `Unexpected URL: ${target}`
+        );
+      },
+    });
+
+  assert.strictEqual(
+    threeChildRegistry.available,
+    true
+  );
+
+  assert.strictEqual(
+    threeChildRegistry.parents.length,
+    1
+  );
+
+  assert.deepStrictEqual(
+    threeChildRegistry.parents[0]
+      .objectives
+      .map(objective => objective.code),
+    [
+      'S053.CG2.O1',
+      'S053.CG2.O2',
+      'S053.CG2.O3',
+    ],
+    'three live registry rows define exactly three legitimate children; no static row-count expectation may be imposed'
+  );
+
+  assert.deepStrictEqual(
+    threeChildRegistry.parents[0].coverage,
+    {
+      objectives_with_data: 0,
+      total_objectives: 3,
+    }
+  );
+
+  assert.strictEqual(
+    threeChildRegistry.parents[0].percentage,
+    88,
+    'zero child evidence may still use same-quarter existing parent fallback'
+  );
+
+  assert.strictEqual(
+    threeChildRegistry.parents[0].source,
+    'existing_parent'
+  );
+
+  assert.strictEqual(
+    calls.some(
+      url =>
+        url.includes(
+          '/rest/v1/objective_data_points?'
+        )
+    ),
+    true,
+    'a legitimate non-empty registry must proceed to objective evidence read'
+  );
+
+  calls = [];
+
+  const mismatchedRegistry =
+    await readObjectiveProgress({
+      parentGoals,
+      parentProgressRows,
+      quarterRange: Q1_RANGE,
+      fetchImpl: async (url) => {
+        const target =
+          String(url);
+
+        calls.push(target);
+
+        if (
+          target.includes(
+            '/rest/v1/goal_objectives?'
+          )
+        ) {
+          const badRows =
+            registryRows.map(
+              (row, index) =>
+                index === 0
+                  ? {
+                      ...row,
+                      parent_goal_id:
+                        '99999999-9999-4999-8999-999999999999',
+                    }
+                  : row
+            );
+
+          return {
+            ok: true,
+            status: 200,
+            async text() {
+              return JSON.stringify(
+                badRows
+              );
+            },
+          };
+        }
+
+        throw new Error(
+          `Unexpected URL: ${target}`
         );
       },
     });
 
   assert.deepStrictEqual(
-    partialRegistry,
+    mismatchedRegistry,
     {
       available: false,
-      reason: 'registry_mismatch',
+      reason:
+        'registry_mismatch',
       parents: [],
     },
-    'partial registry must fail closed'
+    'actual parent/student/registry identity mismatch must still fail closed'
+  );
+
+  assert.strictEqual(
+    calls.some(
+      url =>
+        url.includes(
+          '/rest/v1/objective_data_points?'
+        )
+    ),
+    false,
+    'identity mismatch must fail before objective evidence fanout'
   );
 
   calls = [];

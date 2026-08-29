@@ -92,6 +92,29 @@ for (const resource of [
 
 assert.match(
   endpoint,
+  /goal-objective-registry-reader/,
+  'Student explanation endpoint must use the server-only live objective registry reader'
+);
+
+assert.doesNotMatch(
+  endpoint,
+  /goal-objective-catalog/,
+  'Student explanation endpoint must no longer depend on the stale 35-row static objective catalog'
+);
+
+for (const required of [
+  'buildObjectiveRegistryPath',
+  'indexObjectiveRegistryRowsByParent',
+  'getBrowserObjectivesForParent',
+]) {
+  assert.ok(
+    endpoint.includes(required),
+    `Student explanation endpoint must use ${required}`
+  );
+}
+
+assert.match(
+  endpoint,
   /readObjectiveProgress/,
   'objective-aware explanations must reuse the shared 5C1 reader'
 );
