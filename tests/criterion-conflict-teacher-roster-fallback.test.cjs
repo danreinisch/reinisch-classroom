@@ -226,6 +226,17 @@ function loadEndpoint(
 
         if (
           requestPath.startsWith(
+            '/rest/v1/goal_objectives'
+          )
+        ) {
+          return response(
+            200,
+            []
+          );
+        }
+
+        if (
+          requestPath.startsWith(
             '/rest/v1/class_enrollments'
           )
         ) {

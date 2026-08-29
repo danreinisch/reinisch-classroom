@@ -619,7 +619,7 @@ for (
 
 assert.ok(
   html.includes(
-    '/web/tc-students.js?v=202608280055-onboard'
+    '/web/tc-students.js?v=202608290245-objective-registry'
   ),
   'Teacher Students page must publish the current tc-students cache key'
 );
