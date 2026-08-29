@@ -133,6 +133,10 @@ function flattenGoals(
       criterion_conflict:
         goal.criterion_conflict === true,
       status: goal.status,
+      addressed_in_class:
+        goal.addressed_in_class === true,
+      individual_delivery:
+        goal.individual_delivery === true,
     };
 
     if (!enriched) {

@@ -524,10 +524,34 @@ assert.match(
   'manual objective evidence endpoint must require signed Teacher authentication'
 );
 
+assert.doesNotMatch(
+  endpointSource,
+  /goal-objective-catalog|getObjectivesForParentGoal/,
+  'manual evidence write authorization must no longer depend on the stale 35-row static catalog'
+);
+
 assert.match(
   endpointSource,
-  /getObjectivesForParentGoal/,
-  'server must preflight student + parent + objective against canonical source catalog'
+  /dan_monitoring_role/,
+  'server must read the live objective monitoring role before authorizing manual evidence'
+);
+
+assert.match(
+  endpointSource,
+  /Primary/,
+  'manual evidence must require the explicit Primary monitoring role'
+);
+
+assert.match(
+  endpointSource,
+  /addressed_in_class/,
+  'manual evidence must require the controlling parent to be addressed in class'
+);
+
+assert.match(
+  endpointSource,
+  /individual_delivery/,
+  'manual evidence must reject individual-delivery parent goals'
 );
 
 assert.match(
@@ -693,6 +717,14 @@ assert.ok(
       'tests/objective-manual-evidence-contract.test.cjs'
     ),
   '5D1 contract must be permanently registered in test:unit'
+);
+
+assert.ok(
+  packageJson.scripts['test:unit']
+    .includes(
+      'tests/teacher-manual-objective-evidence-registry-endpoint.test.cjs'
+    ),
+  'live-registry manual evidence authorization behavior must be permanently registered in test:unit'
 );
 
 console.log(

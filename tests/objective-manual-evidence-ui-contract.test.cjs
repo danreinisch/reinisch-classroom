@@ -31,6 +31,11 @@ const students =
     'site/web/tc-students.js'
   );
 
+const rosterContext =
+  read(
+    'netlify/functions/teacher-roster-context.js'
+  );
+
 const html =
   read(
     'site/teacher/students/index.html'
@@ -218,17 +223,49 @@ console.log(
 /* Dormant-safe activation behavior                                            */
 /* ========================================================================== */
 
-assert.ok(
-  students.includes(
-    'const canRecordManualEvidence = objectiveState?.available === true;'
-  ),
-  'manual entry availability must come from the signed objective-system state'
+for (
+  const marker
+  of [
+    'parentAddressedInClass = null',
+    'parentIndividualDelivery = null',
+    'parentAddressedInClass === true',
+    'parentIndividualDelivery === false',
+  ]
+) {
+  assert.ok(
+    students.includes(marker),
+    `manual evidence UI permission gate must include ${marker}`
+  );
+}
+
+assert.match(
+  students,
+  /const canRecordManualEvidence\s*=\s*[\s\S]{0,260}stateAvailable[\s\S]{0,260}parentAddressedInClass\s*===\s*true[\s\S]{0,260}parentIndividualDelivery\s*===\s*false/,
+  'manual entry requires signed objective availability plus explicit in-class, non-individual parent delivery'
+);
+
+assert.match(
+  students,
+  /renderGoalObjectives\([\s\S]{0,420}goal\.addressed_in_class,[\s\S]{0,120}goal\.individual_delivery/,
+  'parent delivery flags must be passed into the objective renderer'
+);
+
+assert.match(
+  rosterContext,
+  /addressed_in_class:\s*goal\.addressed_in_class\s*===\s*true/,
+  'Teacher roster transport must expose a fail-closed addressed_in_class boolean'
+);
+
+assert.match(
+  rosterContext,
+  /individual_delivery:\s*goal\.individual_delivery\s*===\s*true/,
+  'Teacher roster transport must expose a fail-closed individual_delivery boolean'
 );
 
 assert.match(
   students,
   /canRecordManualEvidence\s*\?[\s\S]{0,800}buildManualObjectiveEvidenceForm/,
-  'manual evidence form must render only when objective tracking is available'
+  'manual evidence form must render only after the explicit permission gate passes'
 );
 
 assert.ok(
@@ -239,7 +276,7 @@ assert.ok(
 );
 
 console.log(
-  '✓ dormant objective system keeps wording visible without exposing a live write control'
+  '✓ manual write control requires signed objective availability plus eligible parent delivery'
 );
 
 /* ========================================================================== */

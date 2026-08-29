@@ -33,12 +33,6 @@ const {
 );
 
 const {
-  getObjectivesForParentGoal,
-} = require(
-  './_lib/goal-objective-catalog'
-);
-
-const {
   normalizeManualObjectiveRequest,
   schoolYearFromObjectiveDate,
   buildManualObjectiveEvidenceRow,
@@ -403,7 +397,7 @@ async function resolveActiveParentGoal({
 
   params.set(
     'select',
-    'id,code,student_id,status,active'
+    'id,code,student_id,status,active,addressed_in_class,individual_delivery'
   );
 
   params.set(
@@ -456,25 +450,6 @@ async function resolveActiveParentGoal({
   return goal;
 }
 
-function resolveOfficialObjective(
-  input
-) {
-  const official =
-    getObjectivesForParentGoal(
-      input.parent_goal_code,
-      input.student_code
-    );
-
-  return (
-    official.find(
-      objective =>
-        objective.code ===
-          input.objective_code
-    ) ||
-    null
-  );
-}
-
 async function resolveRegistryObjective({
   input,
   studentId,
@@ -492,6 +467,7 @@ async function resolveRegistryObjective({
       'student_code',
       'parent_goal_code',
       'code',
+      'dan_monitoring_role',
       'active',
     ].join(',')
   );
@@ -754,28 +730,6 @@ exports.handler =
       );
     }
 
-    const officialObjective =
-      resolveOfficialObjective(
-        input
-      );
-
-    if (!officialObjective) {
-      return jsonResponse(
-        event,
-        422,
-        {
-          ok: false,
-          error:
-            'Objective is not an official child objective for this student and parent goal',
-        },
-        {
-          'Cache-Control':
-            'no-store',
-        },
-        requestId
-      );
-    }
-
     try {
       const student =
         await resolveActiveStudent(
@@ -885,23 +839,68 @@ exports.handler =
         throw error;
       }
 
-      if (!registryObjective) {
-        return unavailableResponse(
-          event,
-          requestId,
-          'registry_unavailable'
-        );
-      }
-
+      /*
+       * The live registry is now the canonical child-objective identity.
+       *
+       * Manual/binder evidence has an additional explicit permission fence:
+       * - exact active child identity
+       * - Dan monitoring role = Primary
+       * - controlling parent is addressed in class
+       * - controlling parent is not individual-delivery
+       *
+       * This preserves the original 35-objective behavior while admitting
+       * newly onboarded Primary objectives without opening provider, Math,
+       * or Supporting / Responsibility Review objectives.
+       */
       if (
+        !registryObjective ||
         !UUID_PATTERN.test(
           registryObjective.id || ''
         )
       ) {
-        return unavailableResponse(
+        return jsonResponse(
           event,
-          requestId,
-          'registry_unavailable'
+          422,
+          {
+            ok: false,
+            error:
+              'Objective is not an active child objective for this student and parent goal',
+          },
+          {
+            'Cache-Control':
+              'no-store',
+          },
+          requestId
+        );
+      }
+
+      const manualEvidenceEligible =
+        text(
+          registryObjective
+            .dan_monitoring_role,
+          100
+        ) === 'Primary' &&
+        parentGoal
+          .addressed_in_class ===
+          true &&
+        parentGoal
+          .individual_delivery ===
+          false;
+
+      if (!manualEvidenceEligible) {
+        return jsonResponse(
+          event,
+          422,
+          {
+            ok: false,
+            error:
+              'Objective is not eligible for manual/binder evidence in this teacher context',
+          },
+          {
+            'Cache-Control':
+              'no-store',
+          },
+          requestId
         );
       }
 

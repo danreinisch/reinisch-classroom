@@ -205,11 +205,24 @@ function loadEndpoint({
                 version: 1,
                 observation_config: null,
                 notes: null,
+                addressed_in_class: true,
+                individual_delivery: false,
                 students: {
                   code: 'E2E01',
                 },
               },
             ]
+          );
+        }
+
+        if (
+          requestPath.startsWith(
+            '/rest/v1/goal_objectives'
+          )
+        ) {
+          return response(
+            200,
+            []
           );
         }
 
@@ -366,6 +379,8 @@ async function run() {
           version: 1,
           observation_config: null,
           notes: null,
+          addressed_in_class: true,
+          individual_delivery: false,
         },
       ]
     );
@@ -386,6 +401,34 @@ async function run() {
       'signed roster context must select criterion_conflict'
     );
 
+    assert.ok(
+      goalRead.includes(
+        'addressed_in_class'
+      ),
+      'signed roster context must select addressed_in_class for manual-evidence UI permission'
+    );
+
+    assert.ok(
+      goalRead.includes(
+        'individual_delivery'
+      ),
+      'signed roster context must select individual_delivery for manual-evidence UI permission'
+    );
+
+    const objectiveRegistryReads =
+      restCalls.filter(
+        requestPath =>
+          requestPath.startsWith(
+            '/rest/v1/goal_objectives'
+          )
+      );
+
+    assert.strictEqual(
+      objectiveRegistryReads.length,
+      1,
+      'signed roster context must perform exactly one live objective-registry read'
+    );
+
     assert.strictEqual(
       body.class_enrollments.length,
       1
@@ -398,8 +441,8 @@ async function run() {
 
     assert.strictEqual(
       restCalls.length,
-      4,
-      'signed endpoint must perform the four bounded reads'
+      5,
+      'signed endpoint must perform the five bounded roster/objective reads'
     );
 
     assert.strictEqual(
