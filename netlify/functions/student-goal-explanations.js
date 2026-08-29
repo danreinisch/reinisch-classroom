@@ -16,8 +16,8 @@
  *   start
  *   end
  *
- * This endpoint never writes progress/evidence and never activates the
- * dormant objective registry.
+ * This endpoint never writes progress/evidence and never mutates or
+ * activates the objective registry.
  */
 
 const {
@@ -35,9 +35,11 @@ const {
 } = require('./_lib/student-auth');
 
 const {
-  getObjectivesForParentGoal,
+  buildObjectiveRegistryPath,
+  indexObjectiveRegistryRowsByParent,
+  getBrowserObjectivesForParent,
 } = require(
-  './_lib/goal-objective-catalog'
+  './_lib/goal-objective-registry-reader'
 );
 
 const {
@@ -459,10 +461,36 @@ exports.handler =
           goalsUrl
         );
 
+      /*
+       * The pure explanation helper uses goal.objectives to decide
+       * whether a parent takes the objective-aware explanation path.
+       * Therefore that visibility identity must come from the same
+       * active production goal_objectives registry as every other
+       * live objective reader.
+       */
+      const objectiveRegistryRows =
+        await readJson(
+          `${SUPABASE_URL}${
+            buildObjectiveRegistryPath({
+              studentId,
+            })
+          }`
+        );
+
+      const objectiveIndex =
+        indexObjectiveRegistryRowsByParent(
+          objectiveRegistryRows,
+          {
+            studentCode:
+              codeNorm,
+          }
+        );
+
       const goals =
         goalRows.map(goal => {
           const objectives =
-            getObjectivesForParentGoal(
+            getBrowserObjectivesForParent(
+              objectiveIndex,
               goal.code,
               codeNorm
             );
