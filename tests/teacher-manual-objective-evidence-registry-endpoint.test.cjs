@@ -132,12 +132,19 @@ const savedKey =
   process.env
     .SUPABASE_SERVICE_ROLE_KEY;
 
+const savedSessionSecret =
+  process.env
+    .SESSION_SECRET;
+
 process.env.SUPABASE_URL =
   'https://example.supabase.test';
 
 process.env
   .SUPABASE_SERVICE_ROLE_KEY =
   'test-service-role';
+
+process.env.SESSION_SECRET =
+  'manual-objective-session-secret';
 
 cacheStub(
   httpAbsolute,
@@ -182,7 +189,16 @@ cacheStub(
 cacheStub(
   authAbsolute,
   {
-    async requireTeacher() {
+    async requireTeacher(
+      _event,
+      secret
+    ) {
+      assert.strictEqual(
+        secret,
+        process.env.SESSION_SECRET,
+        'manual objective endpoint must authenticate with SESSION_SECRET'
+      );
+
       return {
         ok:
           true,
@@ -872,6 +888,18 @@ main()
       process.env
         .SUPABASE_SERVICE_ROLE_KEY =
         savedKey;
+    }
+
+    if (
+      savedSessionSecret ===
+      undefined
+    ) {
+      delete process.env
+        .SESSION_SECRET;
+    } else {
+      process.env
+        .SESSION_SECRET =
+        savedSessionSecret;
     }
 
     delete require.cache[

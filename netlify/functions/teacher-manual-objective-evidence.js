@@ -33,6 +33,10 @@ const {
 );
 
 const {
+  SESSION_SECRET,
+} = process.env;
+
+const {
   normalizeManualObjectiveRequest,
   schoolYearFromObjectiveDate,
   buildManualObjectiveEvidenceRow,
@@ -616,7 +620,7 @@ exports.handler =
     const authResult =
       await requireTeacher(
         event,
-        requestId
+        SESSION_SECRET
       );
 
     if (
