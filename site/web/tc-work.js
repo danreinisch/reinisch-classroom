@@ -1317,20 +1317,29 @@
     let wrIndex = 0;
     // BUG 3 FIX: Track current day for subsectioning
     let currentDay = null;
+    let currentDayIsWriting = false;
+    let pendingWritingHeaderTags = null;
 
     const uniq = (arr) =>
       Array.from(new Set((arr || []).map((x) => String(x || "").trim()).filter(Boolean)));
 
-    const startSection = (title) => {
+    const startSection = (title, resetDay = true) => {
       const t = String(title || "Assignment").trim() || "Assignment";
       cur = { title: t, items: [] };
       out.sections.push(cur);
-      // Reset day tracking when starting new section
-      currentDay = null;
+
+      // Explicit class/section boundaries reset DAY context.
+      // Lazy creation of the implicit "Assignment" mapping section must not
+      // erase a DAY header that was already detected immediately above it.
+      if (resetDay) {
+        currentDay = null;
+        currentDayIsWriting = false;
+        pendingWritingHeaderTags = null;
+      }
     };
 
     const addItem = (key, tags, question) => {
-      if (!cur) startSection("Assignment");
+      if (!cur) startSection("Assignment", false);
       const item = { key: String(key), dese: uniq(tags?.dese), iep: uniq(tags?.iep) };
       if (question) item.question = String(question).trim();
       cur.items.push(item);
@@ -1356,10 +1365,30 @@
     // BUG 2 FIX: Match "Question N:" format in addition to "Q1." and "1."
     const isQuestionLine = (line) => /^\s*(?:Question\s+)?(?:Q\s*)?\d+\s*[.):]\s*/i.test(line);
     // BUG 3 FIX: Detect day headers
-    const isDayLine = (line) => /^\s*DAY\s+(\d+)\b/i.test(line);
+    const stripStructuralDecoration = (line) =>
+      String(line || "")
+        .trim()
+        .replace(/^[-─━═]{2,}\s*/, "")
+        .replace(/\s*[-─━═]{2,}$/, "");
+
+    const dayMatchFromLine = (line) =>
+      stripStructuralDecoration(line).match(
+        /^DAY\s+(\d+)\b(.*)$/i
+      );
+
+    const isDayLine = (line) =>
+      !!dayMatchFromLine(line);
     // BUG 4 FIX: Detect writing prompt lines
-    const isWritingPromptLine = (line) => /^\s*(?:DAY\s+\d+[\s:]*)?WRITING\s+(?:PROMPT|WORKSHOP)\b/i.test(line);
-    const isWrittenResponseLine = (line) => /^\s*WRITTEN\s+RESPONSE\b/i.test(line);
+    const isWritingPromptLine = (line) =>
+      /^\s*(?:DAY\s+\d+[\s:]*)?WRITING\s+(?:PROMPT|WORKSHOP)\b/i
+        .test(
+          stripStructuralDecoration(line)
+        );
+    const isWrittenResponseLine = (line) =>
+      /^\s*WRITTEN\s+RESPONSE\b/i
+        .test(
+          stripStructuralDecoration(line)
+        );
     const isTagLine = (line) =>
       /\[[^\]]+\]/.test(line) &&
       (/\bMLS\b/i.test(line) ||
@@ -1378,17 +1407,62 @@
 
       // BUG 3 FIX: Detect day headers for subsectioning
       if (isDayLine(line)) {
-        const dm = line.match(/^\s*DAY\s+(\d+)\b/i);
-        currentDay = dm ? dm[1] : null;
+        const dm =
+          dayMatchFromLine(line);
+
+        const structuralDayLine =
+          stripStructuralDecoration(line);
+
+        currentDay =
+          dm ? dm[1] : null;
+
+        currentDayIsWriting =
+          /WRITING\s+(?:PROMPT|WORKSHOP)|WRITTEN\s+RESPONSE/i
+            .test(
+              structuralDayLine
+            );
+
         pendingWR = null;
+        pendingWritingHeaderTags = null;
         continue;
       }
 
       // BUG 4 FIX: Detect writing prompts as mappable items
       if (isWritingPromptLine(line)) {
         const wpKey = currentDay ? `D${currentDay}.WP` : "WP";
-        // Look ahead for tags
-        let tags = { dese: [], iep: [] };
+        // Preserve mappings carried by the structural
+        // Question 1 ... [WRITTEN RESPONSE] header.
+        let tags =
+          pendingWritingHeaderTags
+            ? {
+                dese:
+                  (pendingWritingHeaderTags.dese || []).slice(),
+                iep:
+                  (pendingWritingHeaderTags.iep || []).slice(),
+              }
+            : {
+                dese: [],
+                iep: [],
+              };
+
+        // Also retain tags placed directly on Writing Prompt:.
+        const inlineWritingTags =
+          parseTagsFromLine(
+            line
+          );
+
+        tags = {
+          dese:
+            (tags.dese || [])
+              .concat(
+                inlineWritingTags.dese || []
+              ),
+          iep:
+            (tags.iep || [])
+              .concat(
+                inlineWritingTags.iep || []
+              ),
+        };
         for (let j = i + 1; j < lines.length; j++) {
           const l2 = lines[j];
           if (isQuestionLine(l2) || isSectionLine(l2) || isDayLine(l2)) break;
@@ -1402,6 +1476,7 @@
         }
         addItem(wpKey, tags, line.trim());
         pendingWR = null;
+        pendingWritingHeaderTags = null;
         continue;
       }
 
@@ -1428,6 +1503,27 @@
         const qText = qm ? line.slice(line.indexOf(qm[0]) + qm[0].length).replace(/\[[^\]]*\]/g, "").trim() : "";
         let tags = parseTagsFromLine(line);
 
+        if (
+          currentDayIsWriting &&
+          /\[WRITTEN\s+RESPONSE\]/i.test(
+            line
+          )
+        ) {
+          pendingWR =
+            currentDay
+              ? `D${currentDay}.WP`
+              : "WP";
+
+          pendingWritingHeaderTags = {
+            dese:
+              (tags.dese || []).slice(),
+            iep:
+              (tags.iep || []).slice(),
+          };
+
+          continue;
+        }
+
         // BUG 5 FIX: Collect ALL tag lines between questions (not just first)
         for (let j = i + 1; j < lines.length; j++) {
           const l2 = lines[j];
@@ -1444,6 +1540,7 @@
 
         addItem(qKey, tags, qText);
         pendingWR = null;
+        pendingWritingHeaderTags = null;
         continue;
       }
 
@@ -3479,7 +3576,48 @@ function normalizeTaggedAssignmentText(input) {
     );
     if (!confirmed) return;
 
-    const baseTitle = getVal(titleEl) || aFile.name;
+    // Self-describing individualized TXT files carry a WEEK title
+    // inside each student header. Manual Title remains a legacy fallback.
+    const manualBaseTitle =
+      getVal(titleEl) ||
+      aFile.name;
+
+    const sourceTitles =
+      Array.from(
+        new Set(
+          sections
+            .map(section =>
+              String(
+                section.title || ""
+              ).trim()
+            )
+            .filter(Boolean)
+        )
+      );
+
+    const weekLabels =
+      Array.from(
+        new Set(
+          sourceTitles
+            .map(title => {
+              const match =
+                title.match(
+                  /^WEEK\s+\d+\b/i
+                );
+
+              return match
+                ? match[0].toUpperCase()
+                : "";
+            })
+            .filter(Boolean)
+        )
+      );
+
+    const batchTitle =
+      weekLabels.length === 1
+        ? `${weekLabels[0]} — Individualized Assignments`
+        : manualBaseTitle;
+
     const notes = getVal(notesEl) || "";
     const releaseAt = toIsoMaybe(getVal(releaseEl));
     const dueAt = toIsoMaybe(getVal(dueEl));
@@ -3500,7 +3638,15 @@ function normalizeTaggedAssignmentText(input) {
     const fallbackMapping = JSON.stringify({ version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } }, null, 2);
 
     for (const sec of sections) {
-      const t = `${baseTitle} — ${sec.studentCode}`;
+      const sourceTitle =
+        String(
+          sec.title || ""
+        ).trim();
+
+      // Human-readable title from TXT + S### keeps the issued
+      // assignment student-specific and unambiguous.
+      const t =
+        `${sourceTitle || manualBaseTitle} — ${sec.studentCode}`;
 
       // Store the normalized assignment text (consistent with normal Save Draft flow)
       let assignText = ensureBound(sec.body);
@@ -3531,7 +3677,7 @@ function normalizeTaggedAssignmentText(input) {
       drafts.unshift({
         id: makeId(),
         batchId,
-        batchTitle: baseTitle,
+        batchTitle,
         title: t,
         className: sec.className || "",
         studentCode: sec.studentCode,
@@ -3781,6 +3927,16 @@ function normalizeTaggedAssignmentText(input) {
         "btnSplitByStudent"
       );
 
+    const titleInput =
+      document.getElementById(
+        "draftTitle"
+      );
+
+    const titleLabel =
+      document.querySelector(
+        'label[for="draftTitle"]'
+      );
+
     const isEditing =
       !!(
         saveBtn &&
@@ -3791,6 +3947,21 @@ function normalizeTaggedAssignmentText(input) {
     if (form) {
       delete form.dataset.rcIndividualizedStudentCount;
       delete form.dataset.rcIndividualizedClassCount;
+    }
+
+    // Restore ordinary/manual behavior before examining the uploaded file.
+    if (!isEditing) {
+      if (titleInput) {
+        titleInput.disabled = false;
+        titleInput.required = true;
+        titleInput.placeholder =
+          "Week 1 — ADIT — Day 1 Assignment";
+      }
+
+      if (titleLabel) {
+        titleLabel.textContent =
+          "Title (required for manual/single-class)";
+      }
     }
 
     if (
@@ -3822,6 +3993,14 @@ function normalizeTaggedAssignmentText(input) {
       const classValidation =
         validateStudentSectionClasses(
           studentSections
+        );
+
+      const allTitlesPresent =
+        studentSections.every(
+          section =>
+            !!String(
+              section.title || ""
+            ).trim()
         );
 
       const distinctClasses =
@@ -3882,7 +4061,9 @@ function normalizeTaggedAssignmentText(input) {
       const actionText =
         isEditing
           ? "Finish or cancel the current draft edit before creating an individualized batch."
-          : "Classes will be taken from each student section. No Individual Class selection is needed.";
+          : allTitlesPresent
+            ? "Titles and classes will be taken from each student section. No Title or Individual Class entry is needed."
+            : "Classes will be taken from each student section. Enter one Title only as a fallback for this older TXT format.";
 
       panel.innerHTML = `
         <div class="work-card" style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.25);">
@@ -3924,6 +4105,24 @@ function normalizeTaggedAssignmentText(input) {
             String(
               classCount
             );
+        }
+
+        if (
+          titleInput &&
+          allTitlesPresent
+        ) {
+          titleInput.value = "";
+          titleInput.disabled = true;
+          titleInput.required = false;
+          titleInput.placeholder =
+            "Titles detected from TXT";
+        }
+
+        if (titleLabel) {
+          titleLabel.textContent =
+            allTitlesPresent
+              ? "Titles detected from TXT"
+              : "Title (required — legacy TXT fallback)";
         }
 
         if (saveBtn) {

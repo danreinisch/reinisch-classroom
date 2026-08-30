@@ -68,8 +68,18 @@ assert.deepStrictEqual(
   ]
 );
 
+assert.strictEqual(
+  sections[0].title,
+  'WEEK 1'
+);
+
+assert.strictEqual(
+  sections[1].title,
+  'WEEK 1'
+);
+
 console.log(
-  '✓ parser preserves embedded student/class pairs'
+  '✓ parser preserves embedded student/class/title identity'
 );
 
 assert.ok(
@@ -184,13 +194,13 @@ console.log(
 
 assert.ok(
   html.includes(
-    "detect each student's embedded class automatically"
+    "detect each student's embedded title and class automatically"
   )
 );
 
 assert.ok(
   html.includes(
-    'tc-work.js?v=20260830-individualized-multiclass'
+    'tc-work.js?v=20260830-self-describing-titles'
   )
 );
 
@@ -379,4 +389,245 @@ assert.strictEqual(
 
 console.log(
   '✓ current and legacy Written Response headings both calculate 26 correctly'
+);
+
+
+/* -------------------------------------------------------------------------- */
+/* Self-describing individualized TXT                                         */
+/* -------------------------------------------------------------------------- */
+
+assert.ok(
+  work.includes(
+    'const manualBaseTitle ='
+  ),
+  'legacy/manual individualized title fallback must remain available'
+);
+
+assert.ok(
+  work.includes(
+    'const sourceTitle ='
+  ),
+  'student splitter must consume each embedded source title'
+);
+
+assert.ok(
+  work.includes(
+    '`${sourceTitle || manualBaseTitle} — ${sec.studentCode}`'
+  ),
+  'student-specific draft title must be <TXT title> — S###'
+);
+
+assert.ok(
+  work.includes(
+    'titleInput.required = false'
+  ),
+  'self-describing individualized mode must not require typed Title'
+);
+
+assert.ok(
+  work.includes(
+    'titleInput.required = true'
+  ),
+  'ordinary/manual mode must restore the Title requirement'
+);
+
+assert.ok(
+  work.includes(
+    '"Titles detected from TXT"'
+  ),
+  'Work UI must identify automatic TXT-title mode'
+);
+
+assert.ok(
+  work.includes(
+    'if (!title) return setMsg("err", "Title is required.");'
+  ),
+  'ordinary Save Draft must still fail closed without Title'
+);
+
+console.log(
+  '✓ self-describing titles preserve ordinary/manual Title behavior'
+);
+
+
+/*
+ * Execute the real browser auto-mapper.
+ *
+ * This fixture permanently covers the production Week 1 failure:
+ * - decorated DAY headings
+ * - lazy implicit Assignment section preserving Day 1
+ * - repeated Question 1 values staying day-qualified
+ * - writing metadata mapping to D4.WP instead of phantom D4.Q1
+ * - S009 parent goal remaining paired with the correct item
+ */
+const mapperStart =
+  work.indexOf(
+    '  function autoMapFromTeacherTxt(text) {'
+  );
+
+const mapperEnd =
+  work.indexOf(
+    '\n  function readScoringDefaults()',
+    mapperStart
+  );
+
+assert.ok(
+  mapperStart >= 0 &&
+  mapperEnd > mapperStart,
+  'must be able to isolate autoMapFromTeacherTxt()'
+);
+
+const mapperSandbox = {
+  console: {
+    log() {},
+    warn() {},
+    error() {},
+  },
+};
+
+vm.runInNewContext(
+  work.slice(
+    mapperStart,
+    mapperEnd
+  ) +
+    '\nthis.autoMapFromTeacherTxt = autoMapFromTeacherTxt;',
+  mapperSandbox
+);
+
+const mapping =
+  JSON.parse(
+    JSON.stringify(
+      mapperSandbox.autoMapFromTeacherTxt(
+        [
+          '--- DAY 1 QUESTIONS ---',
+          'Question 1: [IG: S009.CG2] [IO: S009.CG2.O1] [MLS: 11-12.RL.1.A] First?',
+          'A) One',
+          'B) Two',
+          'Correct: A',
+          'Question 2: [IG: S009.CG2] [MLS: 11-12.RL.1.A] Second?',
+          'A) One',
+          'B) Two',
+          'Correct: B',
+          '',
+          '--- DAY 2 QUESTIONS ---',
+          'Question 1: [IG: S009.CG2] [IO: S009.CG2.O2] [MLS: 11-12.RL.1.A] Third?',
+          'A) One',
+          'B) Two',
+          'Correct: A',
+          '',
+          '--- DAY 3 QUESTIONS ---',
+          'Question 1: [IG: S009.CG2] [MLS: 11-12.RL.1.A] Fourth?',
+          'A) One',
+          'B) Two',
+          'Correct: B',
+          '',
+          '--- DAY 4 WRITTEN RESPONSE ---',
+          'Question 1: [IG: S009.CG4] [MLS: 11-12.RL.1.A] [MLS: 11-12.W.2.A] [WRITTEN RESPONSE]',
+          'Writing Prompt: Explain Ben Kagan.',
+          'Objective Components:',
+          '[IO: S009.CG4.O1] Topic/claim | Objective Max: 1',
+        ].join('\n')
+      )
+    )
+  );
+
+const mappedItems =
+  (mapping.sections || [])
+    .flatMap(
+      section =>
+        Array.isArray(section.items)
+          ? section.items
+          : []
+    );
+
+const mappedKeys =
+  mappedItems.map(
+    item =>
+      item.key
+  );
+
+const mappedByKey =
+  new Map(
+    mappedItems.map(
+      item => [
+        item.key,
+        item,
+      ]
+    )
+  );
+
+assert.deepStrictEqual(
+  mappedKeys,
+  [
+    'D1.Q1',
+    'D1.Q2',
+    'D2.Q1',
+    'D3.Q1',
+    'D4.WP',
+  ],
+  'all structured questions must retain day-qualified mapping keys'
+);
+
+assert.strictEqual(
+  new Set(mappedKeys).size,
+  mappedKeys.length,
+  'mapping keys must remain unique'
+);
+
+assert.strictEqual(
+  mappedKeys.some(
+    key =>
+      /^Q\d+$/i.test(key)
+  ),
+  false,
+  'structured Week-style assignments must never collapse to generic Qn'
+);
+
+assert.strictEqual(
+  mappedByKey.has('D4.Q1'),
+  false,
+  'writing header metadata must not create phantom D4.Q1'
+);
+
+assert.deepStrictEqual(
+  mappedByKey.get('D1.Q1').iep,
+  ['S009.CG2']
+);
+
+assert.deepStrictEqual(
+  mappedByKey.get('D1.Q2').iep,
+  ['S009.CG2']
+);
+
+assert.deepStrictEqual(
+  mappedByKey.get('D2.Q1').iep,
+  ['S009.CG2']
+);
+
+assert.deepStrictEqual(
+  mappedByKey.get('D3.Q1').iep,
+  ['S009.CG2']
+);
+
+assert.deepStrictEqual(
+  mappedByKey.get('D4.WP').iep,
+  ['S009.CG4']
+);
+
+assert.deepStrictEqual(
+  mappedByKey.get('D4.WP').dese,
+  [
+    '11-12.RL.1.A',
+    '11-12.W.2.A',
+  ],
+  'writing artifact must retain canonical DESE identities'
+);
+
+console.log(
+  '✓ decorated DAY + writing mapping permanently covers the S009 failure'
+);
+
+console.log('');
+console.log(
+  'SELF-DESCRIBING INDIVIDUALIZED TXT: PASS'
 );

@@ -475,7 +475,7 @@
             <span style="font-size: 24px;">🎓</span>
             <div>
               <div style="font-weight: 600; margin-bottom: 2px;">SPED / Individualized Assignments</div>
-              <div class="work-subtle" style="font-size: 13px;">Upload a single TXT file with per-student sections. Reinisch Classroom will detect each student's embedded class automatically and switch the form into individualized upload mode.</div>
+              <div class="work-subtle" style="font-size: 13px;">Upload a single TXT file with per-student sections. Reinisch Classroom will detect each student's embedded title and class automatically and switch the form into individualized upload mode.</div>
             </div>
           </div>
 
@@ -506,7 +506,7 @@
             <form id="workDraftForm" style="margin-top: 14px">
               <div class="work-grid">
                 <div class="work-field">
-                  <label for="draftTitle">Title (required)</label>
+                  <label for="draftTitle">Title (required for manual/single-class)</label>
                   <input
                     id="draftTitle"
                     name="title"
@@ -737,7 +737,7 @@ JSON:
     <script src="/web/rc-modal.js"></script>
     <script src="/web/shared/parse-student-sections.js"></script>
     <script src="/web/auth-helpers.js?v=1"></script>
-    <script defer src="/web/tc-work.js?v=20260830-individualized-multiclass"></script>
+    <script defer src="/web/tc-work.js?v=20260830-self-describing-titles"></script>
     <script defer src="/web/tc-work-qol.js"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
     <script type="module" src="/web/tc-observation.js"></script>

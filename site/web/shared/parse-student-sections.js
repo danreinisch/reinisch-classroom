@@ -32,6 +32,14 @@
       // the legacy format.
       let studentCode = null;
       let cls = '';
+
+      // Preserve the teacher-authored WEEK title from this student's
+      // header block when present. Older individualized formats may omit it.
+      const title =
+        lines
+          .slice(i + 1, sepEnd)
+          .map(line => line.trim())
+          .find(line => /^WEEK\s+\d+\b/i.test(line)) || '';
       for (let k = i + 1; k < sepEnd; k++) {
         const line = lines[k].trim();
         if (!line) continue;
@@ -75,7 +83,12 @@
       }
       const fullBody = lines.slice(sepEnd + 1, bodyEnd).join('\n').trim();
 
-      sections.push({ studentCode, className: cls, body: fullBody });
+      sections.push({
+        studentCode,
+        className: cls,
+        ...(title ? { title } : {}),
+        body: fullBody
+      });
 
       // Advance past the body end to avoid re-scanning body content (performance fix)
       i = bodyEnd;

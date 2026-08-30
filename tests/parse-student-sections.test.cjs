@@ -263,6 +263,50 @@ test('Header block with only metadata (no Assignment: or Student:) is skipped', 
   assert.strictEqual(sections.length, 0, 'Header without Assignment: or Student: should be skipped');
 });
 
+
+test('Self-describing student section preserves its WEEK title', () => {
+  const input = [
+    '================================================================================',
+    'WEEK 1 — Seeker — Prologue + Chapters 1–3',
+    'Student: S009 | Class: Language Arts 4 SC',
+    'Targeted IEP Goal Codes: S009.CG1, S009.CG2, S009.CG4',
+    '================================================================================',
+    '--- DAY 1 QUESTIONS ---',
+    'Question 1: Example?',
+  ].join('\n');
+
+  const sections = parseStudentSections(input);
+
+  assert.strictEqual(sections.length, 1);
+  assert.strictEqual(sections[0].studentCode, 'S009');
+  assert.strictEqual(sections[0].className, 'Language Arts 4 SC');
+  assert.strictEqual(
+    sections[0].title,
+    'WEEK 1 — Seeker — Prologue + Chapters 1–3'
+  );
+});
+
+test('Legacy individualized section without WEEK title preserves legacy shape', () => {
+  const input = [
+    '================================================================================',
+    'Assignment: S010',
+    'Class: Language Arts 3 SC',
+    '================================================================================',
+    'Question 1: Legacy example?',
+  ].join('\n');
+
+  const sections = parseStudentSections(input);
+
+  assert.strictEqual(sections.length, 1);
+  assert.strictEqual(sections[0].studentCode, 'S010');
+  assert.strictEqual(sections[0].className, 'Language Arts 3 SC');
+  assert.strictEqual(
+    Object.prototype.hasOwnProperty.call(sections[0], 'title'),
+    false,
+    'legacy section must not invent a title'
+  );
+});
+
 // ── Results ───────────────────────────────────────────────────────────────────
 
 console.log('');
