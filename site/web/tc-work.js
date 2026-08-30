@@ -3297,6 +3297,61 @@ function normalizeTaggedAssignmentText(input) {
     ? rcParseStudentSections
     : function() { console.error("[tc-work] parseStudentSections not loaded"); return []; };
 
+  function validateStudentSectionClasses(sections) {
+    const classSel =
+      document.getElementById(
+        "draftClass"
+      );
+
+    const allowedClasses =
+      new Set(
+        Array.from(
+          (classSel && classSel.options) ||
+            []
+        )
+          .map(
+            (option) =>
+              String(
+                option.value || ""
+              ).trim()
+          )
+          .filter(Boolean)
+      );
+
+    const missing =
+      sections.filter(
+        (section) =>
+          !String(
+            section.className || ""
+          ).trim()
+      );
+
+    const invalid =
+      sections.filter(
+        (section) => {
+          const className =
+            String(
+              section.className || ""
+            ).trim();
+
+          return (
+            className &&
+            !allowedClasses.has(
+              className
+            )
+          );
+        }
+      );
+
+    return {
+      ok:
+        missing.length === 0 &&
+        invalid.length === 0,
+      missing,
+      invalid,
+    };
+  }
+
   async function splitByStudentFromCurrentForm() {
     const form = document.getElementById("workDraftForm");
     if (!form) return;
@@ -3323,6 +3378,46 @@ function normalizeTaggedAssignmentText(input) {
         "No Student Sections Found",
         "That file doesn't contain any 'Assignment: SXXX' headers between separator lines."
       );
+      return;
+    }
+
+    const classValidation =
+      validateStudentSectionClasses(
+        sections
+      );
+
+    if (!classValidation.ok) {
+      const issues = [];
+
+      for (
+        const section
+        of classValidation.missing
+      ) {
+        issues.push(
+          `${section.studentCode}: missing Class`
+        );
+      }
+
+      for (
+        const section
+        of classValidation.invalid
+      ) {
+        issues.push(
+          `${section.studentCode}: unrecognized class "${section.className}"`
+        );
+      }
+
+      await rcAlert(
+        "Student Section Class Error",
+        "Reinisch Classroom cannot create this individualized batch until every student section has a recognized Class value.\n\n" +
+          issues
+            .map(
+              (issue) =>
+                `• ${issue}`
+            )
+            .join("\n")
+      );
+
       return;
     }
 
@@ -3394,10 +3489,6 @@ function normalizeTaggedAssignmentText(input) {
     const scoringDefaults = typeof window.__rcReadScoringDefaults === "function"
       ? window.__rcReadScoringDefaults()
       : { mcq: 1, boolean: 1, constructed: 5, multi: 1 };
-    const totalPossible = typeof window.__rcReadTotalPossible === "function"
-      ? window.__rcReadTotalPossible()
-      : null;
-
     const ensureBound = (t) =>
       t && t.length > 120000 ? t.slice(0, 120000) + "\n…(truncated)\n" : t || "";
 
@@ -3419,6 +3510,12 @@ function normalizeTaggedAssignmentText(input) {
       if (typeof window.__rcJoinTagOnlyLines === "function") {
         assignText = window.__rcJoinTagOnlyLines(assignText);
       }
+
+      const sectionTotalPossible =
+        calculateStudentSectionTotalPossible(
+          sec.body,
+          scoringDefaults
+        );
 
       let mappingText = fallbackMapping;
       if (typeof window.__rcAutoMapFromTeacherTxt === "function") {
@@ -3443,7 +3540,12 @@ function normalizeTaggedAssignmentText(input) {
         notes: notes || null,
         autoRelease,
         createdAt: new Date().toISOString(),
-        meta: { scoring_defaults: scoringDefaults, total_possible: totalPossible },
+        meta: {
+          scoring_defaults:
+            scoringDefaults,
+          total_possible:
+            sectionTotalPossible,
+        },
         assignment: {
           kind: "file",
           name: aFile.name,
@@ -3516,6 +3618,65 @@ function normalizeTaggedAssignmentText(input) {
     return norm(title).includes(norm(cls));
   }
 
+  function calculateStudentSectionTotalPossible(
+    sectionBody,
+    scoringDefaults
+  ) {
+    const counts =
+      countSectionItems(
+        sectionBody
+      );
+
+    const questionCount =
+      Math.max(
+        0,
+        Number(
+          counts.questions || 0
+        )
+      );
+
+    const writingCount =
+      Math.max(
+        0,
+        Number(
+          counts.writingPrompts || 0
+        )
+      );
+
+    const otherCount =
+      Math.max(
+        0,
+        questionCount -
+          writingCount
+      );
+
+    const mcqPoints =
+      Math.max(
+        0,
+        Number(
+          scoringDefaults?.mcq ?? 1
+        ) || 0
+      );
+
+    const constructedPoints =
+      Math.max(
+        0,
+        Number(
+          scoringDefaults?.constructed ??
+            5
+        ) || 0
+      );
+
+    const total =
+      otherCount * mcqPoints +
+      writingCount *
+        constructedPoints;
+
+    return total > 0
+      ? total
+      : null;
+  }
+
   function countSectionItems(sectionBody) {
     const lines = sectionBody.split(/\r?\n/);
     let questions = 0;
@@ -3532,7 +3693,10 @@ function normalizeTaggedAssignmentText(input) {
       }
       
       // Count writing prompt sections
-      if (/DAY\s+\d+\s+WRITING\s+PROMPT/i.test(trimmed)) {
+      if (
+        /^[-─━═\s]*DAY\s+\d+\b(?:\s*[-–—:]\s*|\s+)(?:WRITING\s+PROMPT|WRITTEN\s+RESPONSE|WRITING\s+WORKSHOP)\b/i
+          .test(trimmed)
+      ) {
         writingPrompts++;
       }
       
@@ -3602,6 +3766,46 @@ function normalizeTaggedAssignmentText(input) {
     const panel = document.getElementById("rcFilePreviewPanel");
     if (!panel) return;
 
+    const form =
+      document.getElementById(
+        "workDraftForm"
+      );
+
+    const saveBtn =
+      document.getElementById(
+        "btnSaveDraft"
+      );
+
+    const splitStudentBtn =
+      document.getElementById(
+        "btnSplitByStudent"
+      );
+
+    const isEditing =
+      !!(
+        saveBtn &&
+        saveBtn.textContent.trim() ===
+          "Update Draft"
+      );
+
+    if (form) {
+      delete form.dataset.rcIndividualizedStudentCount;
+      delete form.dataset.rcIndividualizedClassCount;
+    }
+
+    if (
+      saveBtn &&
+      !isEditing
+    ) {
+      saveBtn.textContent =
+        "Save Draft";
+    }
+
+    if (splitStudentBtn) {
+      splitStudentBtn.style.display =
+        "";
+    }
+
     // Local HTML escaper for safe template literal interpolation
     const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -3615,22 +3819,141 @@ function normalizeTaggedAssignmentText(input) {
       // Student-individualized file detected — show info panel, no class checkboxes
       panel.style.display = "block";
 
-      const studentList = studentSections
-        .map((s) => `<strong>${esc(s.studentCode)}</strong>${s.className ? ` (${esc(s.className)})` : ""}`)
-        .join(", ");
+      const classValidation =
+        validateStudentSectionClasses(
+          studentSections
+        );
+
+      const distinctClasses =
+        Array.from(
+          new Set(
+            studentSections
+              .map(
+                (section) =>
+                  String(
+                    section.className || ""
+                  ).trim()
+              )
+              .filter(Boolean)
+          )
+        );
+
+      const classCount =
+        distinctClasses.length;
+
+      const modeLabel =
+        classCount > 1
+          ? "Individualized Multi-Class Upload"
+          : "Individualized Student Upload";
+
+      const studentList =
+        studentSections
+          .map(
+            (s) =>
+              `<strong>${esc(s.studentCode)}</strong>${
+                s.className
+                  ? ` (${esc(s.className)})`
+                  : ""
+              }`
+          )
+          .join(", ");
+
+      const classIssueLines = [
+        ...classValidation.missing.map(
+          (section) =>
+            `${esc(section.studentCode)}: missing Class`
+        ),
+        ...classValidation.invalid.map(
+          (section) =>
+            `${esc(section.studentCode)}: unrecognized class ${esc(section.className)}`
+        ),
+      ];
+
+      const classIssueHtml =
+        classIssueLines.length
+          ? `
+            <div style="margin-top:10px;padding:9px 11px;border-radius:8px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.28);font-size:12px;">
+              <strong>Fix before creating drafts:</strong>
+              ${classIssueLines.join("; ")}
+            </div>
+          `
+          : "";
+
+      const actionText =
+        isEditing
+          ? "Finish or cancel the current draft edit before creating an individualized batch."
+          : "Classes will be taken from each student section. No Individual Class selection is needed.";
 
       panel.innerHTML = `
         <div class="work-card" style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.25);">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="font-size: 20px;">🎓</span>
-            <strong>Detected ${studentSections.length} individualized student assignment${studentSections.length !== 1 ? "s" : ""}</strong>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:20px;">🎓</span>
+            <strong>${modeLabel}</strong>
           </div>
-          <div id="rcPreviewStudentList" style="font-size: 13px; margin-bottom: 8px;">Students: ${studentList}</div>
-          <div class="work-subtle" style="font-size: 12px;">
-            Click <strong>Split by Student</strong> to create one draft per student.
+
+          <div style="font-size:13px;margin-bottom:8px;">
+            Detected <strong>${studentSections.length}</strong>
+            student assignment${studentSections.length !== 1 ? "s" : ""}
+            across <strong>${classCount}</strong>
+            class${classCount !== 1 ? "es" : ""}.
           </div>
+
+          <div
+            id="rcPreviewStudentList"
+            style="font-size:13px;margin-bottom:8px;"
+          >
+            Students: ${studentList}
+          </div>
+
+          <div class="work-subtle" style="font-size:12px;">
+            ${actionText}
+          </div>
+
+          ${classIssueHtml}
         </div>
       `;
+
+      if (!isEditing) {
+        if (form) {
+          form.dataset.rcIndividualizedStudentCount =
+            String(
+              studentSections.length
+            );
+
+          form.dataset.rcIndividualizedClassCount =
+            String(
+              classCount
+            );
+        }
+
+        if (saveBtn) {
+          saveBtn.textContent =
+            `Create ${studentSections.length} Individualized Draft${
+              studentSections.length !== 1
+                ? "s"
+                : ""
+            }`;
+        }
+
+        if (splitStudentBtn) {
+          splitStudentBtn.style.display =
+            "none";
+        }
+
+        const classSel =
+          document.getElementById(
+            "draftClass"
+          );
+
+        if (classSel) {
+          classSel.value = "";
+          classSel.disabled = true;
+
+          updateClassDropdownLabel(
+            "Classes detected from TXT"
+          );
+        }
+      }
 
       // Fire async enrollment validation and update status badges when results arrive
       const previewPairs = studentSections
@@ -3666,12 +3989,6 @@ function normalizeTaggedAssignmentText(input) {
           });
       }
 
-      // Enable class dropdown (not used for student splits, but keep it accessible)
-      const classSel = document.getElementById("draftClass");
-      if (classSel) {
-        classSel.disabled = false;
-        updateClassDropdownLabel("Individual Class");
-      }
       return;
     }
 
@@ -3906,6 +4223,25 @@ function normalizeTaggedAssignmentText(input) {
     function updateScoringTotalDisplay() {
       const display = document.getElementById("scoringTotalDisplay");
       if (!display) return;
+
+      const individualizedCount =
+        form
+          ? (
+              parseInt(
+                form.dataset
+                  .rcIndividualizedStudentCount ||
+                  "0",
+                10
+              ) || 0
+            )
+          : 0;
+
+      if (individualizedCount > 0) {
+        display.textContent =
+          "Individualized totals calculated per student";
+        return;
+      }
+
       const mcqPts = Math.max(0, parseInt((document.getElementById("scoringMcq") || {}).value || "1", 10) || 1);
       const constructedPts = Math.max(0, parseInt((document.getElementById("scoringConstructed") || {}).value || "5", 10) || 5);
       const nOtherQuestions = lastItemCounts.questions - lastItemCounts.writingPrompts;
@@ -3933,18 +4269,13 @@ function normalizeTaggedAssignmentText(input) {
           try {
             const f = aIn.files && aIn.files[0] ? aIn.files[0] : null;
             if (!f) {
-              // Clear preview panel if no file
-              const panel = document.getElementById("rcFilePreviewPanel");
-              if (panel) {
-                panel.innerHTML = "";
-                panel.style.display = "none";
-              }
-              // Restore label when file is cleared
-              if (classSel) {
-                classSel.disabled = false;
-                updateClassDropdownLabel("Individual Class");
-              }
-              lastItemCounts = { questions: 0, writingPrompts: 0 };
+              renderFilePreviewPanel("");
+
+              lastItemCounts = {
+                questions: 0,
+                writingPrompts: 0,
+              };
+
               updateScoringTotalDisplay();
               return;
             }
@@ -3997,15 +4328,48 @@ function normalizeTaggedAssignmentText(input) {
       form.addEventListener(
         "submit",
         (e) => {
-          // Check if there are any checked preview panel checkboxes (multi-class mode)
-          const checkedBoxes = document.querySelectorAll(".rcPreviewClassCheckbox:checked");
-          const isMega = checkedBoxes.length > 0;
-          
-          if (!isMega) return; // Normal single-class save
+          const individualizedCount =
+            parseInt(
+              form.dataset.rcIndividualizedStudentCount ||
+                "0",
+              10
+            ) || 0;
+
+          if (individualizedCount > 0) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            splitByStudentFromCurrentForm()
+              .catch(
+                (err) =>
+                  console.warn(err)
+              );
+
+            return;
+          }
+
+          // Existing class-section mega-TXT workflow.
+          const checkedBoxes =
+            document.querySelectorAll(
+              ".rcPreviewClassCheckbox:checked"
+            );
+
+          const isMega =
+            checkedBoxes.length > 0;
+
+          if (!isMega) {
+            // Preserve normal single-class Save Draft.
+            return;
+          }
 
           e.preventDefault();
           e.stopImmediatePropagation();
-          splitMegaFromCurrentForm().catch((err) => console.warn(err));
+
+          splitMegaFromCurrentForm()
+            .catch(
+              (err) =>
+                console.warn(err)
+            );
         },
         true
       );
