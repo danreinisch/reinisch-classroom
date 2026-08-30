@@ -368,14 +368,20 @@ console.log(
   '✓ Teacher Preview remains complete and unchanged'
 );
 
-const expectedCacheReference =
-  '/web/tc-work.js?v=202608261430';
+const cacheReferenceMatch =
+  workHtml.match(
+    /\/web\/tc-work\.js\?v=([A-Za-z0-9._-]+)/
+  );
 
 assert.ok(
-  workHtml.includes(
-    expectedCacheReference
-  ),
-  '5E2A-P RED: Teacher Work page must move the tc-work.js production cache key'
+  cacheReferenceMatch,
+  'Teacher Work page must reference a cache-busted tc-work.js asset'
+);
+
+assert.notStrictEqual(
+  cacheReferenceMatch[1],
+  '202608261430',
+  'Teacher Work page cache key must remain moved beyond the historical 5E2A-P production key'
 );
 
 const unitScript =
