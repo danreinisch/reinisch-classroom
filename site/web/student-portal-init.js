@@ -324,6 +324,25 @@
     }
   }
 
+  /**
+   * Parse an assignment deadline.
+   *
+   * assignment_instances.due_at is a DATE column, so a bare YYYY-MM-DD
+   * means the assignment remains due through the end of that local
+   * calendar day. Full timestamps retain normal instant/timezone semantics.
+   */
+  function parseAssignmentDeadline(dateStr) {
+    if (!dateStr) return null;
+
+    const raw = String(dateStr).trim();
+    const date =
+      /^\d{4}-\d{2}-\d{2}$/.test(raw)
+        ? new Date(`${raw}T23:59:59.999`)
+        : new Date(raw);
+
+    return isNaN(date.getTime()) ? null : date;
+  }
+
   // ============================================================================
   // Feature 1 & 3: Auto-Save and Progress Tracking Helpers
   // ============================================================================
@@ -10344,8 +10363,8 @@
     
     // Check if overdue (assigned but past due date)
     if (instance.due_at) {
-      const dueDate = new Date(instance.due_at);
-      if (dueDate < now && status !== 'submitted' && status !== 'graded' && status !== 'reviewed') {
+      const dueDate = parseAssignmentDeadline(instance.due_at);
+      if (dueDate && dueDate < now && status !== 'submitted' && status !== 'graded' && status !== 'reviewed') {
         return 'overdue';
       }
     }
@@ -11730,7 +11749,8 @@
     const now = new Date();
     const dueSoon = instances.filter(inst => {
       if (!inst.due_at) return false;
-      const dueDate = new Date(inst.due_at);
+      const dueDate = parseAssignmentDeadline(inst.due_at);
+      if (!dueDate) return false;
       const hoursUntilDue = (dueDate - now) / (1000 * 60 * 60);
       const status = (inst.status || 'Assigned').toLowerCase();
       const isNotSubmitted = status !== 'submitted' && status !== 'graded' && status !== 'reviewed';
@@ -11744,7 +11764,8 @@
 
     // Check if any are urgent (within 24 hours)
     const urgent = dueSoon.some(inst => {
-      const dueDate = new Date(inst.due_at);
+      const dueDate = parseAssignmentDeadline(inst.due_at);
+      if (!dueDate) return false;
       const hoursUntilDue = (dueDate - now) / (1000 * 60 * 60);
       return hoursUntilDue <= 24;
     });
@@ -11814,7 +11835,9 @@
       if (!inst.due_at || !inst.submitted_at) return false;
       const status = (inst.status || '').toLowerCase();
       if (status !== 'submitted' && status !== 'graded' && status !== 'reviewed') return false;
-      return new Date(inst.submitted_at) <= new Date(inst.due_at);
+      const dueDate = parseAssignmentDeadline(inst.due_at);
+      if (!dueDate) return false;
+      return new Date(inst.submitted_at) <= dueDate;
     }).length;
 
     if (onTimeCount > 0) {
@@ -11848,7 +11871,8 @@
 
     let streak = 0;
     for (const inst of sortedSubmitted) {
-      if (new Date(inst.submitted_at) <= new Date(inst.due_at)) {
+      const dueDate = parseAssignmentDeadline(inst.due_at);
+      if (dueDate && new Date(inst.submitted_at) <= dueDate) {
         streak++;
       } else {
         break;
