@@ -35,7 +35,7 @@ test(
 
     const end =
       source.indexOf(
-        '/**\n   * Load and separate Student Portal Library',
+        'async function loadStudentResources()',
         start
       );
 
