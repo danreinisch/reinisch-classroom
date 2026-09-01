@@ -56,6 +56,25 @@
   // DOM helper
   const $ = (id) => document.getElementById(id);
 
+  /**
+   * Parse an assignment deadline.
+   *
+   * assignment_instances.due_at is a DATE column. A bare YYYY-MM-DD
+   * remains due through the end of that local calendar day. Full
+   * timestamps retain their normal instant/timezone semantics.
+   */
+  function parseAssignmentDeadline(dateStr) {
+    if (!dateStr) return null;
+
+    const raw = String(dateStr).trim();
+    const date =
+      /^\d{4}-\d{2}-\d{2}$/.test(raw)
+        ? new Date(`${raw}T23:59:59.999`)
+        : new Date(raw);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
   // State
   let studentsData = [];
   let goalsData = [];
@@ -351,6 +370,16 @@
     if (!dateStr) return "N/A";
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  /**
+   * Format an assignment due date without shifting a DATE value
+   * onto the previous local calendar day.
+   */
+  function formatAssignmentDate(dateStr) {
+    const date = parseAssignmentDeadline(dateStr);
+    if (!date) return "N/A";
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
 
@@ -2677,7 +2706,7 @@ ${narrative}`;
       const submission = submissionsData.find((s) => s.instance_id === inst.id);
 
       const title = assignment?.title || `Assignment ${inst.assignment_id}`;
-      const dueDate = formatDate(inst.due_at);
+      const dueDate = formatAssignmentDate(inst.due_at);
       const status = submission ? "Submitted" : inst.status || "Assigned";
       const score = submission?.score_total != null ? submission.score_total : null;
 
@@ -3160,7 +3189,9 @@ ${narrative}`;
       const submission = submissionsData.find((s) => s.instance_id === inst.id);
       if (!submission) return false;
       if (!inst.due_at) return true;
-      return new Date(submission.submitted_at) <= new Date(inst.due_at);
+      const dueDate = parseAssignmentDeadline(inst.due_at);
+      if (!dueDate) return false;
+      return new Date(submission.submitted_at) <= dueDate;
     }).length;
 
     const onTimeRate = submitted > 0 ? ((onTime / submitted) * 100).toFixed(0) : "0";
@@ -4262,7 +4293,7 @@ ${narrative}`;
             studentCode: student.code,
             assignmentTitle: assignment?.title || `Assignment ${inst.assignment_id}`,
             assignedDate: formatDate(inst.assigned_at),
-            dueDate: formatDate(inst.due_at),
+            dueDate: formatAssignmentDate(inst.due_at),
             status: "Missing",
           });
         }
