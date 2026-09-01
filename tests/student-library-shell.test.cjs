@@ -147,7 +147,65 @@ test('Library and Resources are rendered into separate containers', () => {
   );
   assert.match(
     portalJs,
-    /const resources = classified\.filter/
+    /loadPresentationResources/
+  );
+  assert.match(
+    portalJs,
+    /fetch\(\s*'\/assets\/data\/units\.json'/
+  );
+});
+
+test('Resources use active instructional collections and retire the legacy Skill Builder card', () => {
+  const siteState = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        ROOT,
+        'site/assets/data/site-state.json'
+      ),
+      'utf8'
+    )
+  );
+
+  const category =
+    siteState.categories.student_resources;
+
+  assert.equal(
+    category.titles.includes(
+      'Language Arts Skill Builder'
+    ),
+    false
+  );
+
+  assert.equal(
+    category.links.includes(
+      '/student/resources/presentation-01/'
+    ),
+    false
+  );
+
+  assert.match(
+    portalJs,
+    /loadPresentationResources/
+  );
+
+  assert.match(
+    portalJs,
+    /unit\.section === 'language-arts'/
+  );
+
+  assert.match(
+    portalJs,
+    /unit\.section === 'life-skills'/
+  );
+
+  assert.match(
+    portalJs,
+    /\(unit\.status \|\| 'active'\) !== 'active'/
+  );
+
+  assert.match(
+    portalJs,
+    /pagePath === '\/language-arts\/collection\/'/
   );
 });
 

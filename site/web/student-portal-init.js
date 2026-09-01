@@ -10061,7 +10061,9 @@
   }
 
   /**
-   * Load and separate Student Portal Library books from general Resources.
+   * Load Student Portal Library books and instructional Resources.
+   * Library books come from student_resources in site-state.json.
+   * Resources come from active collections in units.json.
    */
   async function loadStudentResources() {
     const resourcesEl = document.getElementById('resourcesContent');
@@ -10096,6 +10098,127 @@
       }
       html += '</div>';
       resourcesEl.innerHTML = html;
+    };
+
+    const buildPresentationResourceLink = function (unit) {
+      const pagePath = String(
+        unit && unit.pagePath || ''
+      ).trim();
+
+      if (!pagePath) return '';
+
+      /*
+       * Current Language Arts collections share one generic landing page.
+       * Preserve the collection ID exactly as the public navigation does.
+       */
+      if (
+        pagePath === '/language-arts/collection/'
+      ) {
+        return (
+          pagePath +
+          '?collection=' +
+          encodeURIComponent(
+            String(unit.id || '')
+          )
+        );
+      }
+
+      return pagePath;
+    };
+
+    const loadPresentationResources = async function () {
+      const response = await fetch(
+        '/assets/data/units.json',
+        { cache: 'no-store' }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          'Failed to load instructional unit registry'
+        );
+      }
+
+      const registry = await response.json();
+
+      const units = Array.isArray(registry.units)
+        ? registry.units
+        : [];
+
+      return units
+        .filter(function (unit) {
+          if (
+            !unit ||
+            !unit.id ||
+            !unit.title
+          ) {
+            return false;
+          }
+
+          const instructionalSection =
+            unit.section === 'language-arts' ||
+            unit.section === 'life-skills';
+
+          if (!instructionalSection) {
+            return false;
+          }
+
+          /*
+           * Older records without an explicit status predate
+           * the active/archive registry and remain active.
+           */
+          if (
+            (unit.status || 'active') !== 'active'
+          ) {
+            return false;
+          }
+
+          return Boolean(
+            buildPresentationResourceLink(unit)
+          );
+        })
+        .sort(function (a, b) {
+          /*
+           * Language Arts first, Transitional Skills second.
+           */
+          const sectionA =
+            a.section === 'language-arts'
+              ? 0
+              : 1;
+
+          const sectionB =
+            b.section === 'language-arts'
+              ? 0
+              : 1;
+
+          if (sectionA !== sectionB) {
+            return sectionA - sectionB;
+          }
+
+          const orderA =
+            Number.isFinite(Number(a.sortOrder))
+              ? Number(a.sortOrder)
+              : 0;
+
+          const orderB =
+            Number.isFinite(Number(b.sortOrder))
+              ? Number(b.sortOrder)
+              : 0;
+
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+
+          return String(a.title).localeCompare(
+            String(b.title)
+          );
+        })
+        .map(function (unit) {
+          return {
+            title: unit.title,
+            link:
+              buildPresentationResourceLink(unit)
+          };
+        });
     };
 
     const renderLibrary = function (books) {
@@ -10215,9 +10338,12 @@
         return Boolean(entry.bookDataFile);
       });
 
-      const resources = classified.filter(function (entry) {
-        return !entry.bookDataFile;
-      });
+      /*
+       * Library remains backed by student_resources.
+       * Resources come from the active instructional unit registry.
+       */
+      const resources =
+        await loadPresentationResources();
 
       renderLibrary(books);
       renderResources(resources);

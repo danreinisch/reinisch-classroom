@@ -1145,7 +1145,7 @@
     "student_resources": {
       "slots": 40,
       "titles": [
-        "Language Arts Skill Builder",
+        "",
         "\"Lost in Kragdon-ah\" by Shawn Inmon",
         "\"A Door Into Time\" by Shawn Inmon",
         "\"Escape from Camp 14\" by Blaine Harden",
@@ -1187,7 +1187,7 @@
         ""
       ],
       "links": [
-        "/student/resources/presentation-01/",
+        "",
         "/student/resources/presentation-02/",
         "/student/resources/presentation-03/",
         "/student/resources/presentation-04/",
