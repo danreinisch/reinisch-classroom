@@ -17,6 +17,25 @@
 
   const $ = (id) => document.getElementById(id);
 
+  /**
+   * Parse an assignment deadline.
+   *
+   * assignment_instances.due_at is a DATE column. A bare YYYY-MM-DD
+   * remains due through the end of that local calendar day. Full
+   * timestamps retain their normal instant/timezone semantics.
+   */
+  function parseAssignmentDeadline(dateStr) {
+    if (!dateStr) return null;
+
+    const raw = String(dateStr).trim();
+    const date =
+      /^\d{4}-\d{2}-\d{2}$/.test(raw)
+        ? new Date(`${raw}T23:59:59.999`)
+        : new Date(raw);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
   // Helper to format date as YYYY-MM-DD
   function formatDateYYYYMMDD() {
     return new Date().toISOString().split("T")[0];
@@ -4819,8 +4838,8 @@
     for (const instance of assignmentInstancesData) {
       if (!instance.due_at) continue;
       
-      const dueDate = new Date(instance.due_at);
-      if (dueDate >= now) continue; // Not overdue yet
+      const dueDate = parseAssignmentDeadline(instance.due_at);
+      if (!dueDate || dueDate >= now) continue; // Not overdue yet
 
       // Check if student has submitted
       const submission = submissionsData.find(s => s.assignment_instance_id === instance.id);
@@ -4829,7 +4848,10 @@
       const student = studentsData.find(s => s.code === instance.student_code);
       const draft = draftsData.find(d => d.id === instance.assignment_id);
 
-      const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+      const daysOverdue = Math.max(
+        1,
+        Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24))
+      );
 
       missing.push({
         studentCode: student?.code || instance.student_code,

@@ -26,6 +26,25 @@
   // DOM helper
   const $ = (id) => document.getElementById(id);
 
+  /**
+   * Parse an assignment deadline.
+   *
+   * assignment_instances.due_at is a DATE column. A bare YYYY-MM-DD
+   * remains due through the end of that local calendar day. Full
+   * timestamps retain their normal instant/timezone semantics.
+   */
+  function parseAssignmentDeadline(dateStr) {
+    if (!dateStr) return null;
+
+    const raw = String(dateStr).trim();
+    const date =
+      /^\d{4}-\d{2}-\d{2}$/.test(raw)
+        ? new Date(`${raw}T23:59:59.999`)
+        : new Date(raw);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
   // SVG check-circle icon (14px inline)
   const SVG_CHECK =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
@@ -112,9 +131,10 @@
     let assignmentsThisQuarter = 0;
     if (quarterRange) {
       assignmentsThisQuarter = instances.filter((inst) => {
-        const ts = inst.assigned_at || inst.due_at;
-        if (!ts) return false;
-        const d = new Date(ts);
+        const d = inst.assigned_at
+          ? new Date(inst.assigned_at)
+          : parseAssignmentDeadline(inst.due_at);
+        if (!d || Number.isNaN(d.getTime())) return false;
         return d >= quarterRange.start && d <= quarterRange.end;
       }).length;
     } else {
@@ -394,10 +414,12 @@
     const assignmentMap = new Map(assignments.map((a) => [a.id, a]));
     for (const inst of instances) {
       if (inst.due_at) {
+        const dueDate = parseAssignmentDeadline(inst.due_at);
+        if (!dueDate) continue;
         const assignment = assignmentMap.get(inst.assignment_id);
         events.push({
           type: "assignment",
-          date: new Date(inst.due_at),
+          date: dueDate,
           title: assignment ? assignment.title : "Assignment",
         });
       }
@@ -618,13 +640,16 @@
       if (!inst.due_at) continue;
       const studentRecord = studentMap.get(inst.student_code);
       if (studentRecord && studentRecord.active === false) continue;
-      const dueDate = new Date(inst.due_at);
-      if (dueDate >= now) continue; // not yet overdue
+      const dueDate = parseAssignmentDeadline(inst.due_at);
+      if (!dueDate || dueDate >= now) continue; // not yet overdue
       const hasSub = submissionsByInstance.has(inst.id) && submissionsByInstance.get(inst.id).length > 0;
       if (hasSub) continue;
       const student = studentMap.get(inst.student_code);
       const assignment = assignmentMap.get(inst.assignment_id);
-      const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+      const daysOverdue = Math.max(
+        1,
+        Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24))
+      );
       const studentCode = student?.code || inst.student_code || '—';
       const studentName = student?.name || inst.student_code || 'Unknown';
       if (!missingByStudent.has(studentCode)) {
@@ -1450,11 +1475,12 @@
     const nowDate = new Date();
     const weekFromNow = new Date(nowDate);
     weekFromNow.setDate(weekFromNow.getDate() + 7);
+    weekFromNow.setHours(23, 59, 59, 999);
 
     const dueThisWeek = instances.filter((i) => {
       if (!i.due_at) return false;
-      const dueDate = new Date(i.due_at);
-      return dueDate >= nowDate && dueDate <= weekFromNow;
+      const dueDate = parseAssignmentDeadline(i.due_at);
+      return Boolean(dueDate && dueDate >= nowDate && dueDate <= weekFromNow);
     });
 
     if (dueThisWeek.length > 0) {

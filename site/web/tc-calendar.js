@@ -19,6 +19,25 @@
   // DOM helper
   const $ = (id) => document.getElementById(id);
 
+  /**
+   * Parse an assignment deadline.
+   *
+   * assignment_instances.due_at is a DATE column. A bare YYYY-MM-DD
+   * remains due through the end of that local calendar day. Full
+   * timestamps retain their normal instant/timezone semantics.
+   */
+  function parseAssignmentDeadline(dateStr) {
+    if (!dateStr) return null;
+
+    const raw = String(dateStr).trim();
+    const date =
+      /^\d{4}-\d{2}-\d{2}$/.test(raw)
+        ? new Date(`${raw}T23:59:59.999`)
+        : new Date(raw);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
   // State
   let currentView = "month"; // "month" or "week"
   let currentDate = new Date();
@@ -77,10 +96,12 @@
       
       for (const inst of instances) {
         if (inst.due_at) {
+          const dueDate = parseAssignmentDeadline(inst.due_at);
+          if (!dueDate) continue;
           const assignment = assignmentMap.get(inst.assignment_id);
           events.push({
             type: "assignment",
-            date: new Date(inst.due_at),
+            date: dueDate,
             title: assignment ? assignment.title : "Assignment",
             icon: ICONS.assignment,
             id: inst.id
