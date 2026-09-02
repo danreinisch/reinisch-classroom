@@ -13,6 +13,7 @@
   const STORAGE_KEY_DRAFTS = "rc_tc_work_drafts_v1";
   const NS = "rc_unified_";
   const REALTIME_DEBOUNCE_MS = 1000; // Debounce realtime updates to prevent excessive refreshes
+  const COPY_TITLE_MAX_LENGTH = 50;
 
 
   const $ = (id) => document.getElementById(id);
@@ -269,6 +270,9 @@
   // State
   let currentClassFilter = "All Classes";
   let currentQuarterFilter = "";
+  let gradebookViewMode = "grid";
+  let focusedAssignmentIndex = 0;
+  let currentFocusedAssignmentGroup = null;
   let studentSearchTerm = "";
   let missingWorkPairs = new Set(); // stores "studentCode::draftId" strings
   let showOnlyMissingStudents = false;
@@ -2101,6 +2105,880 @@
     tableBody.appendChild(summaryRow);
   }
 
+
+  // Build a deterministic, teacher-editable title that fits the configured
+  // external gradebook character limit without changing the canonical title.
+  function buildCopyTitleSuggestion(
+    rawTitle,
+    maxLength = COPY_TITLE_MAX_LENGTH
+  ) {
+    const normalized = String(rawTitle || "")
+      .trim()
+      .replace(/\s+/g, " ");
+
+    if (normalized.length <= maxLength) {
+      return normalized;
+    }
+
+    const abbreviated = normalized
+      .replace(/\bWEEK\b/gi, "Wk")
+      .replace(/\bCHAPTERS?\b/gi, "Ch.")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (abbreviated.length <= maxLength) {
+      return abbreviated;
+    }
+
+    const roomForEllipsis = maxLength - 1;
+    const candidate =
+      abbreviated.slice(
+        0,
+        roomForEllipsis + 1
+      );
+
+    const wordBoundary =
+      candidate.lastIndexOf(" ");
+
+    const minimumUsefulBoundary =
+      Math.floor(maxLength * 0.6);
+
+    const base =
+      wordBoundary >= minimumUsefulBoundary
+        ? candidate
+            .slice(0, wordBoundary)
+            .trimEnd()
+        : abbreviated
+            .slice(0, roomForEllipsis)
+            .trimEnd();
+
+    return `${base
+      .slice(0, roomForEllipsis)
+      .trimEnd()}…`;
+  }
+
+  function getSavedCopyTitleForGroup(group) {
+    if (
+      !group ||
+      !Array.isArray(group.draftIds)
+    ) {
+      return "";
+    }
+
+    const groupIds =
+      new Set(group.draftIds);
+
+    for (const draft of draftsData) {
+      if (!groupIds.has(draft.id)) {
+        continue;
+      }
+
+      const saved =
+        draft &&
+        draft.meta &&
+        typeof draft.meta.copy_title ===
+          "string"
+          ? draft.meta.copy_title.trim()
+          : "";
+
+      if (saved) {
+        return saved;
+      }
+    }
+
+    return "";
+  }
+
+  // Persist Copy Title across every underlying assignment row represented by
+  // one logical Gradebook column. Remote mode uses the existing metadata write
+  // path; local mode updates the same draft store Gradebook reads on reload.
+  async function saveCopyTitleForGroup(
+    group,
+    rawTitle
+  ) {
+    if (
+      !group ||
+      !Array.isArray(group.draftIds) ||
+      group.draftIds.length === 0
+    ) {
+      throw new Error(
+        "No logical assignment selected."
+      );
+    }
+
+    const copyTitle =
+      String(rawTitle || "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!copyTitle) {
+      throw new Error(
+        "Copy Title cannot be empty."
+      );
+    }
+
+    if (
+      copyTitle.length >
+      COPY_TITLE_MAX_LENGTH
+    ) {
+      throw new Error(
+        `Copy Title must be ${COPY_TITLE_MAX_LENGTH} characters or fewer.`
+      );
+    }
+
+    const uniqueIds = [
+      ...new Set(
+        group.draftIds.filter(Boolean)
+      )
+    ];
+
+    if (usingSupabase) {
+      for (const assignmentId of uniqueIds) {
+        await db.saveFormMeta(
+          assignmentId,
+          {
+            copy_title: copyTitle
+          }
+        );
+      }
+    }
+
+    const idSet =
+      new Set(uniqueIds);
+
+    for (const draft of draftsData) {
+      if (!idSet.has(draft.id)) {
+        continue;
+      }
+
+      draft.meta = {
+        ...(draft.meta || {}),
+        copy_title: copyTitle
+      };
+    }
+
+    if (!usingSupabase) {
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_DRAFTS,
+          JSON.stringify(draftsData)
+        );
+      } catch {
+        // Memory state still reflects the save for the current session.
+      }
+    }
+
+    return copyTitle;
+  }
+
+  function setAssignmentFocusStatus(
+    message,
+    tone = ""
+  ) {
+    const status =
+      $("gbCopyTitleStatus");
+
+    if (!status) {
+      return;
+    }
+
+    status.textContent =
+      message || "";
+
+    if (tone) {
+      status.dataset.tone = tone;
+    } else {
+      delete status.dataset.tone;
+    }
+  }
+
+  function updateCopyTitleCount() {
+    const input =
+      $("gbCopyTitleInput");
+
+    const count =
+      $("gbCopyTitleCount");
+
+    if (!input || !count) {
+      return;
+    }
+
+    count.textContent =
+      `${input.value.length}/${COPY_TITLE_MAX_LENGTH}`;
+  }
+
+  async function copyTextToClipboard(text) {
+    if (
+      navigator.clipboard &&
+      navigator.clipboard.writeText
+    ) {
+      await navigator.clipboard.writeText(
+        text
+      );
+      return;
+    }
+
+    const textarea =
+      document.createElement("textarea");
+
+    textarea.value = text;
+    textarea.setAttribute(
+      "readonly",
+      ""
+    );
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    const copied =
+      document.execCommand("copy");
+
+    textarea.remove();
+
+    if (!copied) {
+      throw new Error(
+        "Clipboard copy failed."
+      );
+    }
+  }
+
+  function syncGradebookViewControls() {
+    const gridButton =
+      $("gbViewModeGrid");
+
+    const focusButton =
+      $("gbViewModeFocus");
+
+    const focusPanel =
+      $("gbFocusPanel");
+
+    const groupSelect =
+      $("gbGroupModeSelect");
+
+    const showMoreButton =
+      $("btnToggleMoreCols");
+
+    const focusAvailable =
+      currentClassFilter !==
+      "All Classes";
+
+    if (
+      !focusAvailable &&
+      gradebookViewMode === "focus"
+    ) {
+      gradebookViewMode = "grid";
+      focusedAssignmentIndex = 0;
+      currentFocusedAssignmentGroup =
+        null;
+    }
+
+    const focusActive =
+      focusAvailable &&
+      gradebookViewMode === "focus";
+
+    if (gridButton) {
+      gridButton.classList.toggle(
+        "primary",
+        !focusActive
+      );
+      gridButton.setAttribute(
+        "aria-pressed",
+        String(!focusActive)
+      );
+    }
+
+    if (focusButton) {
+      focusButton.disabled =
+        !focusAvailable;
+
+      focusButton.classList.toggle(
+        "primary",
+        focusActive
+      );
+
+      focusButton.setAttribute(
+        "aria-pressed",
+        String(focusActive)
+      );
+
+      focusButton.title =
+        focusAvailable
+          ? "Show one assignment at a time"
+          : "Select a class to use Focus view";
+    }
+
+    if (focusPanel) {
+      focusPanel.style.display =
+        focusActive
+          ? "block"
+          : "none";
+    }
+
+    if (groupSelect) {
+      groupSelect.disabled =
+        focusActive;
+
+      groupSelect.hidden =
+        focusActive;
+    }
+
+    if (showMoreButton) {
+      showMoreButton.disabled =
+        focusActive;
+
+      showMoreButton.hidden =
+        focusActive;
+    }
+  }
+
+  function setGradebookViewMode(mode) {
+    const nextMode =
+      mode === "focus"
+        ? "focus"
+        : "grid";
+
+    if (
+      nextMode === "focus" &&
+      currentClassFilter ===
+        "All Classes"
+    ) {
+      announceA11y(
+        "Select a class before opening Assignment Focus."
+      );
+      return;
+    }
+
+    if (
+      nextMode === "focus" &&
+      gradebookViewMode !== "focus"
+    ) {
+      focusedAssignmentIndex = 0;
+    }
+
+    gradebookViewMode =
+      nextMode;
+
+    currentFocusedAssignmentGroup =
+      null;
+
+    renderGradebook();
+  }
+
+  function buildFocusScoreTh(group) {
+    const th =
+      document.createElement("th");
+
+    th.setAttribute(
+      "role",
+      "columnheader"
+    );
+
+    const groupSortKey =
+      "grp:" +
+      group.title +
+      "|" +
+      (group.dateStr || "");
+
+    th.setAttribute(
+      "aria-sort",
+      getAriaSortAttr(
+        groupSortKey
+      )
+    );
+
+    th.style.minWidth =
+      isCompact
+        ? "72px"
+        : "96px";
+
+    th.textContent =
+      "Score" +
+      columnSortIndicator(
+        groupSortKey
+      );
+
+    attachColumnSortClick(
+      th,
+      groupSortKey,
+      "Score"
+    );
+
+    return th;
+  }
+
+  // Render one logical assignment using the same score cells and editing
+  // behavior as Grid view. No parallel grade-processing path is introduced.
+  function renderAssignmentFocus(
+    tableHead,
+    tableBody,
+    students,
+    drafts,
+    scoreMap
+  ) {
+    const focusPanel =
+      $("gbFocusPanel");
+
+    const previousButton =
+      $("gbFocusPrev");
+
+    const nextButton =
+      $("gbFocusNext");
+
+    const assignmentSelect =
+      $("gbFocusSelect");
+
+    const counter =
+      $("gbFocusCounter");
+
+    const fullTitle =
+      $("gbFocusFullTitle");
+
+    const meta =
+      $("gbFocusMeta");
+
+    const copyInput =
+      $("gbCopyTitleInput");
+
+    const copyButton =
+      $("gbCopyTitleCopy");
+
+    const saveButton =
+      $("gbCopyTitleSave");
+
+    const noGroupsBanner =
+      $("gbNoGroupsBanner");
+
+    if (noGroupsBanner) {
+      noGroupsBanner.style.display =
+        "none";
+    }
+
+    if (focusPanel) {
+      focusPanel.style.display =
+        "block";
+    }
+
+    const focusDrafts =
+      currentClassFilter ===
+      "All Classes"
+        ? []
+        : filterDraftsForCurrentClass(
+            drafts
+          );
+
+    const assignmentGroups =
+      deduplicateAssignmentsForExport(
+        focusDrafts
+      );
+
+    backfillGroupTotalPossible(
+      assignmentGroups
+    );
+
+    tableHead.innerHTML = "";
+    tableBody.innerHTML = "";
+
+    if (
+      assignmentGroups.length === 0
+    ) {
+      focusedAssignmentIndex = 0;
+      currentFocusedAssignmentGroup =
+        null;
+
+      if (previousButton) {
+        previousButton.disabled = true;
+      }
+
+      if (nextButton) {
+        nextButton.disabled = true;
+      }
+
+      if (assignmentSelect) {
+        assignmentSelect.innerHTML = "";
+        assignmentSelect.disabled = true;
+      }
+
+      if (counter) {
+        counter.textContent =
+          "No assignments";
+      }
+
+      if (fullTitle) {
+        fullTitle.textContent =
+          "No assignments in this view";
+      }
+
+      if (meta) {
+        meta.textContent =
+          currentClassFilter;
+      }
+
+      if (copyInput) {
+        copyInput.value = "";
+        copyInput.disabled = true;
+      }
+
+      if (copyButton) {
+        copyButton.disabled = true;
+      }
+
+      if (saveButton) {
+        saveButton.disabled = true;
+      }
+
+      updateCopyTitleCount();
+      setAssignmentFocusStatus("");
+
+      return;
+    }
+
+    focusedAssignmentIndex =
+      Math.max(
+        0,
+        Math.min(
+          focusedAssignmentIndex,
+          assignmentGroups.length - 1
+        )
+      );
+
+    const group =
+      assignmentGroups[
+        focusedAssignmentIndex
+      ];
+
+    currentFocusedAssignmentGroup =
+      group;
+
+    if (previousButton) {
+      previousButton.disabled =
+        focusedAssignmentIndex === 0;
+    }
+
+    if (nextButton) {
+      nextButton.disabled =
+        focusedAssignmentIndex ===
+        assignmentGroups.length - 1;
+    }
+
+    if (assignmentSelect) {
+      assignmentSelect.innerHTML = "";
+
+      assignmentGroups.forEach(
+        (candidate, index) => {
+          const option =
+            document.createElement(
+              "option"
+            );
+
+          option.value =
+            String(index);
+
+          option.textContent =
+            candidate.title ||
+            "Untitled assignment";
+
+          assignmentSelect.appendChild(
+            option
+          );
+        }
+      );
+
+      assignmentSelect.value =
+        String(
+          focusedAssignmentIndex
+        );
+
+      assignmentSelect.disabled =
+        assignmentGroups.length <= 1;
+    }
+
+    if (counter) {
+      counter.textContent =
+        `Assignment ${
+          focusedAssignmentIndex + 1
+        } of ${
+          assignmentGroups.length
+        }`;
+    }
+
+    if (fullTitle) {
+      fullTitle.textContent =
+        group.title ||
+        "Untitled assignment";
+    }
+
+    const classAverage =
+      calculateGroupColumnAverage(
+        group,
+        scoreMap,
+        students
+      );
+
+    const gradedCount =
+      students.filter(
+        student =>
+          getStudentScoreForGroup(
+            student.code,
+            group,
+            scoreMap
+          ) !== null
+      ).length;
+
+    if (meta) {
+      const metaParts = [
+        currentClassFilter
+      ];
+
+      if (group.dateStr) {
+        metaParts.push(
+          `Date ${group.dateStr}`
+        );
+      }
+
+      if (
+        group.totalPossible !== null &&
+        group.totalPossible !== undefined
+      ) {
+        metaParts.push(
+          `${group.totalPossible} pts`
+        );
+      }
+
+      metaParts.push(
+        `${gradedCount}/${students.length} graded`
+      );
+
+      if (classAverage !== null) {
+        metaParts.push(
+          `Class avg ${classAverage}%`
+        );
+      }
+
+      meta.textContent =
+        metaParts.join(" · ");
+    }
+
+    const savedCopyTitle =
+      getSavedCopyTitleForGroup(
+        group
+      );
+
+    const displayedCopyTitle =
+      savedCopyTitle ||
+      buildCopyTitleSuggestion(
+        group.title
+      );
+
+    if (copyInput) {
+      copyInput.disabled = false;
+      copyInput.maxLength =
+        COPY_TITLE_MAX_LENGTH;
+      copyInput.value =
+        displayedCopyTitle;
+    }
+
+    if (copyButton) {
+      copyButton.disabled = false;
+    }
+
+    if (saveButton) {
+      saveButton.disabled = false;
+    }
+
+    updateCopyTitleCount();
+
+    setAssignmentFocusStatus(
+      savedCopyTitle
+        ? "Saved"
+        : "Suggested from assignment title"
+    );
+
+    const headerRow =
+      document.createElement("tr");
+
+    headerRow.setAttribute(
+      "role",
+      "row"
+    );
+
+    const studentHeader =
+      document.createElement("th");
+
+    studentHeader.setAttribute(
+      "role",
+      "columnheader"
+    );
+
+    studentHeader.setAttribute(
+      "aria-sort",
+      getAriaSortAttr("student")
+    );
+
+    studentHeader.className =
+      "gb-student-col";
+
+    studentHeader.textContent =
+      "Student" +
+      columnSortIndicator(
+        "student"
+      );
+
+    attachColumnSortClick(
+      studentHeader,
+      "student",
+      "Student"
+    );
+
+    headerRow.appendChild(
+      studentHeader
+    );
+
+    headerRow.appendChild(
+      buildFocusScoreTh(
+        group
+      )
+    );
+
+    tableHead.appendChild(
+      headerRow
+    );
+
+    const sortedStudents =
+      applyColumnSort(
+        students,
+        scoreMap,
+        drafts,
+        [],
+        [group]
+      );
+
+    let isFirstRow = true;
+
+    for (
+      const student of
+      sortedStudents
+    ) {
+      const row =
+        document.createElement("tr");
+
+      row.setAttribute(
+        "role",
+        "row"
+      );
+
+      if (isFirstRow) {
+        row.classList.add(
+          "gb-highlighted"
+        );
+        isFirstRow = false;
+      }
+
+      const studentCell =
+        document.createElement("td");
+
+      studentCell.setAttribute(
+        "role",
+        "rowheader"
+      );
+
+      studentCell.className =
+        "gb-student-cell";
+
+      studentCell.tabIndex = 0;
+
+      studentCell.textContent =
+        student.name ||
+        student.code;
+
+      row.appendChild(
+        studentCell
+      );
+
+      const studentInstanceDraftIds =
+        new Set(
+          assignmentInstancesData
+            .filter(
+              instance =>
+                instance.student_code ===
+                student.code
+            )
+            .map(
+              instance =>
+                instance.assignment_id
+            )
+        );
+
+      row.appendChild(
+        buildGroupScoreTd(
+          group,
+          student.code,
+          scoreMap,
+          student.name ||
+            student.code,
+          studentInstanceDraftIds
+        )
+      );
+
+      tableBody.appendChild(
+        row
+      );
+    }
+
+    const summaryRow =
+      document.createElement("tr");
+
+    summaryRow.className =
+      "gb-summary-row";
+
+    const summaryLabel =
+      document.createElement("td");
+
+    summaryLabel.className =
+      "gb-student-cell";
+
+    summaryLabel.textContent =
+      "Class Average";
+
+    summaryRow.appendChild(
+      summaryLabel
+    );
+
+    const summaryScore =
+      document.createElement("td");
+
+    summaryScore.className =
+      "gb-score-cell";
+
+    if (classAverage !== null) {
+      summaryScore.textContent =
+        `${classAverage}%`;
+
+      const colorClass =
+        scoreColorClass(
+          classAverage
+        );
+
+      if (colorClass) {
+        summaryScore.classList.add(
+          colorClass
+        );
+      }
+    } else {
+      summaryScore.textContent =
+        "—";
+    }
+
+    summaryRow.appendChild(
+      summaryScore
+    );
+
+    tableBody.appendChild(
+      summaryRow
+    );
+  }
+
   // Helper: restore focus to the previously-captured cell position after a re-render
   function restoreFocusFromPos() {
     if (!_focusedCellPos) return;
@@ -2160,6 +3038,8 @@
       selectGroupMode.value = groupMode;
     }
 
+    syncGradebookViewControls();
+
     // Sync search input value
     const searchEl = $("gbStudentSearch");
     if (searchEl && searchEl.value !== studentSearchTerm) {
@@ -2185,6 +3065,21 @@
 
     // Build header row
     tableHead.innerHTML = "";
+
+    if (gradebookViewMode === "focus") {
+      tableBody.innerHTML = "";
+      renderAssignmentFocus(
+        tableHead,
+        tableBody,
+        students,
+        drafts,
+        scoreMap
+      );
+      restoreFocusFromPos();
+      return;
+    }
+
+    currentFocusedAssignmentGroup = null;
 
     // Grouped view (Option A): delegate to renderGroupedGradebook
     if (groupMode !== "individual") {
@@ -2456,6 +3351,16 @@
   function applyGradebookClassFilter(className) {
     currentClassFilter =
       className || "All Classes";
+
+    focusedAssignmentIndex = 0;
+    currentFocusedAssignmentGroup = null;
+
+    if (
+      currentClassFilter ===
+      "All Classes"
+    ) {
+      gradebookViewMode = "grid";
+    }
 
     groupMode = "class";
     expandedGroups.clear();
@@ -6024,6 +6929,12 @@
    */
   function setSort(value) {
     currentSort = value;
+
+    if (gradebookViewMode === "focus") {
+      focusedAssignmentIndex = 0;
+      currentFocusedAssignmentGroup = null;
+    }
+
     try {
       localStorage.setItem(PREF_SORT, value);
     } catch {
@@ -6239,6 +7150,231 @@
     setupStudentHoverCard();
     setupKeyboardNavigation();
 
+    // Wire Grid / Focus view controls
+    const gridViewButton =
+      $("gbViewModeGrid");
+
+    if (gridViewButton) {
+      gridViewButton.addEventListener(
+        "click",
+        () =>
+          setGradebookViewMode(
+            "grid"
+          )
+      );
+    }
+
+    const focusViewButton =
+      $("gbViewModeFocus");
+
+    if (focusViewButton) {
+      focusViewButton.addEventListener(
+        "click",
+        () =>
+          setGradebookViewMode(
+            "focus"
+          )
+      );
+    }
+
+    const focusPrevious =
+      $("gbFocusPrev");
+
+    if (focusPrevious) {
+      focusPrevious.addEventListener(
+        "click",
+        () => {
+          focusedAssignmentIndex =
+            Math.max(
+              0,
+              focusedAssignmentIndex - 1
+            );
+
+          currentFocusedAssignmentGroup =
+            null;
+
+          renderGradebook();
+        }
+      );
+    }
+
+    const focusNext =
+      $("gbFocusNext");
+
+    if (focusNext) {
+      focusNext.addEventListener(
+        "click",
+        () => {
+          focusedAssignmentIndex += 1;
+          currentFocusedAssignmentGroup =
+            null;
+          renderGradebook();
+        }
+      );
+    }
+
+    const focusSelect =
+      $("gbFocusSelect");
+
+    if (focusSelect) {
+      focusSelect.addEventListener(
+        "change",
+        () => {
+          const nextIndex =
+            Number(
+              focusSelect.value
+            );
+
+          if (
+            Number.isInteger(
+              nextIndex
+            ) &&
+            nextIndex >= 0
+          ) {
+            focusedAssignmentIndex =
+              nextIndex;
+
+            currentFocusedAssignmentGroup =
+              null;
+
+            renderGradebook();
+          }
+        }
+      );
+    }
+
+    const copyTitleInput =
+      $("gbCopyTitleInput");
+
+    if (copyTitleInput) {
+      copyTitleInput.addEventListener(
+        "input",
+        () => {
+          updateCopyTitleCount();
+          setAssignmentFocusStatus(
+            "Unsaved changes"
+          );
+        }
+      );
+    }
+
+    const copyTitleButton =
+      $("gbCopyTitleCopy");
+
+    if (
+      copyTitleButton &&
+      copyTitleInput
+    ) {
+      copyTitleButton.addEventListener(
+        "click",
+        async () => {
+          const copyTitle =
+            copyTitleInput.value.trim();
+
+          if (!copyTitle) {
+            setAssignmentFocusStatus(
+              "Nothing to copy.",
+              "error"
+            );
+            return;
+          }
+
+          try {
+            await copyTextToClipboard(
+              copyTitle
+            );
+
+            setAssignmentFocusStatus(
+              "Copied.",
+              "success"
+            );
+
+            announceA11y(
+              "Copy Title copied to clipboard."
+            );
+          } catch (error) {
+            console.error(
+              "[gradebook] Copy Title clipboard error:",
+              error
+            );
+
+            setAssignmentFocusStatus(
+              "Could not copy.",
+              "error"
+            );
+          }
+        }
+      );
+    }
+
+    const saveCopyTitleButton =
+      $("gbCopyTitleSave");
+
+    if (
+      saveCopyTitleButton &&
+      copyTitleInput
+    ) {
+      saveCopyTitleButton.addEventListener(
+        "click",
+        async () => {
+          if (
+            !currentFocusedAssignmentGroup
+          ) {
+            setAssignmentFocusStatus(
+              "No assignment selected.",
+              "error"
+            );
+            return;
+          }
+
+          saveCopyTitleButton.disabled =
+            true;
+
+          setAssignmentFocusStatus(
+            "Saving…"
+          );
+
+          try {
+            const saved =
+              await saveCopyTitleForGroup(
+                currentFocusedAssignmentGroup,
+                copyTitleInput.value
+              );
+
+            copyTitleInput.value =
+              saved;
+
+            updateCopyTitleCount();
+
+            setAssignmentFocusStatus(
+              "Saved.",
+              "success"
+            );
+
+            announceA11y(
+              "Copy Title saved."
+            );
+          } catch (error) {
+            console.error(
+              "[gradebook] Copy Title save error:",
+              error
+            );
+
+            setAssignmentFocusStatus(
+              error &&
+              error.message
+                ? error.message
+                : "Could not save.",
+              "error"
+            );
+          } finally {
+            saveCopyTitleButton.disabled =
+              false;
+          }
+        }
+      );
+    }
+
     // Wire manual assignment button
     const btnManualAssignment = $("btnManualAssignment");
     if (btnManualAssignment) {
@@ -6256,6 +7392,8 @@
     if (quarterFilter) {
       quarterFilter.addEventListener("change", () => {
         currentQuarterFilter = quarterFilter.value;
+        focusedAssignmentIndex = 0;
+        currentFocusedAssignmentGroup = null;
         renderGradebook();
       });
     }
