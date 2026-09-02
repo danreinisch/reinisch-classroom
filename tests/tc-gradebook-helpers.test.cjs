@@ -101,6 +101,73 @@ function readDrafts(raw) {
   }
 }
 
+const CANON_CLASSES = [
+  'Language Arts 1 SC',
+  'Language Arts 2 SC',
+  'Language Arts 3 SC',
+  'Language Arts 4 SC',
+  'Life Skills Language Arts SC',
+  'Transitional Skills',
+  'Consumer Math',
+  'Geometry SC',
+  'Speech/Language',
+  'Warrior Academy'
+];
+
+// Inline mirror of inferSeriesFromDraft from site/web/tc-gradebook.js.
+// Keep this helper aligned with production class-routing behavior.
+function inferSeriesFromDraft(draft, assignmentInstancesData, classEnrollmentsData) {
+  const metaClassName =
+    draft &&
+    draft.meta &&
+    typeof draft.meta.class_name === 'string'
+      ? draft.meta.class_name.trim()
+      : '';
+
+  if (metaClassName && CANON_CLASSES.includes(metaClassName)) {
+    return metaClassName;
+  }
+
+  if (draft.series && CANON_CLASSES.includes(draft.series)) {
+    return draft.series;
+  }
+
+  const title = (draft.title || '').toLowerCase();
+  for (const cls of CANON_CLASSES) {
+    if (title.includes(cls.toLowerCase())) {
+      return cls;
+    }
+  }
+
+  const instancesForDraft = assignmentInstancesData.filter(
+    i => i.assignment_id === draft.id
+  );
+
+  if (instancesForDraft.length > 0) {
+    const assignedStudentCodes = new Set(
+      instancesForDraft.map(instance => instance.student_code)
+    );
+
+    const candidateClasses = new Set(
+      classEnrollmentsData
+        .filter(
+          enrollment =>
+            assignedStudentCodes.has(enrollment.student_code) &&
+            enrollment.active !== false &&
+            enrollment.class_name &&
+            CANON_CLASSES.includes(enrollment.class_name)
+        )
+        .map(enrollment => enrollment.class_name)
+    );
+
+    if (candidateClasses.size === 1) {
+      return [...candidateClasses][0];
+    }
+  }
+
+  return null;
+}
+
 // ── calculateEarnedPoints ─────────────────────────────────────────────────────
 
 console.log('--- calculateEarnedPoints ---');
@@ -423,6 +490,125 @@ console.log('\n--- scoreColorClass ---');
   assert.strictEqual(scoreColorClass(NaN), '', 'NaN returns empty string');
   console.log('✓ null/undefined/NaN return empty string');
 }
+
+
+// ── inferSeriesFromDraft class routing ────────────────────────────────────────
+
+console.log('\n--- inferSeriesFromDraft class routing ---');
+
+{
+  // Regression: issued assignments already preserve the authoritative class in
+  // meta.class_name. Enrollment ordering must never override it.
+  const draft = {
+    id: 'A-LA4',
+    title: 'ELA Response — S001',
+    series: null,
+    meta: { class_name: 'Language Arts 4 SC' }
+  };
+
+  const instances = [
+    { assignment_id: 'A-LA4', student_code: 'S001' }
+  ];
+
+  const enrollments = [
+    { student_code: 'S001', class_name: 'Transitional Skills', active: true },
+    { student_code: 'S001', class_name: 'Language Arts 4 SC', active: true }
+  ];
+
+  assert.strictEqual(
+    inferSeriesFromDraft(draft, instances, enrollments),
+    'Language Arts 4 SC',
+    'meta.class_name must outrank enrollment ordering'
+  );
+
+  console.log('✓ assignment meta.class_name is authoritative');
+}
+
+{
+  const draft = {
+    id: 'A-SERIES',
+    title: 'Legacy Assignment',
+    series: 'Language Arts 3 SC',
+    meta: {}
+  };
+
+  assert.strictEqual(
+    inferSeriesFromDraft(draft, [], []),
+    'Language Arts 3 SC',
+    'canonical series remains supported'
+  );
+
+  console.log('✓ canonical series remains supported');
+}
+
+{
+  const draft = {
+    id: 'A-TITLE',
+    title: 'Week 2 — Language Arts 2 SC',
+    series: null,
+    meta: {}
+  };
+
+  assert.strictEqual(
+    inferSeriesFromDraft(draft, [], []),
+    'Language Arts 2 SC',
+    'legacy title inference remains supported'
+  );
+
+  console.log('✓ legacy title inference remains supported');
+}
+
+{
+  const draft = {
+    id: 'A-ONE-CLASS',
+    title: 'Legacy Untagged Assignment',
+    series: null,
+    meta: {}
+  };
+
+  const instances = [
+    { assignment_id: 'A-ONE-CLASS', student_code: 'S002' }
+  ];
+
+  const enrollments = [
+    { student_code: 'S002', class_name: 'Language Arts 1 SC', active: true }
+  ];
+
+  assert.strictEqual(
+    inferSeriesFromDraft(draft, instances, enrollments),
+    'Language Arts 1 SC',
+    'one unambiguous enrollment may remain a compatibility fallback'
+  );
+
+  console.log('✓ one unambiguous enrollment remains a fallback');
+}
+
+{
+  const draft = {
+    id: 'A-AMBIG',
+    title: 'Legacy Untagged Assignment',
+    series: null,
+    meta: {}
+  };
+
+  const instances = [
+    { assignment_id: 'A-AMBIG', student_code: 'S003' }
+  ];
+
+  const enrollments = [
+    { student_code: 'S003', class_name: 'Transitional Skills', active: true },
+    { student_code: 'S003', class_name: 'Language Arts 4 SC', active: true }
+  ];
+
+  assert.strictEqual(
+    inferSeriesFromDraft(draft, instances, enrollments),
+    null,
+    'ambiguous multi-class enrollment must not guess a class'
+  );
+
+  console.log('✓ ambiguous enrollment returns null instead of guessing');
+}
+
 
 console.log('\n✓ All tc-gradebook-helpers tests passed!');
 

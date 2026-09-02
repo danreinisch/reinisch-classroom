@@ -1097,15 +1097,29 @@
     });
   }
 
-  // Infer the CANON_CLASSES series for a draft using multiple fallback strategies.
+  // Infer the CANON_CLASSES series for a draft using authoritative assignment
+  // metadata first, then progressively weaker compatibility fallbacks.
   // Returns a matching CANON_CLASSES string or null.
   function inferSeriesFromDraft(draft) {
-    // Strategy 1: use draft.series directly if it matches a known class
+    // Strategy 1: issued file assignments preserve their authoritative class
+    // in meta.class_name.
+    const metaClassName =
+      draft &&
+      draft.meta &&
+      typeof draft.meta.class_name === 'string'
+        ? draft.meta.class_name.trim()
+        : '';
+
+    if (metaClassName && CANON_CLASSES.includes(metaClassName)) {
+      return metaClassName;
+    }
+
+    // Strategy 2: use draft.series when it contains a canonical class.
     if (draft.series && CANON_CLASSES.includes(draft.series)) {
       return draft.series;
     }
 
-    // Strategy 2: search the draft title for a CANON_CLASSES keyword (case-insensitive)
+    // Strategy 3: legacy compatibility — search the assignment title.
     const title = (draft.title || '').toLowerCase();
     for (const cls of CANON_CLASSES) {
       if (title.includes(cls.toLowerCase())) {
@@ -1113,22 +1127,32 @@
       }
     }
 
-    // Strategy 3: look up which students were assigned this draft via
-    //   assignmentInstancesData → classEnrollmentsData, then pick the most
-    //   common CANON_CLASS among those enrollments.
-    const instancesForDraft = assignmentInstancesData.filter(i => i.assignment_id === draft.id);
+    // Strategy 4: legacy compatibility — infer from enrollments only when all
+    // relevant active canonical enrollments resolve to exactly one class.
+    // Never guess from the first enrollment for a multi-class student.
+    const instancesForDraft = assignmentInstancesData.filter(
+      i => i.assignment_id === draft.id
+    );
+
     if (instancesForDraft.length > 0) {
-      const classCounts = new Map();
-      for (const instance of instancesForDraft) {
-        const enrollment = classEnrollmentsData.find(
-          e => e.student_code === instance.student_code && e.active !== false
-        );
-        if (enrollment && enrollment.class_name && CANON_CLASSES.includes(enrollment.class_name)) {
-          classCounts.set(enrollment.class_name, (classCounts.get(enrollment.class_name) || 0) + 1);
-        }
-      }
-      if (classCounts.size > 0) {
-        return [...classCounts.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+      const assignedStudentCodes = new Set(
+        instancesForDraft.map(instance => instance.student_code)
+      );
+
+      const candidateClasses = new Set(
+        classEnrollmentsData
+          .filter(
+            enrollment =>
+              assignedStudentCodes.has(enrollment.student_code) &&
+              enrollment.active !== false &&
+              enrollment.class_name &&
+              CANON_CLASSES.includes(enrollment.class_name)
+          )
+          .map(enrollment => enrollment.class_name)
+      );
+
+      if (candidateClasses.size === 1) {
+        return [...candidateClasses][0];
       }
     }
 
