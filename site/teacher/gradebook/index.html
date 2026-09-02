@@ -244,6 +244,139 @@
         padding: 4px 6px;
       }
       
+      /* Assignment Focus */
+      .gb-view-toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .gb-view-toggle .gb-btn {
+        padding: 7px 11px;
+      }
+
+      .gb-focus-panel {
+        margin-top: 16px;
+      }
+
+      .gb-focus-nav {
+        display: grid;
+        grid-template-columns: auto minmax(220px, 1fr) auto auto;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .gb-focus-select {
+        min-width: 0;
+        width: 100%;
+      }
+
+      .gb-focus-counter {
+        font-size: 12px;
+        opacity: 0.72;
+        white-space: nowrap;
+      }
+
+      .gb-focus-assignment-title {
+        margin-top: 16px;
+        font-size: 19px;
+        line-height: 1.35;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+        user-select: text;
+      }
+
+      .gb-focus-meta {
+        margin-top: 5px;
+        font-size: 12px;
+        opacity: 0.72;
+      }
+
+      .gb-copy-title-box {
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .gb-copy-title-label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        opacity: 0.8;
+      }
+
+      .gb-copy-title-row {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) auto auto auto;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .gb-copy-title-input {
+        width: 100%;
+        min-width: 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(0, 0, 0, 0.25);
+        color: inherit;
+        font: inherit;
+      }
+
+      .gb-copy-title-input:focus {
+        outline: none;
+        border-color: rgba(34, 197, 94, 0.65);
+      }
+
+      .gb-copy-title-count {
+        min-width: 42px;
+        font-size: 12px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        opacity: 0.7;
+      }
+
+      .gb-copy-title-status {
+        min-height: 18px;
+        margin-top: 6px;
+        font-size: 12px;
+        opacity: 0.75;
+      }
+
+      .gb-copy-title-status[data-tone="success"] {
+        color: rgba(34, 197, 94, 1);
+        opacity: 1;
+      }
+
+      .gb-copy-title-status[data-tone="error"] {
+        color: rgba(239, 68, 68, 1);
+        opacity: 1;
+      }
+
+      @media (max-width: 800px) {
+        .gb-focus-nav {
+          grid-template-columns: auto 1fr auto;
+        }
+
+        .gb-focus-counter {
+          grid-column: 1 / -1;
+        }
+
+        .gb-copy-title-row {
+          grid-template-columns: 1fr auto;
+        }
+
+        .gb-copy-title-input {
+          grid-column: 1 / -1;
+        }
+      }
+
       /* Analytics styles */
       .gb-analytics-assignment {
         margin-bottom: 20px;
@@ -1043,6 +1176,10 @@
                 </span>
               </div>
               <div class="gb-actions">
+                <div class="gb-view-toggle" role="group" aria-label="Gradebook view">
+                  <button class="gb-btn primary" type="button" id="gbViewModeGrid" aria-pressed="true">Grid</button>
+                  <button class="gb-btn" type="button" id="gbViewModeFocus" aria-pressed="false" disabled>Focus</button>
+                </div>
                 <input type="text" id="gbStudentSearch" class="gb-btn" placeholder="🔍 Search students..."
                   aria-label="Search students by name or code"
                   style="min-width: 180px; padding: 10px 12px;" />
@@ -1092,6 +1229,40 @@
                 <span class="gb-legend-swatch red" aria-hidden="true"></span>
                 &lt;60% Needs Support
               </span>
+            </div>
+          </section>
+
+          <!-- Assignment Focus (hidden until a class + Focus are selected) -->
+          <section class="gb-card gb-focus-panel" aria-label="Assignment Focus" id="gbFocusPanel" style="display: none;">
+            <div class="gb-focus-nav">
+              <button class="gb-btn" type="button" id="gbFocusPrev">← Previous</button>
+              <select class="gb-btn gb-focus-select" id="gbFocusSelect" aria-label="Focused assignment">
+                <!-- Assignment options populated by JS -->
+              </select>
+              <button class="gb-btn" type="button" id="gbFocusNext">Next →</button>
+              <span class="gb-focus-counter" id="gbFocusCounter"></span>
+            </div>
+
+            <div class="gb-focus-assignment-title" id="gbFocusFullTitle"></div>
+            <div class="gb-focus-meta" id="gbFocusMeta"></div>
+
+            <div class="gb-copy-title-box">
+              <label class="gb-copy-title-label" for="gbCopyTitleInput">Copy Title</label>
+              <div class="gb-copy-title-row">
+                <input
+                  class="gb-copy-title-input"
+                  id="gbCopyTitleInput"
+                  type="text"
+                  maxlength="50"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-describedby="gbCopyTitleCount gbCopyTitleStatus"
+                />
+                <span class="gb-copy-title-count" id="gbCopyTitleCount">0/50</span>
+                <button class="gb-btn" type="button" id="gbCopyTitleCopy">Copy</button>
+                <button class="gb-btn primary" type="button" id="gbCopyTitleSave">Save</button>
+              </div>
+              <div class="gb-copy-title-status" id="gbCopyTitleStatus" aria-live="polite"></div>
             </div>
           </section>
 
@@ -1172,7 +1343,7 @@
     <script src="/web/supabase-config.js"></script>
     <script defer src="/web/teacher-shell.js"></script>
     <script src="/web/rc-modal.js"></script>
-    <script type="module" src="/web/tc-gradebook.js?v=20260902-logical-identity"></script>
+    <script type="module" src="/web/tc-gradebook.js?v=20260902-assignment-focus-copy-title"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
     <script type="module" src="/web/tc-observation.js"></script>
 </body>

@@ -1949,3 +1949,306 @@ function expectedDeduplicateLogicalAssignments(drafts) {
     '✓ production persists and safely consumes logical assignment identity'
   );
 }
+
+// ── Gradebook assignment focus + copy title regression ──
+
+console.log(
+  '\n--- Gradebook assignment focus + copy title ---'
+);
+
+function expectedCopyTitleSuggestion(
+  rawTitle,
+  maxLength = 50
+) {
+  const normalized = String(rawTitle || '')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  const abbreviated = normalized
+    .replace(/\bWEEK\b/gi, 'Wk')
+    .replace(/\bCHAPTERS?\b/gi, 'Ch.')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (abbreviated.length <= maxLength) {
+    return abbreviated;
+  }
+
+  const roomForEllipsis = maxLength - 1;
+  const candidate =
+    abbreviated.slice(0, roomForEllipsis + 1);
+
+  const wordBoundary =
+    candidate.lastIndexOf(' ');
+
+  const minimumUsefulBoundary =
+    Math.floor(maxLength * 0.6);
+
+  const base =
+    wordBoundary >= minimumUsefulBoundary
+      ? candidate
+          .slice(0, wordBoundary)
+          .trimEnd()
+      : abbreviated
+          .slice(0, roomForEllipsis)
+          .trimEnd();
+
+  return `${base
+    .slice(0, roomForEllipsis)
+    .trimEnd()}…`;
+}
+
+{
+  assert.strictEqual(
+    expectedCopyTitleSuggestion(
+      'Week 2 Quiz'
+    ),
+    'Week 2 Quiz',
+    'Copy Title must preserve an already-safe title unchanged'
+  );
+
+  const suggested =
+    expectedCopyTitleSuggestion(
+      'WEEK 1 — Seeker — Prologue + Chapters 1–3 — Written Response and Vocabulary Review'
+    );
+
+  assert.ok(
+    suggested.length <= 50,
+    'generated Copy Title must never exceed the configured limit'
+  );
+
+  assert.ok(
+    suggested.includes('Seeker'),
+    'generated Copy Title should preserve meaningful assignment identity'
+  );
+
+  assert.ok(
+    !suggested.includes('Chapters'),
+    'long suggestions may conservatively abbreviate Chapters'
+  );
+
+  console.log(
+    '✓ expected Copy Title behavior is bounded and conservative'
+  );
+}
+
+{
+  const gradebookSource =
+    fs.readFileSync(
+      'site/web/tc-gradebook.js',
+      'utf8'
+    );
+
+  const gradebookHtml =
+    fs.readFileSync(
+      'site/teacher/gradebook/index.html',
+      'utf8'
+    );
+
+  assert.ok(
+    /const\s+COPY_TITLE_MAX_LENGTH\s*=\s*50\b/.test(
+      gradebookSource
+    ),
+    'production Gradebook must define a 50-character Copy Title limit'
+  );
+
+  assert.ok(
+    /let\s+gradebookViewMode\s*=\s*["']grid["']/.test(
+      gradebookSource
+    ),
+    'production Gradebook must default to Grid view'
+  );
+
+  assert.ok(
+    /function\s+buildCopyTitleSuggestion\s*\(/.test(
+      gradebookSource
+    ),
+    'production Gradebook must define deterministic Copy Title suggestion logic'
+  );
+
+  const copyTitleFunctionStart =
+    gradebookSource.indexOf(
+      'function buildCopyTitleSuggestion'
+    );
+
+  const copyTitleFunctionEnd =
+    gradebookSource.indexOf(
+      '\n\n  function getSavedCopyTitleForGroup',
+      copyTitleFunctionStart
+    );
+
+  assert.ok(
+    copyTitleFunctionStart >= 0 &&
+      copyTitleFunctionEnd >
+        copyTitleFunctionStart,
+    'production Copy Title helper must be extractable for behavioral verification'
+  );
+
+  const productionCopyTitleSuggestion =
+    new Function(
+      'COPY_TITLE_MAX_LENGTH',
+      `${gradebookSource.slice(
+        copyTitleFunctionStart,
+        copyTitleFunctionEnd
+      )}\nreturn buildCopyTitleSuggestion;`
+    )(50);
+
+  assert.strictEqual(
+    productionCopyTitleSuggestion(
+      'Week 2 Quiz'
+    ),
+    expectedCopyTitleSuggestion(
+      'Week 2 Quiz'
+    ),
+    'production Copy Title helper must preserve short titles'
+  );
+
+  const longCopyTitleFixture =
+    'WEEK 1 — Seeker — Prologue + Chapters 1–3 — Written Response and Vocabulary Review';
+
+  assert.strictEqual(
+    productionCopyTitleSuggestion(
+      longCopyTitleFixture
+    ),
+    expectedCopyTitleSuggestion(
+      longCopyTitleFixture
+    ),
+    'production Copy Title helper must match the bounded conservative contract'
+  );
+
+  assert.ok(
+    /function\s+renderAssignmentFocus\s*\(/.test(
+      gradebookSource
+    ),
+    'production Gradebook must define Assignment Focus rendering'
+  );
+
+  assert.ok(
+    /const\s+focusDrafts\s*=[\s\S]*?filterDraftsForCurrentClass\s*\(\s*drafts\s*\)/.test(
+      gradebookSource
+    ),
+    'Assignment Focus must explicitly class-scope its assignment choices'
+  );
+
+  const focusScoreHeaderStart =
+    gradebookSource.indexOf(
+      'function buildFocusScoreTh'
+    );
+
+  const focusScoreHeaderEnd =
+    gradebookSource.indexOf(
+      '\n\n  // Render one logical assignment',
+      focusScoreHeaderStart
+    );
+
+  const focusScoreHeaderSource =
+    focusScoreHeaderStart >= 0 &&
+    focusScoreHeaderEnd >
+      focusScoreHeaderStart
+      ? gradebookSource.slice(
+          focusScoreHeaderStart,
+          focusScoreHeaderEnd
+        )
+      : '';
+
+  assert.ok(
+    /textContent\s*=[\s\S]*?"Score"/.test(
+      focusScoreHeaderSource
+    ),
+    'Assignment Focus table must use a simple Score column heading'
+  );
+
+  assert.ok(
+    /groupSelect\.hidden\s*=\s*focusActive/.test(
+      gradebookSource
+    ) &&
+    /showMoreButton\.hidden\s*=\s*focusActive/.test(
+      gradebookSource
+    ),
+    'Grid-only grouping and extra-column controls must hide in Focus'
+  );
+
+  assert.ok(
+    /function\s+saveCopyTitleForGroup\s*\(/.test(
+      gradebookSource
+    ),
+    'production Gradebook must save Copy Title at logical-assignment scope'
+  );
+
+  assert.ok(
+    /copy_title/.test(
+      gradebookSource
+    ),
+    'Copy Title must persist in assignment metadata as copy_title'
+  );
+
+  assert.ok(
+    /db\.saveFormMeta\s*\(/.test(
+      gradebookSource
+    ),
+    'Copy Title persistence must use the existing data-adapter metadata write path'
+  );
+
+  const copyTitleSaveStart =
+    gradebookSource.indexOf(
+      'async function saveCopyTitleForGroup'
+    );
+
+  const copyTitleSaveEnd =
+    gradebookSource.indexOf(
+      '\n\n  function setAssignmentFocusStatus',
+      copyTitleSaveStart
+    );
+
+  const copyTitleSaveSource =
+    copyTitleSaveStart >= 0 &&
+    copyTitleSaveEnd >
+      copyTitleSaveStart
+      ? gradebookSource.slice(
+          copyTitleSaveStart,
+          copyTitleSaveEnd
+        )
+      : '';
+
+  assert.ok(
+    /group\.draftIds/.test(
+      copyTitleSaveSource
+    ) &&
+    /db\.saveFormMeta\s*\(/.test(
+      copyTitleSaveSource
+    ) &&
+    /copy_title\s*:\s*copyTitle/.test(
+      copyTitleSaveSource
+    ),
+    'Copy Title save must persist across every underlying row in the logical assignment group'
+  );
+
+  assert.ok(
+    /id=["']gbViewModeGrid["']/.test(
+      gradebookHtml
+    ),
+    'Gradebook must expose a Grid view control'
+  );
+
+  assert.ok(
+    /id=["']gbViewModeFocus["']/.test(
+      gradebookHtml
+    ),
+    'Gradebook must expose a Focus view control'
+  );
+
+  assert.ok(
+    /id=["']gbFocusPanel["']/.test(
+      gradebookHtml
+    ),
+    'Gradebook must provide a dedicated Assignment Focus panel'
+  );
+
+  console.log(
+    '✓ production Gradebook implements Assignment Focus + Copy Title contract'
+  );
+}
