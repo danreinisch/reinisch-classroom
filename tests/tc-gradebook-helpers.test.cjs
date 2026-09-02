@@ -1275,3 +1275,239 @@ function isGradebookScoreEligible(
     '✓ production Gradebook applies eligibility in both score-map paths'
   );
 }
+
+
+// ── Gradebook class drilldown + count accuracy regression ──
+
+console.log('\n--- Gradebook class drilldown + count accuracy ---');
+
+function expectedClassDrilldownState(className) {
+  return {
+    currentClassFilter: className,
+    groupMode: 'class',
+    expandedGroups:
+      className === 'All Classes'
+        ? []
+        : [className]
+  };
+}
+
+{
+  assert.deepStrictEqual(
+    expectedClassDrilldownState('Language Arts 4 SC'),
+    {
+      currentClassFilter: 'Language Arts 4 SC',
+      groupMode: 'class',
+      expandedGroups: ['Language Arts 4 SC']
+    },
+    'selecting LA4 must switch to class mode and expand only LA4'
+  );
+
+  console.log(
+    '✓ selecting a class means class-mode drilldown into that class'
+  );
+}
+
+{
+  assert.deepStrictEqual(
+    expectedClassDrilldownState('All Classes'),
+    {
+      currentClassFilter: 'All Classes',
+      groupMode: 'class',
+      expandedGroups: []
+    },
+    'All Classes must return to collapsed class-summary mode'
+  );
+
+  console.log(
+    '✓ All Classes returns to collapsed class-summary mode'
+  );
+}
+
+function expectedClassScopedDrafts(
+  drafts,
+  className
+) {
+  if (className === 'All Classes') {
+    return drafts;
+  }
+
+  return drafts.filter(
+    draft =>
+      draft.inferredClass === className
+  );
+}
+
+{
+  const drafts = [
+    {
+      id: 'LA3-1',
+      inferredClass: 'Language Arts 3 SC'
+    },
+    {
+      id: 'LA4-1',
+      inferredClass: 'Language Arts 4 SC'
+    },
+    {
+      id: 'LA4-2',
+      inferredClass: 'Language Arts 4 SC'
+    },
+    {
+      id: 'TS-1',
+      inferredClass: 'Transitional Skills'
+    }
+  ];
+
+  assert.deepStrictEqual(
+    expectedClassScopedDrafts(
+      drafts,
+      'Language Arts 4 SC'
+    ).map(d => d.id),
+    ['LA4-1', 'LA4-2'],
+    'LA4 drilldown must not retain LA3 or Transitional Skills drafts'
+  );
+
+  assert.strictEqual(
+    expectedClassScopedDrafts(
+      drafts,
+      'All Classes'
+    ).length,
+    4,
+    'All Classes must retain all drafts'
+  );
+
+  console.log(
+    '✓ selected class scopes assignments as well as students'
+  );
+}
+
+{
+  // Seven raw individualized records can legitimately render as only three
+  // assignment columns after the existing title/date deduplication step.
+  const rawClassDrafts = [
+    {
+      id: 'A1',
+      title: 'WEEK 1 — Seeker — Prologue + Chapters 1–3 — S003',
+      created_at: '2026-08-30T12:00:00Z',
+      meta: { total_possible: 26 }
+    },
+    {
+      id: 'A2',
+      title: 'WEEK 1 — Seeker — Prologue + Chapters 1–3 — S004',
+      created_at: '2026-08-30T12:00:00Z',
+      meta: { total_possible: 26 }
+    },
+    {
+      id: 'A3',
+      title: 'WEEK 1 — Seeker — Prologue + Chapters 1–3 — S005',
+      created_at: '2026-08-30T12:00:00Z',
+      meta: { total_possible: 26 }
+    },
+    {
+      id: 'B1',
+      title: 'WEEK 1 — Seeker — Prologue + Chapters 1–3 — S039',
+      created_at: '2026-08-22T12:00:00Z',
+      meta: { total_possible: 26 }
+    },
+    {
+      id: 'C1',
+      title: 'SEEKER — WEEK 1 — DAY 4 — S003',
+      created_at: '2026-08-27T12:00:00Z',
+      meta: { total_possible: 10 }
+    },
+    {
+      id: 'C2',
+      title: 'SEEKER — WEEK 1 — DAY 4 — S004',
+      created_at: '2026-08-27T12:00:00Z',
+      meta: { total_possible: 10 }
+    },
+    {
+      id: 'C3',
+      title: 'SEEKER — WEEK 1 — DAY 4 — S039',
+      created_at: '2026-08-27T12:00:00Z',
+      meta: { total_possible: 10 }
+    }
+  ];
+
+  const displayGroups =
+    deduplicateAssignmentsForExport(
+      rawClassDrafts
+    );
+
+  assert.strictEqual(
+    rawClassDrafts.length,
+    7,
+    'fixture must contain seven raw assignment rows'
+  );
+
+  assert.strictEqual(
+    displayGroups.length,
+    3,
+    'seven raw rows must display as three assignment columns under current dedup rules'
+  );
+
+  console.log(
+    '✓ class count contract uses unique displayed assignment columns, not raw rows'
+  );
+}
+
+// Production integration contract:
+// 1. class selection is centralized through applyGradebookClassFilter()
+// 2. buildGradebookData scopes drafts through filterDraftsForCurrentClass()
+// 3. collapsed class headers count the same deduplicated columns shown when expanded
+{
+  const gradebookSource =
+    fs.readFileSync(
+      'site/web/tc-gradebook.js',
+      'utf8'
+    );
+
+  assert.ok(
+    /function\s+applyGradebookClassFilter\s*\(/.test(
+      gradebookSource
+    ),
+    'production must centralize class-pill drilldown behavior'
+  );
+
+  const classFilterOccurrences =
+    gradebookSource.match(
+      /\bapplyGradebookClassFilter\s*\(/g
+    ) || [];
+
+  assert.ok(
+    classFilterOccurrences.length >= 3,
+    'production must define class drilldown and use it for All Classes + class pills'
+  );
+
+  assert.ok(
+    /function\s+filterDraftsForCurrentClass\s*\(/.test(
+      gradebookSource
+    ),
+    'production must define class-scoped assignment filtering'
+  );
+
+  assert.ok(
+    /filterDraftsForCurrentClass\s*\(\s*draftsData\s*\)/.test(
+      gradebookSource
+    ),
+    'buildGradebookData must class-scope drafts as well as students'
+  );
+
+  assert.ok(
+    /function\s+countDisplayAssignmentsInGroup\s*\(/.test(
+      gradebookSource
+    ),
+    'production must count deduplicated displayed assignments'
+  );
+
+  assert.ok(
+    /countDisplayAssignmentsInGroup\s*\(\s*group\s*\)/.test(
+      gradebookSource
+    ),
+    'collapsed group header must use the display-count helper'
+  );
+
+  console.log(
+    '✓ production Gradebook implements drilldown + accurate display counts'
+  );
+}
