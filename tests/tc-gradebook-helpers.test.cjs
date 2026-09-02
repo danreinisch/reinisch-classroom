@@ -1511,3 +1511,441 @@ function expectedClassScopedDrafts(
     '✓ production Gradebook implements drilldown + accurate display counts'
   );
 }
+
+// ── Gradebook logical assignment identity regression ──
+
+console.log('\n--- Gradebook logical assignment identity ---');
+
+function stripStudentSuffixForLogicalIdentity(rawTitle) {
+  return String(rawTitle || '')
+    .trim()
+    .replace(/\s*[—–-]\s*S\d+\s*$/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function extractWeekNumberForLogicalIdentity(rawTitle) {
+  const title =
+    stripStudentSuffixForLogicalIdentity(
+      rawTitle
+    );
+
+  const match =
+    title.match(/\bWEEK\s+(\d+)\b/i);
+
+  return match
+    ? Number(match[1])
+    : null;
+}
+
+function extractSeriesTokenForLogicalIdentity(rawTitle) {
+  const title =
+    stripStudentSuffixForLogicalIdentity(
+      rawTitle
+    ).replace(/[—–]/g, '-');
+
+  const weekFirst =
+    title.match(
+      /^\s*WEEK\s+\d+\s*-\s*([^-]+?)(?:\s*-\s*|$)/i
+    );
+
+  if (weekFirst) {
+    return weekFirst[1]
+      .trim()
+      .toLowerCase();
+  }
+
+  const seriesFirst =
+    title.match(
+      /^\s*([^-]+?)\s*-\s*WEEK\s+\d+\b/i
+    );
+
+  return seriesFirst
+    ? seriesFirst[1]
+        .trim()
+        .toLowerCase()
+    : null;
+}
+
+function expectedLogicalIdentityInfo(draft) {
+  const title =
+    stripStudentSuffixForLogicalIdentity(
+      draft && draft.title
+    );
+
+  const titleKey =
+    title
+      .replace(/[—–]/g, '-')
+      .toLowerCase();
+
+  const explicit =
+    draft &&
+    draft.meta &&
+    typeof draft.meta.logical_assignment_id === 'string'
+      ? draft.meta.logical_assignment_id.trim()
+      : '';
+
+  const week =
+    extractWeekNumberForLogicalIdentity(
+      title
+    );
+
+  const series =
+    extractSeriesTokenForLogicalIdentity(
+      title
+    );
+
+  return {
+    key:
+      explicit
+        ? `logical:${explicit}`
+        : week != null
+          ? `week-title:${week}:${titleKey}`
+          : `legacy-title:${titleKey}`,
+    explicit: !!explicit,
+    legacyFamily:
+      week != null && series
+        ? `${series}::week-${week}`
+        : null,
+    isDayComponent:
+      /\bDAY\s+\d+\b/i.test(title),
+    title
+  };
+}
+
+function expectedDeduplicateLogicalAssignments(drafts) {
+  const groups = [];
+
+  // First pass:
+  // - explicit identity wins
+  // - identical Week-numbered parent titles collapse across dates
+  // - Day components remain separate until all possible parents are known
+  for (const draft of drafts) {
+    const identity =
+      expectedLogicalIdentityInfo(
+        draft
+      );
+
+    let group =
+      groups.find(
+        candidate =>
+          candidate.identity.key ===
+            identity.key
+      );
+
+    if (!group) {
+      group = {
+        identity,
+        title: identity.title,
+        draftIds: []
+      };
+
+      groups.push(group);
+    }
+
+    group.draftIds.push(
+      draft.id
+    );
+  }
+
+  // Second pass:
+  // A legacy Day component may join its parent only when exactly ONE
+  // compatible non-Day parent exists. Ambiguous cases stay separate.
+  for (const group of [...groups]) {
+    const identity =
+      group.identity;
+
+    if (
+      identity.explicit ||
+      !identity.isDayComponent ||
+      !identity.legacyFamily
+    ) {
+      continue;
+    }
+
+    const parents =
+      groups.filter(
+        candidate =>
+          candidate !== group &&
+          candidate.identity &&
+          !candidate.identity.explicit &&
+          candidate.identity.legacyFamily ===
+            identity.legacyFamily &&
+          candidate.identity.isDayComponent !==
+            true
+      );
+
+    if (parents.length === 1) {
+      parents[0].draftIds.push(
+        ...group.draftIds
+      );
+
+      groups.splice(
+        groups.indexOf(group),
+        1
+      );
+    }
+  }
+
+  return groups;
+}
+
+{
+  const futureExplicitIdentity = [
+    {
+      id: 'A1',
+      title:
+        'WEEK 2 — Seeker — Chapters 4–6 — S003',
+      meta: {
+        logical_assignment_id:
+          'seeker-week-2'
+      }
+    },
+    {
+      id: 'A2',
+      title:
+        'SEEKER — WEEK 2 — DAY 4 — S003',
+      meta: {
+        logical_assignment_id:
+          'seeker-week-2'
+      }
+    }
+  ];
+
+  const groups =
+    expectedDeduplicateLogicalAssignments(
+      futureExplicitIdentity
+    );
+
+  assert.strictEqual(
+    groups.length,
+    1,
+    'explicit logical_assignment_id must collapse assignment components'
+  );
+
+  assert.deepStrictEqual(
+    groups[0].draftIds.sort(),
+    ['A1', 'A2'],
+    'explicit logical identity must retain all underlying rows'
+  );
+
+  console.log(
+    '✓ explicit logical assignment identity collapses future components'
+  );
+}
+
+{
+  // Exact current LA4 shape:
+  // duplicate Week 1 parent rows created on different dates
+  // plus a Day 4 written-response component.
+  const seekerWeek1 = [
+    {
+      id: 'S039-MAIN',
+      title:
+        'WEEK 1 — Seeker — Prologue + Chapters 1–3 — S039',
+      created_at:
+        '2026-08-22T12:00:00Z',
+      meta: {}
+    },
+    {
+      id: 'S003-DAY4',
+      title:
+        'SEEKER — WEEK 1 — DAY 4 — S003',
+      created_at:
+        '2026-08-27T12:00:00Z',
+      meta: {}
+    },
+    {
+      id: 'S003-MAIN',
+      title:
+        'WEEK 1 — Seeker — Prologue + Chapters 1–3 — S003',
+      created_at:
+        '2026-08-30T12:00:00Z',
+      meta: {}
+    },
+    {
+      id: 'S004-MAIN',
+      title:
+        'WEEK 1 — Seeker — Prologue + Chapters 1–3 — S004',
+      created_at:
+        '2026-08-30T12:00:00Z',
+      meta: {}
+    }
+  ];
+
+  const groups =
+    expectedDeduplicateLogicalAssignments(
+      seekerWeek1
+    );
+
+  assert.strictEqual(
+    groups.length,
+    1,
+    'current Week 1 Seeker records must render as one Gradebook assignment'
+  );
+
+  assert.deepStrictEqual(
+    groups[0].draftIds.sort(),
+    [
+      'S003-DAY4',
+      'S003-MAIN',
+      'S004-MAIN',
+      'S039-MAIN'
+    ],
+    'one logical column must retain every underlying Seeker record'
+  );
+
+  console.log(
+    '✓ current Week 1 Seeker three-column mess collapses to one logical assignment'
+  );
+}
+
+{
+  const distinctWeek1Assignments = [
+    {
+      id: 'SEEKER-MAIN',
+      title:
+        'WEEK 1 — Seeker — Prologue + Chapters 1–3 — S003',
+      meta: {}
+    },
+    {
+      id: 'SEEKER-VOCAB',
+      title:
+        'WEEK 1 — Seeker — Vocabulary Check — S003',
+      meta: {}
+    }
+  ];
+
+  const groups =
+    expectedDeduplicateLogicalAssignments(
+      distinctWeek1Assignments
+    );
+
+  assert.strictEqual(
+    groups.length,
+    2,
+    'two genuinely separate Week 1 Seeker assignments must remain separate'
+  );
+
+  console.log(
+    '✓ genuinely distinct same-week assignments remain separate'
+  );
+}
+
+{
+  const ambiguousDayComponent = [
+    {
+      id: 'SEEKER-MAIN',
+      title:
+        'WEEK 1 — Seeker — Prologue + Chapters 1–3 — S003',
+      meta: {}
+    },
+    {
+      id: 'SEEKER-VOCAB',
+      title:
+        'WEEK 1 — Seeker — Vocabulary Check — S003',
+      meta: {}
+    },
+    {
+      id: 'SEEKER-DAY4',
+      title:
+        'SEEKER — WEEK 1 — DAY 4 — S003',
+      meta: {}
+    }
+  ];
+
+  const groups =
+    expectedDeduplicateLogicalAssignments(
+      ambiguousDayComponent
+    );
+
+  assert.strictEqual(
+    groups.length,
+    3,
+    'ambiguous legacy Day component must remain separate instead of guessing a parent'
+  );
+
+  const dayGroup =
+    groups.find(
+      group =>
+        group.draftIds.includes(
+          'SEEKER-DAY4'
+        )
+    );
+
+  assert.ok(
+    dayGroup,
+    'ambiguous Day component must still exist as its own group'
+  );
+
+  assert.deepStrictEqual(
+    dayGroup.draftIds,
+    ['SEEKER-DAY4'],
+    'ambiguous Day component must not be attached to either parent'
+  );
+
+  console.log(
+    '✓ ambiguous legacy Day component refuses to guess a parent'
+  );
+}
+
+// Production integration contract.
+{
+  const gradebookSource =
+    fs.readFileSync(
+      'site/web/tc-gradebook.js',
+      'utf8'
+    );
+
+  const issueSource =
+    fs.readFileSync(
+      'netlify/functions/teacher-issue-draft.js',
+      'utf8'
+    );
+
+  assert.ok(
+    /function\s+resolveLogicalAssignmentIdentity\s*\(/.test(
+      gradebookSource
+    ),
+    'production Gradebook must define logical assignment identity resolution'
+  );
+
+  assert.ok(
+    /logical_assignment_id/.test(
+      gradebookSource
+    ),
+    'production Gradebook must prefer explicit logical_assignment_id metadata'
+  );
+
+  assert.ok(
+    /resolveLogicalAssignmentIdentity\s*\(\s*draft\s*\)/.test(
+      gradebookSource
+    ),
+    'Gradebook deduplication must invoke logical identity resolution'
+  );
+
+  assert.ok(
+    /parents\.length\s*===\s*1/.test(
+      gradebookSource
+    ),
+    'legacy Day fallback must require exactly one compatible parent'
+  );
+
+  assert.ok(
+    /function\s+resolvePersistedLogicalAssignmentId\s*\(/.test(
+      issueSource
+    ),
+    'issuance must define logical assignment identity persistence'
+  );
+
+  assert.ok(
+    /logical_assignment_id/.test(
+      issueSource
+    ),
+    'teacher-issue-draft must persist logical identity into assignment meta'
+  );
+
+  console.log(
+    '✓ production persists and safely consumes logical assignment identity'
+  );
+}

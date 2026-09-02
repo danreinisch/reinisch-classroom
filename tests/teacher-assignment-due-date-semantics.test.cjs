@@ -209,7 +209,7 @@ assert.ok(
 const cacheContracts = [
   [
     'site/teacher/gradebook/index.html',
-    '/web/tc-gradebook.js?v=20260902-class-drilldown',
+    '/web/tc-gradebook.js?v=20260902-logical-identity',
   ],
   [
     'site/teacher/index.html',

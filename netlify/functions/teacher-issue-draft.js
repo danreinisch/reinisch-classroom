@@ -867,6 +867,54 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
 }
 
 /**
+ * Resolve logical Gradebook identity without changing the assignments schema.
+ *
+ * Priority:
+ *   1. preserve identity already stored on an existing assignment
+ *   2. teacher/draft-provided explicit identity
+ *   3. shared Work batch identity for individualized drafts
+ *
+ * Batch identity is prefixed so Gradebook knows it is useful provenance but
+ * may still use conservative legacy Day-component compatibility.
+ */
+function resolvePersistedLogicalAssignmentId(
+  draft,
+  existingAssignmentMeta
+) {
+  const candidates = [
+    existingAssignmentMeta &&
+      existingAssignmentMeta
+        .logical_assignment_id,
+    draft &&
+      draft.meta &&
+      draft.meta.logical_assignment_id,
+    draft &&
+      draft.logicalAssignmentId,
+    draft &&
+      draft.logical_assignment_id
+  ];
+
+  for (const candidate of candidates) {
+    if (
+      typeof candidate === 'string' &&
+      candidate.trim()
+    ) {
+      return candidate.trim();
+    }
+  }
+
+  if (
+    draft &&
+    typeof draft.batchId === 'string' &&
+    draft.batchId.trim()
+  ) {
+    return `batch:${draft.batchId.trim()}`;
+  }
+
+  return null;
+}
+
+/**
  * Core logic for issuing a draft assignment.
  * Called by both the HTTP handler (with teacher JWT auth) and the scheduled
  * auto-release function (headless, using service-role credentials).
@@ -1533,6 +1581,20 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
         return { ok: false, error: reissueErrMsg, statusCode: 422 };
       }
     }
+  }
+
+  const persistedLogicalAssignmentId =
+    resolvePersistedLogicalAssignmentId(
+      draft,
+      existingAssignmentMeta
+    );
+
+  if (
+    parsedMeta &&
+    persistedLogicalAssignmentId
+  ) {
+    parsedMeta.logical_assignment_id =
+      persistedLogicalAssignmentId;
   }
 
   // Objective-aware assignments keep the normal teacher-visible title, but their

@@ -2673,6 +2673,141 @@
       .toLowerCase();
   }
 
+  // Extract an explicit Week N number from an assignment title.
+  function extractLogicalAssignmentWeek(rawTitle) {
+    const title =
+      normalizeAssignmentTitle(rawTitle);
+
+    const match =
+      title.match(/\bWEEK\s+(\d+)\b/i);
+
+    return match
+      ? Number(match[1])
+      : null;
+  }
+
+  // Resolve the subject/series token from either:
+  //   WEEK 1 — Seeker — ...
+  //   Seeker — WEEK 1 — ...
+  function extractLogicalAssignmentSeries(rawTitle) {
+    const title =
+      normalizeAssignmentTitle(rawTitle)
+        .replace(/[—–]/g, "-");
+
+    const weekFirst =
+      title.match(
+        /^\s*WEEK\s+\d+\s*-\s*([^-]+?)(?:\s*-\s*|$)/i
+      );
+
+    if (weekFirst) {
+      return weekFirst[1]
+        .trim()
+        .toLowerCase();
+    }
+
+    const seriesFirst =
+      title.match(
+        /^\s*([^-]+?)\s*-\s*WEEK\s+\d+\b/i
+      );
+
+    return seriesFirst
+      ? seriesFirst[1]
+          .trim()
+          .toLowerCase()
+      : null;
+  }
+
+  function isLogicalDayComponent(rawTitle) {
+    return /\bDAY\s+\d+\b/i.test(
+      normalizeAssignmentTitle(rawTitle)
+    );
+  }
+
+  // Resolve the strongest available Gradebook identity.
+  //
+  // Strong future identity:
+  //   meta.logical_assignment_id
+  //
+  // Legacy compatibility:
+  //   - Week-numbered assignments with the same normalized title remain one
+  //     logical assignment even when individualized rows were created on
+  //     different dates.
+  //   - Non-weekly repeated titles retain date-sensitive behavior.
+  //
+  // Batch-derived IDs are intentionally marked weak because a later Day
+  // component may have been produced by a different upload batch.
+  function resolveLogicalAssignmentIdentity(draft) {
+    const normalizedTitle =
+      normalizeAssignmentTitle(
+        draft && draft.title
+      );
+
+    const titleKey =
+      titleDedupKey(normalizedTitle);
+
+    const explicit =
+      draft &&
+      draft.meta &&
+      typeof draft.meta.logical_assignment_id === "string"
+        ? draft.meta.logical_assignment_id.trim()
+        : "";
+
+    const dateStr =
+      formatShortDate(
+        (draft && (
+          draft.dueAt ||
+          draft.due_at ||
+          draft.createdAt ||
+          draft.created_at
+        )) || ""
+      );
+
+    const week =
+      extractLogicalAssignmentWeek(
+        normalizedTitle
+      );
+
+    const series =
+      extractLogicalAssignmentSeries(
+        normalizedTitle
+      );
+
+    const legacyFamily =
+      week != null && series
+        ? `${series}::week-${week}`
+        : null;
+
+    const weakBatchIdentity =
+      explicit.startsWith("batch:");
+
+    const legacyKey =
+      week != null
+        ? `week-title:${week}:${titleKey}`
+        : `title-date:${dateStr}:${titleKey}`;
+
+    return {
+      key:
+        explicit
+          ? `logical:${explicit}`
+          : legacyKey,
+      explicit: !!explicit,
+      weakBatchIdentity,
+      allowsLegacyFallback:
+        !explicit || weakBatchIdentity,
+      legacyKey,
+      legacyFamily,
+      isDayComponent:
+        isLogicalDayComponent(
+          normalizedTitle
+        ),
+      normalizedTitle,
+      titleKey,
+      dateStr,
+      week,
+      series
+    };
+  }
+
   /**
    * Group drafts by title so that per-student assignment instances collapse into
    * one column per unique assignment title in the export.
@@ -2689,43 +2824,229 @@
    * @returns {Array} Array of group objects: { title, draftIds, totalPossible, dateStr }
    */
   function deduplicateAssignmentsForExport(drafts) {
-    // Linear scan for a matching group: O(groups) per draft.
-    // In practice groups ≤ a few dozen (one per unique assignment), so this is fast enough.
-    function findMatchingGroupIdx(groups, dedupKey, dateStr) {
+    function canUseLegacyFallback(info) {
+      return (
+        info &&
+        info.allowsLegacyFallback === true
+      );
+    }
+
+    function findMatchingGroupIdx(
+      groups,
+      logicalIdentity
+    ) {
+      // Strong explicit identity always wins.
       for (let i = 0; i < groups.length; i++) {
-        const g = groups[i];
-        if (g.dateStr !== dateStr) continue;
-        const gKey = titleDedupKey(g.title);
-        if (gKey === dedupKey) return i;
-        // Prefix match: one title is a word-boundary prefix of the other.
-        // This collapses assignment variants like:
-        //   "WEEK 10 — Lost in Kragdon-ah (Chapters 29–31)"
-        //   "WEEK 10 — Lost in Kragdon-ah (Chapters 29–31) Sentence Structure & Transitions"
-        if (dedupKey.startsWith(gKey + " ") || gKey.startsWith(dedupKey + " ")) return i;
+        const group = groups[i];
+
+        if (
+          group.logicalIdentity &&
+          group.logicalIdentity.key ===
+            logicalIdentity.key
+        ) {
+          return i;
+        }
       }
+
+      if (
+        !canUseLegacyFallback(
+          logicalIdentity
+        )
+      ) {
+        return -1;
+      }
+
+      // Legacy Week-numbered rows with the same normalized title are one
+      // assignment even when individualized records were created on
+      // different dates. Non-weekly repeated titles remain date-sensitive
+      // because their legacyKey includes dateStr.
+      for (let i = 0; i < groups.length; i++) {
+        const group = groups[i];
+        const groupIdentity =
+          group.logicalIdentity;
+
+        if (
+          !canUseLegacyFallback(
+            groupIdentity
+          )
+        ) {
+          continue;
+        }
+
+        if (
+          groupIdentity.legacyKey ===
+            logicalIdentity.legacyKey
+        ) {
+          return i;
+        }
+      }
+
+      // Preserve the existing title-prefix compatibility, but only when the
+      // date still matches. This avoids broad accidental merging.
+      for (let i = 0; i < groups.length; i++) {
+        const group = groups[i];
+        const groupIdentity =
+          group.logicalIdentity;
+
+        if (
+          !canUseLegacyFallback(
+            groupIdentity
+          ) ||
+          groupIdentity.dateStr !==
+            logicalIdentity.dateStr
+        ) {
+          continue;
+        }
+
+        const groupKey =
+          groupIdentity.titleKey;
+
+        const draftKey =
+          logicalIdentity.titleKey;
+
+        if (
+          draftKey.startsWith(
+            groupKey + " "
+          ) ||
+          groupKey.startsWith(
+            draftKey + " "
+          )
+        ) {
+          return i;
+        }
+      }
+
       return -1;
     }
 
     const groups = [];
+
     for (const draft of drafts) {
-      const title = normalizeAssignmentTitle(draft.title);
-      const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-      const dedupKey = titleDedupKey(title);
-      const matchedIdx = findMatchingGroupIdx(groups, dedupKey, dateStr);
+      const logicalIdentity =
+        resolveLogicalAssignmentIdentity(
+          draft
+        );
+
+      const matchedIdx =
+        findMatchingGroupIdx(
+          groups,
+          logicalIdentity
+        );
 
       if (matchedIdx >= 0) {
-        const g = groups[matchedIdx];
-        g.draftIds.push(draft.id);
-        // Prefer the shorter, more canonical title as the display title
-        if (title.length < g.title.length) g.title = title;
-        if (g.totalPossible == null && draft.meta && draft.meta.total_possible) {
-          g.totalPossible = draft.meta.total_possible;
+        const group =
+          groups[matchedIdx];
+
+        group.draftIds.push(
+          draft.id
+        );
+
+        // A Day component should never replace the parent assignment's
+        // teacher-facing title.
+        if (
+          !logicalIdentity.isDayComponent &&
+          (
+            group.logicalIdentity
+              .isDayComponent ||
+            logicalIdentity
+              .normalizedTitle.length <
+              group.title.length
+          )
+        ) {
+          group.title =
+            logicalIdentity
+              .normalizedTitle;
+
+          group.logicalIdentity =
+            logicalIdentity;
         }
-      } else {
-        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-        groups.push({ title, draftIds: [draft.id], totalPossible, dateStr });
+
+        if (
+          group.totalPossible == null &&
+          draft.meta &&
+          draft.meta.total_possible
+        ) {
+          group.totalPossible =
+            draft.meta.total_possible;
+        }
+
+        continue;
+      }
+
+      const totalPossible =
+        draft.meta &&
+        draft.meta.total_possible
+          ? draft.meta.total_possible
+          : null;
+
+      groups.push({
+        title:
+          logicalIdentity
+            .normalizedTitle,
+        draftIds: [
+          draft.id
+        ],
+        totalPossible,
+        dateStr:
+          logicalIdentity.dateStr,
+        logicalIdentity
+      });
+    }
+
+    // Second pass for an orphaned Day component that happened to sort before
+    // its parent. Merge only when there is exactly one compatible non-Day
+    // parent, keeping ambiguous cases separate rather than guessing.
+    for (const group of [...groups]) {
+      const identity =
+        group.logicalIdentity;
+
+      if (
+        !identity ||
+        !canUseLegacyFallback(identity) ||
+        identity.isDayComponent !== true ||
+        !identity.legacyFamily
+      ) {
+        continue;
+      }
+
+      const parents =
+        groups.filter(
+          candidate =>
+            candidate !== group &&
+            candidate.logicalIdentity &&
+            canUseLegacyFallback(
+              candidate.logicalIdentity
+            ) &&
+            candidate.logicalIdentity
+              .legacyFamily ===
+                identity.legacyFamily &&
+            candidate.logicalIdentity
+              .isDayComponent !== true
+        );
+
+      if (parents.length === 1) {
+        const parent =
+          parents[0];
+
+        parent.draftIds.push(
+          ...group.draftIds
+        );
+
+        if (
+          parent.totalPossible == null &&
+          group.totalPossible != null
+        ) {
+          parent.totalPossible =
+            group.totalPossible;
+        }
+
+        groups.splice(
+          groups.indexOf(group),
+          1
+        );
       }
     }
+
     return groups;
   }
 
