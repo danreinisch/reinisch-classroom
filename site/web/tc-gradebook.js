@@ -469,6 +469,25 @@
     return students;
   }
 
+  // Filter assignments by the same selected class used for the roster.
+  // "All Classes" preserves the full assignment collection.
+  function filterDraftsForCurrentClass(drafts) {
+    const safeDrafts =
+      Array.isArray(drafts)
+        ? drafts
+        : [];
+
+    if (currentClassFilter === "All Classes") {
+      return safeDrafts;
+    }
+
+    return safeDrafts.filter(
+      draft =>
+        inferSeriesFromDraft(draft) ===
+        currentClassFilter
+    );
+  }
+
   // Sort drafts array based on currentSort preference
   function sortDrafts(drafts) {
     const sorted = [...drafts];
@@ -610,7 +629,10 @@
   // Build gradebook data structure
   function buildGradebookData() {
     const students = getFilteredStudents();
-    let drafts = draftsData;
+    let drafts =
+      filterDraftsForCurrentClass(
+        draftsData
+      );
     
     // Filter drafts by quarter if selected
     if (currentQuarterFilter) {
@@ -1600,6 +1622,21 @@
     return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
   }
 
+  // Count the unique assignment columns a group will display when
+  // expanded. This keeps collapsed counts aligned with the actual UI.
+  function countDisplayAssignmentsInGroup(group) {
+    if (
+      !group ||
+      !Array.isArray(group.drafts)
+    ) {
+      return 0;
+    }
+
+    return deduplicateAssignmentsForExport(
+      group.drafts
+    ).length;
+  }
+
   // Render gradebook in grouped/collapsed column mode (Option A)
   function renderGroupedGradebook(tableHead, tableBody, students, drafts, scoreMap) {
     const { groups, ungrouped } = groupMode === "week"
@@ -1655,7 +1692,13 @@
         // Compact assignment count; for week groups also show the earliest date
         const countEl = document.createElement("div");
         countEl.className = "gb-group-header-count";
-        const countText = `${group.drafts.length} assignment${group.drafts.length !== 1 ? 's' : ''}`;
+        const displayAssignmentCount =
+        countDisplayAssignmentsInGroup(
+          group
+        );
+
+      const countText =
+        `${displayAssignmentCount} assignment${displayAssignmentCount !== 1 ? 's' : ''}`;
         if (groupMode === "week") {
           const timestamps = group.drafts
             .map(d => {
@@ -2409,6 +2452,36 @@
     }
   }
 
+  // Apply the teacher-facing class drilldown state.
+  function applyGradebookClassFilter(className) {
+    currentClassFilter =
+      className || "All Classes";
+
+    groupMode = "class";
+    expandedGroups.clear();
+
+    if (
+      currentClassFilter !==
+      "All Classes"
+    ) {
+      expandedGroups.add(
+        currentClassFilter
+      );
+    }
+
+    try {
+      localStorage.setItem(
+        PREF_GROUP_MODE,
+        groupMode
+      );
+    } catch {
+      // Storage unavailable — current page state still works.
+    }
+
+    renderClassFilter();
+    renderGradebook();
+  }
+
   // Render class filter buttons
   function renderClassFilter() {
     const filterBar = $("classFilterBar");
@@ -2425,9 +2498,9 @@
       btnAll.classList.add("active");
     }
     btnAll.addEventListener("click", () => {
-      currentClassFilter = "All Classes";
-      renderClassFilter();
-      renderGradebook();
+      applyGradebookClassFilter(
+        "All Classes"
+      );
     });
     filterBar.appendChild(btnAll);
 
@@ -2441,9 +2514,9 @@
         btn.classList.add("active");
       }
       btn.addEventListener("click", () => {
-        currentClassFilter = cls;
-        renderClassFilter();
-        renderGradebook();
+        applyGradebookClassFilter(
+          cls
+        );
       });
       filterBar.appendChild(btn);
     }
