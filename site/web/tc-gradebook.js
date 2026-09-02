@@ -101,6 +101,38 @@
     return Math.round(score * totalPossible / 100);
   }
 
+  // Decide whether a submission is authoritative enough to populate
+  // the Gradebook. Preserve existing local/offline behavior unchanged.
+  function isGradebookScoreEligible(submission, draft) {
+    if (!usingSupabase) return true;
+
+    const reviewStatus =
+      submission &&
+      typeof submission.review_status === 'string'
+        ? submission.review_status.trim().toLowerCase()
+        : '';
+
+    const isManualAssignment =
+      draft &&
+      draft.meta &&
+      draft.meta.manual === true;
+
+    const isPaperAssignment =
+      draft &&
+      draft.type === 'paper';
+
+    // MANUAL and PAPER records are terminal teacher-entered evidence at
+    // reviewed. Ordinary digital work requires explicit finalization.
+    if (isManualAssignment || isPaperAssignment) {
+      return (
+        reviewStatus === 'reviewed' ||
+        reviewStatus === 'finalized'
+      );
+    }
+
+    return reviewStatus === 'finalized';
+  }
+
   function resolveEarnedInfo(submission, score, draft) {
     const hasScoreAuto =
       submission.score_auto !== null &&
@@ -635,6 +667,20 @@
           droppedNoStudentOrDraftGBD++;
           continue;
         }
+      }
+
+      const draftForEligibility =
+        draftsData.find(
+          (draft) => draft.id === draftId
+        );
+
+      if (
+        !isGradebookScoreEligible(
+          submission,
+          draftForEligibility
+        )
+      ) {
+        continue;
       }
 
       if (!scoreMap.has(studentCode)) {
@@ -3895,6 +3941,20 @@
         droppedNotInScope++;
         continue;
       }
+      const draftForEligibility =
+        drafts.find(
+          (draft) => draft.id === draftId
+        );
+
+      if (
+        !isGradebookScoreEligible(
+          submission,
+          draftForEligibility
+        )
+      ) {
+        continue;
+      }
+
       if (!scoreMap.has(studentCode)) scoreMap.set(studentCode, new Map());
       if (scoreMap.get(studentCode).has(draftId)) {
         droppedDuplicate++;

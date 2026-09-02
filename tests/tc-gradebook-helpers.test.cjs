@@ -7,6 +7,7 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
 
 // ── Inline helpers (mirror site/web/tc-gradebook.js) ─────────────────────────
 
@@ -1095,3 +1096,182 @@ console.log('\n--- backfillGroupTotalPossible ---');
   console.log('\u2713 score_manual back-calculation: S006 Wk9 (87%) → 26/30');
 }
 
+
+
+// ── Gradebook score eligibility regression ──
+
+console.log('\n--- Gradebook score eligibility ---');
+
+// Inline mirror of site/web/tc-gradebook.js.
+function isGradebookScoreEligible(
+  submission,
+  draft,
+  usingSupabase = true
+) {
+  // Preserve existing local/offline Gradebook behavior.
+  if (!usingSupabase) return true;
+
+  const reviewStatus =
+    submission &&
+    typeof submission.review_status === 'string'
+      ? submission.review_status.trim().toLowerCase()
+      : '';
+
+  const isManualAssignment =
+    draft &&
+    draft.meta &&
+    draft.meta.manual === true;
+
+  const isPaperAssignment =
+    draft &&
+    draft.type === 'paper';
+
+  // MANUAL and PAPER evidence are terminal at reviewed.
+  if (isManualAssignment || isPaperAssignment) {
+    return (
+      reviewStatus === 'reviewed' ||
+      reviewStatus === 'finalized'
+    );
+  }
+
+  // Ordinary digital work is Gradebook-authoritative only after
+  // explicit finalization.
+  return reviewStatus === 'finalized';
+}
+
+{
+  const digitalDraft = {
+    id: 'DIGITAL-1',
+    type: 'html',
+    meta: {}
+  };
+
+  for (const status of [
+    'pending',
+    'in_progress',
+    'returned',
+    'reviewed'
+  ]) {
+    assert.strictEqual(
+      isGradebookScoreEligible(
+        { review_status: status },
+        digitalDraft,
+        true
+      ),
+      false,
+      `digital ${status} submission must not populate Gradebook`
+    );
+  }
+
+  console.log(
+    '✓ unfinished/reviewed digital submissions are not Gradebook-authoritative'
+  );
+}
+
+{
+  const digitalDraft = {
+    id: 'DIGITAL-2',
+    type: 'html',
+    meta: {}
+  };
+
+  assert.strictEqual(
+    isGradebookScoreEligible(
+      { review_status: 'finalized' },
+      digitalDraft,
+      true
+    ),
+    true,
+    'finalized digital submission must populate Gradebook'
+  );
+
+  console.log('✓ finalized digital submission is Gradebook-authoritative');
+}
+
+{
+  const manualDraft = {
+    id: 'MANUAL-1',
+    type: 'html',
+    meta: {
+      manual: true,
+      total_possible: 50
+    }
+  };
+
+  assert.strictEqual(
+    isGradebookScoreEligible(
+      { review_status: 'reviewed' },
+      manualDraft,
+      true
+    ),
+    true,
+    'reviewed MANUAL grade must remain visible'
+  );
+
+  console.log('✓ reviewed MANUAL grade remains visible');
+}
+
+{
+  const paperDraft = {
+    id: 'PAPER-1',
+    type: 'paper',
+    meta: {}
+  };
+
+  assert.strictEqual(
+    isGradebookScoreEligible(
+      { review_status: 'reviewed' },
+      paperDraft,
+      true
+    ),
+    true,
+    'reviewed PAPER result must remain visible'
+  );
+
+  console.log('✓ reviewed PAPER result remains visible');
+}
+
+{
+  const localDraft = {
+    id: 'LOCAL-1',
+    type: 'html',
+    meta: {}
+  };
+
+  assert.strictEqual(
+    isGradebookScoreEligible(
+      { review_status: 'pending' },
+      localDraft,
+      false
+    ),
+    true,
+    'local/offline Gradebook behavior must remain unchanged'
+  );
+
+  console.log('✓ local/offline Gradebook behavior remains unchanged');
+}
+
+// Production integration contract:
+// tc-gradebook.js must define the eligibility helper and apply it in BOTH
+// buildGradebookData() and buildScoreMapForStudents().
+{
+  const gradebookSource =
+    fs.readFileSync(
+      'site/web/tc-gradebook.js',
+      'utf8'
+    );
+
+  const occurrences =
+    gradebookSource.match(
+      /\bisGradebookScoreEligible\s*\(/g
+    ) || [];
+
+  assert.ok(
+    occurrences.length >= 3,
+    'production Gradebook must define score eligibility and apply it in both score-map paths'
+  );
+
+  console.log(
+    '✓ production Gradebook applies eligibility in both score-map paths'
+  );
+}
