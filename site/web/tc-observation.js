@@ -192,6 +192,12 @@
   const { getInstructionalDayStatus, isInstructionalDay } =
     await import('/web/instructional-day.js');
 
+  const { computeObservationDueState } =
+    await import('/web/observation-due-state.js');
+
+  const { getSchedule, getCurrentPeriod } =
+    await import('/web/class-schedule.js');
+
   // ─── Helpers ──────────────────────────────────────────────────────────────
   function escapeHtml(text) {
     if (text == null) return '';
@@ -219,6 +225,8 @@
   // ─── State ────────────────────────────────────────────────────────────────
   let allGoals = [];
   let allStudents = [];
+
+  let currentSchedule = null;
   let trayIconEl = null;
   let trayEl = null;
   let trayBackdropEl = null;
@@ -1004,10 +1012,126 @@
   }
 
   // ─── Build Goal Card ──────────────────────────────────────────────────────
-  function buildGoalCard(goal, date, onAnyRecorded) {
+  function getConfiguredClassPeriods(goal) {
+
+    const periods =
+      goal?.observation_config?.class_periods;
+
+    return Array.isArray(periods)
+      ? periods.filter(period =>
+          typeof period === 'string' &&
+          period.trim()
+        )
+      : [];
+
+  }
+
+  function getLiveCurrentPeriodLabel() {
+
+    if (!currentSchedule) return null;
+
+    const periodState =
+      getCurrentPeriod(
+        currentSchedule,
+        new Date()
+      );
+
+    if (periodState?.status !== 'in-class') {
+      return null;
+    }
+
+    return (
+      periodState.period?.label ||
+      periodState.period?.name ||
+      null
+    );
+
+  }
+
+  function getGoalDueState(goal, date) {
+
+    const classPeriods =
+      getConfiguredClassPeriods(goal);
+
+    /*
+     * OBS-2 preserves the established daily collection expectation.
+     *
+     * Explicit weekly cadence is not stored yet.
+     * target_met and target_window remain performance criteria.
+     *
+     * During a live class, that class period determines what needs
+     * attention now. Outside a live class, fall back to broad tray
+     * visibility instead of silently hiding unfinished observations.
+     */
+
+    const livePeriod =
+      date === todayStr()
+        ? getLiveCurrentPeriodLabel()
+        : null;
+
+    const currentPeriod =
+      date === todayStr()
+        ? (
+            livePeriod ||
+            classPeriods[0] ||
+            null
+          )
+        : (
+            classPeriods[0] ||
+            null
+          );
+
+    const entries = [];
+
+    if (
+      isAlreadyRecorded(
+        goal.student_code,
+        goal.code,
+        date
+      )
+    ) {
+      entries.push({
+        date,
+        classPeriod:
+          currentPeriod ||
+          classPeriods[0] ||
+          null,
+        kind: 'observation',
+      });
+    }
+
+    return computeObservationDueState({
+      date,
+      requiredPerWeek: 1,
+      classPeriods,
+      currentPeriod,
+      entries,
+    });
+
+  }
+
+  function buildGoalCard(
+    goal,
+    date,
+    onAnyRecorded,
+    dueState = null
+  ) {
     const config = goal.observation_config || {};
     const category = config.category;
-    const isRecorded = isAlreadyRecorded(goal.student_code, goal.code, date);
+    const isRecorded =
+      isAlreadyRecorded(
+        goal.student_code,
+        goal.code,
+        date
+      );
+
+    const state =
+      dueState ||
+      getGoalDueState(goal, date);
+
+    const needsAttention =
+      state.state === 'due' ||
+      state.state === 'urgent';
 
     const cardEl = document.createElement('div');
     cardEl.className = 'obs-goal-card';
@@ -1016,7 +1140,12 @@
     const header = document.createElement('button');
     header.type = 'button';
     header.className = 'obs-card-header';
-    header.setAttribute('aria-expanded', isRecorded ? 'false' : 'true');
+    header.setAttribute(
+      'aria-expanded',
+      needsAttention && !isRecorded
+        ? 'true'
+        : 'false'
+    );
 
     const chevron = document.createElement('span');
     chevron.className = 'obs-card-chevron';
@@ -1034,8 +1163,18 @@
 
     const statusBadge = document.createElement('span');
     statusBadge.className = 'obs-card-status';
-    if (isRecorded) {
-      statusBadge.innerHTML = OBS_CHECK_SVG + ' Recorded';
+    if (
+      isRecorded ||
+      state.state === 'satisfied'
+    ) {
+      statusBadge.innerHTML =
+        OBS_CHECK_SVG + ' Recorded';
+    } else if (state.state === 'urgent') {
+      statusBadge.textContent = 'Urgent';
+    } else if (state.state === 'due') {
+      statusBadge.textContent = 'Due';
+    } else if (state.state === 'upcoming') {
+      statusBadge.textContent = 'Upcoming';
     }
 
     header.appendChild(chevron);
@@ -1054,7 +1193,7 @@
     // onSave callback — updates card status; only auto-collapses for session_outcome
     const onSave = () => {
       const nowRecorded = isAlreadyRecorded(goal.student_code, goal.code, date);
-      if (nowRecorded && !statusBadge.innerHTML) {
+      if (nowRecorded) {
         statusBadge.innerHTML = OBS_CHECK_SVG + ' Recorded';
       }
       // Only auto-collapse for session_outcome; multi-input categories stay expanded
@@ -1083,7 +1222,8 @@
     cardEl.appendChild(body);
 
     // ── Collapse/expand logic ──
-    let isExpanded = !isRecorded; // Unrecorded starts expanded
+    let isExpanded =
+      needsAttention && !isRecorded;
 
     const applyExpanded = (expanded) => {
       isExpanded = expanded;
@@ -1104,47 +1244,137 @@
   }
 
   // ─── Build Tray Content ───────────────────────────────────────────────────
-  function countUnrecorded(date) {
-    return allGoals.filter(g => !isAlreadyRecorded(g.student_code, g.code, date)).length;
+  function countAttentionNeeded(date) {
+
+    return allGoals.filter(goal => {
+
+      const { state } =
+        getGoalDueState(goal, date);
+
+      return (
+        state === 'due' ||
+        state === 'urgent'
+      );
+
+    }).length;
+
   }
 
   function buildTrayContent(date, onAnyRecorded) {
-    const studentsMap = new Map(allStudents.map(s => [s.code, s]));
-    const fragment = document.createDocumentFragment();
 
-    // Group goals by student
+    const studentsMap =
+      new Map(
+        allStudents.map(student => [
+          student.code,
+          student,
+        ])
+      );
+
+    const fragment =
+      document.createDocumentFragment();
+
+    const stateRank = {
+      urgent: 0,
+      due: 1,
+      upcoming: 2,
+      satisfied: 3,
+      excused: 4,
+      not_scheduled: 5,
+    };
+
+    const rankedGoals =
+      allGoals
+        .map(goal => ({
+          goal,
+          dueState:
+            getGoalDueState(goal, date),
+        }))
+        .sort((left, right) => {
+
+          const leftRank =
+            stateRank[left.dueState.state] ?? 99;
+
+          const rightRank =
+            stateRank[right.dueState.state] ?? 99;
+
+          return leftRank - rightRank;
+
+        });
+
     const byStudent = new Map();
-    for (const goal of allGoals) {
-      if (!byStudent.has(goal.student_code)) byStudent.set(goal.student_code, []);
-      byStudent.get(goal.student_code).push(goal);
+
+    for (const item of rankedGoals) {
+
+      const studentCode =
+        item.goal.student_code;
+
+      if (!byStudent.has(studentCode)) {
+        byStudent.set(studentCode, []);
+      }
+
+      byStudent
+        .get(studentCode)
+        .push(item);
+
     }
 
-    for (const [studentCode, goals] of byStudent) {
-      const studentInfo = studentsMap.get(studentCode);
-      const studentName = studentInfo ? studentInfo.name : studentCode;
+    for (const [studentCode, items] of byStudent) {
 
-      const section = document.createElement('div');
-      section.className = 'obs-student-section';
+      const studentInfo =
+        studentsMap.get(studentCode);
 
-      const nameEl = document.createElement('div');
-      nameEl.className = 'obs-student-name';
-      nameEl.textContent = `${studentName} (${studentCode})`;
+      const studentName =
+        studentInfo
+          ? studentInfo.name
+          : studentCode;
+
+      const section =
+        document.createElement('div');
+
+      section.className =
+        'obs-student-section';
+
+      const nameEl =
+        document.createElement('div');
+
+      nameEl.className =
+        'obs-student-name';
+
+      nameEl.textContent =
+        `${studentName} (${studentCode})`;
+
       section.appendChild(nameEl);
 
-      for (const goal of goals) {
-        section.appendChild(buildGoalCard(goal, date, onAnyRecorded));
+      for (const item of items) {
+
+        section.appendChild(
+          buildGoalCard(
+            item.goal,
+            date,
+            onAnyRecorded,
+            item.dueState
+          )
+        );
+
       }
 
       fragment.appendChild(section);
+
     }
 
     return fragment;
+
   }
 
-  // ─── Tray Badge ───────────────────────────────────────────────────────────
   function updateTrayBadge() {
+
     if (!trayIconEl) return;
-    const badge = trayIconEl.querySelector('.obs-tray-badge');
+
+    const badge =
+      trayIconEl.querySelector(
+        '.obs-tray-badge'
+      );
+
     if (!badge) return;
 
     const date = todayStr();
@@ -1153,20 +1383,32 @@
       badge.style.display = 'none';
       return;
     }
-    const unrecorded = countUnrecorded(date);
 
-    if (unrecorded === 0) {
-      badge.className = 'obs-tray-badge all-done';
-      badge.innerHTML = OBS_CHECK_SVG;
-      badge.style.display = '';
+    const attentionNeeded =
+      countAttentionNeeded(date);
+
+    if (attentionNeeded === 0) {
+
+      badge.className =
+        'obs-tray-badge all-done';
+
+      badge.innerHTML =
+        OBS_CHECK_SVG;
+
     } else {
-      badge.className = 'obs-tray-badge has-unrecorded';
-      badge.textContent = String(unrecorded);
-      badge.style.display = '';
+
+      badge.className =
+        'obs-tray-badge has-unrecorded';
+
+      badge.textContent =
+        String(attentionNeeded);
+
     }
+
+    badge.style.display = '';
+
   }
 
-  // ─── Open / Close Tray ───────────────────────────────────────────────────
   function openTray() {
     if (isTrayOpen) return;
     isTrayOpen = true;
@@ -1263,17 +1505,38 @@
     };
 
     const updateFooterText = () => {
-      if (!isInstructionalDay(currentTrayDate)) {
+
+      if (
+        !isInstructionalDay(
+          currentTrayDate
+        )
+      ) {
         footerEl.textContent = '';
         return;
       }
-      const total = allGoals.length;
-      const recorded = total - countUnrecorded(currentTrayDate);
-      if (recorded >= total && total > 0) {
-        footerEl.innerHTML = OBS_CHECK_SVG + ` <span style="color:#22c55e;">${recorded} of ${total} recorded \u2014 all done!</span>`;
+
+      const attentionNeeded =
+        countAttentionNeeded(
+          currentTrayDate
+        );
+
+      if (attentionNeeded === 0) {
+
+        footerEl.innerHTML =
+          OBS_CHECK_SVG +
+          ' <span style="color:#22c55e;">' +
+          'No observations need attention right now.' +
+          '</span>';
+
       } else {
-        footerEl.textContent = total > 0 ? `${recorded} of ${total} recorded` : '';
+
+        footerEl.textContent =
+          `${attentionNeeded} observation` +
+          `${attentionNeeded !== 1 ? 's' : ''} ` +
+          'need attention now';
+
       }
+
     };
 
     const onAnyRecorded = () => {
@@ -1403,10 +1666,18 @@
   // ─── Data Loading ─────────────────────────────────────────────────────────
   async function loadData() {
     try {
-      const [goals, students] = await Promise.all([
-        db.listGoalsAll(),
-        db.listStudents()
-      ]);
+      const [goals, students, schedule] =
+        await Promise.all([
+
+          db.listGoalsAll(),
+
+          db.listStudents(),
+
+          getSchedule().catch(() => null)
+
+        ]);
+
+      currentSchedule = schedule;
 
       const rawGoals = goals || [];
       const obsTypeGoals = rawGoals.filter(g => g.measurement_type === 'Observation');
