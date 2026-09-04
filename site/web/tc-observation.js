@@ -554,21 +554,7 @@
         console.warn('[tc-observation] Server save failed:', syncResponse.status, '— queued locally');
       }
 
-      // Auto-record attendance — student was present if a session was observed
-      if (goal.student_code) {
-        try {
-          await db.upsertAttendance({
-            student_code: goal.student_code,
-            date,
-            status: 'present',
-            source: 'observation_auto',
-            notes: 'Auto-recorded from observation session',
-          });
-          console.log('[tc-observation] Attendance auto-recorded for', goal.student_code, date);
-        } catch (attErr) {
-          console.warn('[tc-observation] Attendance auto-record failed (non-blocking):', attErr.message);
-        }
-      }
+
     } catch (err) {
       console.warn('[tc-observation] Server save failed — queued locally:', err.message);
       if (saveIndicatorEl) {
