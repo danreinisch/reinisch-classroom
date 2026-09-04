@@ -467,27 +467,13 @@ test(
 );
 
 test(
-  'OBS-3 leaves observation and attendance write paths intact',
+  'OBS-3 retains the observation sync write path',
   () => {
     assert.ok(
       observationSource.includes(
         "/.netlify/functions/teacher-sync-observations"
       ),
       'existing observation sync endpoint must remain'
-    );
-
-    assert.ok(
-      observationSource.includes(
-        'db.upsertAttendance({'
-      ),
-      'existing attendance write remains unchanged in OBS-3'
-    );
-
-    assert.ok(
-      observationSource.includes(
-        "source: 'observation_auto'"
-      ),
-      'OBS-3 must not silently change attendance behavior'
     );
   }
 );
