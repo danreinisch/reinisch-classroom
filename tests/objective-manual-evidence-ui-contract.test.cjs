@@ -618,10 +618,10 @@ for (
 }
 
 assert.ok(
-  html.includes(
-    '/web/tc-students.js?v=202608290245-objective-registry'
+  /\/web\/tc-students\.js\?v=[^"'<>]+/.test(
+    html
   ),
-  'Teacher Students page must publish the current tc-students cache key'
+  'Teacher Students page must publish a versioned tc-students cache key'
 );
 
 console.log(

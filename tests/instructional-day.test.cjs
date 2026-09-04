@@ -280,7 +280,7 @@ test('navigation avoids evidence reads on non-instructional dates', () => {
 
 test('recorded-entry loader fails closed before database read', () => {
   const start = observationSource.indexOf(
-    'async function loadRecordedEntriesForDate(date)'
+    'async function loadRecordedEntriesForWeek(date)'
   );
   const end = observationSource.indexOf(
     '// ─── Init ─',

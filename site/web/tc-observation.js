@@ -222,11 +222,43 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
 
+  function getWeekBounds(dateString) {
+    const d =
+      new Date(
+        dateString + 'T00:00:00'
+      );
+
+    const day =
+      d.getDay();
+
+    const offsetToMonday =
+      day === 0
+        ? -6
+        : 1 - day;
+
+    const weekStart =
+      addDays(
+        dateString,
+        offsetToMonday
+      );
+
+    return {
+      weekStart,
+      weekEnd:
+        addDays(
+          weekStart,
+          6
+        ),
+    };
+  }
+
   // ─── State ────────────────────────────────────────────────────────────────
   let allGoals = [];
   let allStudents = [];
 
   let currentSchedule = null;
+  const observationEvidenceByDate =
+    new Map();
   let trayIconEl = null;
   let trayEl = null;
   let trayBackdropEl = null;
@@ -469,6 +501,22 @@
     // Mark in the recorded map so future checks reflect this immediately
     if (!recordedByDate.has(date)) recordedByDate.set(date, new Set());
     recordedByDate.get(date).add(`${goal.student_code}|${goal.code}|${date}`);
+
+    if (Number.isFinite(value)) {
+      if (!observationEvidenceByDate.has(date)) {
+        observationEvidenceByDate.set(
+          date,
+          new Set()
+        );
+      }
+
+      observationEvidenceByDate
+        .get(date)
+        .add(
+          `${goal.student_code}|${goal.code}|${date}`
+        );
+    }
+
     if (onSave) onSave();
 
     // Attempt server-side save via Netlify function (uses service role key, bypasses RLS)
@@ -1026,6 +1074,107 @@
 
   }
 
+  function getRequiredPerWeek(goal) {
+
+    const value =
+      Number(
+        goal?.observation_config
+          ?.required_per_week
+      );
+
+    if (
+      Number.isInteger(value) &&
+      value >= 1 &&
+      value <= 5
+    ) {
+      return value;
+    }
+
+    return 1;
+  }
+
+  function getRecordedObservationEntriesForWeek(
+    goal,
+    date,
+    classPeriods,
+    currentPeriod
+  ) {
+
+    const {
+      weekStart,
+      weekEnd,
+    } =
+      getWeekBounds(date);
+
+    const evidenceDates =
+      new Set();
+
+    for (
+      let cursor = weekStart;
+      cursor <= weekEnd;
+      cursor = addDays(cursor, 1)
+    ) {
+      const dateSet =
+        observationEvidenceByDate
+          .get(cursor);
+
+      const key =
+        `${goal.student_code}|${goal.code}|${cursor}`;
+
+      if (
+        dateSet &&
+        dateSet.has(key)
+      ) {
+        evidenceDates.add(cursor);
+      }
+    }
+
+    for (const entry of readQueue()) {
+
+      const parsed =
+        parseObservationNotes(
+          entry.notes
+        );
+
+      if (
+        entry.student_code !==
+          goal.student_code ||
+        entry.goal_code !==
+          goal.code ||
+        typeof entry.date !==
+          'string' ||
+        entry.date < weekStart ||
+        entry.date > weekEnd ||
+        !Number.isFinite(entry.value) ||
+        !parsed
+      ) {
+        continue;
+      }
+
+      evidenceDates.add(
+        entry.date
+      );
+    }
+
+    return [...evidenceDates]
+      .sort()
+      .map(entryDate => ({
+        date: entryDate,
+        classPeriod:
+          entryDate === date
+            ? (
+                currentPeriod ||
+                classPeriods[0] ||
+                null
+              )
+            : (
+                classPeriods[0] ||
+                null
+              ),
+        kind: 'observation',
+      }));
+  }
+
   function getLiveCurrentPeriodLabel() {
 
     if (!currentSchedule) return null;
@@ -1081,28 +1230,20 @@
             null
           );
 
-    const entries = [];
+    const requiredPerWeek =
+      getRequiredPerWeek(goal);
 
-    if (
-      isAlreadyRecorded(
-        goal.student_code,
-        goal.code,
-        date
-      )
-    ) {
-      entries.push({
+    const entries =
+      getRecordedObservationEntriesForWeek(
+        goal,
         date,
-        classPeriod:
-          currentPeriod ||
-          classPeriods[0] ||
-          null,
-        kind: 'observation',
-      });
-    }
+        classPeriods,
+        currentPeriod
+      );
 
     return computeObservationDueState({
       date,
-      requiredPerWeek: 1,
+      requiredPerWeek,
       classPeriods,
       currentPeriod,
       entries,
@@ -1571,7 +1712,7 @@
       updateNavButtons();
       if (isInstructionalDay(newDate) && !recordedByDate.has(newDate)) {
         bodyEl.innerHTML = '<div class="obs-tray-empty">Loading\u2026</div>';
-        await loadRecordedEntriesForDate(newDate);
+        await loadRecordedEntriesForWeek(newDate);
       }
       renderBody();
     };
@@ -1703,41 +1844,150 @@
   // ─── Load Recorded Entries from Supabase (per date) ─────────────────────
   // Populates recordedByDate so the tray accurately reflects recorded state
   // even if localStorage was cleared or the teacher is on a different device.
-  async function loadRecordedEntriesForDate(date) {
+  async function loadRecordedEntriesForWeek(date) {
     if (allGoals.length === 0) return;
     if (date == null) date = todayStr();
     if (!isInstructionalDay(date)) return;
+
+    const {
+      weekStart,
+      weekEnd,
+    } =
+      getWeekBounds(date);
+
     try {
-      const goalCodes = allGoals.map(g => g.code);
-      const entries = await db.listGoalProgress({
-        startDate: date,
-        endDate: date,
-        goalCodes
-      });
-      if (!recordedByDate.has(date)) recordedByDate.set(date, new Set());
-      const dateSet = recordedByDate.get(date);
-      let count = 0;
-      for (const entry of (entries || [])) {
-        if (entry.student_code && entry.goal_code) {
-          const key = `${entry.student_code}|${entry.goal_code}|${date}`;
-          if (!dateSet.has(key)) {
-            dateSet.add(key);
-            count++;
-          }
-        }
+      const goalCodes =
+        allGoals.map(
+          goal => goal.code
+        );
+
+      const entries =
+        await db.listGoalProgress({
+          startDate: weekStart,
+          endDate: weekEnd,
+          goalCodes
+        });
+
+      for (
+        let cursor = weekStart;
+        cursor <= weekEnd;
+        cursor = addDays(cursor, 1)
+      ) {
+        recordedByDate.set(
+          cursor,
+          new Set()
+        );
+
+        observationEvidenceByDate.set(
+          cursor,
+          new Set()
+        );
       }
-      if (date === todayStr()) todayRecordedDate = date;
+
+      let count = 0;
+
+      for (
+        const entry
+        of (entries || [])
+      ) {
+
+        const parsed =
+          parseObservationNotes(
+            entry.notes
+          );
+
+        const rawValue =
+          entry.value;
+
+        const hasNumericValue =
+          rawValue !== null &&
+          rawValue !== undefined &&
+          rawValue !== '' &&
+          Number.isFinite(
+            Number(rawValue)
+          );
+
+        if (
+          !entry.student_code ||
+          !entry.goal_code ||
+          typeof entry.date !== 'string' ||
+          entry.date < weekStart ||
+          entry.date > weekEnd ||
+          !parsed ||
+          !hasNumericValue
+        ) {
+          continue;
+        }
+
+        if (
+          !recordedByDate.has(
+            entry.date
+          )
+        ) {
+          recordedByDate.set(
+            entry.date,
+            new Set()
+          );
+        }
+
+        if (
+          !observationEvidenceByDate
+            .has(entry.date)
+        ) {
+          observationEvidenceByDate.set(
+            entry.date,
+            new Set()
+          );
+        }
+
+        const key =
+          `${entry.student_code}|${entry.goal_code}|${entry.date}`;
+
+        recordedByDate
+          .get(entry.date)
+          .add(key);
+
+        observationEvidenceByDate
+          .get(entry.date)
+          .add(key);
+
+        count++;
+      }
+
+      const today =
+        todayStr();
+
+      if (
+        today >= weekStart &&
+        today <= weekEnd
+      ) {
+        todayRecordedDate =
+          today;
+      }
+
       if (count > 0) {
-        console.log('[tc-observation] Pre-loaded', count, 'already-recorded goal(s) from Supabase for', date);
+        console.log(
+          '[tc-observation] Pre-loaded',
+          count,
+          'canonical observation evidence row(s) for week',
+          weekStart,
+          'through',
+          weekEnd
+        );
       }
     } catch (err) {
-      console.warn('[tc-observation] Could not pre-load Supabase entries for', date, ':', err.message);
+      console.warn(
+        '[tc-observation] Could not pre-load weekly observation evidence for',
+        date,
+        ':',
+        err.message
+      );
     }
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────
   await loadData();
-  await loadRecordedEntriesForDate(todayStr());
+  await loadRecordedEntriesForWeek(todayStr());
   await syncQueue();
 
   // Inject the tray icon into the topbar
@@ -1750,11 +2000,12 @@
     // so midnight-stale data doesn't hide newly-required observations.
     if (todayRecordedDate !== null && todayStr() !== todayRecordedDate) {
       recordedByDate.delete(todayRecordedDate);
+      observationEvidenceByDate.delete(todayRecordedDate);
       todayRecordedDate = null;
       console.log('[tc-observation] New day detected — cleared stale recorded set');
     }
     await loadData();
-    await loadRecordedEntriesForDate(todayStr());
+    await loadRecordedEntriesForWeek(todayStr());
     await syncQueue();
     updateTrayBadge();
     // If tray is open, refresh its content

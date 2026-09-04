@@ -99,25 +99,30 @@ test(
 );
 
 test(
-  'legacy goals use one-observation daily projection without stealing target_window as cadence',
+  'legacy goals keep a safe cadence default without stealing target_window as cadence',
   () => {
     assert.ok(
-      /requiredPerWeek\s*:\s*1/.test(source),
-      'OBS-2 must preserve the legacy daily expectation with requiredPerWeek: 1'
+      /function\s+getRequiredPerWeek\s*\(/.test(source),
+      'tray must centralize collection cadence resolution'
+    );
+
+    assert.ok(
+      /required_per_week/.test(source),
+      'configured cadence must come from observation_config.required_per_week'
     );
 
     assert.ok(
       !/requiredPerWeek\s*:\s*config\.target_window/.test(
         source
       ),
-      'target_window is performance criterion data, not collection cadence'
+      'target_window remains performance criterion data'
     );
 
     assert.ok(
       !/requiredPerWeek\s*:\s*goal\.target_window/.test(
         source
       ),
-      'goal target_window must not be repurposed as collection cadence'
+      'goal target_window must not become cadence'
     );
   }
 );

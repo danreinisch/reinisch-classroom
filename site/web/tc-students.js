@@ -509,6 +509,21 @@
 
     const config = { category };
 
+    const requiredPerWeekValue =
+      Number(
+        container.querySelector(
+          '[name="obs_required_per_week"]'
+        )?.value
+      );
+
+    config.required_per_week =
+      Number.isInteger(requiredPerWeekValue) &&
+      requiredPerWeekValue >= 1 &&
+      requiredPerWeekValue <= 5
+        ? requiredPerWeekValue
+        : 1;
+
+
     if (category === 'session_outcome') {
       config.target_met = parseInt(container.querySelector('[name="obs_target_met"]')?.value) || null;
       config.target_window = parseInt(container.querySelector('[name="obs_target_window"]')?.value) || null;
@@ -543,6 +558,23 @@
 
     if (!category) {
       errors.push('Observation category is required.');
+    }
+
+    const requiredPerWeek =
+      Number(
+        container.querySelector(
+          '[name="obs_required_per_week"]'
+        )?.value
+      );
+
+    if (
+      !Number.isInteger(requiredPerWeek) ||
+      requiredPerWeek < 1 ||
+      requiredPerWeek > 5
+    ) {
+      errors.push(
+        'Observations per week must be a whole number from 1 through 5.'
+      );
     }
 
     if (category === 'session_outcome') {
@@ -586,6 +618,7 @@
     const targetMet = obsConfig?.target_met ?? '';
     const targetWindow = obsConfig?.target_window ?? '';
     const targetMaxPrompts = obsConfig?.target_max_prompts ?? '';
+    const requiredPerWeek = obsConfig?.required_per_week ?? 1;
 
     // Sub-behaviors for checklist
     const subBehaviors = (obsConfig?.category === 'behavior_checklist' && Array.isArray(obsConfig?.sub_behaviors) && obsConfig.sub_behaviors.length > 0)
@@ -656,6 +689,13 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Sub-Behavior
             </button>
+          </div>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Observations per week</label>
+          <input type="number" name="obs_required_per_week" class="st-form-input" min="1" max="5" step="1" value="${escapeHtml(String(requiredPerWeek))}" />
+          <div style="font-size:12px;color:#6b7280;margin-top:4px;">
+            Number of evaluable observation data points to collect each instructional week.
           </div>
         </div>
         <div class="st-form-group">
@@ -13432,6 +13472,21 @@
 
     const config = { category };
 
+    const requiredPerWeekValue =
+      Number(
+        container.querySelector(
+          '[name="bulk_obs_required_per_week"]'
+        )?.value
+      );
+
+    config.required_per_week =
+      Number.isInteger(requiredPerWeekValue) &&
+      requiredPerWeekValue >= 1 &&
+      requiredPerWeekValue <= 5
+        ? requiredPerWeekValue
+        : 1;
+
+
     if (category === 'session_outcome') {
       config.target_met = parseInt(container.querySelector('[name="bulk_obs_target_met"]')?.value) || null;
       config.target_window = parseInt(container.querySelector('[name="bulk_obs_target_window"]')?.value) || null;
@@ -13462,6 +13517,23 @@
     if (!category) {
       errors.push('Observation category is required.');
       return errors;
+    }
+
+    const requiredPerWeek =
+      Number(
+        container.querySelector(
+          '[name="bulk_obs_required_per_week"]'
+        )?.value
+      );
+
+    if (
+      !Number.isInteger(requiredPerWeek) ||
+      requiredPerWeek < 1 ||
+      requiredPerWeek > 5
+    ) {
+      errors.push(
+        'Observations per week must be a whole number from 1 through 5.'
+      );
     }
 
     if (category === 'session_outcome') {
@@ -13551,6 +13623,13 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Sub-Behavior
           </button>
+        </div>
+      </div>
+      <div class="st-form-group">
+        <label class="st-form-label">Observations per week</label>
+        <input type="number" name="bulk_obs_required_per_week" class="st-form-input" min="1" max="5" step="1" value="1" />
+        <div style="font-size:12px;color:#6b7280;margin-top:4px;">
+          Number of evaluable observation data points to collect each instructional week.
         </div>
       </div>
       <div class="st-form-group">
@@ -13863,7 +13942,8 @@
       const obsConfig = gatherBulkObsConfigValues(configPanel);
       const categoryLabel = obsCategoryLabel(obsConfig.category);
       const periodList = obsConfig.class_periods.length > 0 ? obsConfig.class_periods.join(', ') : '(none)';
-      const previewMsg = `This will configure ${selected.length} goal${selected.length !== 1 ? 's' : ''} as "${categoryLabel}" observation goals with class periods: ${periodList}.\n\nProceed?`;
+      const cadenceLabel = `${obsConfig.required_per_week} observation${obsConfig.required_per_week !== 1 ? 's' : ''}/week`;
+      const previewMsg = `This will configure ${selected.length} goal${selected.length !== 1 ? 's' : ''} as "${categoryLabel}" observation goals at ${cadenceLabel}, with class periods: ${periodList}.\n\nProceed?`;
 
       const confirmed = await rcConfirm('Apply Observation Config', previewMsg, 'Apply');
       if (!confirmed) return;
