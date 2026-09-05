@@ -272,20 +272,20 @@ test(
 );
 
 test(
-  'OBS-2 does not introduce disposition persistence',
+  'OBS-2 keeps one central due-state resolver for later observation slices',
   () => {
     assert.ok(
-      !source.includes(
-        'no_opportunity'
+      source.includes(
+        'function getGoalDueState('
       ),
-      'No Opportunity persistence is outside OBS-2'
+      'later observation slices must continue through the central goal due-state resolver'
     );
 
     assert.ok(
-      !source.includes(
-        "disposition: 'absent'"
+      source.includes(
+        'computeObservationDueState({'
       ),
-      'Absent disposition persistence is outside OBS-2'
+      'OBS-1 remains authoritative for observation due-state semantics'
     );
   }
 );

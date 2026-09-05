@@ -93,3 +93,60 @@ export function buildObservationNotes(category, responseData, noteText) {
 
   return noteText ? `${prefix} ${noteText}` : prefix;
 }
+
+/**
+ * Build a non-evaluable Observation Tray disposition marker.
+ *
+ * The class-period label is encoded inside the existing notes field because
+ * progress_entries has no class-period column. This is observation context,
+ * not attendance.
+ *
+ * @param {string} disposition - absent | no_opportunity
+ * @param {string} classPeriod - exact observation opportunity period label
+ * @param {string} [noteText] - optional teacher note
+ * @returns {string}
+ */
+export function buildObservationDispositionNotes(disposition, classPeriod, noteText) {
+  const normalized = typeof disposition === 'string'
+    ? disposition.trim().toLowerCase()
+    : '';
+  const period = typeof classPeriod === 'string' ? classPeriod.trim() : '';
+
+  if (!['absent', 'no_opportunity'].includes(normalized) || !period) return '';
+
+  const prefix =
+    `[obs:disposition:${normalized}|period=${encodeURIComponent(period)}]`;
+
+  return noteText ? `${prefix} ${String(noteText).trim()}` : prefix;
+}
+
+/**
+ * Parse an Observation Tray disposition marker.
+ *
+ * @param {string} notes
+ * @returns {{disposition:string,classPeriod:string,userNote:string}|null}
+ */
+export function parseObservationDispositionNotes(notes) {
+  const parsed = parseObservationNotes(notes);
+  if (!parsed || parsed.category !== 'disposition') return null;
+
+  const [disposition, ...metadata] = parsed.rawData.split('|');
+  if (!['absent', 'no_opportunity'].includes(disposition)) return null;
+
+  const periodPart = metadata.find(part => part.startsWith('period='));
+  if (!periodPart) return null;
+
+  try {
+    const classPeriod =
+      decodeURIComponent(periodPart.slice('period='.length)).trim();
+    if (!classPeriod) return null;
+
+    return {
+      disposition,
+      classPeriod,
+      userNote: parsed.userNote || '',
+    };
+  } catch {
+    return null;
+  }
+}
