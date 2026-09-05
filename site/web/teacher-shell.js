@@ -52,6 +52,50 @@
     }
   }
 
+  function ensureObservationNav(){
+    const nav = document.querySelector('.tc-nav');
+    if(!nav) return;
+
+    const existing =
+      nav.querySelector(
+        'a[data-href="/teacher/observations/"]'
+      );
+
+    if(existing) return;
+
+    const studentsLink =
+      nav.querySelector(
+        'a[data-href="/teacher/students/"]'
+      );
+
+    if(!studentsLink) return;
+
+    const link = document.createElement('a');
+    link.href = '/teacher/observations/';
+    link.setAttribute(
+      'data-href',
+      '/teacher/observations/'
+    );
+
+    link.innerHTML =
+      '<span class="tc-icon">' +
+        '<svg width="20" height="20" viewBox="0 0 24 24" ' +
+          'fill="none" stroke="currentColor" stroke-width="1.5" ' +
+          'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>' +
+          '<rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>' +
+          '<line x1="9" y1="12" x2="15" y2="12"></line>' +
+          '<line x1="9" y1="16" x2="15" y2="16"></line>' +
+        '</svg>' +
+      '</span>' +
+      '<span class="tc-label">Observations</span>';
+
+    studentsLink.insertAdjacentElement(
+      'afterend',
+      link
+    );
+  }
+
   function wireNavActive(){
     const path = location.pathname.replace(/\/+$/, '/') || '/teacher/';
     document.querySelectorAll('.tc-nav a[data-href]').forEach(a=>{
@@ -102,6 +146,7 @@
       topbar.appendChild(signOutBtn);
     }
 
+    ensureObservationNav();
     wireNavActive();
     loadUngradedBadge();
   }

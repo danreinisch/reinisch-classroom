@@ -17,9 +17,38 @@
  */
 export function parseObservationNotes(notes) {
   if (!notes) return null;
+
   const m = notes.match(/^\[obs:(\w+):([^\]]*)\]/);
   if (!m) return null;
-  return { category: m[1], rawData: m[2], userNote: notes.slice(m[0].length).trim() };
+
+  const remainder = notes.slice(m[0].length).trim();
+  let classPeriod = null;
+  let userNote = remainder;
+
+  const periodMatch =
+    remainder.match(/^\[obs-period:([^\]]+)\](?:\s+|$)/);
+
+  if (periodMatch) {
+    try {
+      const decoded =
+        decodeURIComponent(periodMatch[1]).trim();
+
+      if (decoded) {
+        classPeriod = decoded;
+        userNote =
+          remainder.slice(periodMatch[0].length).trim();
+      }
+    } catch {
+      // Fail closed: malformed period metadata remains visible note text.
+    }
+  }
+
+  return {
+    category: m[1],
+    rawData: m[2],
+    userNote,
+    classPeriod,
+  };
 }
 
 /**
@@ -73,7 +102,7 @@ export function formatObservationValue(entry, goal) { // eslint-disable-line no-
  * @param {string} [noteText] - Optional user note
  * @returns {string}
  */
-export function buildObservationNotes(category, responseData, noteText) {
+export function buildObservationNotes(category, responseData, noteText, classPeriod = null) {
   let prefix = '';
   const { response, successful, opportunities, promptCount, checkedBehaviors, subBehaviors } = responseData;
 
@@ -91,6 +120,21 @@ export function buildObservationNotes(category, responseData, noteText) {
     prefix = `[obs:checklist:${parts.join(',')}]`;
   }
 
+  const normalizedPeriod =
+    typeof classPeriod === 'string'
+      ? classPeriod.trim()
+      : '';
+
+  if (normalizedPeriod) {
+    const periodMarker =
+      `[obs-period:${encodeURIComponent(normalizedPeriod)}]`;
+
+    return noteText
+      ? `${prefix} ${periodMarker} ${noteText}`
+      : `${prefix} ${periodMarker}`;
+  }
+
+  // No period supplied: preserve exact legacy observation-note storage.
   return noteText ? `${prefix} ${noteText}` : prefix;
 }
 

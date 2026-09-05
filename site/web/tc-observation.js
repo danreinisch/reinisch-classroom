@@ -193,7 +193,7 @@
     parseObservationNotes,
     buildObservationDispositionNotes,
     parseObservationDispositionNotes,
-  } = await import('/web/obs-utils.js?v=20260904-obs5-dispositions');
+  } = await import('/web/obs-utils.js?v=20260905-obs6-center');
   const { getInstructionalDayStatus, isInstructionalDay } =
     await import('/web/instructional-day.js');
 
@@ -263,6 +263,10 @@
 
   let currentSchedule = null;
   const observationEvidenceByDate =
+    new Map();
+
+  // date => Map<student|goal|date, exact observation class-period label>
+  const observationEvidencePeriodsByDate =
     new Map();
 
   // date => Map<student|goal|date, due-state disposition entry>
@@ -458,9 +462,16 @@
   }
 
     function clearObservationEvidenceForIdentity(studentCode, goalCode, date) {
+    const identity =
+      observationIdentityKey(studentCode, goalCode, date);
+
     observationEvidenceByDate
       .get(date)
-      ?.delete(observationIdentityKey(studentCode, goalCode, date));
+      ?.delete(identity);
+
+    observationEvidencePeriodsByDate
+      .get(date)
+      ?.delete(identity);
   }
 
   // ─── Calculate Value ──────────────────────────────────────────────────────
@@ -496,7 +507,15 @@
   }
 
   // ─── Save Observation ─────────────────────────────────────────────────────
-  async function saveObservation(goal, responseData, noteText, saveIndicatorEl, onSave, date) {
+  async function saveObservation(
+    goal,
+    responseData,
+    noteText,
+    saveIndicatorEl,
+    onSave,
+    date,
+    periodOverride = null
+  ) {
     if (date == null) date = todayStr();
 
     const dayStatus = getInstructionalDayStatus(date);
@@ -515,7 +534,13 @@
 
     const category = goal.observation_config?.category;
     const value = calcValue(category, responseData);
-    const notes = buildObservationNotes(category, responseData, noteText);
+    const notes =
+      buildObservationNotes(
+        category,
+        responseData,
+        noteText,
+        periodOverride
+      );
 
     console.log(
       '[tc-observation] saveObservation: goal=', goal.code,
@@ -556,11 +581,37 @@
         );
       }
 
+      const evidenceKey =
+        `${goal.student_code}|${goal.code}|${date}`;
+
       observationEvidenceByDate
         .get(date)
-        .add(
-          `${goal.student_code}|${goal.code}|${date}`
+        .add(evidenceKey);
+
+      if (!observationEvidencePeriodsByDate.has(date)) {
+        observationEvidencePeriodsByDate.set(
+          date,
+          new Map()
         );
+      }
+
+      const normalizedPeriod =
+        typeof periodOverride === 'string'
+          ? periodOverride.trim()
+          : '';
+
+      if (normalizedPeriod) {
+        observationEvidencePeriodsByDate
+          .get(date)
+          .set(
+            evidenceKey,
+            normalizedPeriod
+          );
+      } else {
+        observationEvidencePeriodsByDate
+          .get(date)
+          .delete(evidenceKey);
+      }
     }
 
     if (onSave) onSave();
@@ -617,6 +668,8 @@
     saveIndicatorEl,
     onSave,
     date
+  ,
+    classPeriodOverride = null
   ) {
     if (date == null) date = todayStr();
 
@@ -629,7 +682,9 @@
       return;
     }
 
-    const classPeriod = getObservationOpportunityPeriod(goal, date);
+    const classPeriod =
+      classPeriodOverride ||
+      getObservationOpportunityPeriod(goal, date);
     if (!classPeriod) {
       console.warn(
         '[tc-observation] Disposition blocked: observation period unavailable',
@@ -762,7 +817,7 @@
   // All 4 forms take (goal, cardEl, saveIndicatorEl, preRecorded, onSave)
   // periodLabel has been removed — we now use date-only dedup.
 
-  function renderSessionOutcomeForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date) {
+  function renderSessionOutcomeForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date, periodOverride = null) {
     const config = goal.observation_config || {};
     const container = document.createElement('div');
 
@@ -810,7 +865,7 @@
         btn.classList.add('active');
         btn.setAttribute('aria-checked', 'true');
         selectedResponse = response;
-        await saveObservation(goal, { response }, noteInput.value, saveIndicatorEl, onSave, date);
+        await saveObservation(goal, { response }, noteInput.value, saveIndicatorEl, onSave, date, periodOverride);
       });
       row.appendChild(btn);
     });
@@ -837,7 +892,7 @@
     noteInput.placeholder = 'Optional note…';
     noteInput.addEventListener('change', async () => {
       if (selectedResponse) {
-        await saveObservation(goal, { response: selectedResponse }, noteInput.value, saveIndicatorEl, onSave, date);
+        await saveObservation(goal, { response: selectedResponse }, noteInput.value, saveIndicatorEl, onSave, date, periodOverride);
       }
     });
     formWrapper.appendChild(noteInput);
@@ -870,7 +925,7 @@
     cardEl.appendChild(container);
   }
 
-  function renderTallyForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date) {
+  function renderTallyForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date, periodOverride = null) {
     const container = document.createElement('div');
 
     let badgeEl = null;
@@ -920,7 +975,7 @@
       if (o > 0) {
         const pct = Math.round((s / o) * 100);
         resultEl.textContent = `${pct}%`;
-        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, saveIndicatorEl, onSave, date);
+        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, saveIndicatorEl, onSave, date, periodOverride);
       } else {
         resultEl.textContent = '';
       }
@@ -953,7 +1008,7 @@
         noOppBtns.querySelectorAll('.obs-response-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         noOppResponse = response;
-        await saveObservation(goal, { response }, noteInput.value, saveIndicatorEl, onSave, date);
+        await saveObservation(goal, { response }, noteInput.value, saveIndicatorEl, onSave, date, periodOverride);
       });
       noOppBtns.appendChild(btn);
     });
@@ -971,9 +1026,9 @@
       const s = Number(succInput.value) || 0;
       const o = Number(oppInput.value) || 0;
       if (noOppResponse) {
-        await saveObservation(goal, { response: noOppResponse }, noteInput.value, saveIndicatorEl, onSave, date);
+        await saveObservation(goal, { response: noOppResponse }, noteInput.value, saveIndicatorEl, onSave, date, periodOverride);
       } else if (o > 0) {
-        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, saveIndicatorEl, onSave, date);
+        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, saveIndicatorEl, onSave, date, periodOverride);
       }
     });
     formWrapper.appendChild(noteInput);
@@ -1004,7 +1059,7 @@
     cardEl.appendChild(container);
   }
 
-  function renderPromptCountForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date) {
+  function renderPromptCountForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date, periodOverride = null) {
     const config = goal.observation_config || {};
     const maxPrompts = config.target_max_prompts ?? 2;
     const container = document.createElement('div');
@@ -1046,7 +1101,7 @@
         selectedCount = numVal;
         statusEl.textContent = `Target: ${maxPrompts} or fewer prompts`;
         statusEl.style.color = numVal <= maxPrompts ? '#22c55e' : '#ef4444';
-        await saveObservation(goal, { promptCount: numVal }, noteInput.value, saveIndicatorEl, onSave, date);
+        await saveObservation(goal, { promptCount: numVal }, noteInput.value, saveIndicatorEl, onSave, date, periodOverride);
       });
       row.appendChild(btn);
     });
@@ -1059,7 +1114,7 @@
     noteInput.placeholder = 'Optional note…';
     noteInput.addEventListener('change', async () => {
       if (selectedCount !== null) {
-        await saveObservation(goal, { promptCount: selectedCount }, noteInput.value, saveIndicatorEl, onSave, date);
+        await saveObservation(goal, { promptCount: selectedCount }, noteInput.value, saveIndicatorEl, onSave, date, periodOverride);
       }
     });
     formWrapper.appendChild(noteInput);
@@ -1095,7 +1150,7 @@
     cardEl.appendChild(container);
   }
 
-  function renderBehaviorChecklistForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date) {
+  function renderBehaviorChecklistForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date, periodOverride = null) {
     const config = goal.observation_config || {};
     const subBehaviors = Array.isArray(config.sub_behaviors) ? config.sub_behaviors : [];
     const container = document.createElement('div');
@@ -1142,9 +1197,7 @@
         { checkedBehaviors: checkedStates, subBehaviors },
         noteInput.value,
         saveIndicatorEl,
-        onSave,
-        date
-      );
+        onSave, date, periodOverride);
     };
 
     subBehaviors.forEach((sb, idx) => {
@@ -1176,9 +1229,7 @@
         { response: 'not_addressed', checkedBehaviors: checkedStates, subBehaviors },
         noteInput.value,
         saveIndicatorEl,
-        onSave,
-        date
-      );
+        onSave, date, periodOverride);
     });
     formWrapper.appendChild(notAddressedBtn);
 
@@ -1224,6 +1275,8 @@
     onSave,
     date,
     dueState
+  ,
+    periodOverride = null
   ) {
     const wrapper = document.createElement('div');
     wrapper.className = 'obs-no-opp-btns';
@@ -1265,7 +1318,8 @@
           '',
           saveIndicatorEl,
           onSave,
-          date
+          date,
+          periodOverride
         );
       });
 
@@ -1341,15 +1395,24 @@
 
     const localOverrides = new Set();
     const localDispositions = [];
+    const localEvidencePeriods = new Map();
 
     for (const entry of queueEntries) {
       localOverrides.add(entry.date);
 
+      const parsedObservation =
+        parseObservationNotes(entry.notes);
+
       if (
         Number.isFinite(entry.value) &&
-        parseObservationNotes(entry.notes)
+        parsedObservation
       ) {
         evidenceDates.add(entry.date);
+
+        localEvidencePeriods.set(
+          entry.date,
+          parsedObservation.classPeriod || null
+        );
       }
 
       const parsedDisposition =
@@ -1367,15 +1430,48 @@
       }
     }
 
-    const observationEntries = [...evidenceDates].sort().map(entryDate => ({
-      date: entryDate,
-      classPeriod: entryDate === date
-        ? (currentPeriod || classPeriods[0] || null)
-        : (classPeriods[0] || null),
-      kind: 'observation',
-    }));
+    const observationEntries =
+      [...evidenceDates]
+        .sort()
+        .map(entryDate => {
+          const identity =
+            identityFor(entryDate);
 
-    const persistedDispositions = [];
+          const localPeriodKnown =
+            localEvidencePeriods.has(entryDate);
+
+          const persistedPeriod =
+            observationEvidencePeriodsByDate
+              .get(entryDate)
+              ?.get(identity) ||
+            null;
+
+          const storedPeriod =
+            localPeriodKnown
+              ? localEvidencePeriods.get(entryDate)
+              : persistedPeriod;
+
+          return {
+            date: entryDate,
+            classPeriod:
+              storedPeriod ||
+              (
+                entryDate === date
+                  ? (
+                      currentPeriod ||
+                      classPeriods[0] ||
+                      null
+                    )
+                  : (
+                      classPeriods[0] ||
+                      null
+                    )
+              ),
+            kind: 'observation',
+          };
+        });
+
+const persistedDispositions = [];
 
     for (
       let cursor = weekStart;
@@ -1427,7 +1523,11 @@
       : (classPeriods[0] || null);
   }
 
-  function getGoalDueState(goal, date) {
+  function getGoalDueState(
+    goal,
+    date,
+    currentPeriodOverride = null
+  ) {
 
     const classPeriods =
       getConfiguredClassPeriods(goal);
@@ -1449,16 +1549,19 @@
         : null;
 
     const currentPeriod =
-      date === todayStr()
-        ? (
-            livePeriod ||
-            classPeriods[0] ||
-            null
-          )
-        : (
-            classPeriods[0] ||
-            null
-          );
+      currentPeriodOverride ||
+      (
+        date === todayStr()
+          ? (
+              livePeriod ||
+              classPeriods[0] ||
+              null
+            )
+          : (
+              classPeriods[0] ||
+              null
+            )
+      );
 
     const requiredPerWeek =
       getRequiredPerWeek(goal);
@@ -1485,7 +1588,8 @@
     goal,
     date,
     onAnyRecorded,
-    dueState = null
+    dueState = null,
+    periodOverride = null
   ) {
     const config = goal.observation_config || {};
     const category = config.category;
@@ -1498,7 +1602,7 @@
 
     const state =
       dueState ||
-      getGoalDueState(goal, date);
+      getGoalDueState(goal, date, periodOverride);
 
     const needsAttention =
       state.state === 'due' ||
@@ -1586,10 +1690,7 @@
         );
 
       const refreshedState =
-        getGoalDueState(
-          goal,
-          date
-        );
+        getGoalDueState(goal, date, periodOverride);
 
       if (
         refreshedState.state ===
@@ -1624,17 +1725,18 @@
       saveIndicatorEl,
       onSave,
       date,
-      state
+      state,
+      periodOverride
     );
 
     if (category === 'session_outcome') {
-      renderSessionOutcomeForm(goal, body, saveIndicatorEl, isRecorded, onSave, date);
+      renderSessionOutcomeForm(goal, body, saveIndicatorEl, isRecorded, onSave, date, periodOverride);
     } else if (category === 'tally') {
-      renderTallyForm(goal, body, saveIndicatorEl, isRecorded, onSave, date);
+      renderTallyForm(goal, body, saveIndicatorEl, isRecorded, onSave, date, periodOverride);
     } else if (category === 'prompt_count') {
-      renderPromptCountForm(goal, body, saveIndicatorEl, isRecorded, onSave, date);
+      renderPromptCountForm(goal, body, saveIndicatorEl, isRecorded, onSave, date, periodOverride);
     } else if (category === 'behavior_checklist') {
-      renderBehaviorChecklistForm(goal, body, saveIndicatorEl, isRecorded, onSave, date);
+      renderBehaviorChecklistForm(goal, body, saveIndicatorEl, isRecorded, onSave, date, periodOverride);
     } else {
       const unknownMsg = document.createElement('div');
       unknownMsg.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.4);padding:4px 0;';
@@ -2267,6 +2369,11 @@
           cursor,
           new Set()
         );
+
+        observationEvidencePeriodsByDate.set(
+          cursor,
+          new Map()
+        );
       }
 
       let count = 0;
@@ -2280,6 +2387,9 @@
           parseObservationNotes(
             entry.notes
           );
+
+        const parsedClassPeriod =
+          parsed?.classPeriod || null;
 
         const rawValue =
           entry.value;
@@ -2336,6 +2446,15 @@
           .get(entry.date)
           .add(key);
 
+        if (parsedClassPeriod) {
+          observationEvidencePeriodsByDate
+            .get(entry.date)
+            .set(
+              key,
+              parsedClassPeriod
+            );
+        }
+
         count++;
       }
 
@@ -2373,10 +2492,804 @@
     );
   }
 
+  async function initObservationCenter() {
+    const app =
+      document.getElementById(
+        'observationCenterApp'
+      );
+
+    if (!app) return;
+
+    let selectedDate =
+      todayStr();
+
+    let selectedPeriod =
+      '';
+
+    if (
+      !document.getElementById(
+        'obs-center-styles'
+      )
+    ) {
+      const centerStyle =
+        document.createElement(
+          'style'
+        );
+
+      centerStyle.id =
+        'obs-center-styles';
+
+      centerStyle.textContent = `
+        .obs-center { display:grid; gap:16px; }
+        .obs-center-head {
+          display:flex;
+          gap:16px;
+          justify-content:space-between;
+          align-items:flex-start;
+          flex-wrap:wrap;
+        }
+        .obs-center-head h1 { margin:0 0 6px; }
+        .obs-center-head p {
+          margin:0;
+          color:rgba(240,255,250,.72);
+          max-width:70ch;
+        }
+        .obs-center-controls {
+          display:grid;
+          grid-template-columns:minmax(280px,1fr) minmax(240px,.7fr);
+          gap:12px;
+        }
+        .obs-center-panel {
+          border:1px solid rgba(255,255,255,.09);
+          background:rgba(0,0,0,.20);
+          border-radius:16px;
+          padding:14px;
+        }
+        .obs-center-label {
+          display:block;
+          font-size:12px;
+          font-weight:700;
+          color:rgba(240,255,250,.72);
+          margin-bottom:7px;
+        }
+        .obs-center-date-row {
+          display:flex;
+          gap:8px;
+          align-items:center;
+          flex-wrap:wrap;
+        }
+        .obs-center-date-input,
+        .obs-center-period-select {
+          min-height:42px;
+          padding:8px 11px;
+          border-radius:10px;
+          border:1px solid rgba(255,255,255,.14);
+          background:rgba(0,0,0,.30);
+          color:inherit;
+        }
+        .obs-center-period-select {
+          width:100%;
+        }
+        .obs-center-status {
+          min-height:22px;
+          font-size:13px;
+          color:#22c55e;
+          font-weight:700;
+        }
+        .obs-center-hint {
+          padding:18px;
+          border:1px dashed rgba(255,255,255,.15);
+          border-radius:14px;
+          color:rgba(240,255,250,.68);
+          background:rgba(255,255,255,.025);
+        }
+        .obs-center-period-heading {
+          margin:0 0 12px;
+          font-size:17px;
+          font-weight:800;
+        }
+        @media (max-width: 760px) {
+          .obs-center-controls {
+            grid-template-columns:1fr;
+          }
+        }
+      `;
+
+      document.head.appendChild(
+        centerStyle
+      );
+    }
+
+    app.innerHTML = '';
+
+    const center =
+      document.createElement(
+        'div'
+      );
+
+    center.className =
+      'obs-center';
+
+    const head =
+      document.createElement(
+        'div'
+      );
+
+    head.className =
+      'obs-center-head';
+
+    const intro =
+      document.createElement(
+        'div'
+      );
+
+    intro.innerHTML =
+      '<h1>Observation Center</h1>' +
+      '<p>Enter observational data in real time or return to a previous instructional day. ' +
+      'The selected date is the observation date; the save time is only the audit timestamp.</p>';
+
+    const saveStatus =
+      document.createElement(
+        'div'
+      );
+
+    saveStatus.className =
+      'obs-center-status';
+
+    saveStatus.setAttribute(
+      'aria-live',
+      'polite'
+    );
+
+    head.append(
+      intro,
+      saveStatus
+    );
+
+    const controls =
+      document.createElement(
+        'div'
+      );
+
+    controls.className =
+      'obs-center-controls';
+
+    const datePanel =
+      document.createElement(
+        'div'
+      );
+
+    datePanel.className =
+      'obs-center-panel';
+
+    const dateLabel =
+      document.createElement(
+        'label'
+      );
+
+    dateLabel.className =
+      'obs-center-label';
+
+    dateLabel.textContent =
+      'Observation date';
+
+    const dateRow =
+      document.createElement(
+        'div'
+      );
+
+    dateRow.className =
+      'obs-center-date-row';
+
+    const previousBtn =
+      document.createElement(
+        'button'
+      );
+
+    previousBtn.type =
+      'button';
+
+    previousBtn.className =
+      'tc-btn';
+
+    previousBtn.textContent =
+      '← Previous';
+
+    const dateInput =
+      document.createElement(
+        'input'
+      );
+
+    dateInput.type =
+      'date';
+
+    dateInput.className =
+      'obs-center-date-input';
+
+    dateInput.value =
+      selectedDate;
+
+    dateInput.max =
+      todayStr();
+
+    const todayBtn =
+      document.createElement(
+        'button'
+      );
+
+    todayBtn.type =
+      'button';
+
+    todayBtn.className =
+      'tc-btn';
+
+    todayBtn.textContent =
+      'Today';
+
+    const nextBtn =
+      document.createElement(
+        'button'
+      );
+
+    nextBtn.type =
+      'button';
+
+    nextBtn.className =
+      'tc-btn';
+
+    nextBtn.textContent =
+      'Next →';
+
+    dateRow.append(
+      previousBtn,
+      dateInput,
+      todayBtn,
+      nextBtn
+    );
+
+    datePanel.append(
+      dateLabel,
+      dateRow
+    );
+
+    const periodPanel =
+      document.createElement(
+        'div'
+      );
+
+    periodPanel.className =
+      'obs-center-panel';
+
+    const periodLabel =
+      document.createElement(
+        'label'
+      );
+
+    periodLabel.className =
+      'obs-center-label';
+
+    periodLabel.textContent =
+      'Class period';
+
+    const periodSelect =
+      document.createElement(
+        'select'
+      );
+
+    periodSelect.className =
+      'obs-center-period-select';
+
+    periodSelect.setAttribute(
+      'aria-label',
+      'Select class period'
+    );
+
+    periodPanel.append(
+      periodLabel,
+      periodSelect
+    );
+
+    controls.append(
+      datePanel,
+      periodPanel
+    );
+
+    const workspace =
+      document.createElement(
+        'div'
+      );
+
+    workspace.className =
+      'obs-center-panel';
+
+    center.append(
+      head,
+      controls,
+      workspace
+    );
+
+    app.appendChild(
+      center
+    );
+
+    const formatCenterDate =
+      dateKey => {
+        const [
+          year,
+          month,
+          day,
+        ] =
+          dateKey
+            .split('-')
+            .map(Number);
+
+        return new Date(
+          year,
+          month - 1,
+          day
+        ).toLocaleDateString(
+          'en-US',
+          {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          }
+        );
+      };
+
+    const configuredPeriods =
+      () => {
+        const periods =
+          new Set();
+
+        for (
+          const goal
+          of allGoals
+        ) {
+          for (
+            const period
+            of getConfiguredClassPeriods(
+              goal
+            )
+          ) {
+            periods.add(
+              period
+            );
+          }
+        }
+
+        return [
+          ...periods,
+        ].sort(
+          (left, right) =>
+            left.localeCompare(
+              right,
+              undefined,
+              {
+                numeric: true,
+              }
+            )
+        );
+      };
+
+    const refreshPeriodOptions =
+      () => {
+        const periods =
+          configuredPeriods();
+
+        periodSelect.innerHTML =
+          '';
+
+        const placeholder =
+          document.createElement(
+            'option'
+          );
+
+        placeholder.value =
+          '';
+
+        placeholder.textContent =
+          selectedDate !== todayStr()
+            ? 'Select the class period for this historical observation…'
+            : 'Select class period…';
+
+        periodSelect.appendChild(
+          placeholder
+        );
+
+        for (
+          const period
+          of periods
+        ) {
+          const option =
+            document.createElement(
+              'option'
+            );
+
+          option.value =
+            period;
+
+          option.textContent =
+            period;
+
+          periodSelect.appendChild(
+            option
+          );
+        }
+
+        if (
+          selectedDate === todayStr() &&
+          !selectedPeriod
+        ) {
+          const livePeriod =
+            getLiveCurrentPeriodLabel();
+
+          if (
+            livePeriod &&
+            periods.includes(
+              livePeriod
+            )
+          ) {
+            selectedPeriod =
+              livePeriod;
+          }
+        }
+
+        if (
+          selectedPeriod &&
+          periods.includes(
+            selectedPeriod
+          )
+        ) {
+          periodSelect.value =
+            selectedPeriod;
+        } else {
+          selectedPeriod =
+            '';
+
+          periodSelect.value =
+            '';
+        }
+
+        return periods;
+      };
+
+    const showHint =
+      message => {
+        workspace.innerHTML =
+          '';
+
+        const hint =
+          document.createElement(
+            'div'
+          );
+
+        hint.className =
+          'obs-center-hint';
+
+        hint.textContent =
+          message;
+
+        workspace.appendChild(
+          hint
+        );
+      };
+
+    const renderWorkspace =
+      async () => {
+        const dayStatus =
+          getInstructionalDayStatus(
+            selectedDate
+          );
+
+        nextBtn.disabled =
+          selectedDate >=
+          todayStr();
+
+        todayBtn.disabled =
+          selectedDate ===
+          todayStr();
+
+        dateInput.value =
+          selectedDate;
+
+        refreshPeriodOptions();
+
+        if (
+          !dayStatus.instructional
+        ) {
+          showHint(
+            `No observations scheduled — ${dayStatus.label}.`
+          );
+          return;
+        }
+
+        await loadRecordedEntriesForWeek(
+          selectedDate
+        );
+
+        if (
+          selectedDate !== todayStr() &&
+          !selectedPeriod
+        ) {
+          showHint(
+            'Select a class period before entering historical observational data. The period is required so the entry is attached to the correct observation opportunity.'
+          );
+          return;
+        }
+
+        if (!selectedPeriod) {
+          showHint(
+            'Select a class period to begin entering observational data.'
+          );
+          return;
+        }
+
+        const matchingGoals =
+          allGoals.filter(
+            goal =>
+              getConfiguredClassPeriods(
+                goal
+              ).includes(
+                selectedPeriod
+              )
+          );
+
+        workspace.innerHTML =
+          '';
+
+        const heading =
+          document.createElement(
+            'div'
+          );
+
+        heading.className =
+          'obs-center-period-heading';
+
+        heading.textContent =
+          `${selectedPeriod} — ${formatCenterDate(selectedDate)}`;
+
+        workspace.appendChild(
+          heading
+        );
+
+        if (
+          matchingGoals.length === 0
+        ) {
+          showHint(
+            `No observation goals are configured for ${selectedPeriod}.`
+          );
+          return;
+        }
+
+        const studentMap =
+          new Map(
+            allStudents.map(
+              student => [
+                student.code,
+                student,
+              ]
+            )
+          );
+
+        const grouped =
+          new Map();
+
+        for (
+          const goal
+          of matchingGoals
+        ) {
+          if (
+            !grouped.has(
+              goal.student_code
+            )
+          ) {
+            grouped.set(
+              goal.student_code,
+              []
+            );
+          }
+
+          grouped
+            .get(
+              goal.student_code
+            )
+            .push(
+              goal
+            );
+        }
+
+        const onAnyRecorded =
+          () => {
+            saveStatus.textContent =
+              `Saved for ${formatCenterDate(selectedDate)}`;
+
+            updateTrayBadge();
+          };
+
+        for (
+          const [
+            studentCode,
+            goals,
+          ]
+          of grouped
+        ) {
+          const section =
+            document.createElement(
+              'section'
+            );
+
+          section.className =
+            'obs-student-section';
+
+          const student =
+            studentMap.get(
+              studentCode
+            );
+
+          const name =
+            document.createElement(
+              'div'
+            );
+
+          name.className =
+            'obs-student-name';
+
+          name.textContent =
+            `${student?.name || studentCode} (${studentCode})`;
+
+          section.appendChild(
+            name
+          );
+
+          for (
+            const goal
+            of goals
+          ) {
+            const dueState =
+              getGoalDueState(
+                goal,
+                selectedDate,
+                selectedPeriod
+              );
+
+            section.appendChild(
+              buildGoalCard(
+                goal,
+                selectedDate,
+                onAnyRecorded,
+                dueState,
+                selectedPeriod
+              )
+            );
+          }
+
+          workspace.appendChild(
+            section
+          );
+        }
+      };
+
+    const navigateTo =
+      async newDate => {
+        if (
+          typeof newDate !==
+            'string' ||
+          !newDate ||
+          newDate > todayStr()
+        ) {
+          return;
+        }
+
+        selectedDate =
+          newDate;
+
+        saveStatus.textContent =
+          '';
+
+        /*
+         * Historical entry must be deliberate.
+         * Do not silently infer a period from today's live schedule
+         * or from the goal's first configured period.
+         */
+        if (
+          selectedDate !==
+          todayStr()
+        ) {
+          selectedPeriod =
+            '';
+        } else {
+          selectedPeriod =
+            '';
+        }
+
+        await renderWorkspace();
+      };
+
+    previousBtn.addEventListener(
+      'click',
+      () => {
+        navigateTo(
+          addDays(
+            selectedDate,
+            -1
+          )
+        );
+      }
+    );
+
+    nextBtn.addEventListener(
+      'click',
+      () => {
+        if (
+          selectedDate >=
+          todayStr()
+        ) {
+          return;
+        }
+
+        navigateTo(
+          addDays(
+            selectedDate,
+            1
+          )
+        );
+      }
+    );
+
+    todayBtn.addEventListener(
+      'click',
+      () => {
+        navigateTo(
+          todayStr()
+        );
+      }
+    );
+
+    dateInput.addEventListener(
+      'change',
+      () => {
+        const newDate =
+          dateInput.value;
+
+        if (
+          newDate >
+          todayStr()
+        ) {
+          dateInput.value =
+            selectedDate;
+
+          return;
+        }
+
+        navigateTo(
+          newDate
+        );
+      }
+    );
+
+    periodSelect.addEventListener(
+      'change',
+      async () => {
+        selectedPeriod =
+          periodSelect.value;
+
+        saveStatus.textContent =
+          '';
+
+        await renderWorkspace();
+      }
+    );
+
+    await renderWorkspace();
+  }
+
   // ─── Init ─────────────────────────────────────────────────────────────────
   await loadData();
   await loadRecordedEntriesForWeek(todayStr());
   await syncQueue();
+
+  await initObservationCenter();
 
   // Inject the tray icon into the topbar
   injectTrayIcon();
