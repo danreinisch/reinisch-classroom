@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Teacher Center — Observations</title>
+  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
+  <link rel="stylesheet" href="/assets/css/class-clock.css" />
+  <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <script src="/web/sidebar-init.js"></script>
+</head>
+<body>
+  <div class="tc-app">
+    <header class="tc-topbar">
+      <button
+        class="tc-btn"
+        id="tcSidebarToggle"
+        aria-label="Toggle sidebar"
+        aria-expanded="false"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round"
+          aria-hidden="true">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      <a
+        class="tc-btn"
+        href="/"
+        target="_blank"
+        rel="noopener"
+        aria-label="Home"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round"
+          aria-hidden="true">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </a>
+
+      <div class="tc-title">
+        Teacher Center — Observations
+      </div>
+    </header>
+
+    <div class="tc-shell">
+<aside class="tc-sidebar" aria-label="Teacher navigation">
+        <nav class="tc-nav">
+          <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </span><span class="tc-label">Overview</span></a>
+          <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </span><span class="tc-label">Work</span></a>
+          <a data-href="/teacher/ai-builder/" href="/teacher/ai-builder/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"></path>
+            </svg>
+          </span><span class="tc-label">AI Builder</span></a>
+          <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </span><span class="tc-label">Library</span></a>
+          <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </span><span class="tc-label">Review</span></a>
+          <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+          </span><span class="tc-label">Gradebook</span></a>
+          <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </span><span class="tc-label">Students</span></a>
+          <a data-href="/teacher/observations/" href="/teacher/observations/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              <line x1="9" y1="12" x2="15" y2="12"></line>
+              <line x1="9" y1="16" x2="15" y2="16"></line>
+            </svg>
+          </span><span class="tc-label">Observations</span></a>
+          <a data-href="/teacher/calendar/" href="/teacher/calendar/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </span><span class="tc-label">Calendar</span></a>
+          <a data-href="/teacher/schedule/" href="/teacher/schedule/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </span><span class="tc-label">Schedule</span></a>
+          <a data-href="/teacher/substitute/" href="/teacher/substitute/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+          </span><span class="tc-label">Substitute</span></a><a data-href="/teacher/archive/" href="/teacher/archive/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="21 8 21 21 3 21 3 8"></polyline>
+              <rect x="1" y="3" width="22" height="5"></rect>
+              <line x1="10" y1="12" x2="14" y2="12"></line>
+            </svg>
+          </span><span class="tc-label">Archive</span></a>
+          <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </span><span class="tc-label">Admin</span></a>
+          <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <line x1="10" y1="9" x2="8" y2="9"></line>
+            </svg>
+          </span><span class="tc-label">Reporting</span></a>
+          <a data-href="/teacher/district-export/" href="/teacher/district-export/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+              <path d="M8 21h8M12 17v4"></path>
+              <path d="M7 9h4m-2-2v4M13 9h4"></path>
+            </svg>
+          </span><span class="tc-label">District Export</span></a>
+          <a data-href="/teacher/share/" href="/teacher/share/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+          </span><span class="tc-label">Share</span></a>
+          <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m-6-6H0m12 0h6m-3-9 3 3m-6 6 3 3M7.8 7.8 4.9 4.9m12.2 12.2-2.9-2.9m0-9.4 2.9 2.9M7.8 16.2l-2.9 2.9"></path>
+            </svg>
+          </span><span class="tc-label">Settings</span></a>
+        </nav>
+      </aside>
+
+      <main class="tc-main">
+        <div
+          id="observationCenterApp"
+          aria-live="polite"
+        >
+          <div class="tc-card" style="padding:18px;">
+            Loading Observation Center…
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script
+    defer
+    src="/web/teacher-shell.js?v=20260905-obs6-center"
+  ></script>
+  <script
+    type="module"
+    src="/web/tc-observation.js?v=20260905-obs6-center"
+  ></script>
+  <script
+    defer
+    type="module"
+    src="/assets/js/class-clock.js"
+  ></script>
+</body>
+</html>
