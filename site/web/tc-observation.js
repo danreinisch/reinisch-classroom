@@ -188,7 +188,12 @@
 
   // ─── Imports ──────────────────────────────────────────────────────────────
   const { db } = await import('/web/data-adapter.js');
-  const { buildObservationNotes, parseObservationNotes } = await import('/web/obs-utils.js');
+  const {
+    buildObservationNotes,
+    parseObservationNotes,
+    buildObservationDispositionNotes,
+    parseObservationDispositionNotes,
+  } = await import('/web/obs-utils.js?v=20260904-obs5-dispositions');
   const { getInstructionalDayStatus, isInstructionalDay } =
     await import('/web/instructional-day.js');
 
@@ -258,6 +263,10 @@
 
   let currentSchedule = null;
   const observationEvidenceByDate =
+    new Map();
+
+  // date => Map<student|goal|date, due-state disposition entry>
+  const observationDispositionsByDate =
     new Map();
   let trayIconEl = null;
   let trayEl = null;
@@ -425,6 +434,35 @@
     writeQueue(queue);
   }
 
+    function observationIdentityKey(studentCode, goalCode, date) {
+    return `${studentCode}|${goalCode}|${date}`;
+  }
+
+    function setObservationDispositionEntry(entry) {
+    if (!entry?.date || !entry.studentCode || !entry.goalCode) return;
+
+    if (!observationDispositionsByDate.has(entry.date)) {
+      observationDispositionsByDate.set(entry.date, new Map());
+    }
+
+    observationDispositionsByDate.get(entry.date).set(
+      observationIdentityKey(entry.studentCode, entry.goalCode, entry.date),
+      entry
+    );
+  }
+
+    function clearObservationDispositionEntry(studentCode, goalCode, date) {
+    observationDispositionsByDate
+      .get(date)
+      ?.delete(observationIdentityKey(studentCode, goalCode, date));
+  }
+
+    function clearObservationEvidenceForIdentity(studentCode, goalCode, date) {
+    observationEvidenceByDate
+      .get(date)
+      ?.delete(observationIdentityKey(studentCode, goalCode, date));
+  }
+
   // ─── Calculate Value ──────────────────────────────────────────────────────
   function calcValue(category, responseData) {
     const { response, successful, opportunities, promptCount, checkedBehaviors, subBehaviors } = responseData;
@@ -498,6 +536,14 @@
     };
 
     replaceOrPushToQueue(queueEntry);
+
+    // A normal observation replaces any same-day disposition projection.
+    clearObservationDispositionEntry(
+      goal.student_code,
+      goal.code,
+      date
+    );
+
     // Mark in the recorded map so future checks reflect this immediately
     if (!recordedByDate.has(date)) recordedByDate.set(date, new Set());
     recordedByDate.get(date).add(`${goal.student_code}|${goal.code}|${date}`);
@@ -559,6 +605,132 @@
       console.warn('[tc-observation] Server save failed — queued locally:', err.message);
       if (saveIndicatorEl) {
         saveIndicatorEl.textContent = 'Saved locally — will sync when connected';
+        saveIndicatorEl.className = 'obs-save-indicator offline';
+      }
+    }
+  }
+
+    async function saveObservationDisposition(
+    goal,
+    disposition,
+    noteText,
+    saveIndicatorEl,
+    onSave,
+    date
+  ) {
+    if (date == null) date = todayStr();
+
+    const dayStatus = getInstructionalDayStatus(date);
+    if (!dayStatus.instructional) {
+      if (saveIndicatorEl) {
+        saveIndicatorEl.textContent = `No school — ${dayStatus.label}`;
+        saveIndicatorEl.className = 'obs-save-indicator offline';
+      }
+      return;
+    }
+
+    const classPeriod = getObservationOpportunityPeriod(goal, date);
+    if (!classPeriod) {
+      console.warn(
+        '[tc-observation] Disposition blocked: observation period unavailable',
+        goal.code,
+        date
+      );
+      if (saveIndicatorEl) {
+        saveIndicatorEl.textContent = 'Observation period unavailable';
+        saveIndicatorEl.className = 'obs-save-indicator offline';
+      }
+      return;
+    }
+
+    const normalizedDisposition =
+      ['absent', 'no_opportunity'].includes(disposition) ? disposition : '';
+    const notes = buildObservationDispositionNotes(
+      normalizedDisposition,
+      classPeriod,
+      noteText
+    );
+
+    if (!notes) {
+      console.warn('[tc-observation] Invalid observation disposition ignored');
+      return;
+    }
+
+    const savedAt = new Date().toISOString();
+    replaceOrPushToQueue({
+      student_code: goal.student_code,
+      goal_code: goal.code,
+      date,
+      value: null,
+      notes,
+      saved_at: savedAt,
+      synced: false,
+    });
+
+    setObservationDispositionEntry({
+      studentCode: goal.student_code,
+      goalCode: goal.code,
+      date,
+      classPeriod,
+      kind: 'disposition',
+      disposition: normalizedDisposition,
+    });
+
+    clearObservationEvidenceForIdentity(goal.student_code, goal.code, date);
+
+    if (!recordedByDate.has(date)) recordedByDate.set(date, new Set());
+    recordedByDate
+      .get(date)
+      .add(observationIdentityKey(goal.student_code, goal.code, date));
+
+    if (onSave) onSave();
+
+    try {
+      const syncResponse = await fetch(
+        '/.netlify/functions/teacher-sync-observations',
+        {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entries: [{
+              student_code: goal.student_code,
+              goal_id: goal.id,
+              date,
+              percent: null,
+              method: 'Observation',
+              by_name: 'Teacher',
+              via: 'observation_tray',
+              notes,
+            }],
+          }),
+        }
+      );
+
+      if (syncResponse.ok) {
+        const syncResult = await syncResponse.json();
+        if (syncResult.ok && syncResult.synced > 0) {
+          markSynced(savedAt, goal.student_code, goal.code);
+          if (saveIndicatorEl) {
+            saveIndicatorEl.textContent = 'Auto-saved ✓';
+            saveIndicatorEl.className = 'obs-save-indicator';
+          }
+        }
+      } else {
+        console.warn(
+          '[tc-observation] Disposition server save failed:',
+          syncResponse.status,
+          '— queued locally'
+        );
+      }
+    } catch (err) {
+      console.warn(
+        '[tc-observation] Disposition server save failed — queued locally:',
+        err.message
+      );
+      if (saveIndicatorEl) {
+        saveIndicatorEl.textContent =
+          'Saved locally — will sync when connected';
         saveIndicatorEl.className = 'obs-save-indicator offline';
       }
     }
@@ -1045,6 +1217,65 @@
     cardEl.appendChild(container);
   }
 
+    function renderObservationDispositionActions(
+    goal,
+    cardEl,
+    saveIndicatorEl,
+    onSave,
+    date,
+    dueState
+  ) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'obs-no-opp-btns';
+
+    const label = document.createElement('div');
+    label.className = 'obs-rolling';
+    label.textContent = 'Observation disposition';
+
+    const row = document.createElement('div');
+    row.className = 'obs-response-row';
+
+    [
+      { label: 'Absent', disposition: 'absent' },
+      { label: 'No Opportunity', disposition: 'no_opportunity' },
+    ].forEach(option => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'obs-response-btn';
+      btn.dataset.disposition = option.disposition;
+      btn.textContent = option.label;
+
+      if (
+        dueState?.state === 'excused' &&
+        dueState.disposition === option.disposition
+      ) {
+        btn.classList.add('active');
+      }
+
+      btn.addEventListener('click', async () => {
+        row
+          .querySelectorAll('.obs-response-btn')
+          .forEach(other => other.classList.remove('active'));
+
+        btn.classList.add('active');
+
+        await saveObservationDisposition(
+          goal,
+          option.disposition,
+          '',
+          saveIndicatorEl,
+          onSave,
+          date
+        );
+      });
+
+      row.appendChild(btn);
+    });
+
+    wrapper.append(label, row);
+    cardEl.appendChild(wrapper);
+  }
+
   // ─── Build Goal Card ──────────────────────────────────────────────────────
   function getConfiguredClassPeriods(goal) {
 
@@ -1079,86 +1310,91 @@
     return 1;
   }
 
-  function getRecordedObservationEntriesForWeek(
+    function getRecordedObservationEntriesForWeek(
     goal,
     date,
     classPeriods,
     currentPeriod
   ) {
-
-    const {
-      weekStart,
-      weekEnd,
-    } =
-      getWeekBounds(date);
-
-    const evidenceDates =
-      new Set();
+    const { weekStart, weekEnd } = getWeekBounds(date);
+    const identityFor = entryDate =>
+      observationIdentityKey(goal.student_code, goal.code, entryDate);
+    const evidenceDates = new Set();
 
     for (
       let cursor = weekStart;
       cursor <= weekEnd;
       cursor = addDays(cursor, 1)
     ) {
-      const dateSet =
-        observationEvidenceByDate
-          .get(cursor);
-
-      const key =
-        `${goal.student_code}|${goal.code}|${cursor}`;
-
-      if (
-        dateSet &&
-        dateSet.has(key)
-      ) {
+      if (observationEvidenceByDate.get(cursor)?.has(identityFor(cursor))) {
         evidenceDates.add(cursor);
       }
     }
 
-    for (const entry of readQueue()) {
+    const queueEntries = readQueue().filter(entry =>
+      entry.student_code === goal.student_code &&
+      entry.goal_code === goal.code &&
+      typeof entry.date === 'string' &&
+      entry.date >= weekStart &&
+      entry.date <= weekEnd
+    );
 
-      const parsed =
-        parseObservationNotes(
-          entry.notes
-        );
+    const localOverrides = new Set();
+    const localDispositions = [];
+
+    for (const entry of queueEntries) {
+      localOverrides.add(entry.date);
 
       if (
-        entry.student_code !==
-          goal.student_code ||
-        entry.goal_code !==
-          goal.code ||
-        typeof entry.date !==
-          'string' ||
-        entry.date < weekStart ||
-        entry.date > weekEnd ||
-        !Number.isFinite(entry.value) ||
-        !parsed
+        Number.isFinite(entry.value) &&
+        parseObservationNotes(entry.notes)
       ) {
-        continue;
+        evidenceDates.add(entry.date);
       }
 
-      evidenceDates.add(
-        entry.date
-      );
+      const parsedDisposition =
+        parseObservationDispositionNotes(entry.notes);
+
+      if (parsedDisposition) {
+        localDispositions.push({
+          studentCode: goal.student_code,
+          goalCode: goal.code,
+          date: entry.date,
+          classPeriod: parsedDisposition.classPeriod,
+          kind: 'disposition',
+          disposition: parsedDisposition.disposition,
+        });
+      }
     }
 
-    return [...evidenceDates]
-      .sort()
-      .map(entryDate => ({
-        date: entryDate,
-        classPeriod:
-          entryDate === date
-            ? (
-                currentPeriod ||
-                classPeriods[0] ||
-                null
-              )
-            : (
-                classPeriods[0] ||
-                null
-              ),
-        kind: 'observation',
-      }));
+    const observationEntries = [...evidenceDates].sort().map(entryDate => ({
+      date: entryDate,
+      classPeriod: entryDate === date
+        ? (currentPeriod || classPeriods[0] || null)
+        : (classPeriods[0] || null),
+      kind: 'observation',
+    }));
+
+    const persistedDispositions = [];
+
+    for (
+      let cursor = weekStart;
+      cursor <= weekEnd;
+      cursor = addDays(cursor, 1)
+    ) {
+      if (localOverrides.has(cursor)) continue;
+
+      const entry =
+        observationDispositionsByDate.get(cursor)?.get(identityFor(cursor));
+
+      if (entry) persistedDispositions.push(entry);
+    }
+
+    return [
+      ...observationEntries,
+      ...persistedDispositions,
+      ...localDispositions,
+    ];
   }
 
   function getLiveCurrentPeriodLabel() {
@@ -1181,6 +1417,14 @@
       null
     );
 
+  }
+
+    function getObservationOpportunityPeriod(goal, date) {
+    const classPeriods = getConfiguredClassPeriods(goal);
+
+    return date === todayStr()
+      ? (getLiveCurrentPeriodLabel() || classPeriods[0] || null)
+      : (classPeriods[0] || null);
   }
 
   function getGoalDueState(goal, date) {
@@ -1290,18 +1534,33 @@
 
     const statusBadge = document.createElement('span');
     statusBadge.className = 'obs-card-status';
-    if (
+
+    if (state.state === 'excused') {
+      statusBadge.textContent =
+        state.disposition === 'absent'
+          ? 'Absent'
+          : 'No Opportunity';
+    } else if (
       isRecorded ||
       state.state === 'satisfied'
     ) {
       statusBadge.innerHTML =
         OBS_CHECK_SVG + ' Recorded';
-    } else if (state.state === 'urgent') {
-      statusBadge.textContent = 'Urgent';
-    } else if (state.state === 'due') {
-      statusBadge.textContent = 'Due';
-    } else if (state.state === 'upcoming') {
-      statusBadge.textContent = 'Upcoming';
+    } else if (
+      state.state === 'urgent'
+    ) {
+      statusBadge.textContent =
+        'Urgent';
+    } else if (
+      state.state === 'due'
+    ) {
+      statusBadge.textContent =
+        'Due';
+    } else if (
+      state.state === 'upcoming'
+    ) {
+      statusBadge.textContent =
+        'Upcoming';
     }
 
     header.appendChild(chevron);
@@ -1317,18 +1576,56 @@
     const saveIndicatorEl = document.createElement('div');
     saveIndicatorEl.className = 'obs-save-indicator';
 
-    // onSave callback — updates card status; only auto-collapses for session_outcome
+    // onSave callback — refreshes due/disposition status.
     const onSave = () => {
-      const nowRecorded = isAlreadyRecorded(goal.student_code, goal.code, date);
-      if (nowRecorded) {
-        statusBadge.innerHTML = OBS_CHECK_SVG + ' Recorded';
+      const nowRecorded =
+        isAlreadyRecorded(
+          goal.student_code,
+          goal.code,
+          date
+        );
+
+      const refreshedState =
+        getGoalDueState(
+          goal,
+          date
+        );
+
+      if (
+        refreshedState.state ===
+          'excused'
+      ) {
+        statusBadge.textContent =
+          refreshedState.disposition ===
+            'absent'
+            ? 'Absent'
+            : 'No Opportunity';
+      } else if (nowRecorded) {
+        statusBadge.innerHTML =
+          OBS_CHECK_SVG +
+          ' Recorded';
       }
-      // Only auto-collapse for session_outcome; multi-input categories stay expanded
-      if (nowRecorded && category === 'session_outcome') {
+
+      // Preserve the existing session-outcome collapse behavior.
+      if (
+        nowRecorded &&
+        category ===
+          'session_outcome'
+      ) {
         applyExpanded(false);
       }
+
       onAnyRecorded();
     };
+
+    renderObservationDispositionActions(
+      goal,
+      body,
+      saveIndicatorEl,
+      onSave,
+      date,
+      state
+    );
 
     if (category === 'session_outcome') {
       renderSessionOutcomeForm(goal, body, saveIndicatorEl, isRecorded, onSave, date);
@@ -1830,6 +2127,108 @@
   // ─── Load Recorded Entries from Supabase (per date) ─────────────────────
   // Populates recordedByDate so the tray accurately reflects recorded state
   // even if localStorage was cleared or the teacher is on a different device.
+    async function loadObservationDispositionsForWeek(date) {
+    if (allGoals.length === 0) return;
+    if (date == null) date = todayStr();
+    if (!isInstructionalDay(date)) return;
+
+    const { weekStart, weekEnd } = getWeekBounds(date);
+
+    for (
+      let cursor = weekStart;
+      cursor <= weekEnd;
+      cursor = addDays(cursor, 1)
+    ) {
+      observationDispositionsByDate.set(cursor, new Map());
+    }
+
+    const query = new URLSearchParams({
+      start_date: weekStart,
+      end_date: weekEnd,
+    });
+
+    try {
+      const response = await fetch(
+        '/.netlify/functions/teacher-sync-observations?' + query.toString(),
+        {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' },
+        }
+      );
+
+      if (!response.ok) {
+        console.warn(
+          '[tc-observation] Could not load persisted dispositions:',
+          response.status
+        );
+        return;
+      }
+
+      const payload = await response.json();
+      const rows = Array.isArray(payload?.entries) ? payload.entries : [];
+      let count = 0;
+
+      for (const row of rows) {
+        if (
+          !row ||
+          typeof row.student_code !== 'string' ||
+          typeof row.goal_code !== 'string' ||
+          typeof row.date !== 'string' ||
+          !['absent', 'no_opportunity'].includes(row.disposition) ||
+          typeof row.classPeriod !== 'string' ||
+          !row.classPeriod.trim()
+        ) {
+          continue;
+        }
+
+        const goal = allGoals.find(candidate =>
+          candidate.student_code === row.student_code &&
+          candidate.code === row.goal_code
+        );
+        if (!goal) continue;
+
+        setObservationDispositionEntry({
+          studentCode: row.student_code,
+          goalCode: row.goal_code,
+          date: row.date,
+          classPeriod: row.classPeriod,
+          kind: 'disposition',
+          disposition: row.disposition,
+        });
+
+        if (!recordedByDate.has(row.date)) {
+          recordedByDate.set(row.date, new Set());
+        }
+        recordedByDate
+          .get(row.date)
+          .add(observationIdentityKey(
+            row.student_code,
+            row.goal_code,
+            row.date
+          ));
+
+        count++;
+      }
+
+      if (count > 0) {
+        console.log(
+          '[tc-observation] Pre-loaded',
+          count,
+          'observation disposition row(s) for week',
+          weekStart,
+          'through',
+          weekEnd
+        );
+      }
+    } catch (err) {
+      console.warn(
+        '[tc-observation] Could not load persisted observation dispositions:',
+        err.message
+      );
+    }
+  }
+
   async function loadRecordedEntriesForWeek(date) {
     if (allGoals.length === 0) return;
     if (date == null) date = todayStr();
@@ -1969,6 +2368,9 @@
         err.message
       );
     }
+    await loadObservationDispositionsForWeek(
+      date
+    );
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────
@@ -1987,6 +2389,7 @@
     if (todayRecordedDate !== null && todayStr() !== todayRecordedDate) {
       recordedByDate.delete(todayRecordedDate);
       observationEvidenceByDate.delete(todayRecordedDate);
+      observationDispositionsByDate.delete(todayRecordedDate);
       todayRecordedDate = null;
       console.log('[tc-observation] New day detected — cleared stale recorded set');
     }

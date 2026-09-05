@@ -166,6 +166,153 @@ async function verifyGoal(goalId, studentId) {
   return status !== 'closed' && status !== 'archived';
 }
 
+function parseObservationDispositionNotes(notes) {
+  const match = text(notes).match(
+    /^\[obs:disposition:(absent|no_opportunity)\|period=([^\]]+)\]/
+  );
+  if (!match) return null;
+
+  try {
+    const classPeriod = decodeURIComponent(match[2]).trim();
+    return classPeriod
+      ? { disposition: match[1], classPeriod }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveStudentById(studentId) {
+  const params = new URLSearchParams({
+    select: 'id,code,class_id,active,archived_at',
+    id: `eq.${studentId}`,
+    active: 'eq.true',
+    archived_at: 'is.null',
+    limit: '1',
+  });
+
+  return (await rest('students', 'GET', params))[0] || null;
+}
+
+async function resolveDispositionGoal(goalId, studentId) {
+  const params = new URLSearchParams({
+    select: 'id,code,status',
+    id: `eq.${goalId}`,
+    student_id: `eq.${studentId}`,
+    active: 'eq.true',
+    limit: '1',
+  });
+
+  const goal = (await rest('goals', 'GET', params))[0] || null;
+  if (!goal) return null;
+
+  const goalStatus = text(goal.status, 50).toLowerCase();
+  return goalStatus === 'closed' || goalStatus === 'archived'
+    ? null
+    : goal;
+}
+
+function daysBetweenDateKeys(startDate, endDate) {
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${endDate}T00:00:00Z`);
+
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  return Math.round((end - start) / 86400000);
+}
+
+async function readObservationDispositions(event, authResult, requestId) {
+  const query = event.queryStringParameters || {};
+  const startDate = text(query.start_date, 10);
+  const endDate = text(query.end_date, 10);
+  const span = daysBetweenDateKeys(startDate, endDate);
+
+  if (
+    !DATE_PATTERN.test(startDate) ||
+    !DATE_PATTERN.test(endDate) ||
+    span === null ||
+    span < 0 ||
+    span > 6
+  ) {
+    return jsonResponse(
+      event,
+      400,
+      {
+        ok: false,
+        error:
+          'start_date and end_date must define one Monday-Sunday-sized date range',
+      },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  }
+
+  const teacherId = text(authResult?.user?.teacherId, 100);
+  if (!UUID_PATTERN.test(teacherId)) {
+    return jsonResponse(
+      event,
+      401,
+      { ok: false, error: 'Teacher identity unavailable' },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  }
+
+  const params = new URLSearchParams({
+    select: 'id,student_id,goal_id,date,percent,via,notes',
+    percent: 'is.null',
+    via: 'eq.observation_tray',
+    order: 'date.asc',
+    limit: '500',
+  });
+  params.append('date', `gte.${startDate}`);
+  params.append('date', `lte.${endDate}`);
+
+  const rows = await rest('progress_entries', 'GET', params);
+  const entries = [];
+
+  for (const row of rows) {
+    const parsed = parseObservationDispositionNotes(row?.notes);
+
+    if (
+      !parsed ||
+      !UUID_PATTERN.test(row?.student_id || '') ||
+      !UUID_PATTERN.test(row?.goal_id || '') ||
+      !DATE_PATTERN.test(row?.date || '')
+    ) {
+      continue;
+    }
+
+    const student = await resolveStudentById(row.student_id);
+    if (!student?.id || !student.code) continue;
+
+    const authorizedClassId = await resolveAuthorizedClass(
+      student.id,
+      teacherId,
+      student.class_id
+    );
+    if (!authorizedClassId) continue;
+
+    const goal = await resolveDispositionGoal(row.goal_id, student.id);
+    if (!goal?.id || !goal.code) continue;
+
+    entries.push({
+      student_code: normalizeCode(student.code),
+      goal_code: text(goal.code, 100),
+      date: row.date,
+      disposition: parsed.disposition,
+      classPeriod: parsed.classPeriod,
+    });
+  }
+
+  return jsonResponse(
+    event,
+    200,
+    { ok: true, entries },
+    { 'Cache-Control': 'no-store' },
+    requestId
+  );
+}
+
 async function canonicalObservationRows(studentId, goalId, date) {
   const params = new URLSearchParams({
     select: 'id,notes',
@@ -337,12 +484,15 @@ exports.handler = async event => {
   if (event.httpMethod === 'OPTIONS') {
     return handleCorsPreFlight(
       event,
-      ['POST', 'OPTIONS'],
+      ['GET', 'POST', 'OPTIONS'],
       ['Content-Type']
     );
   }
 
-  if (event.httpMethod !== 'POST') {
+  if (
+    event.httpMethod !== 'GET' &&
+    event.httpMethod !== 'POST'
+  ) {
     return jsonResponse(
       event,
       405,
@@ -370,6 +520,40 @@ exports.handler = async event => {
       { 'Cache-Control': 'no-store' },
       requestId
     );
+  }
+
+  if (event.httpMethod === 'GET') {
+    const authResult = requireTeacher(event, SESSION_SECRET);
+
+    if (!authResult.ok) {
+      return jsonResponse(
+        event,
+        401,
+        { ok: false, error: 'Unauthorized' },
+        { 'Cache-Control': 'no-store' },
+        requestId
+      );
+    }
+
+    try {
+      return await readObservationDispositions(
+        event,
+        authResult,
+        requestId
+      );
+    } catch (err) {
+      console.error(
+        `[teacher-sync-observations] [${requestId}] Disposition read failed:`,
+        err.message
+      );
+      return jsonResponse(
+        event,
+        500,
+        { ok: false, error: 'Failed to read observation dispositions' },
+        { 'Cache-Control': 'no-store' },
+        requestId
+      );
+    }
   }
 
   const sizeCheck = validateBodySize(event.body, 1);
