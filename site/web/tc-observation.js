@@ -2503,6 +2503,12 @@ const persistedDispositions = [];
     let selectedDate =
       todayStr();
 
+    let selectedBrowseMode =
+      'student';
+
+    let selectedStudentCode =
+      '';
+
     let selectedPeriod =
       '';
 
@@ -2520,7 +2526,11 @@ const persistedDispositions = [];
         'obs-center-styles';
 
       centerStyle.textContent = `
-        .obs-center { display:grid; gap:16px; }
+        .obs-center {
+          display:grid;
+          gap:16px;
+        }
+
         .obs-center-head {
           display:flex;
           gap:16px;
@@ -2528,23 +2538,31 @@ const persistedDispositions = [];
           align-items:flex-start;
           flex-wrap:wrap;
         }
-        .obs-center-head h1 { margin:0 0 6px; }
+
+        .obs-center-head h1 {
+          margin:0 0 6px;
+        }
+
         .obs-center-head p {
           margin:0;
           color:rgba(240,255,250,.72);
-          max-width:70ch;
+          max-width:74ch;
         }
-        .obs-center-controls {
+
+        .obs-center-controls,
+        .obs-center-selectors {
           display:grid;
-          grid-template-columns:minmax(280px,1fr) minmax(240px,.7fr);
+          grid-template-columns:minmax(280px,1fr) minmax(260px,1fr);
           gap:12px;
         }
+
         .obs-center-panel {
           border:1px solid rgba(255,255,255,.09);
           background:rgba(0,0,0,.20);
           border-radius:16px;
           padding:14px;
         }
+
         .obs-center-label {
           display:block;
           font-size:12px;
@@ -2552,14 +2570,31 @@ const persistedDispositions = [];
           color:rgba(240,255,250,.72);
           margin-bottom:7px;
         }
-        .obs-center-date-row {
+
+        .obs-center-date-row,
+        .obs-center-mode-row {
           display:flex;
           gap:8px;
           align-items:center;
           flex-wrap:wrap;
         }
+
+        .obs-center-mode-btn.active {
+          border-color:rgba(34,197,94,.72);
+          background:rgba(34,197,94,.12);
+          color:#dcfce7;
+        }
+
+        .obs-center-student-grid {
+          display:grid;
+          grid-template-columns:minmax(160px,.7fr) minmax(220px,1fr);
+          gap:8px;
+        }
+
         .obs-center-date-input,
-        .obs-center-period-select {
+        .obs-center-period-select,
+        .obs-center-student-search,
+        .obs-center-student-select {
           min-height:42px;
           padding:8px 11px;
           border-radius:10px;
@@ -2567,15 +2602,27 @@ const persistedDispositions = [];
           background:rgba(0,0,0,.30);
           color:inherit;
         }
-        .obs-center-period-select {
+
+        .obs-center-period-select,
+        .obs-center-student-search,
+        .obs-center-student-select {
           width:100%;
         }
+
+        .obs-center-helper {
+          margin-top:7px;
+          font-size:12px;
+          line-height:1.45;
+          color:rgba(240,255,250,.56);
+        }
+
         .obs-center-status {
           min-height:22px;
           font-size:13px;
           color:#22c55e;
           font-weight:700;
         }
+
         .obs-center-hint {
           padding:18px;
           border:1px dashed rgba(255,255,255,.15);
@@ -2583,13 +2630,54 @@ const persistedDispositions = [];
           color:rgba(240,255,250,.68);
           background:rgba(255,255,255,.025);
         }
+
         .obs-center-period-heading {
           margin:0 0 12px;
           font-size:17px;
           font-weight:800;
         }
+
+        .obs-center-goal-period {
+          margin:0 0 9px;
+          padding:7px 9px;
+          border-radius:9px;
+          background:rgba(59,130,246,.08);
+          border:1px solid rgba(59,130,246,.16);
+          color:rgba(219,234,254,.85);
+          font-size:12px;
+          line-height:1.4;
+        }
+
+        .obs-center-goal-description {
+          margin:0 0 9px;
+          padding:0 2px;
+          color:rgba(240,255,250,.82);
+          font-size:13px;
+          line-height:1.5;
+        }
+
+        .obs-center-goal-locked {
+          padding:14px;
+          margin-bottom:10px;
+        }
+
+        .obs-center-goal-locked-title {
+          font-size:14px;
+          font-weight:750;
+          margin-bottom:8px;
+        }
+
+        .obs-center-goal-lock {
+          margin-top:8px;
+          color:rgba(240,255,250,.66);
+          font-size:13px;
+          line-height:1.45;
+        }
+
         @media (max-width: 760px) {
-          .obs-center-controls {
+          .obs-center-controls,
+          .obs-center-selectors,
+          .obs-center-student-grid {
             grid-template-columns:1fr;
           }
         }
@@ -2600,7 +2688,8 @@ const persistedDispositions = [];
       );
     }
 
-    app.innerHTML = '';
+    app.innerHTML =
+      '';
 
     const center =
       document.createElement(
@@ -2625,7 +2714,7 @@ const persistedDispositions = [];
 
     intro.innerHTML =
       '<h1>Observation Center</h1>' +
-      '<p>Enter observational data in real time or return to a previous instructional day. ' +
+      '<p>Choose a student or class period, then enter observational data for today or a previous instructional day. ' +
       'The selected date is the observation date; the save time is only the audit timestamp.</p>';
 
     const saveStatus =
@@ -2752,6 +2841,165 @@ const persistedDispositions = [];
       dateRow
     );
 
+    const modePanel =
+      document.createElement(
+        'div'
+      );
+
+    modePanel.className =
+      'obs-center-panel';
+
+    const modeLabel =
+      document.createElement(
+        'div'
+      );
+
+    modeLabel.className =
+      'obs-center-label';
+
+    modeLabel.textContent =
+      'Find observations by';
+
+    const modeRow =
+      document.createElement(
+        'div'
+      );
+
+    modeRow.className =
+      'obs-center-mode-row';
+
+    const studentModeBtn =
+      document.createElement(
+        'button'
+      );
+
+    studentModeBtn.type =
+      'button';
+
+    studentModeBtn.className =
+      'tc-btn obs-center-mode-btn obs-center-mode-student';
+
+    studentModeBtn.textContent =
+      'Student';
+
+    const periodModeBtn =
+      document.createElement(
+        'button'
+      );
+
+    periodModeBtn.type =
+      'button';
+
+    periodModeBtn.className =
+      'tc-btn obs-center-mode-btn obs-center-mode-period';
+
+    periodModeBtn.textContent =
+      'Class Period';
+
+    modeRow.append(
+      studentModeBtn,
+      periodModeBtn
+    );
+
+    modePanel.append(
+      modeLabel,
+      modeRow
+    );
+
+    controls.append(
+      datePanel,
+      modePanel
+    );
+
+    const selectors =
+      document.createElement(
+        'div'
+      );
+
+    selectors.className =
+      'obs-center-selectors';
+
+    const studentPanel =
+      document.createElement(
+        'div'
+      );
+
+    studentPanel.className =
+      'obs-center-panel';
+
+    const studentLabel =
+      document.createElement(
+        'label'
+      );
+
+    studentLabel.className =
+      'obs-center-label';
+
+    studentLabel.textContent =
+      'Student';
+
+    const studentGrid =
+      document.createElement(
+        'div'
+      );
+
+    studentGrid.className =
+      'obs-center-student-grid';
+
+    const studentSearchInput =
+      document.createElement(
+        'input'
+      );
+
+    studentSearchInput.type =
+      'search';
+
+    studentSearchInput.className =
+      'obs-center-student-search';
+
+    studentSearchInput.placeholder =
+      'Search students…';
+
+    studentSearchInput.setAttribute(
+      'aria-label',
+      'Search students'
+    );
+
+    const studentSelect =
+      document.createElement(
+        'select'
+      );
+
+    studentSelect.className =
+      'obs-center-student-select';
+
+    studentSelect.setAttribute(
+      'aria-label',
+      'Select student'
+    );
+
+    studentGrid.append(
+      studentSearchInput,
+      studentSelect
+    );
+
+    const studentHelp =
+      document.createElement(
+        'div'
+      );
+
+    studentHelp.className =
+      'obs-center-helper';
+
+    studentHelp.textContent =
+      'Only students with configured observational goals are shown.';
+
+    studentPanel.append(
+      studentLabel,
+      studentGrid,
+      studentHelp
+    );
+
     const periodPanel =
       document.createElement(
         'div'
@@ -2768,9 +3016,6 @@ const persistedDispositions = [];
     periodLabel.className =
       'obs-center-label';
 
-    periodLabel.textContent =
-      'Class period';
-
     const periodSelect =
       document.createElement(
         'select'
@@ -2784,13 +3029,22 @@ const persistedDispositions = [];
       'Select class period'
     );
 
+    const periodHelp =
+      document.createElement(
+        'div'
+      );
+
+    periodHelp.className =
+      'obs-center-helper';
+
     periodPanel.append(
       periodLabel,
-      periodSelect
+      periodSelect,
+      periodHelp
     );
 
-    controls.append(
-      datePanel,
+    selectors.append(
+      studentPanel,
       periodPanel
     );
 
@@ -2805,6 +3059,7 @@ const persistedDispositions = [];
     center.append(
       head,
       controls,
+      selectors,
       workspace
     );
 
@@ -2837,10 +3092,89 @@ const persistedDispositions = [];
         );
       };
 
+    const getObservationCenterStudents =
+      () => {
+        const goalStudentCodes =
+          new Set(
+            allGoals
+              .map(goal =>
+                goal.student_code
+              )
+              .filter(Boolean)
+          );
+
+        const rosterByCode =
+          new Map(
+            allStudents.map(
+              student => [
+                student.code,
+                student,
+              ]
+            )
+          );
+
+        return [
+          ...goalStudentCodes,
+        ]
+          .map(code =>
+            rosterByCode.get(code) || {
+              code,
+              name: code,
+            }
+          )
+          .sort(
+            (left, right) =>
+              String(
+                left.name ||
+                left.code ||
+                ''
+              ).localeCompare(
+                String(
+                  right.name ||
+                  right.code ||
+                  ''
+                ),
+                undefined,
+                {
+                  numeric: true,
+                  sensitivity: 'base',
+                }
+              )
+          );
+      };
+
     const configuredPeriods =
       () => {
         const periods =
           new Set();
+
+        for (
+          const period
+          of (
+            currentSchedule?.periods ||
+            []
+          )
+        ) {
+          if (
+            period?.isPlanning === true ||
+            period?.planning === true
+          ) {
+            continue;
+          }
+
+          const label =
+            (
+              period?.label ||
+              period?.name ||
+              ''
+            ).trim();
+
+          if (label) {
+            periods.add(
+              label
+            );
+          }
+        }
 
         for (
           const goal
@@ -2872,6 +3206,120 @@ const persistedDispositions = [];
         );
       };
 
+    const refreshStudentOptions =
+      () => {
+        const students =
+          getObservationCenterStudents();
+
+        const query =
+          studentSearchInput.value
+            .trim()
+            .toLowerCase();
+
+        let visibleStudents =
+          query
+            ? students.filter(student => {
+                const haystack =
+                  `${
+                    student.name ||
+                    ''
+                  } ${
+                    student.code ||
+                    ''
+                  }`.toLowerCase();
+
+                return haystack.includes(
+                  query
+                );
+              })
+            : [
+                ...students,
+              ];
+
+        if (
+          selectedStudentCode &&
+          !visibleStudents.some(
+            student =>
+              student.code ===
+              selectedStudentCode
+          )
+        ) {
+          const selectedStudent =
+            students.find(
+              student =>
+                student.code ===
+                selectedStudentCode
+            );
+
+          if (selectedStudent) {
+            visibleStudents = [
+              selectedStudent,
+              ...visibleStudents,
+            ];
+          }
+        }
+
+        studentSelect.innerHTML =
+          '';
+
+        const placeholder =
+          document.createElement(
+            'option'
+          );
+
+        placeholder.value =
+          '';
+
+        placeholder.textContent =
+          students.length === 0
+            ? 'No students with observation goals'
+            : 'Select a student…';
+
+        studentSelect.appendChild(
+          placeholder
+        );
+
+        for (
+          const student
+          of visibleStudents
+        ) {
+          const option =
+            document.createElement(
+              'option'
+            );
+
+          option.value =
+            student.code;
+
+          option.textContent =
+            `${student.name || student.code} (${student.code})`;
+
+          studentSelect.appendChild(
+            option
+          );
+        }
+
+        if (
+          selectedStudentCode &&
+          students.some(
+            student =>
+              student.code ===
+              selectedStudentCode
+          )
+        ) {
+          studentSelect.value =
+            selectedStudentCode;
+        } else {
+          selectedStudentCode =
+            '';
+
+          studentSelect.value =
+            '';
+        }
+
+        return students;
+      };
+
     const refreshPeriodOptions =
       () => {
         const periods =
@@ -2888,10 +3336,27 @@ const persistedDispositions = [];
         placeholder.value =
           '';
 
-        placeholder.textContent =
-          selectedDate !== todayStr()
-            ? 'Select the class period for this historical observation…'
-            : 'Select class period…';
+        if (
+          periods.length === 0
+        ) {
+          placeholder.textContent =
+            'No class periods available';
+        } else if (
+          selectedBrowseMode ===
+          'period'
+        ) {
+          placeholder.textContent =
+            'Select class period…';
+        } else if (
+          selectedDate !==
+          todayStr()
+        ) {
+          placeholder.textContent =
+            'Select the observation period for this historical entry…';
+        } else {
+          placeholder.textContent =
+            'Select observation period…';
+        }
 
         periodSelect.appendChild(
           placeholder
@@ -2918,7 +3383,8 @@ const persistedDispositions = [];
         }
 
         if (
-          selectedDate === todayStr() &&
+          selectedDate ===
+            todayStr() &&
           !selectedPeriod
         ) {
           const livePeriod =
@@ -2954,6 +3420,62 @@ const persistedDispositions = [];
         return periods;
       };
 
+    const syncBrowseControls =
+      () => {
+        const studentMode =
+          selectedBrowseMode ===
+          'student';
+
+        studentModeBtn.classList.toggle(
+          'active',
+          studentMode
+        );
+
+        studentModeBtn.setAttribute(
+          'aria-pressed',
+          String(
+            studentMode
+          )
+        );
+
+        periodModeBtn.classList.toggle(
+          'active',
+          !studentMode
+        );
+
+        periodModeBtn.setAttribute(
+          'aria-pressed',
+          String(
+            !studentMode
+          )
+        );
+
+        studentPanel.hidden =
+          !studentMode;
+
+        periodLabel.textContent =
+          studentMode
+            ? 'Observation period'
+            : 'Class period';
+
+        if (
+          studentMode &&
+          selectedDate !==
+            todayStr()
+        ) {
+          periodHelp.textContent =
+            'Required for historical capture. Choose the actual period when the observation occurred.';
+        } else if (
+          studentMode
+        ) {
+          periodHelp.textContent =
+            'Today, the current bell-schedule period is selected automatically when available.';
+        } else {
+          periodHelp.textContent =
+            'Choose a period to see students whose observational goals are configured for that period.';
+        }
+      };
+
     const showHint =
       message => {
         workspace.innerHTML =
@@ -2975,6 +3497,193 @@ const persistedDispositions = [];
         );
       };
 
+    const buildGoalPeriodMeta =
+      (
+        goal,
+        recordingPeriod = null
+      ) => {
+        const periods =
+          getConfiguredClassPeriods(
+            goal
+          );
+
+        const meta =
+          document.createElement(
+            'div'
+          );
+
+        meta.className =
+          'obs-center-goal-period';
+
+        const configuredText =
+          periods.length > 0
+            ? `Configured period${periods.length === 1 ? '' : 's'}: ${periods.join(', ')}`
+            : 'Configured period: not set';
+
+        meta.textContent =
+          recordingPeriod
+            ? `${configuredText} · Recording as: ${recordingPeriod}`
+            : configuredText;
+
+        return meta;
+      };
+
+    const buildLockedHistoricalGoal =
+      goal => {
+        const card =
+          document.createElement(
+            'div'
+          );
+
+        card.className =
+          'obs-goal-card obs-center-goal-locked';
+
+        const title =
+          document.createElement(
+            'div'
+          );
+
+        title.className =
+          'obs-center-goal-locked-title';
+
+        title.textContent =
+          goal.desc ||
+          goal.goal_text ||
+          goal.code ||
+          'Observation goal';
+
+        const lock =
+          document.createElement(
+            'div'
+          );
+
+        lock.className =
+          'obs-center-goal-lock';
+
+        lock.textContent =
+          'Choose the observation period above before entering historical data. OBS-7 will not guess historical period identity.';
+
+        card.append(
+          buildGoalPeriodMeta(
+            goal
+          ),
+          title,
+          lock
+        );
+
+        return card;
+      };
+
+    const renderStudentSection =
+      (
+        studentCode,
+        goals,
+        periodOverride = null
+      ) => {
+        const student =
+          allStudents.find(
+            candidate =>
+              candidate.code ===
+              studentCode
+          );
+
+        const section =
+          document.createElement(
+            'section'
+          );
+
+        section.className =
+          'obs-student-section';
+
+        const name =
+          document.createElement(
+            'div'
+          );
+
+        name.className =
+          'obs-student-name';
+
+        name.textContent =
+          `${student?.name || studentCode} (${studentCode})`;
+
+        section.appendChild(
+          name
+        );
+
+        for (
+          const goal
+          of goals
+        ) {
+          if (
+            selectedDate !==
+              todayStr() &&
+            !periodOverride
+          ) {
+            section.appendChild(
+              buildLockedHistoricalGoal(
+                goal
+              )
+            );
+
+            continue;
+          }
+
+          const dueState =
+            getGoalDueState(
+              goal,
+              selectedDate,
+              periodOverride
+            );
+
+          const card =
+            buildGoalCard(
+              goal,
+              selectedDate,
+              () => {
+                saveStatus.textContent =
+                  `Saved for ${formatCenterDate(selectedDate)}`;
+
+                updateTrayBadge();
+              },
+              dueState,
+              periodOverride
+            );
+
+          const goalDescription =
+            document.createElement(
+              'div'
+            );
+
+          goalDescription.className =
+            'obs-center-goal-description';
+
+          goalDescription.textContent =
+            goal.desc ||
+            goal.goal_text ||
+            goal.code ||
+            'Observation goal';
+
+          card.insertBefore(
+            goalDescription,
+            card.firstChild
+          );
+
+          card.insertBefore(
+            buildGoalPeriodMeta(
+              goal,
+              periodOverride
+            ),
+            card.firstChild
+          );
+
+          section.appendChild(
+            card
+          );
+        }
+
+        return section;
+      };
+
     const renderWorkspace =
       async () => {
         const dayStatus =
@@ -2993,7 +3702,11 @@ const persistedDispositions = [];
         dateInput.value =
           selectedDate;
 
+        const observationStudents =
+          refreshStudentOptions();
+
         refreshPeriodOptions();
+        syncBrowseControls();
 
         if (
           !dayStatus.instructional
@@ -3001,6 +3714,7 @@ const persistedDispositions = [];
           showHint(
             `No observations scheduled — ${dayStatus.label}.`
           );
+
           return;
         }
 
@@ -3009,19 +3723,107 @@ const persistedDispositions = [];
         );
 
         if (
-          selectedDate !== todayStr() &&
-          !selectedPeriod
+          selectedBrowseMode ===
+            'student'
         ) {
-          showHint(
-            'Select a class period before entering historical observational data. The period is required so the entry is attached to the correct observation opportunity.'
+          if (
+            observationStudents.length ===
+            0
+          ) {
+            if (
+              selectedDate !==
+                todayStr() &&
+              !selectedPeriod
+            ) {
+              showHint(
+                'Select a class period before entering historical observational data. The period is required so the entry is attached to the correct observation opportunity.'
+              );
+            } else {
+              showHint(
+                'No students with observation goals are available.'
+              );
+            }
+
+            return;
+          }
+
+          if (
+            !selectedStudentCode
+          ) {
+            showHint(
+              'Select a student to view observational goals for this date.'
+            );
+
+            return;
+          }
+
+          const matchingGoals =
+            allGoals.filter(
+              goal =>
+                goal.student_code ===
+                selectedStudentCode
+            );
+
+          workspace.innerHTML =
+            '';
+
+          const student =
+            allStudents.find(
+              candidate =>
+                candidate.code ===
+                selectedStudentCode
+            );
+
+          const heading =
+            document.createElement(
+              'div'
+            );
+
+          heading.className =
+            'obs-center-period-heading';
+
+          heading.textContent =
+            `${student?.name || selectedStudentCode} — ${formatCenterDate(selectedDate)}`;
+
+          workspace.appendChild(
+            heading
           );
+
+          if (
+            matchingGoals.length ===
+            0
+          ) {
+            showHint(
+              'No observation goals are configured for this student.'
+            );
+
+            return;
+          }
+
+          workspace.appendChild(
+            renderStudentSection(
+              selectedStudentCode,
+              matchingGoals,
+              selectedPeriod ||
+                null
+            )
+          );
+
           return;
         }
 
-        if (!selectedPeriod) {
+        if (
+          selectedBrowseMode ===
+            'period' &&
+          !selectedPeriod
+        ) {
           showHint(
-            'Select a class period to begin entering observational data.'
+            selectedDate !==
+              todayStr()
+              ? 'Select a class period before entering historical observational data. The period is required so the entry is attached to the correct observation opportunity.'
+              : 'Select a class period to view observational goals.'
           );
+
           return;
         }
 
@@ -3054,23 +3856,15 @@ const persistedDispositions = [];
         );
 
         if (
-          matchingGoals.length === 0
+          matchingGoals.length ===
+          0
         ) {
           showHint(
             `No observation goals are configured for ${selectedPeriod}.`
           );
+
           return;
         }
-
-        const studentMap =
-          new Map(
-            allStudents.map(
-              student => [
-                student.code,
-                student,
-              ]
-            )
-          );
 
         const grouped =
           new Map();
@@ -3099,14 +3893,6 @@ const persistedDispositions = [];
             );
         }
 
-        const onAnyRecorded =
-          () => {
-            saveStatus.textContent =
-              `Saved for ${formatCenterDate(selectedDate)}`;
-
-            updateTrayBadge();
-          };
-
         for (
           const [
             studentCode,
@@ -3114,58 +3900,12 @@ const persistedDispositions = [];
           ]
           of grouped
         ) {
-          const section =
-            document.createElement(
-              'section'
-            );
-
-          section.className =
-            'obs-student-section';
-
-          const student =
-            studentMap.get(
-              studentCode
-            );
-
-          const name =
-            document.createElement(
-              'div'
-            );
-
-          name.className =
-            'obs-student-name';
-
-          name.textContent =
-            `${student?.name || studentCode} (${studentCode})`;
-
-          section.appendChild(
-            name
-          );
-
-          for (
-            const goal
-            of goals
-          ) {
-            const dueState =
-              getGoalDueState(
-                goal,
-                selectedDate,
-                selectedPeriod
-              );
-
-            section.appendChild(
-              buildGoalCard(
-                goal,
-                selectedDate,
-                onAnyRecorded,
-                dueState,
-                selectedPeriod
-              )
-            );
-          }
-
           workspace.appendChild(
-            section
+            renderStudentSection(
+              studentCode,
+              goals,
+              selectedPeriod
+            )
           );
         }
       };
@@ -3176,7 +3916,8 @@ const persistedDispositions = [];
           typeof newDate !==
             'string' ||
           !newDate ||
-          newDate > todayStr()
+          newDate >
+            todayStr()
         ) {
           return;
         }
@@ -3189,19 +3930,37 @@ const persistedDispositions = [];
 
         /*
          * Historical entry must be deliberate.
-         * Do not silently infer a period from today's live schedule
-         * or from the goal's first configured period.
+         * Reset the period whenever the date changes.
+         * Student selection may remain so the teacher can
+         * review the same student across multiple dates.
          */
+        selectedPeriod =
+          '';
+
+        await renderWorkspace();
+      };
+
+    const setBrowseMode =
+      async mode => {
         if (
-          selectedDate !==
-          todayStr()
+          ![
+            'student',
+            'period',
+          ].includes(
+            mode
+          )
         ) {
-          selectedPeriod =
-            '';
-        } else {
-          selectedPeriod =
-            '';
+          return;
         }
+
+        selectedBrowseMode =
+          mode;
+
+        selectedPeriod =
+          '';
+
+        saveStatus.textContent =
+          '';
 
         await renderWorkspace();
       };
@@ -3265,6 +4024,44 @@ const persistedDispositions = [];
         navigateTo(
           newDate
         );
+      }
+    );
+
+    studentModeBtn.addEventListener(
+      'click',
+      () => {
+        setBrowseMode(
+          'student'
+        );
+      }
+    );
+
+    periodModeBtn.addEventListener(
+      'click',
+      () => {
+        setBrowseMode(
+          'period'
+        );
+      }
+    );
+
+    studentSearchInput.addEventListener(
+      'input',
+      () => {
+        refreshStudentOptions();
+      }
+    );
+
+    studentSelect.addEventListener(
+      'change',
+      async () => {
+        selectedStudentCode =
+          studentSelect.value;
+
+        saveStatus.textContent =
+          '';
+
+        await renderWorkspace();
       }
     );
 

@@ -86,7 +86,7 @@ test(
 
     assert.match(
       page,
-      /\/web\/tc-observation\.js\?v=20260905-obs6-center/
+      /\/web\/tc-observation\.js\?v=[^"']+/
     );
 
     assert.doesNotMatch(
@@ -217,8 +217,8 @@ test(
     const center =
       section(
         observation,
-        'function initObservationCenter',
-        22000
+        'const renderWorkspace',
+        8000
       );
 
     assert.match(
@@ -245,8 +245,8 @@ test(
     const center =
       section(
         observation,
-        'function initObservationCenter',
-        22000
+        'const renderWorkspace',
+        8000
       );
 
     assert.match(
