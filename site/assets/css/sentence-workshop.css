@@ -1,29 +1,13 @@
-.sw-launch {
-  margin: 16px 0;
-  padding: 22px;
-  border: 1px solid #63877b;
-  border-radius: 20px;
-  background: #14322b;
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  justify-content: space-between;
-}
-.sw-launch h2 {
-  margin: 4px 0 8px;
-  font-size: 1.45rem;
-}
-.sw-launch p {
-  margin: 0;
-  max-width: 65ch;
+#sentenceWorkshopStatus {
   color: #d5e9e2;
   line-height: 1.5;
 }
-.sw-launch button {
-  flex-shrink: 0;
+#sentenceWorkshopStatus:empty {
+  display: none;
 }
-.sw-launch #sentenceWorkshopStatus {
-  margin-top: 8px;
+#openSentenceWorkshopBtn:focus-visible {
+  outline: 3px solid #9effdd;
+  outline-offset: 3px;
 }
 .sw .sw-header {
   display: flex;
@@ -128,8 +112,7 @@
   outline: 3px solid #087469;
   outline-offset: 3px;
 }
-.sw-header .sw-button:focus-visible,
-.sw-launch .sw-button:focus-visible {
+.sw-header .sw-button:focus-visible {
   outline-color: #9effdd;
 }
 .sw .sw-model-grid {
@@ -205,16 +188,21 @@
   min-width: 44px;
   height: 48px;
   margin: 0 3px;
-  border: 1px dashed #719986;
+  border: 1px solid transparent;
+  border-bottom-color: #719986;
   background: transparent;
   color: #24513f;
-  border-radius: 8px;
+  border-radius: 0;
   cursor: pointer;
+}
+.sw .sw-gap:hover:not(:disabled) {
+  background: #d5eade;
 }
 .sw .sw-gap[aria-pressed="true"] {
   background: #165e4c;
   color: #fff;
-  border-style: solid;
+  border-color: #165e4c;
+  border-radius: 8px;
 }
 .sw .sw-word[aria-pressed="true"] {
   border-bottom: 3px solid #165e4c;
@@ -284,7 +272,6 @@
   display: block;
 }
 @media (max-width: 720px) {
-  .sw-launch,
   .sw .sw-header {
     flex-direction: column;
     align-items: flex-start;

@@ -3,7 +3,7 @@ import {
   initialEdit,
   solution,
   editedText,
-} from "./sentence-workshop-content.js?v=20260906-sw1";
+} from "./sentence-workshop-content.js?v=20260906-sw2";
 import {
   createSession,
   start,
@@ -14,7 +14,7 @@ import {
   finish,
   recordFor,
   summary,
-} from "./sentence-workshop-engine.js?v=20260906-sw1";
+} from "./sentence-workshop-engine.js?v=20260906-sw2";
 
 const escape = (value) =>
   String(value).replace(
@@ -27,6 +27,8 @@ const phaseNames = {
   check: "Try a fresh example",
   apply: "Use it in a message",
 };
+const taskDirections =
+  "Read the message first. Choose the blank space after the first complete sentence to place a period. Choose a word to change its first letter between capital and lowercase. The final period is already there.";
 
 export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
   let session = createSession();
@@ -88,7 +90,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
         return `<span class="sw-piece"><button type="button" class="sw-word ${focusBoundary && (index === 0 || index === item.boundary) ? "sw-cue" : ""}"
         data-sw-word="${index}" aria-label="${escape(text)}, ${capital ? "capital" : "lowercase"} first letter. Change capitalization" aria-pressed="${capital}" ${locked ? "disabled" : ""}>${escape(text)}</button>${
           gap < item.words.length
-            ? `<button type="button" class="sw-gap ${focusBoundary && gap === item.boundary ? "sw-cue" : ""}" data-sw-gap="${gap}" aria-label="Period after ${escape(word)}" aria-pressed="${draft.period === gap}" ${locked ? "disabled" : ""}>${draft.period === gap ? "." : "+"}</button>`
+            ? `<button type="button" class="sw-gap ${focusBoundary && gap === item.boundary ? "sw-cue" : ""}" data-sw-gap="${gap}" aria-label="Period after ${escape(word)}" aria-pressed="${draft.period === gap}" ${locked ? "disabled" : ""}>${draft.period === gap ? "." : ""}</button>`
             : '<span class="sw-final-period" aria-label="period">.</span>'
         }</span>`;
       })
@@ -102,7 +104,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
     return `<section class="sw-card" data-sw-item="${item.id}"><p class="sw-eyebrow">${phaseNames[session.phase]}</p>
       <h2 id="sw-heading" tabindex="-1">Make two clear sentences.</h2>
       ${item.context ? `<p class="sw-context">${escape(item.context)}</p>` : ""}
-      <p id="sw-directions">Choose a <strong>+</strong> gap to place one period. Choose a word to change its first letter between capital and lowercase. The final period is already there.</p>
+      <p id="sw-directions">${taskDirections}</p>
       <div class="sw-actions">${button("read-task", "Read directions")}${button("read-edit", "Read my sentences")}${button("read-marks", "Read marks & capitals")}</div>
       <div class="sw-editor" role="group" aria-label="Sentence editor" aria-describedby="sw-directions">${pieces}</div>
       <div class="sw-preview"><span class="sw-muted">Your sentences</span><p>${escape(editedText(item, draft))}</p></div>
@@ -175,8 +177,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       const item = session.item;
       const texts = {
         "read-models": `Find the complete messages. ${models[0]} Bring your notebook is a complete direction. Class starts at nine is another complete message. Begin each sentence with a capital. ${models[1]} A capital P begins Practice.`,
-        "read-task":
-          "Make two clear sentences. Choose a plus gap to place one period. Choose a word to change its first letter between capital and lowercase. The final period is already there.",
+        "read-task": `Make two clear sentences. ${taskDirections}`,
         "read-edit": item ? editedText(item, draft) : "",
         "read-marks": item
           ? item.words

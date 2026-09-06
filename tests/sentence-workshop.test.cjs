@@ -2,8 +2,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw1");
-const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw1");
+const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw2");
+const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw2");
 
 test("reviewed content has distinct examples and the intended sentence boundaries", async () => {
   const { allItems, models, solution, editedText } = await content;
@@ -216,8 +216,8 @@ test("both launch copies match and lesson assets use one version", () => {
     "utf8"
   );
   assert.equal(donor, mirror);
-  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw1/);
-  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw1/);
+  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw2/);
+  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw2/);
   for (const filename of [
     "sentence-workshop.js",
     "sentence-workshop-engine.js",

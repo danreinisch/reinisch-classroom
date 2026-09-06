@@ -2,7 +2,7 @@
 
 Sentence Workshop adds guided editing to Language Arts Skill Builder. Its initial targets are placing a period between two complete sentences and capitalizing their beginnings. Directions explicitly require two sentences; the final period is supplied. It does not evaluate unrestricted writing or cover all punctuation rules.
 
-The menu opens the module on demand. Both Skill Builder entry copies use the same versioned assets. The workshop has its own visit-only state and results, separate from the existing 140-question score. Returning to the menu preserves workshop work; End/clear, reload, departure, and restored history clear it. The existing Viewer and dialog contracts are reused.
+A regular-sized card in the existing skill grid opens the module on demand. Both Skill Builder entry copies use the same versioned assets. The workshop has its own visit-only state and results, separate from the existing 140-question score. Returning to the menu preserves workshop work; End/clear, reload, departure, and restored history clear it. The existing Viewer and dialog contracts are reused.
 
 ## Instructional content and routing
 
@@ -20,7 +20,7 @@ These are provisional routing rules for a classroom pilot. They are not a valida
 
 ## Accessibility and implementation
 
-Words and punctuation gaps use native buttons with keyboard operation and pressed-state labels. Feedback is text with a live-region announcement and focus placement. Hints have textual explanations as well as outlines. Narration can name punctuation and initial-letter case. Missing speech displays a text notice and preserves the task. No native alert or confirm is needed in the workshop.
+Words and punctuation gaps use native buttons with keyboard operation and pressed-state labels. Empty gaps are quiet underlined spaces, with no plus signs or dashed boxes; directions ask students to read the message before placing a period. The spaces keep their 44-pixel touch targets and visible keyboard focus. Feedback is text with a live-region announcement and focus placement. Hints have textual explanations as well as outlines. Narration can name punctuation and initial-letter case. Missing speech displays a text notice and preserves the task. No native alert or confirm is needed in the workshop.
 
 The browser adapter owns rendering and draft edits; the engine owns attempts, instructional help, and finite routing. A generation guard prevents a late module load from reopening a cleared visit. Navigation to another skill during loading also takes precedence. CSS is scoped to the workshop and launcher.
 
@@ -34,6 +34,7 @@ Teacher review should check whether students understand the controls, use the he
 
 ## Local review results
 
+- Teacher review follow-up: removed the plus signs and boxed gap cues, and moved the launcher into one regular skill-grid card. Re-ran all 27 workshop/Skill Builder unit checks and all 10 workshop Chromium tests successfully. Browser checks include equal card sizing, unchanged card count after returning, blank-space keyboard/touch access, and matching visible/spoken directions. Reviewed updated menu and editor screenshots.
 - 11 workshop unit checks, 16 existing Skill Builder checks, and 5 Activities contract checks passed.
 - 14 Chromium tests passed: 10 workshop checks and 4 existing Activities/Viewer regressions. A temporary local configuration used Python's static server at a loopback URL because the repository's `serve` process could not enumerate network interfaces in this runtime. The repository Playwright configuration was unchanged.
 - Full ESLint passed with zero errors (157 existing warnings); the asset-path scan passed. New files were formatted and changed inline JavaScript was syntax-checked.

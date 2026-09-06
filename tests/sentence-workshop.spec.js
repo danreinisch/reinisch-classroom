@@ -70,8 +70,28 @@ test("complete independent route, accurate summary, and resume without adding qu
 }, testInfo) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await open(page);
+  await page.goto(donor);
+  await expect(page.locator("#skillMenuGrid > .skill-card")).toHaveCount(9);
+  const workshopCard = page.locator("#skillMenuGrid > #openSentenceWorkshopBtn");
+  const nextCard = page.locator('[data-open-skill="verbs"]');
+  const workshopBox = await workshopCard.boundingBox();
+  const nextBox = await nextCard.boundingBox();
+  expect(Math.abs(workshopBox.width - nextBox.width)).toBeLessThan(1);
+  expect(workshopBox.y).toBe(nextBox.y);
+  expect(workshopBox.height).toBe(nextBox.height);
+  await page
+    .locator("#skillMenuGrid")
+    .screenshot({ path: testInfo.outputPath("sentence-workshop-menu.png") });
+  await workshopCard.click();
+  await page.locator('[data-sw-action="start"]').click();
+  expect(await page.locator("[data-sw-gap]").allTextContents()).toEqual(Array(6).fill(""));
   await page.locator('[data-sw-action="read-task"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toBe(
+    `Make two clear sentences. ${await page.locator("#sw-directions").textContent()}`
+  );
+  await page
+    .locator("#sentenceWorkshop")
+    .screenshot({ path: testInfo.outputPath("sentence-workshop-blank-spaces.png") });
   await page.locator('[data-sw-action="read-marks"]').click();
   expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("Capital P");
   for (let i = 0; i < 6; i++) {
@@ -89,6 +109,7 @@ test("complete independent route, accurate summary, and resume without adding qu
   await expect(page.locator("#scoreNumMenu")).toHaveText("0");
   await expect(page.locator("#scoreTotalMenu")).toHaveText("140");
   await expect(page.locator("#openSentenceWorkshopBtn")).toBeFocused();
+  await expect(page.locator("#skillMenuGrid > .skill-card")).toHaveCount(9);
   await page.locator("#openSentenceWorkshopBtn").click();
   await expect(page.locator(".sw-stats strong").first()).toHaveText("2 / 2");
   expect(errors).toEqual([]);
@@ -100,9 +121,15 @@ test("partial feedback, keyboard editing, and supported results work at a narrow
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
   const gap = page.locator('[data-sw-gap="3"]');
+  await expect(gap).toHaveAccessibleName("Period after lunch");
+  await expect(gap).toBeEmpty();
+  const gapBox = await gap.boundingBox();
+  expect(gapBox.width).toBeGreaterThanOrEqual(44);
+  expect(gapBox.height).toBeGreaterThanOrEqual(44);
   await gap.focus();
   await gap.press("Enter");
   await expect(page.locator('[data-sw-gap="3"]')).toBeFocused();
+  await expect(page.locator('[data-sw-gap="3"]')).toHaveText(".");
   await page.locator('[data-sw-action="check"]').click();
   await expect(page.locator("#sw-feedback")).toContainText("period is in the right place");
   await expect(page.locator("#sw-feedback")).toBeFocused();

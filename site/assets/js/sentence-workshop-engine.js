@@ -1,4 +1,4 @@
-import { bank, checkEdit } from "./sentence-workshop-content.js?v=20260906-sw1";
+import { bank, checkEdit } from "./sentence-workshop-content.js?v=20260906-sw2";
 
 // Visit-only routing. First submissions and demonstrations are never overwritten.
 export function createSession() {

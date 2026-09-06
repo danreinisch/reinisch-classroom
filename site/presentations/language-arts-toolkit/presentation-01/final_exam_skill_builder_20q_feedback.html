@@ -51,7 +51,7 @@
   outline:3px solid #075b51;outline-offset:3px;
 }
 </style>
-<link rel="stylesheet" href="/assets/css/sentence-workshop.css?v=20260906-sw1" />
+<link rel="stylesheet" href="/assets/css/sentence-workshop.css?v=20260906-sw2" />
 </head>
 <body>
 <main id="mainMenu" class="screen">
@@ -75,13 +75,14 @@
     <button class="btn secondary" id="overallFeedbackBtn">Read overall progress</button>
     <button class="btn warning" id="resetBtn">End / clear practice</button>
   </section>
-  <section class="sw-launch" aria-labelledby="sentenceWorkshopLabel">
-    <div><p class="sw-eyebrow">Interactive lesson</p><h2 id="sentenceWorkshopLabel">Sentence Workshop</h2>
-      <p>Edit sentences, get a useful hint, and try your skills in a real message. Practice periods and sentence capitals.</p>
-      <p id="sentenceWorkshopStatus" role="status"></p></div>
-    <button type="button" class="sw-button" id="openSentenceWorkshopBtn">Open Sentence Workshop →</button>
+  <section class="skill-grid" id="skillMenuGrid" aria-label="Skill menu">
+    <button type="button" class="skill-card" id="openSentenceWorkshopBtn" aria-label="Open Sentence Workshop" aria-describedby="sentenceWorkshopStatus">
+      <span><span class="skill-icon" aria-hidden="true">📝</span><h2>Sentence Workshop</h2>
+      <p>Practice periods and sentence capitals. Edit a message, use hints, and try a fresh example.</p></span>
+      <span class="skill-status">Interactive lesson</span>
+    </button>
   </section>
-  <section class="skill-grid" id="skillMenuGrid" aria-label="Skill menu"></section>
+  <p id="sentenceWorkshopStatus" role="status"></p>
   <p class="menu-note">Practice lasts for this open visit. Leaving or reloading clears answers and writing. Copy any writing you want to keep. Choose End / clear practice before sharing this device.</p>
 </main>
 
@@ -159,7 +160,7 @@ function updateProgress(){const total=allItems();const earned=totalCorrect();con
 function speak(text){if(!('speechSynthesis' in window)){alert('Text-to-speech is not available in this browser.');return}window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(text));u.rate=.92;u.pitch=1;window.speechSynthesis.speak(u)}
 function stopSpeech(){if(window.speechSynthesis&&typeof window.speechSynthesis.cancel==='function')window.speechSynthesis.cancel()}
 function getQuestionText(skill,q,idx){return skill.title+'. Question '+(idx+1)+' of '+skill.questions.length+'. Skill reminder: '+q.teaching+' Question: '+q.prompt+' Choices: '+q.choices.map((c,i)=>String.fromCharCode(65+i)+'. '+c.text).join('. ')}
-function renderMenu(){updateProgress();let html='';moduleData.forEach(skill=>{const done=correctCountForSkill(skill);const complete=done===skill.questions.length;html+=`<button class="skill-card ${complete?'done':''}" data-open-skill="${skill.id}"><span><span class="skill-icon">${skill.icon}</span><h2>${escapeHTML(skill.title)}</h2><p>${escapeHTML(skill.blurb)}</p></span><span class="skill-status">${escapeHTML(statusForSkill(skill))}</span></button>`});html+=`<button class="skill-card" data-open-skill="writing"><span><span class="skill-icon">${writingPrompt.icon}</span><h2>${escapeHTML(writingPrompt.title)}</h2><p>${escapeHTML(writingPrompt.blurb)}</p></span><span class="skill-status">Paragraph practice</span></button>`;skillMenuGrid.innerHTML=html;document.querySelectorAll('[data-open-skill]').forEach(btn=>btn.addEventListener('click',()=>openSkill(btn.getAttribute('data-open-skill'))))}
+function renderMenu(){updateProgress();let html='';moduleData.forEach(skill=>{const done=correctCountForSkill(skill);const complete=done===skill.questions.length;html+=`<button class="skill-card ${complete?'done':''}" data-open-skill="${skill.id}"><span><span class="skill-icon">${skill.icon}</span><h2>${escapeHTML(skill.title)}</h2><p>${escapeHTML(skill.blurb)}</p></span><span class="skill-status">${escapeHTML(statusForSkill(skill))}</span></button>`});html+=`<button class="skill-card" data-open-skill="writing"><span><span class="skill-icon">${writingPrompt.icon}</span><h2>${escapeHTML(writingPrompt.title)}</h2><p>${escapeHTML(writingPrompt.blurb)}</p></span><span class="skill-status">Paragraph practice</span></button>`;skillMenuGrid.querySelectorAll('[data-open-skill]').forEach(card=>card.remove());skillMenuGrid.insertAdjacentHTML('beforeend',html);document.querySelectorAll('[data-open-skill]').forEach(btn=>btn.addEventListener('click',()=>openSkill(btn.getAttribute('data-open-skill'))))}
 function openSkill(skillId){currentSkillId=skillId;currentQuestionIndex=firstQuestionIndex(skillId);currentMode='question';mainMenu.classList.add('hidden');practiceScreen.classList.remove('hidden');window.scrollTo({top:0,behavior:'auto'});renderPractice()}
 function firstQuestionIndex(skillId){if(skillId==='writing')return 0;const skill=moduleData.find(s=>s.id===skillId);if(!skill)return 0;const firstUnfinished=skill.questions.findIndex((_,idx)=>!isCorrect(skillId,idx));return firstUnfinished>=0?firstUnfinished:0}
 function backToMenu(){stopSpeech();document.getElementById('sentenceWorkshop').classList.add('hidden');practiceScreen.classList.add('hidden');mainMenu.classList.remove('hidden');renderMenu();window.scrollTo({top:0,behavior:'auto'})}
@@ -264,7 +265,7 @@ async function openSentenceWorkshop(){
   button.disabled=true;
   status.textContent='Opening Sentence Workshop…';
   try{
-    const {mountSentenceWorkshop}=await import('/assets/js/sentence-workshop.js?v=20260906-sw1');
+    const {mountSentenceWorkshop}=await import('/assets/js/sentence-workshop.js?v=20260906-sw2');
     if(generation!==sentenceWorkshopGeneration)return;
     if(mainMenu.classList.contains('hidden')){status.textContent='';return;}
     const root=document.getElementById('sentenceWorkshop');
