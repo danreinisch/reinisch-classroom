@@ -79,6 +79,14 @@
 .sw .sw-bottom {
   margin-top: 20px;
 }
+.sw .sw-task-nav {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #cedcd3;
+}
+.sw .sw-task-nav p {
+  margin: 0 0 10px;
+}
 .sw-button {
   font: inherit;
   font-size: 0.94rem;

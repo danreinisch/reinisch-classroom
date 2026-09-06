@@ -1,5 +1,5 @@
-import { ROWS, COLS, LEVELS, emptyGame, drop, replay, legalColumns, hintFor, snapshot, parseGameCode, GameStore, playerName } from './core.js?v=20260906-four-1';
-import { EXERCISES, exerciseSolved, solutions } from './exercises.js?v=20260906-four-1';
+import { ROWS, COLS, LEVELS, emptyGame, drop, replay, legalColumns, hintFor, snapshot, parseGameCode, GameStore, playerName } from './core.js?v=20260906-four-2';
+import { EXERCISES, exerciseSolved, solutions } from './exercises.js?v=20260906-four-2';
 
 const $ = id => document.getElementById(id);
 let storage, session;
@@ -23,6 +23,50 @@ let focusColumn = 3, hintColumn = null;
 let worker = null, workerTimer = null, jobId = 0, thinking = false, computerPaused = false;
 let setupRevision = null, setupCanSave = false, incoming = null, transferMode = 'copy';
 const columnButtons = [];
+
+// Older Safari has no native modal dialog. Keep the same controls, focus
+// containment, Escape behavior, and close events without changing other pages.
+function prepareDialogs() {
+  const dialogs = [...document.querySelectorAll('dialog')];
+  if (dialogs.every(dialog => typeof dialog.showModal === 'function' && typeof dialog.close === 'function')) return;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'dialog-backdrop'; backdrop.hidden = true; document.body.append(backdrop);
+  const app = document.querySelector('.game-app');
+  let active = null, previousFocus = null;
+  const controls = () => [...active.querySelectorAll('button, input, select, textarea, a[href], [tabindex]')]
+    .filter(element => !element.disabled && element.tabIndex >= 0 && element.getClientRects().length);
+  const focusFirst = () => (controls()[0] || active).focus();
+  dialogs.forEach(dialog => {
+    dialog.classList.add('dialog-fallback'); dialog.setAttribute('role', 'dialog'); dialog.tabIndex = -1;
+    dialog.showModal = () => {
+      if (active) active.close();
+      previousFocus = document.activeElement; active = dialog;
+      dialog.setAttribute('open', ''); dialog.setAttribute('aria-modal', 'true');
+      backdrop.hidden = false; document.body.classList.add('dialog-fallback-open');
+      focusFirst(); app.setAttribute('aria-hidden', 'true');
+    };
+    dialog.close = () => {
+      if (!dialog.hasAttribute('open')) return;
+      dialog.removeAttribute('open'); dialog.removeAttribute('aria-modal');
+      active = null; backdrop.hidden = true; document.body.classList.remove('dialog-fallback-open');
+      app.removeAttribute('aria-hidden');
+      if (previousFocus?.isConnected) previousFocus.focus();
+      dialog.dispatchEvent(new Event('close'));
+    };
+  });
+  document.addEventListener('focusin', event => { if (active && !active.contains(event.target)) focusFirst(); });
+  document.addEventListener('keydown', event => {
+    if (!active) return;
+    if (event.key === 'Escape') {
+      event.preventDefault(); event.stopPropagation();
+      if (active.dispatchEvent(new Event('cancel', { cancelable: true }))) active.close();
+    } else if (event.key === 'Tab') {
+      const elements = controls(), index = elements.indexOf(document.activeElement);
+      event.preventDefault();
+      (elements[(index + (event.shiftKey ? -1 : 1) + elements.length) % elements.length] || active).focus();
+    }
+  }, true);
+}
 
 function ensureSession() {
   if (locked) return false;
@@ -164,7 +208,7 @@ function maybeComputer() {
     renderBoard(); renderPlayPanel();
   };
   try {
-    worker = new Worker(new URL('./worker.js?v=20260906-four-1', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./worker.js?v=20260906-four-2', import.meta.url));
     thinking = true; computerPaused = false;
     worker.onerror = fail;
     worker.onmessage = event => {
@@ -311,6 +355,7 @@ function openTransfer(mode) {
   renderBoard(); renderPlayPanel(); $('transferDialog').showModal();
 }
 
+prepareDialogs();
 document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => changeView(button.dataset.view)));
 document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => $(button.dataset.close).close()));
 document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('close', () => { if (ensureSession()) { renderBoard(); renderPlayPanel(); maybeComputer(); } }));

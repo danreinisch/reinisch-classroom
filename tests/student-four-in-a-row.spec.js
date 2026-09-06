@@ -232,7 +232,7 @@ test('a malformed computer reply pauses safely and a retry can continue', async 
 
 test('the real worker rejects malformed requests and processes a later valid request', async ({ page }) => {
   const results = await page.evaluate(async () => {
-    const worker = new Worker('/activities/four-in-a-row/worker.js?v=20260906-four-1',{type:'module'});
+    const worker = new Worker('/activities/four-in-a-row/worker.js?v=20260906-four-2');
     const send = data => new Promise((resolve,reject) => { worker.onmessage=e=>resolve(e.data); worker.onerror=e=>reject(new Error(e.message)); worker.postMessage(data); });
     try { return [await send(null),await send({id:3,moves:[-1],level:'learning'}),await send({id:4,moves:[],level:'learning'})]; }
     finally { worker.terminate(); }
@@ -240,4 +240,59 @@ test('the real worker rejects malformed requests and processes a later valid req
   expect(results[0]).toEqual({id:null,error:'The computer paused. Try again.'});
   expect(results[1]).toEqual({id:3,error:'The computer paused. Try again.'});
   expect(results[2].id).toBe(4); expect(results[2].column).toBeGreaterThanOrEqual(0); expect(results[2].column).toBeLessThan(7);
+});
+
+test('older-browser fallbacks keep dialogs, keyboard focus, computer play, and imports usable', async ({ page }) => {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.addInitScript(() => {
+    Object.hasOwn = undefined;
+    HTMLDialogElement.prototype.showModal = undefined; HTMLDialogElement.prototype.close = undefined;
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      constructor(url, settings) {
+        if (settings?.type === 'module') throw new Error('Module workers unavailable');
+        super(url, settings);
+      }
+    };
+  });
+  await page.reload();
+  await page.locator('#newGameBtn').click();
+  await expect(page.locator('#newGameDialog')).toBeVisible();
+  await expect(page.locator('[data-close="newGameDialog"]')).toBeFocused();
+  await page.locator('#startGameBtn').focus(); await page.keyboard.press('Tab');
+  await expect(page.locator('[data-close="newGameDialog"]')).toBeFocused();
+  await page.keyboard.press('Shift+Tab'); await expect(page.locator('#startGameBtn')).toBeFocused();
+  await page.locator('#newGameBtn').evaluate(element => element.focus());
+  await expect(page.locator('[data-close="newGameDialog"]')).toBeFocused();
+  await page.keyboard.press('Escape'); await expect(page.locator('#newGameDialog')).toBeHidden();
+  await expect(page.locator('#newGameBtn')).toBeFocused();
+  await setup(page, 'computer'); await drop(page, 0);
+  await expect(page.locator('#moveCount')).toHaveText('2 of 42 spaces');
+  await page.locator('#settingsBtn').click(); await page.locator('#themeSelect').selectOption('forest');
+  await page.keyboard.press('Escape'); await expect(page.locator('#settingsBtn')).toBeFocused();
+  await openCode(page, '#pasteBtn');
+  await page.locator('#gameCode').fill(JSON.stringify({ version: 1, moves: [3,2,4], ...options }));
+  await page.locator('#transferAction').click(); await page.locator('#startGameBtn').click();
+  expect((await saved(page)).game.moves).toEqual([3,2,4]);
+  await page.reload(); await expect(page.locator('#moveCount')).toHaveText('3 of 42 spaces');
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'forest');
+  expect(errors).toEqual([]);
+});
+
+test('the board stays legible without dynamic viewport units or CSS aspect ratios', async ({ page }) => {
+  await page.route('**/activities/four-in-a-row/game.css*', async route => {
+    const response = await route.fetch();
+    const css = (await response.text()).replace(/[^{};]*100dvh[^;]*;/g, '').replace(/aspect-ratio\s*:[^;]+;/g, '');
+    await route.fulfill({ response, body: css });
+  });
+  await page.reload(); await setup(page);
+  for (const viewport of [{width:375,height:812}, {width:1366,height:768}]) {
+    await page.setViewportSize(viewport);
+    const sizes = await page.locator('.cell').evaluateAll(cells => cells.map(cell => { const box=cell.getBoundingClientRect(); return {width:box.width,height:box.height}; }));
+    expect(sizes).toHaveLength(42);
+    for (const size of sizes) { expect(size.width).toBeGreaterThan(20); expect(Math.abs(size.height-size.width)).toBeLessThan(2); }
+    const box=await page.locator('.board-card').boundingBox(); expect(box.y+box.height).toBeLessThanOrEqual(viewport.height);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await drop(page, 0); await expect(page.locator('#moveCount')).toHaveText('1 of 42 spaces');
 });

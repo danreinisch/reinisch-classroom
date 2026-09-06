@@ -1,4 +1,4 @@
-import { ROWS, COLS, LEVELS, drop, legalColumns, winningColumns, other } from './core.js?v=20260906-four-1';
+import { ROWS, COLS, LEVELS, drop, legalColumns, winningColumns, other } from './core.js?v=20260906-four-2';
 
 const ORDER = [3, 2, 4, 1, 5, 0, 6];
 const WINDOWS = [];
@@ -25,7 +25,7 @@ function evaluate(game) {
 // Iterative search keeps the last fully searched result. Both time and node
 // limits are enforced; a stopped search never replaces a completed result.
 export function chooseMove(game, level = 'friendly', budgetMs = 450, random = Math.random) {
-  if (!Object.hasOwn(LEVELS, level)) throw new Error('Unknown computer level.');
+  if (!Object.prototype.hasOwnProperty.call(LEVELS, level)) throw new Error('Unknown computer level.');
   const legal = ORDER.filter(c => legalColumns(game).includes(c));
   if (!legal.length) return null;
   const wins = winningColumns(game);

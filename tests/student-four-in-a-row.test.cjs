@@ -2,6 +2,8 @@ const { test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
+const { execFileSync } = require('node:child_process');
 
 let emptyGame, drop, replay, legalColumns, winningColumns, forkColumns, hintFor, snapshot, restore, parseGameCode, GameStore, chooseMove, EXERCISES, solutions, exerciseSolved;
 before(async () => {
@@ -10,6 +12,17 @@ before(async () => {
   ({ EXERCISES, solutions, exerciseSolved } = await import('../site/activities/four-in-a-row/exercises.js'));
 });
 const options = { mode: 'local', level: 'friendly', human: 1 };
+
+test('the classic worker matches its sources and runs without newer browser APIs', () => {
+  execFileSync(process.execPath, [path.join(__dirname, '../scripts/build-four-in-a-row-worker.mjs'), '--check']);
+  const replies = [], self = { postMessage: data => replies.push(data) };
+  vm.runInNewContext('Object.hasOwn = undefined;\n' + fs.readFileSync(path.join(__dirname, '../site/activities/four-in-a-row/worker.js'), 'utf8'), { self });
+  self.onmessage({ data: { id: 9, moves: [0,6,1,6,2,5], level: 'challenge' } });
+  assert.equal(replies[0].id, 9); assert.equal(replies[0].column, 3);
+  self.onmessage({ data: { id: 10, moves: [], level: 'toString' } });
+  assert.equal(replies[1].id, 10); assert.equal(replies[1].error, 'The computer paused. Try again.');
+});
+
 const DRAW = [4,0,1,3,5,1,6,0,2,5,6,3,4,3,4,6,6,6,6,0,1,4,1,5,5,4,2,4,1,2,0,0,3,1,3,5,3,2,2,2,0,5];
 function memory() {
   const data = new Map();

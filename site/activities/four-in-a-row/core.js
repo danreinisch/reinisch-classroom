@@ -90,7 +90,7 @@ export function snapshot(game, options) {
 
 export function restore(value) {
   if (!value || value.version !== 1 || !['local', 'computer'].includes(value.mode) ||
-      !Object.hasOwn(LEVELS, value.level) || ![1, 2].includes(value.human)) throw new Error('This is not a supported Four in a Row game.');
+      !Object.prototype.hasOwnProperty.call(LEVELS, value.level) || ![1, 2].includes(value.human)) throw new Error('This is not a supported Four in a Row game.');
   return { game: replay(value.moves), options: { mode: value.mode, level: value.level, human: value.human } };
 }
 

@@ -157,7 +157,7 @@ test("fragment hints and a worked example lead to a matching shorter task", asyn
 });
 
 for (const route of [donor, mirror]) {
-  test(`all three lesson drafts resume and clear together: ${route}`, async ({ page }) => {
+  test(`all four lesson drafts resume and clear together: ${route}`, async ({ page }) => {
     await openRepairs(page, route);
     await page.locator('[data-sw-repair-choice="who"]').click();
     await page.locator('[data-sw-action="lesson-endings"]').click();
@@ -166,31 +166,44 @@ for (const route of [donor, mirror]) {
     await page.locator('[data-sw-action="lesson-boundaries"]').click();
     await page.locator('[data-sw-action="start"]').click();
     await page.locator('[data-sw-gap="3"]').click();
+    await page.locator('[data-sw-action="lesson-commas"]').click();
+    await page.locator('[data-sw-action="start"]').click();
+    await page.locator('[data-sw-comma="2"]').click();
     await page.locator('[data-sw-action="lesson-repairs"]').click();
     await expect(page.locator('[data-sw-repair-choice="who"]')).toHaveAttribute(
       "aria-pressed",
       "true"
     );
+    await page.locator('[data-sw-action="lesson-endings"]').click();
+    await expect(page.locator('[data-sw-ending="?"]')).toHaveAttribute("aria-pressed", "true");
+    await page.locator('[data-sw-action="lesson-boundaries"]').click();
+    await expect(page.locator('[data-sw-gap="3"]')).toHaveAttribute("aria-pressed", "true");
+    await page.locator('[data-sw-action="lesson-commas"]').click();
+    await expect(page.locator('[data-sw-comma="2"]')).toHaveAttribute("aria-pressed", "true");
     await page.locator('[data-sw-action="clear"]').click();
     await page.locator("#cancelClearPracticeBtn").click();
-    await expect(page.locator('[data-sw-repair-choice="who"]')).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
+    await expect(page.locator('[data-sw-comma="2"]')).toHaveAttribute("aria-pressed", "true");
     await page.locator('[data-sw-action="clear"]').click();
     await page.locator("#confirmClearPracticeBtn").click();
     await page.locator("#openSentenceWorkshopBtn").click();
-    for (const lesson of ["boundaries", "endings", "repairs"]) {
+    for (const lesson of ["boundaries", "endings", "repairs", "commas"]) {
       await page.locator(`[data-sw-action="lesson-${lesson}"]`).click();
       await expect(page.locator('[data-sw-action="start"]')).toBeVisible();
       await expect(page.locator("[data-sw-item]")).toHaveCount(0);
     }
     await page.locator('[data-sw-action="start"]').click();
-    await page.locator('[data-sw-repair-choice="who"]').click();
+    await page.locator('[data-sw-comma="2"]').click();
     await page.reload();
     await page.locator("#openSentenceWorkshopBtn").click();
-    await page.locator('[data-sw-action="lesson-repairs"]').click();
+    await page.locator('[data-sw-action="lesson-commas"]').click();
     await expect(page.locator('[data-sw-action="start"]')).toBeVisible();
+    await page.locator('[data-sw-action="start"]').click();
+    await page.locator('[data-sw-comma="2"]').click();
+    await page.evaluate(() =>
+      dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }))
+    );
+    await expect(page.locator("#sentenceWorkshop")).toBeEmpty();
+    await expect(page.locator("#mainMenu")).toBeVisible();
   });
 }
 
@@ -440,6 +453,12 @@ test("Viewer sandbox supports workshop, clear confirmation, and return to Activi
   await builder.locator("#openSentenceWorkshopBtn").click();
   await builder.locator('[data-sw-action="start"]').click();
   await solve(builder);
+  await builder.locator('[data-sw-action="lesson-commas"]').click();
+  await builder.locator('[data-sw-action="start"]').click();
+  await setCommas(builder, [2]);
+  await builder.locator('[data-sw-action="read-marks"]').click();
+  await builder.locator('[data-sw-action="check"]').click();
+  await expect(builder.locator("#sw-feedback")).toContainText("Edit complete");
   await page.screenshot({ path: testInfo.outputPath("sentence-workshop-viewer.png") });
   await builder.locator('[data-sw-action="clear"]').click();
   await expect(builder.locator("#clearPracticeDialog")).toBeVisible();
@@ -706,4 +725,329 @@ test("legacy read controls fail gracefully when speech is partial or throws", as
   await expect(page.locator("#topicBox")).toHaveValue("A synthetic writing draft.");
   expect(errors).toEqual([]);
   expect(dialogs).toEqual([]);
+});
+
+async function openCommas(page, route = donor) {
+  await page.goto(route);
+  await page.locator("#openSentenceWorkshopBtn").click();
+  await page.locator('[data-sw-action="lesson-commas"]').click();
+  await page.locator('[data-sw-action="start"]').click();
+}
+
+async function setCommas(scope, desired) {
+  const gaps = await scope.locator("[data-sw-comma]").evaluateAll((buttons) =>
+    buttons.map((button) => ({
+      gap: Number(button.dataset.swComma),
+      selected: button.getAttribute("aria-pressed") === "true",
+    }))
+  );
+  for (const { gap, selected } of gaps) {
+    if (selected !== desired.includes(gap)) await scope.locator(`[data-sw-comma="${gap}"]`).click();
+  }
+}
+
+async function checkCommas(scope, desired) {
+  await setCommas(scope, desired);
+  await scope.locator('[data-sw-action="check"]').click();
+  await expect(scope.locator("#sw-feedback")).toContainText("Edit complete");
+}
+
+test("comma route accepts both serial styles, removes extras, keeps a correct draft, and reports three fresh types", async ({
+  page,
+}, testInfo) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await openCommas(page);
+  expect(await page.locator("[data-sw-comma]").allTextContents()).toEqual(Array(4).fill(""));
+  await page.locator('[data-sw-action="read-task"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain(
+    await page.locator("#sw-directions").textContent()
+  );
+  await page.locator('[data-sw-action="read-edit"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toBe("Pack socks shirts and shoes.");
+  await page.locator('[data-sw-action="read-marks"]').click();
+  await expect(page.locator("#sw-feedback")).toBeEmpty();
+  await expect(page.locator('[data-sw-comma][aria-pressed="true"]')).toHaveCount(0);
+  const route = [
+    ["practice-1", [2, 3]],
+    ["practice-2", [3]],
+    ["practice-3", []],
+    ["check-1", [2]],
+    ["check-2", [5, 8]],
+    ["check-3", []],
+    ["apply-1", [3, 4]],
+    ["apply-2", [5]],
+    ["apply-3", []],
+  ];
+  for (const [id, gaps] of route) {
+    await expect(page.locator("[data-sw-item]")).toHaveAttribute("data-sw-item", `commas-${id}`);
+    if (id === "check-3")
+      await expect(page.locator(".sw-preview p")).toHaveText(
+        "We need paper clips and sticky notes."
+      );
+    await checkCommas(page, gaps);
+    await page.locator('[data-sw-action="read-edit"]').click();
+    expect((await page.evaluate(() => window.swSpoken)).at(-1)).toBe(
+      await page.locator(".sw-preview p").textContent()
+    );
+    if (id === "practice-1") {
+      await page.locator('[data-sw-action="read-marks"]').click();
+      const spoken = (await page.evaluate(() => window.swSpoken)).at(-1);
+      expect(spoken.match(/comma/g)).toHaveLength(2);
+      expect(spoken).toContain("period");
+      await page.locator('[data-sw-action="stop"]').click();
+      expect(await page.evaluate(() => window.swCancelled)).toBeGreaterThan(0);
+    }
+    if (id === "practice-2") {
+      await expect(page.locator(".sw-preview p")).toHaveText(
+        "Bring blue folders, spare pencils and blank paper."
+      );
+      await expect(page.locator("#sw-feedback")).toContainText("without the final Oxford comma");
+      await page
+        .locator("#sentenceWorkshop")
+        .screenshot({ path: testInfo.outputPath("commas-grouped-desktop.png") });
+    }
+    await page.locator('[data-sw-action="next"]').click();
+  }
+  await expect(page.locator(".sw-stats strong").first()).toHaveText("3 / 3");
+  await expect(page.locator(".sw-card")).toContainText("covered 3 of 3 list types");
+  await expect(page.locator(".sw-card")).toContainText("You attempted 9 tasks");
+  await expect(page.locator(".sw-card")).toContainText(
+    "Message edits correct on the first try without hints: 3 / 3"
+  );
+  await page.locator('[data-sw-action="read-report"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("3 of 3 list types");
+  await page.locator('[data-sw-action="lesson-repairs"]').click();
+  await page.locator('[data-sw-action="lesson-commas"]').click();
+  await expect(page.locator(".sw-stats strong").first()).toHaveText("3 / 3");
+  await page.locator('.sw-card [data-sw-action="menu"]').click();
+  await expect(page.locator("#scoreNumMenu")).toHaveText("0");
+  await expect(page.locator("#scoreTotalMenu")).toHaveText("140");
+  await expect(page.locator("#skillMenuGrid > .skill-card")).toHaveCount(9);
+  expect(errors).toEqual([]);
+});
+
+test("comma feedback identifies a split item and preserves correction history", async ({
+  page,
+}) => {
+  await openCommas(page);
+  await checkCommas(page, [2]);
+  await page.locator('[data-sw-action="next"]').click();
+  await setCommas(page, [2]);
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText("“blue folders” is one item");
+  await expect(page.locator("#sw-feedback")).toBeFocused();
+  await page.locator('[data-sw-action="read-feedback"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain(
+    "keep those words together"
+  );
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText("Change your edit");
+  await setCommas(page, [3, 5]);
+  await expect(page.locator("#sw-feedback")).toBeEmpty();
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText("Edit complete");
+  await page.locator('[data-sw-action="finish"]').click();
+  await expect(page.locator(".sw-stats strong").nth(1)).toHaveText("1");
+  await expect(page.locator(".sw-card")).toContainText("No fresh checks were attempted");
+});
+
+test("comma help distinguishes needed and optional marks and offers a matching shorter task", async ({
+  page,
+}, testInfo) => {
+  await openCommas(page);
+  await checkCommas(page, [2]);
+  await page.locator('[data-sw-action="next"]').click();
+  await page.locator('[data-sw-action="hint"]').click();
+  await expect(page.locator(".sw-hint")).toContainText("One item may have several words");
+  await page.locator('[data-sw-action="hint"]').click();
+  await expect(page.locator(".sw-hint")).toContainText("Add a comma after “folders”");
+  await expect(page.locator(".sw-hint")).toContainText("optional final comma");
+  await expect(page.locator(".sw-cue")).toHaveCount(2);
+  await page.locator('[data-sw-action="read-hint"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("“spare pencils”");
+  await page.locator('[data-sw-action="demonstrate"]').click();
+  await page.locator('[data-sw-action="read-solution"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("comma");
+  await page
+    .locator("#sentenceWorkshop")
+    .screenshot({ path: testInfo.outputPath("commas-support.png") });
+  await page.locator('[data-sw-action="next"]').click();
+  await expect(page.locator("[data-sw-item]")).toHaveAttribute("data-sw-item", "commas-simpler-2");
+  await checkCommas(page, [3]);
+  await page.locator('[data-sw-action="finish"]').click();
+  await expect(page.locator(".sw-stats strong").nth(1)).toHaveText("0");
+  await expect(page.locator(".sw-stats strong").nth(2)).toHaveText("1");
+});
+
+test("blank comma controls support keyboard and touch; missing voice leaves the draft intact", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openCommas(page);
+  const gap = page.locator('[data-sw-comma="2"]');
+  await expect(gap).toHaveAccessibleName("Comma after socks, word 2");
+  await expect(gap).toBeEmpty();
+  const box = await gap.boundingBox();
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  await gap.focus();
+  await gap.press("Enter");
+  await expect(gap).toBeFocused();
+  await expect(gap).toHaveText(",");
+  await gap.press("Space");
+  await expect(gap).toBeFocused();
+  await expect(gap).toBeEmpty();
+  await gap.press("Enter");
+  await page.evaluate(() => {
+    window.speechSynthesis = undefined;
+  });
+  await page.locator('[data-sw-action="read-marks"]').click();
+  await expect(page.locator("#sw-voice-note")).toContainText("Voice is unavailable");
+  await expect(page.locator(".sw-preview p")).toHaveText("Pack socks, shirts and shoes.");
+  await expect(page.locator("#sw-feedback")).toBeEmpty();
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toBeFocused();
+  await expect(page.locator("#sw-feedback")).toContainText("Edit complete");
+  await page
+    .locator("#sentenceWorkshop")
+    .screenshot({ path: testInfo.outputPath("commas-mobile.png") });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+for (const lesson of ["boundaries", "endings", "repairs", "commas"]) {
+  test(`retry reopens the same draft after misses and a worked example: ${lesson}`, async ({
+    page,
+  }, testInfo) => {
+    if (lesson === "boundaries") await open(page);
+    else if (lesson === "endings") await openEndings(page);
+    else if (lesson === "repairs") await openRepairs(page);
+    else await openCommas(page);
+    const first = await page.locator("[data-sw-item]").getAttribute("data-sw-item");
+    await expect(page.locator('[data-sw-action="previous"]')).toBeDisabled();
+    await expect(page.locator('[data-sw-action="next"]')).toHaveText("Skip for now →");
+    if (lesson === "endings") await page.locator('[data-sw-ending="."]').click();
+    await page.locator('[data-sw-action="check"]').click();
+    const wrong =
+      lesson === "boundaries"
+        ? '[data-sw-gap="1"]'
+        : lesson === "endings"
+          ? '[data-sw-ending="!"]'
+          : lesson === "repairs"
+            ? '[data-sw-repair-choice="when"]'
+            : '[data-sw-comma="1"]';
+    await page.locator(wrong).click();
+    await page.locator('[data-sw-action="check"]').click();
+    await expect(page.locator('[data-sw-action="check"]')).toBeDisabled();
+    await expect(page.locator('[data-sw-action="next"]')).toBeEnabled();
+    await page.locator('[data-sw-action="retry"]').press("Enter");
+    await expect(page.locator("[data-sw-item]")).toHaveAttribute("data-sw-item", first);
+    await expect(page.locator(wrong)).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator('[data-sw-action="check"]')).toBeEnabled();
+    await page.locator('[data-sw-action="demonstrate"]').click();
+    await expect(page.locator('[data-sw-action="check"]')).toBeDisabled();
+    await page.locator('[data-sw-action="retry"]').click();
+    await expect(page.locator('[data-sw-action="check"]')).toBeEnabled();
+    if (lesson === "boundaries") await solve(page);
+    else if (lesson === "endings") await chooseEnding(page, "?");
+    else if (lesson === "repairs") await repair(page, "who");
+    else await checkCommas(page, [2]);
+    await page.locator('[data-sw-action="next"]').click();
+    const second = await page.locator("[data-sw-item]").getAttribute("data-sw-item");
+    expect(second).toContain("simpler");
+    await page.locator('[data-sw-action="previous"]').click();
+    await expect(page.locator("[data-sw-item]")).toHaveAttribute("data-sw-item", first);
+    await expect(page.locator("#sw-feedback")).toContainText("Edit complete");
+    await expect(page.locator('[data-sw-action="next"]')).toHaveText("Next →");
+    await page.locator('[data-sw-action="next"]').click();
+    await expect(page.locator("[data-sw-item]")).toHaveAttribute("data-sw-item", second);
+    await page.locator('[data-sw-action="finish"]').click();
+    await expect(page.locator(".sw-stats strong").nth(1)).toHaveText("1");
+    await expect(page.locator(".sw-stats strong").nth(2)).toHaveText("1");
+    await expect(page.locator(".sw-card")).toContainText("You attempted 1 tasks");
+    await page.locator('[data-sw-action="previous"]').click();
+    await expect(page.locator("[data-sw-item]")).toHaveAttribute("data-sw-item", second);
+    if (lesson === "commas") {
+      await page.locator('[data-sw-action="previous"]').click();
+      await page
+        .locator("#sentenceWorkshop")
+        .screenshot({ path: testInfo.outputPath("retry-and-navigation.png") });
+    }
+  });
+}
+
+for (const route of [donor, mirror]) {
+  test(`comma task history preserves edits and feedback; clear discards the whole history: ${route}`, async ({
+    page,
+  }) => {
+    await openCommas(page, route);
+    await setCommas(page, [1]);
+    await page.locator('[data-sw-action="check"]').click();
+    const feedback = await page.locator("#sw-feedback").textContent();
+    await page.locator('[data-sw-action="next"]').click();
+    await expect(page.locator("[data-sw-item]")).toHaveAttribute(
+      "data-sw-item",
+      "commas-practice-2"
+    );
+    await setCommas(page, [3, 4]);
+    await page.locator('[data-sw-action="hint"]').click();
+    await page.locator('[data-sw-action="previous"]').press("Space");
+    await expect(page.locator("#sw-feedback")).toHaveText(feedback);
+    await expect(page.locator('[data-sw-comma="1"]')).toHaveAttribute("aria-pressed", "true");
+    await page.locator('[data-sw-action="lesson-endings"]').click();
+    await page.locator('[data-sw-action="lesson-commas"]').click();
+    await expect(page.locator("#sw-feedback")).toHaveText(feedback);
+    await page.locator('[data-sw-action="next"]').click();
+    await expect(page.locator('[data-sw-comma="3"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator('[data-sw-comma="4"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".sw-hint")).toBeVisible();
+    await page.locator('[data-sw-action="finish"]').click();
+    await expect(page.locator(".sw-card")).toContainText("You attempted 1 tasks");
+    await expect(page.locator(".sw-stats strong").first()).toHaveText("0 / 0");
+    await page.locator('[data-sw-action="previous"]').click();
+    await page.locator('[data-sw-action="clear"]').click();
+    await page.locator("#cancelClearPracticeBtn").click();
+    await expect(page.locator('[data-sw-comma="4"]')).toHaveAttribute("aria-pressed", "true");
+    await page.locator('[data-sw-action="clear"]').click();
+    await page.locator("#confirmClearPracticeBtn").click();
+    await page.locator("#openSentenceWorkshopBtn").click();
+    await page.locator('[data-sw-action="lesson-commas"]').click();
+    await page.locator('[data-sw-action="start"]').click();
+    await expect(page.locator('[data-sw-action="previous"]')).toBeDisabled();
+    await expect(page.locator('[data-sw-comma][aria-pressed="true"]')).toHaveCount(0);
+    await expect(page.locator(".sw-task-nav")).toContainText("Task 1 of 1 opened");
+  });
+}
+
+test("comma mistake recovery, navigation, and resumed edits remain usable on mobile", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openCommas(page);
+  await checkCommas(page, [2]);
+  await page.locator('[data-sw-action="next"]').click();
+  for (const gaps of [[3, 4], [4]]) {
+    await setCommas(page, gaps);
+    await page.locator('[data-sw-action="check"]').click();
+  }
+  await page.locator('[data-sw-action="hint"]').click();
+  await page.locator('[data-sw-action="hint"]').click();
+  await page.locator('[data-sw-action="demonstrate"]').click();
+  for (const action of ["previous", "retry", "next"]) {
+    const box = await page.locator(`[data-sw-action="${action}"]`).boundingBox();
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+  }
+  await page
+    .locator(".sw-task-nav")
+    .screenshot({ path: testInfo.outputPath("navigation-mobile.png") });
+  await page.locator('[data-sw-action="retry"]').press("Enter");
+  await expect(page.locator('[data-sw-comma="1"]')).toBeFocused();
+  await checkCommas(page, [3]);
+  await page.locator('[data-sw-action="previous"]').click();
+  await page.locator('[data-sw-action="next"]').click();
+  await expect(page.locator(".sw-preview p")).toHaveText(
+    "Bring blue folders, spare pencils and blank paper."
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

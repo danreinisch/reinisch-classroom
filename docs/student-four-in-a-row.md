@@ -13,7 +13,7 @@ are needed.
   first. Learning takes immediate wins and blocks and otherwise varies its moves.
   Friendly searches up to four plies; Challenge searches up to seven. These are
   bounded practice opponents, with no claim of perfect play or a rating.
-- The computer searches in a module Web Worker. Iterative search retains its
+- The computer searches in a classic Web Worker, including on Safari 14. Iterative search retains its
   last completed result, with a 60,000-node limit and at most a 1,200 ms requested
   search budget. The UI timeout is 4.5 seconds. A failed response offers retry;
   undo, view changes, dialogs, and page hiding cancel the pending request.
@@ -57,6 +57,7 @@ deployment configuration changes.
 ## Verification
 
 ```bash
+node scripts/build-four-in-a-row-worker.mjs --check
 node --test tests/student-four-in-a-row.test.cjs
 npx playwright test tests/student-four-in-a-row.spec.js tests/student-chess.spec.js tests/student-activities-word-search.spec.js
 npx eslint site/activities/four-in-a-row/*.js tests/student-four-in-a-row.test.cjs tests/student-four-in-a-row.spec.js
@@ -73,3 +74,14 @@ answers, styles, keyboard input, Chromebook/mobile layouts, blocked/quota-limite
 storage, corrupt saves, stale tabs, session changes, imports, and worker failure
 or cancellation. Existing Chess, Word Search, and Skill Builder browser cases
 also run as integration checks.
+
+The activity includes fallbacks for browsers without native modal dialogs,
+dynamic viewport units, CSS aspect ratios, or `Object.hasOwn`. Dialog fallback
+coverage checks focus containment, Tab/Shift+Tab, Escape, and restored focus.
+These missing-feature paths are simulated in Chromium; this is not a claim of
+a test run on an actual Safari 14 device.
+
+`worker-entry.js` is the worker source. Run
+`node scripts/build-four-in-a-row-worker.mjs` after editing the rules, engine, or
+entry point to regenerate `worker.js`. The unit suite rejects an outdated
+bundle and executes it without module imports or `Object.hasOwn`.

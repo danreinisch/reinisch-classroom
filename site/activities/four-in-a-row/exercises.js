@@ -1,4 +1,4 @@
-import { replay, drop, legalColumns, winningColumns } from './core.js?v=20260906-four-1';
+import { replay, drop, legalColumns, winningColumns } from './core.js?v=20260906-four-2';
 
 export const EXERCISES = [
   { id: 'first-drop', section: 'learn', kind: 'drop', target: 3, title: 'Make your first drop', tag: 'Start here', moves: [], prompt: 'Drop a piece in column 4, right in the middle. Watch where it lands.', hints: ['Choose a column, not an individual space.', 'A piece falls to the lowest empty space.', 'Choose column 4.'], explanation: 'Pieces fall straight down. You can choose the column, but you cannot leave a piece floating above an empty space.' },
