@@ -1,7 +1,7 @@
-import { bank, checkEdit } from "./sentence-workshop-content.js?v=20260906-sw5";
-import * as endings from "./sentence-workshop-endings.js?v=20260906-sw5";
-import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw5";
-import * as commas from "./sentence-workshop-commas.js?v=20260906-sw5";
+import { bank, checkEdit } from "./sentence-workshop-content.js?v=20260906-sw6";
+import * as endings from "./sentence-workshop-endings.js?v=20260906-sw6";
+import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw6";
+import * as commas from "./sentence-workshop-commas.js?v=20260906-sw6";
 
 function lessonFor(session) {
   if (session.lessonId === "commas")
@@ -25,6 +25,9 @@ export function createSession(lessonId = "boundaries") {
     cursors: { practice: 0, check: 0, simpler: 0, apply: 0 },
     returnPhase: null,
     reason: "",
+    history: [],
+    position: -1,
+    endReason: "",
   };
 }
 
@@ -41,12 +44,21 @@ function selectNext(session, phase) {
       : items[session.cursors[phase]];
   session.cursors[phase]++;
   if (!next) {
-    finish(session, "You have finished the available examples for this visit.");
+    finish(session, "You have finished the available examples for this visit.", true);
     return;
   }
   session.phase = phase;
   session.item = next;
-  session.records[next.id] = { phase, attempts: [], help: 0, demonstrated: false, resolved: false };
+  session.records[next.id] = {
+    phase,
+    attempts: [],
+    help: 0,
+    demonstrated: false,
+    resolved: false,
+    retryAt: 0,
+  };
+  session.history.push({ item: next, phase, returnPhase: session.returnPhase });
+  session.position = session.history.length - 1;
 }
 
 export function start(session) {
@@ -55,6 +67,38 @@ export function start(session) {
 
 export function recordFor(session) {
   return session.item ? session.records[session.item.id] : null;
+}
+
+export function canEdit(session) {
+  const record = recordFor(session);
+  return !!record && !record.resolved && record.attempts.length - record.retryAt < 2;
+}
+
+// Reopen this edit without erasing first submissions or instructional support.
+export function retry(session) {
+  const record = recordFor(session);
+  if (!record || (!record.attempts.length && !record.demonstrated)) return;
+  record.retryAt = record.attempts.length;
+  record.lastEditKey = null;
+  record.resolved = false;
+}
+
+function restore(session, position) {
+  const entry = session.history[position];
+  if (!entry) return;
+  session.position = position;
+  session.item = entry.item;
+  session.phase = entry.phase;
+  session.returnPhase = entry.returnPhase;
+}
+
+export function previous(session) {
+  restore(session, session.phase === "summary" ? session.position : session.position - 1);
+}
+
+// Skipping changes location only; it never submits an answer or creates a mistake.
+export function forward(session) {
+  next(session, { skip: true });
 }
 
 export function hint(session) {
@@ -73,7 +117,7 @@ export function demonstrate(session) {
 
 export function submit(session, edit) {
   const record = recordFor(session);
-  if (!record || record.resolved || record.attempts.length >= 2) return null;
+  if (!canEdit(session)) return null;
   const key =
     session.lessonId === "commas"
       ? JSON.stringify(
@@ -132,15 +176,25 @@ export function summary(session) {
   };
 }
 
-export function finish(session, reason = "You chose to finish this visit.") {
+export function finish(session, reason = "You chose to finish this visit.", complete = false) {
   session.phase = "summary";
   session.item = null;
   session.reason = reason;
+  if (complete) session.endReason = reason;
 }
 
-export function next(session) {
+export function next(session, { skip = false } = {}) {
   const record = recordFor(session);
-  if (!record?.resolved) return;
+  if (!record || (!skip && !record.resolved)) return;
+  // Travel through the existing visit before creating another task. Never reset records.
+  if (session.position < session.history.length - 1) {
+    restore(session, session.position + 1);
+    return;
+  }
+  if (session.endReason) {
+    finish(session, session.endReason, true);
+    return;
+  }
   const phase = session.phase;
   if (phase === "simpler") {
     const destination = session.returnPhase;
@@ -159,7 +213,8 @@ export function next(session) {
             ? "You worked through examples with support. Try another short practice later, or ask for help finding what a sentence needs to be complete."
             : session.lessonId === "endings"
               ? "You worked through examples with support. Try another short practice later, or ask for help deciding whether a message tells, asks, or adds emphasis."
-              : "You worked through examples with support. Try another short practice later, or ask for help finding where a complete sentence ends."
+              : "You worked through examples with support. Try another short practice later, or ask for help finding where a complete sentence ends.",
+        true
       );
       return;
     }
@@ -185,7 +240,7 @@ export function next(session) {
     selectNext(session, ready ? "apply" : "check");
   } else if (phase === "apply") {
     if (session.cursors.apply >= lessonFor(session).applied)
-      finish(session, "You finished the message edits. Review what you practiced below.");
+      finish(session, "You finished the message edits. Review what you practiced below.", true);
     else selectNext(session, "apply");
   }
 }

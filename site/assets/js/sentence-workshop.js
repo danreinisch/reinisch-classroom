@@ -3,21 +3,24 @@ import {
   initialEdit,
   solution,
   editedText,
-} from "./sentence-workshop-content.js?v=20260906-sw5";
+} from "./sentence-workshop-content.js?v=20260906-sw6";
 import {
   createSession,
   start,
   hint,
   demonstrate,
   submit,
-  next,
+  forward,
+  previous,
+  retry,
+  canEdit,
   finish,
   recordFor,
   summary,
-} from "./sentence-workshop-engine.js?v=20260906-sw5";
-import * as endings from "./sentence-workshop-endings.js?v=20260906-sw5";
-import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw5";
-import * as commas from "./sentence-workshop-commas.js?v=20260906-sw5";
+} from "./sentence-workshop-engine.js?v=20260906-sw6";
+import * as endings from "./sentence-workshop-endings.js?v=20260906-sw6";
+import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw6";
+import * as commas from "./sentence-workshop-commas.js?v=20260906-sw6";
 
 const escape = (value) =>
   String(value).replace(
@@ -58,8 +61,23 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
           ? endings
           : { initialEdit, solution, editedText };
 
+  function saveTask() {
+    const record = recordFor(session);
+    if (record) {
+      record.draft = draft;
+      record.feedback = feedback;
+    }
+  }
+
+  function restoreTask() {
+    const record = recordFor(session);
+    draft = record ? (record.draft ?? content().initialEdit(session.item)) : null;
+    feedback = record?.feedback || "";
+  }
+
   function selectLesson(id) {
     if (id === session.lessonId) return;
+    saveTask();
     visits.set(session.lessonId, { session, draft, feedback });
     const saved = visits.get(id) || { session: createSession(id), draft: null, feedback: "" };
     ({ session, draft, feedback } = saved);
@@ -140,7 +158,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
     if (isEndings()) return endingsTask();
     const item = session.item;
     const record = recordFor(session);
-    const locked = record.resolved || record.attempts.length >= 2;
+    const locked = !canEdit(session);
     const focusBoundary = record.help >= 2;
     const pieces = item.words
       .map((word, index) => {
@@ -172,11 +190,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       <div id="sw-feedback" class="sw-feedback ${record.resolved && !record.demonstrated ? "sw-success" : ""}" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${escape(feedback)}</div>
       ${feedback ? button("read-feedback", "Read feedback") : ""}
       ${record.demonstrated ? `<aside class="sw-hint"><strong>Worked example</strong><p class="sw-example">${escape(editedText(item, solution(item)))}</p><p>Place the period after “${escape(item.words[item.boundary - 1])}”. Begin each sentence with a capital. This example is practice with support.</p>${button("read-solution", "Read worked example")}</aside>` : ""}
-      <div class="sw-actions sw-bottom">${button("check", "Check my edit", `data-primary="true" ${locked ? "disabled" : ""}`)}
-      ${button("hint", record.help ? "Show the clue" : "Give me a hint", record.resolved || record.help >= 2 ? "disabled" : "")}
-      ${button("demonstrate", "Show a worked example", record.resolved ? "disabled" : "")}
-      ${record.resolved ? button("next", record.demonstrated && session.phase !== "simpler" && session.phase !== "apply" ? (session.cursors.simpler >= 2 ? "See my summary →" : "Try a shorter task →") : "Continue →", 'data-primary="true"') : ""}</div>
-      ${locked && !record.resolved ? '<p class="sw-muted">Let’s change the approach. Choose “Show a worked example” to see the steps, or finish for now.</p>' : ""}
+      ${taskControls(record)}
       ${session.phase === "check" ? '<p class="sw-muted">This is a new example. Help is always available; your summary will distinguish work with help.</p>' : ""}
       </section>`;
   }
@@ -185,7 +199,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
     const item = session.item;
     const lastSpace = item.text.lastIndexOf(" ");
     const record = recordFor(session);
-    const locked = record.resolved || record.attempts.length >= 2;
+    const locked = !canEdit(session);
     const hintText =
       record.help === 1
         ? "Read the purpose and the whole message. Is the writer asking directly, giving a calm statement or direction, or adding strong feeling?"
@@ -212,18 +226,14 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       <div id="sw-feedback" class="sw-feedback ${record.resolved && !record.demonstrated ? "sw-success" : ""}" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${escape(feedback)}</div>
       ${feedback ? button("read-feedback", "Read feedback") : ""}
       ${record.demonstrated ? `<aside class="sw-hint"><strong>Worked example</strong><p class="sw-example">${escape(endings.editedText(item, endings.solution(item)))}</p><p>${escape(item.clue)}</p>${button("read-solution", "Read worked example")}</aside>` : ""}
-      <div class="sw-actions sw-bottom">${button("check", "Check my edit", `data-primary="true" ${locked ? "disabled" : ""}`)}
-      ${button("hint", record.help ? "Show the clue" : "Give me a hint", record.resolved || record.help >= 2 ? "disabled" : "")}
-      ${button("demonstrate", "Show a worked example", record.resolved ? "disabled" : "")}
-      ${record.resolved ? button("next", record.demonstrated && !["simpler", "apply"].includes(session.phase) ? (session.cursors.simpler >= 2 ? "See my summary →" : "Try a shorter task →") : "Continue →", 'data-primary="true"') : ""}</div>
-      ${locked && !record.resolved ? '<p class="sw-muted">Choose “Show a worked example” to see the steps, or finish for now.</p>' : ""}
+      ${taskControls(record)}
       </section>`;
   }
 
   function repairsTask() {
     const item = session.item;
     const record = recordFor(session);
-    const locked = record.resolved || record.attempts.length >= 2;
+    const locked = !canEdit(session);
     const hintText =
       record.help === 1
         ? item.mode === "join"
@@ -261,18 +271,14 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       <div id="sw-feedback" class="sw-feedback ${record.resolved && !record.demonstrated ? "sw-success" : ""}" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${escape(feedback)}</div>
       ${feedback ? button("read-feedback", "Read feedback") : ""}
       ${record.demonstrated ? `<aside class="sw-hint"><strong>Worked example</strong><p class="sw-example">${escape(repairs.editedText(item, repairs.solution(item)))}</p><p>${escape(item.clue)}</p>${button("read-solution", "Read worked example")}</aside>` : ""}
-      <div class="sw-actions sw-bottom">${button("check", "Check my edit", `data-primary="true" ${locked ? "disabled" : ""}`)}
-      ${button("hint", record.help ? "Show the clue" : "Give me a hint", record.resolved || record.help >= 2 ? "disabled" : "")}
-      ${button("demonstrate", "Show a worked example", record.resolved ? "disabled" : "")}
-      ${record.resolved ? button("next", record.demonstrated && !["simpler", "apply"].includes(session.phase) ? (session.cursors.simpler >= 2 ? "See my summary →" : "Try a shorter task →") : "Continue →", 'data-primary="true"') : ""}</div>
-      ${locked && !record.resolved ? '<p class="sw-muted">Choose “Show a worked example” to see the steps, or finish for now.</p>' : ""}
+      ${taskControls(record)}
       ${session.phase === "check" ? '<p class="sw-muted">This is a new example. Help is always available; your summary distinguishes work with help.</p>' : ""}</section>`;
   }
 
   function commasTask() {
     const item = session.item;
     const record = recordFor(session);
-    const locked = record.resolved || record.attempts.length >= 2;
+    const locked = !canEdit(session);
     const hintText =
       record.help === 1
         ? "Name the separate things or actions. One item may have several words. Look for the word and or the word or before the last item. Count the items before deciding where commas belong."
@@ -299,12 +305,32 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       <div id="sw-feedback" class="sw-feedback ${record.resolved && !record.demonstrated ? "sw-success" : ""}" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${escape(feedback)}</div>
       ${feedback ? button("read-feedback", "Read feedback") : ""}
       ${record.demonstrated ? `<aside class="sw-hint"><strong>Worked example</strong><p class="sw-example">${escape(commas.editedText(item, commas.solution(item)))}</p><p>${escape(commas.clue(item))}</p>${button("read-solution", "Read worked example")}</aside>` : ""}
-      <div class="sw-actions sw-bottom">${button("check", "Check my edit", `data-primary="true" ${locked ? "disabled" : ""}`)}
-      ${button("hint", record.help ? "Show the clue" : "Give me a hint", record.resolved || record.help >= 2 ? "disabled" : "")}
-      ${button("demonstrate", "Show a worked example", record.resolved ? "disabled" : "")}
-      ${record.resolved ? button("next", record.demonstrated && !["simpler", "apply"].includes(session.phase) ? (session.cursors.simpler >= 2 ? "See my summary →" : "Try a shorter task →") : "Continue →", 'data-primary="true"') : ""}</div>
-      ${locked && !record.resolved ? '<p class="sw-muted">Choose “Show a worked example” to see the steps, or finish for now.</p>' : ""}
+      ${taskControls(record)}
       ${session.phase === "check" ? '<p class="sw-muted">This is a new example. Help is always available; your summary distinguishes work with help.</p>' : ""}</section>`;
+  }
+
+  function taskControls(record) {
+    const atFront = session.position === session.history.length - 1;
+    const label = !atFront
+      ? "Next →"
+      : session.endReason
+        ? "See my summary →"
+        : record.demonstrated && !["simpler", "apply"].includes(session.phase)
+          ? session.cursors.simpler >= 2
+            ? "See my summary →"
+            : "Try a shorter task →"
+          : record.resolved
+            ? "Next →"
+            : "Skip for now →";
+    return `<div class="sw-actions sw-bottom">${button("check", "Check my edit", `data-primary="true" ${canEdit(session) ? "" : "disabled"}`)}
+      ${button("hint", record.help ? "Show the clue" : "Give me a hint", record.resolved || record.help >= 2 ? "disabled" : "")}
+      ${button("demonstrate", "Show a worked example", record.resolved || record.demonstrated ? "disabled" : "")}</div>
+      ${!canEdit(session) && !record.resolved ? '<p class="sw-muted">You can try this edit again, use a worked example, or skip for now.</p>' : ""}
+      <nav class="sw-task-nav" aria-label="Task navigation">
+      <p class="sw-muted">Task ${session.position + 1} of ${session.history.length} opened this visit. Previous and Next keep your work.</p>
+      <div class="sw-actions">${button("previous", "← Previous", session.position > 0 ? "" : "disabled")}
+      ${button("retry", "Try this one again", record.attempts.length || record.demonstrated ? "" : "disabled")}
+      ${button("next", label, 'data-primary="true"')}</div></nav>`;
   }
 
   function report() {
@@ -327,7 +353,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       <div><strong>${s.freshIndependent} / ${s.freshAttempted}</strong><span>fresh examples correct on the first try without hints</span></div>
       <div><strong>${s.supported}</strong><span>edits completed after feedback or instructional help</span></div>
       <div><strong>${s.demonstrations}</strong><span>worked examples shown</span></div></div>
-      <p>You attempted ${s.attempted} tasks. Unattempted tasks are not mistakes. Worked examples are not counted as completed edits.</p>
+      <p>You attempted ${s.attempted} tasks. Unattempted tasks are not mistakes. Viewing a worked example alone does not count as a completed edit.</p>
       ${
         s.freshAttempted
           ? isCommas()
@@ -356,7 +382,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       <p>Message edits correct on the first try without hints: ${s.appliedIndependent} / ${s.appliedAttempted} attempted.</p>
       <aside class="sw-hint"><strong>A useful next step</strong><p>${recommendation}</p></aside>
       <p class="sw-muted">This describes this visit’s practice. It does not establish mastery. Read-aloud does not count as an instructional hint. Workshop results are separate from the 140 practice questions.</p>
-      <div class="sw-actions">${button("read-report", "Read my summary")}${button("menu", "Back to Skill Builder", 'data-primary="true"')}</div>
+      <div class="sw-actions">${button("read-report", "Read my summary")}${session.history.length ? button("previous", "Back to last task") : ""}${button("menu", "Back to Skill Builder", 'data-primary="true"')}</div>
       <p class="sw-muted">Returning here keeps this summary. End / clear practice starts a new visit and clears all Skill Builder answers and writing.</p></section>`;
   }
 
@@ -477,13 +503,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
     }
     stopSpeech();
     if (control.dataset.swComma !== undefined) {
-      if (
-        !isCommas() ||
-        !session.item ||
-        recordFor(session).resolved ||
-        recordFor(session).attempts.length >= 2
-      )
-        return;
+      if (!isCommas() || !session.item || !canEdit(session)) return;
       const gap = Number(control.dataset.swComma);
       draft.commas = draft.commas.includes(gap)
         ? draft.commas.filter((value) => value !== gap)
@@ -498,13 +518,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       control.dataset.swJoin !== undefined ||
       action === "repair-keep"
     ) {
-      if (
-        !isRepairs() ||
-        !session.item ||
-        recordFor(session).resolved ||
-        recordFor(session).attempts.length >= 2
-      )
-        return;
+      if (!isRepairs() || !session.item || !canEdit(session)) return;
       let selector;
       if (control.dataset.swRepairChoice !== undefined) {
         const choice = control.dataset.swRepairChoice;
@@ -529,21 +543,15 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       return;
     }
     if (control.dataset.swEnding !== undefined) {
-      if (
-        !isEndings() ||
-        !session.item ||
-        recordFor(session).resolved ||
-        recordFor(session).attempts.length >= 2
-      )
-        return;
+      if (!isEndings() || !session.item || !canEdit(session)) return;
       const mark = control.dataset.swEnding;
       draft.ending = draft.ending === mark ? null : mark;
+      feedback = "";
       render(`[data-sw-ending="${mark}"]`);
       return;
     }
     if (control.dataset.swGap !== undefined || control.dataset.swWord !== undefined) {
-      if (!session.item || recordFor(session).resolved || recordFor(session).attempts.length >= 2)
-        return;
+      if (!session.item || !canEdit(session)) return;
       let selector;
       if (control.dataset.swGap !== undefined) {
         const gap = Number(control.dataset.swGap);
@@ -556,6 +564,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
           : [...draft.capitals, index];
         selector = `[data-sw-word="${index}"]`;
       }
+      feedback = "";
       render(selector);
       return;
     }
@@ -563,7 +572,26 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       start(session);
       draft = content().initialEdit(session.item);
     }
-    if (action === "finish") finish(session);
+    if (action === "finish") {
+      saveTask();
+      finish(session);
+    }
+    if (action === "retry") {
+      retry(session);
+      feedback = "Try this edit again. Your earlier work is kept in your visit summary.";
+      render();
+      root
+        .querySelector(
+          "[data-sw-comma], [data-sw-ending], [data-sw-repair-choice], [data-sw-repair-gap], [data-sw-word]"
+        )
+        ?.focus();
+      return;
+    }
+    if (action === "previous") {
+      saveTask();
+      previous(session);
+      restoreTask();
+    }
     if (action === "hint") {
       hint(session);
       render('[data-sw-action="read-hint"]');
@@ -571,7 +599,8 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
     }
     if (action === "demonstrate") {
       demonstrate(session);
-      feedback = "Here are the steps. Then you can practice on a different example.";
+      feedback =
+        "Here are the steps. Choose Try this one again to edit this message, or move to another task.";
     }
     if (action === "check") {
       const result = submit(session, draft);
@@ -581,9 +610,9 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       return;
     }
     if (action === "next") {
-      next(session);
-      draft = session.item ? content().initialEdit(session.item) : null;
-      feedback = "";
+      saveTask();
+      forward(session);
+      restoreTask();
     }
     render();
   });

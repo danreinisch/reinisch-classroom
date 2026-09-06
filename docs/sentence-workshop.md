@@ -11,9 +11,9 @@ There are two introductory demonstrations and 22 original tasks: eight guided, s
 - Two completed guided tasks lead to fresh checks. Guided success can include corrections.
 - Two fresh first-try successes without instructional hints lead to two message edits.
 - Reminder, boundary/capital highlighting, and worked examples are available. Ordinary read-aloud and the marks/capitals reader do not count as hints.
-- Two distinct unsuccessful submissions on one task lead to a worked-example option. Repeated checks of an unchanged edit do not consume another attempt.
+- Two distinct unsuccessful submissions pause checking and offer an explicit retry, a worked example, or navigation to another task. Repeated checks of an unchanged edit do not consume another attempt.
 - After a demonstration, a shorter task is offered, with at most two prerequisite detours. Persistent difficulty has a clear finish and a help suggestion.
-- Examples do not repeat in the same visit. Exhausting the checks ends the lesson without inventing success.
+- Automatic progression uses unused examples. Students can revisit opened tasks through Previous/Next; this does not make those tasks fresh again. Exhausting the checks ends the lesson without inventing success.
 - Students can finish early. The summary distinguishes independent fresh checks, supported completed edits, and demonstrated answers. An unattempted item is not a mistake.
 
 These are provisional routing rules for a classroom pilot. They are not a validated mastery standard. The content assumes the other words in these selected tasks use lowercase initials; that statement must not be generalized to proper nouns or other capitalization rules.
@@ -62,11 +62,24 @@ For the authored clear lists of three or more items, both versions—with and wi
 
 Three completed guided tasks open fresh checks. Applied work requires fresh first-try success without hints in each of three targets: separating single-word items, keeping multiword items together, and recognizing two-item lists. Repeated success in two targets cannot replace the third. The summary names coverage and support from this visit; the rule is a provisional routing threshold, not a mastery standard. Shorter tasks match the target needing help, at most two detours are offered, and the finite exit and unchanged-submission rules remain in effect. Read-aloud and the comma-position reader do not count as instructional help.
 
-All four lessons preserve their individual draft and summary during a visit and clear together. Both entry pages share the `20260906-sw5` assets; the menu retains one regular-sized workshop card and the separate 140-question score.
+All four lessons preserve their individual draft and summary during a visit and clear together. Both entry pages share the `20260906-sw6` assets; the menu retains one regular-sized workshop card and the separate 140-question score.
 
 Content references: [Purdue OWL list-comma rules](https://owl.purdue.edu/owl/general_writing/punctuation/commas/extended_rules_for_commas.html) and [Chicago Manual of Style on when the serial comma is necessary](https://www.chicagomanualofstyle.org/qanda/data/faq/topics/Commas/faq0077.html). These ground punctuation choices; they do not validate the lesson's routing rules or learning effectiveness.
 
+## Retry and task navigation
+
+Teacher review found that the two-attempt limit and worked-example state could leave students unable to edit the same task again or revisit earlier work. All four lessons now share a visible task-navigation row:
+
+- **Try this one again** reopens the current draft after a submission or worked example. It preserves the original submissions, hint exposure, and demonstrated status. Each explicit retry allows another two distinct checks; unchanged repeated checks within that round still do not consume attempts.
+- **Previous** restores the prior opened task, including its draft, feedback, and hints. **Next** moves forward through already-opened tasks before the engine creates another example. Revisiting does not reset an item or create fresh evidence.
+- **Skip for now** opens another task without submitting the current draft. An unsubmitted task remains unattempted. Guided and fresh-coverage requirements remain in force; skipping every available example leads to a finite summary.
+- Summaries offer **Back to last task**. Early finish can be resumed. A completed/exhausted visit can be reviewed without reopening the automatic routing loop.
+
+Task position describes the examples opened in this visit. Navigation retains shorter-task return paths and the two automatic detour limit. A corrected answer after a worked example counts as an edit completed with support; viewing the example alone does not count as a completed edit. Repeating an already recorded task cannot add a second item or replace its original first try. All task history remains in visit memory and clears with the existing clear/reload/departure behavior.
+
 ## Verification
+
+- Teacher-reported retry/navigation repair: all 30 workshop unit checks and 16 original Skill Builder checks passed. All 33 Chromium tests passed with no failures, skips, or flaky results. New cases cover reopening after two wrong submissions and after a worked example in all four lessons, first-submission preservation, supported corrections, backward/forward draft and feedback restoration, unchanged item counts, shorter-task return paths, skipped/unattempted work, early-finish resume, exhausted-history review, per-lesson switching, clear on both entry routes, and mobile keyboard/touch use. Desktop and mobile navigation screenshots were reviewed. Targeted lint, inline syntax, matching entry copies, and unchanged original DATA checks passed. Main advanced to `062e788b` with a Fractions toolkit repair outside this change's scope.
 
 - Commas in lists: 26 workshop unit checks and 16 original Skill Builder checks passed. All 26 workshop Chromium tests passed with no failures, skips, or flaky results. Browser coverage includes both serial-comma styles, missing and extra marks, multiword-item feedback, unchanged correct drafts, narration, supported recovery, four-lesson resume/clear/reload/history on both entry routes, keyboard/mobile use, and commas inside the real Viewer sandbox. Desktop, mobile, and support screenshots were reviewed. The independent editorial key checks every selectable comma combination for all 23 tasks, invalid inputs, three-target fresh coverage, unchanged-submission handling, matching shorter tasks, and finite exits. Targeted ESLint and inline JavaScript syntax checks passed; the HTML copies match and original question/writing DATA is unchanged. Main advanced to `710ac4ac` with Observation Center changes outside these eight files; that update was fast-forwarded without overlap.
 

@@ -2,10 +2,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw5");
-const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw5");
-const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260906-sw5");
-const commas = import("../site/assets/js/sentence-workshop-commas.js?v=20260906-sw5");
+const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw6");
+const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw6");
+const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260906-sw6");
+const commas = import("../site/assets/js/sentence-workshop-commas.js?v=20260906-sw6");
 
 test("list comma answer sets match the editorial key across every selectable combination", async () => {
   const c = await commas;
@@ -646,8 +646,8 @@ test("both launch copies match and lesson assets use one version", () => {
     "utf8"
   );
   assert.equal(donor, mirror);
-  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw5/);
-  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw5/);
+  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw6/);
+  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw6/);
   for (const filename of [
     "sentence-workshop.js",
     "sentence-workshop-engine.js",
@@ -659,12 +659,12 @@ test("both launch copies match and lesson assets use one version", () => {
     const js = fs.readFileSync(path.join(root, "site/assets/js", filename), "utf8");
     assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(|XMLHttpRequest|sendBeacon/);
     for (const imported of js.matchAll(/from "\.\/sentence-workshop[^"?]*\.js\?v=([^"\s]+)"/g)) {
-      assert.equal(imported[1], "20260906-sw5");
+      assert.equal(imported[1], "20260906-sw6");
     }
   }
 });
 
-const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw5");
+const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw6");
 
 test("sentence endings follow the reviewed purpose key and accept both allowed tones", async () => {
   const c = await endings;
@@ -829,4 +829,153 @@ test("shorter endings task matches the purpose needing support; lessons stay sep
   assert.equal(e.summary(old).attempted, 0);
   e.finish(s);
   assert.equal(e.submit(s, { ending: "!" }), null);
+});
+
+async function navigationCases() {
+  const modules = {
+    boundaries: await content,
+    endings: await endings,
+    repairs: await repairs,
+    commas: await commas,
+  };
+  return Object.entries(modules).map(([id, c]) => ({
+    id,
+    c,
+    wrong:
+      id === "boundaries"
+        ? [
+            { period: null, capitals: [0] },
+            { period: 1, capitals: [0] },
+          ]
+        : id === "endings"
+          ? [{ ending: "." }, { ending: "!" }]
+          : id === "repairs"
+            ? [c.initialEdit(c.bank.practice[0]), { choice: "when", gap: null, join: null }]
+            : [{ commas: [] }, { commas: [1] }],
+  }));
+}
+
+test("all lessons reopen after two misses without erasing the original submissions", async () => {
+  const e = await engine;
+  for (const { id, c, wrong } of await navigationCases()) {
+    const s = e.createSession(id);
+    e.start(s);
+    const record = e.recordFor(s);
+    for (const edit of wrong) assert.equal(e.submit(s, edit).correct, false, id);
+    const original = structuredClone(record.attempts);
+    assert.equal(e.canEdit(s), false);
+    assert.equal(e.submit(s, c.solution(s.item)), null);
+    e.retry(s);
+    assert.equal(e.canEdit(s), true);
+    assert.equal(e.submit(s, c.solution(s.item)).correct, true);
+    assert.deepEqual(record.attempts.slice(0, 2), original);
+    assert.equal(e.summary(s).attempted, 1);
+    assert.equal(e.summary(s).supported, 1);
+    e.retry(s);
+    e.submit(s, c.solution(s.item));
+    assert.equal(e.summary(s).supported, 1, "repeating does not count a second completed item");
+    assert.equal(e.summary(s).freshIndependent, 0);
+  }
+});
+
+test("practice after a worked example remains supported and history preserves shorter routing", async () => {
+  const e = await engine;
+  for (const { id, c } of await navigationCases()) {
+    const s = e.createSession(id);
+    e.start(s);
+    const first = s.item;
+    e.demonstrate(s);
+    assert.equal(e.summary(s).attempted, 0);
+    e.retry(s);
+    assert.equal(e.canEdit(s), true);
+    e.submit(s, c.solution(s.item));
+    assert.equal(e.recordFor(s).attempts[0].help, 3);
+    assert.equal(e.summary(s).supported, 1);
+    assert.equal(e.summary(s).demonstrations, 1);
+    e.forward(s);
+    assert.equal(s.phase, "simpler");
+    const shorter = s.item;
+    const counts = structuredClone(s.cursors);
+    e.previous(s);
+    assert.equal(s.item, first);
+    e.forward(s);
+    assert.equal(s.item, shorter);
+    assert.equal(s.returnPhase, "practice");
+    assert.deepEqual(s.cursors, counts);
+    assert.equal(s.history.length, 2);
+    e.forward(s); // Skipping a shorter task still returns to the correct phase.
+    assert.equal(s.phase, "practice");
+    assert.notEqual(s.item.id, first.id);
+  }
+});
+
+test("skipping and traversing history never submit answers; exhausted visits can still be reviewed", async () => {
+  const e = await engine;
+  for (const { id, c } of await navigationCases()) {
+    const s = e.createSession(id);
+    e.start(s);
+    const first = s.item;
+    e.forward(s);
+    const second = s.item;
+    const record = e.recordFor(s);
+    const counts = structuredClone(s.cursors);
+    e.previous(s);
+    assert.equal(s.item, first);
+    e.forward(s);
+    assert.equal(s.item, second);
+    assert.equal(e.recordFor(s), record);
+    assert.deepEqual(s.cursors, counts);
+    assert.equal(e.summary(s).attempted, 0);
+    e.finish(s);
+    e.previous(s);
+    assert.equal(s.item, second, "early finish returns to the exact task left");
+    while (s.phase !== "summary") {
+      assert.ok(s.history.length <= c.bank.practice.length);
+      e.forward(s);
+    }
+    assert.equal(e.summary(s).attempted, 0);
+    assert.equal(e.summary(s).freshAttempted, 0);
+    const total = s.history.length;
+    const reason = s.reason;
+    for (let i = 0; i < 3; i++) {
+      e.previous(s);
+      assert.equal(s.position, total - 1);
+      assert.ok(s.item);
+      e.forward(s);
+      assert.equal(s.phase, "summary");
+      assert.equal(s.reason, reason);
+      assert.equal(s.history.length, total);
+    }
+  }
+});
+
+test("revisiting a corrected fresh check cannot overwrite its first-try evidence", async () => {
+  const e = await engine,
+    c = await commas,
+    s = e.createSession("commas");
+  e.start(s);
+  for (let i = 0; i < 3; i++) {
+    e.submit(s, c.solution(s.item));
+    e.forward(s);
+  }
+  const firstCheck = s.item;
+  e.submit(s, { commas: [] });
+  e.demonstrate(s);
+  e.retry(s);
+  e.submit(s, c.solution(s.item));
+  const record = e.recordFor(s);
+  const firstSubmission = structuredClone(record.attempts[0]);
+  e.forward(s);
+  const shorter = s.item;
+  e.previous(s);
+  assert.equal(s.item, firstCheck);
+  e.retry(s);
+  e.submit(s, c.solution(s.item));
+  assert.deepEqual(record.attempts[0], firstSubmission);
+  assert.equal(e.summary(s).freshAttempted, 1);
+  assert.equal(e.summary(s).freshIndependent, 0);
+  assert.deepEqual(e.summary(s).freshKinds, []);
+  assert.equal(e.summary(s).supported, 1);
+  e.forward(s);
+  assert.equal(s.item, shorter);
 });
