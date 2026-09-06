@@ -210,3 +210,17 @@ test('Activities integration preserves the existing viewer return contract and l
   assert.doesNotMatch(app, /fetch\(|supabase|localStorage\.clear\(|sessionStorage\.setItem/);
   assert.ok(fs.existsSync(path.join(root, 'site/vendor/chessjs/LICENSE')));
 });
+
+test('vendored comment cleanup round-trips repeated and nested braces through PGN', () => {
+  for (const comment of ['First {idea}, then {{another}}.', '}} {extra}\n{last}', 'Plain chess comment']) {
+    const chess = game();
+    chess.setComment(comment);
+    assert.doesNotMatch(chess.getComment(), /[{}]/);
+    const restored = new Chess(); restored.loadPgn(chess.pgn());
+    // PGN import normalizes comment line breaks to spaces.
+    assert.equal(restored.getComment(), chess.getComment().replace(/\n/g, ' '));
+    assert.equal(restored.fen(), chess.fen());
+  }
+  const chess = game(); chess.setComment('First {idea}, then {{another}}.');
+  assert.equal(chess.getComment(), 'First [idea], then [[another]].');
+});

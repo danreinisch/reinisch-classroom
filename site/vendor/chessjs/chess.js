@@ -3304,7 +3304,7 @@ class Chess {
         return this._comments[this.fen()];
     }
     setComment(comment) {
-        this._comments[this.fen()] = comment.replace('{', '[').replace('}', ']');
+        this._comments[this.fen()] = comment.replace(/\{/g, '[').replace(/\}/g, ']');
     }
     /**
      * @deprecated Renamed to `removeComment` for consistency
@@ -3365,4 +3365,3 @@ class Chess {
 }
 
 export { BISHOP, BLACK, Chess, DEFAULT_POSITION, KING, KNIGHT, Move, PAWN, QUEEN, ROOK, SEVEN_TAG_ROSTER, SQUARES, WHITE, validateFen, xoroshiro128 };
-

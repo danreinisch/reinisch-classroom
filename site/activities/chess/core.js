@@ -1,4 +1,4 @@
-import { Chess } from '../../vendor/chessjs/chess.js';
+import { Chess } from '../../vendor/chessjs/chess.js?v=1.4.0-rc1';
 
 export { Chess };
 export const SLOT_COUNT = 3;

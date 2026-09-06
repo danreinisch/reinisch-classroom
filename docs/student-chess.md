@@ -48,8 +48,11 @@ success. Client session changes lock the old board before further actions.
 
 The pinned, locally served chess.js 1.4.0 ESM build supplies move legality and
 game-state rules. See `site/vendor/chessjs/README.md` for package integrity and
-provenance and `LICENSE` for the BSD-2-Clause notice. The only vendor change is
-removing an unused source-map URL. There is no CDN, external game service, LLM,
+provenance and `LICENSE` for the BSD-2-Clause notice. The local build removes an
+unused source-map URL and patches comment brace replacement to handle every
+occurrence, fixing two CodeQL incomplete-escaping findings. The patch is covered
+by a repeated/nested-brace PGN round-trip test and a versioned browser import.
+There is no CDN, external game service, LLM,
 chat, or online matchmaking. Board art is original SVG defined in the app.
 
 These are untimed casual games. As disclosed in Quick rules, threefold repetition
