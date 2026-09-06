@@ -13,6 +13,232 @@ const boundaries = {
   "apply-2": 4,
 };
 
+async function openRepairs(page, route = donor) {
+  await page.goto(route);
+  await page.locator("#openSentenceWorkshopBtn").click();
+  await page.locator('[data-sw-action="lesson-repairs"]').click();
+  await page.locator('[data-sw-action="start"]').click();
+}
+
+async function repair(scope, choice, join = "period") {
+  if (typeof choice === "number") {
+    await scope.locator(`[data-sw-repair-gap="${choice}"]`).click();
+    await scope.locator(`[data-sw-join="${join}"]`).click();
+  } else await scope.locator(`[data-sw-repair-choice="${choice}"]`).click();
+  await scope.locator('[data-sw-action="check"]').click();
+  await expect(scope.locator("#sw-feedback")).toContainText("Edit complete");
+}
+
+test("fragments route edits words and joins, reads without answering, and reports five fresh kinds", async ({
+  page,
+}, testInfo) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await openRepairs(page);
+  for (const reader of await page.locator("[data-sw-read-choice]").all()) {
+    const name = await reader.getAttribute("aria-label");
+    await reader.click();
+    expect((await page.evaluate(() => window.swSpoken)).at(-1)).toBe(
+      name.replace("Read edit: ", "")
+    );
+  }
+  await expect(page.locator("#sw-feedback")).toBeEmpty();
+  await expect(page.locator('[data-sw-repair-choice][aria-pressed="true"]')).toHaveCount(0);
+  const key = [
+    "who",
+    "verb",
+    "main",
+    4,
+    "keep",
+    "who",
+    "verb",
+    "main",
+    4,
+    "keep",
+    "main",
+    5,
+    "keep",
+  ];
+  for (const [index, answer] of key.entries()) {
+    await repair(page, answer, index === 3 ? "semicolon" : index === 8 ? "linked" : "period");
+    await page.locator('[data-sw-action="read-edit"]').click();
+    expect((await page.evaluate(() => window.swSpoken)).at(-1)).toBe(
+      await page.locator(".sw-preview p").textContent()
+    );
+    if (index === 8) {
+      await expect(page.locator(".sw-preview p")).toHaveText(
+        "The door was heavy, but the handle moved easily."
+      );
+      await page.locator('[data-sw-action="read-marks"]').click();
+      expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("comma, but");
+      await page
+        .locator("#sentenceWorkshop")
+        .screenshot({ path: testInfo.outputPath("repairs-runon.png") });
+    }
+    await page.locator('[data-sw-action="next"]').click();
+  }
+  await expect(page.locator(".sw-stats strong").first()).toHaveText("5 / 5");
+  await expect(page.locator(".sw-card")).toContainText("covered 5 of 5 sentence checks");
+  await expect(page.locator(".sw-card")).toContainText("You attempted 13 tasks");
+  await expect(page.locator(".sw-card")).toContainText(
+    "Message edits correct on the first try without hints: 3 / 3"
+  );
+  await page.locator('[data-sw-action="read-report"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("5 of 5");
+  await page.locator('[data-sw-action="lesson-endings"]').click();
+  await expect(page.locator("#sw-heading")).toHaveText("Make the ending match the message.");
+  await page.locator('[data-sw-action="lesson-repairs"]').click();
+  await expect(page.locator(".sw-stats strong").first()).toHaveText("5 / 5");
+  await page.locator('.sw-card [data-sw-action="menu"]').click();
+  await expect(page.locator("#scoreNumMenu")).toHaveText("0");
+  await expect(page.locator("#scoreTotalMenu")).toHaveText("140");
+  await expect(page.locator("#skillMenuGrid > .skill-card")).toHaveCount(9);
+  expect(errors).toEqual([]);
+});
+
+test("run-on repair requires a location and a valid join; a comma-only correction stays supported", async ({
+  page,
+}) => {
+  await openRepairs(page);
+  for (const answer of ["who", "verb", "main"]) {
+    await repair(page, answer);
+    await page.locator('[data-sw-action="next"]').click();
+  }
+  expect(await page.locator("[data-sw-repair-gap]").allTextContents()).toEqual(Array(8).fill(""));
+  await page.locator('[data-sw-join="semicolon"]').click();
+  await page.locator('[data-sw-repair-gap="2"]').click();
+  await expect(page.locator(".sw-preview p")).toHaveText(
+    "The library; is open we can return the books."
+  );
+  await page.locator('[data-sw-repair-gap="4"]').click();
+  await page.locator('[data-sw-join="comma"]').click();
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText("comma splice");
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText("Change your edit");
+  await page.locator('[data-sw-join="linked"]').click();
+  await expect(page.locator("#sw-feedback")).toBeEmpty();
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText("More than one repair works");
+  await page.locator('[data-sw-action="finish"]').click();
+  await expect(page.locator(".sw-stats strong").nth(1)).toHaveText("1");
+});
+
+test("fragment hints and a worked example lead to a matching shorter task", async ({
+  page,
+}, testInfo) => {
+  await openRepairs(page);
+  await repair(page, "who");
+  await page.locator('[data-sw-action="next"]').click();
+  for (const wrong of ["where", "when"]) {
+    await page.locator(`[data-sw-repair-choice="${wrong}"]`).click();
+    await page.locator('[data-sw-action="check"]').click();
+  }
+  await expect(page.locator('[data-sw-action="check"]')).toBeDisabled();
+  await page.locator('[data-sw-action="hint"]').click();
+  await page.locator('[data-sw-action="hint"]').click();
+  await expect(page.locator(".sw-hint")).toContainText("are waiting");
+  await page.locator('[data-sw-action="read-hint"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("are waiting");
+  await page.locator('[data-sw-action="demonstrate"]').click();
+  await page.locator('[data-sw-action="read-solution"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain(
+    "The students are waiting by the door."
+  );
+  await page
+    .locator("#sentenceWorkshop")
+    .screenshot({ path: testInfo.outputPath("repairs-support.png") });
+  await page.locator('[data-sw-action="next"]').click();
+  await expect(page.locator("[data-sw-item]")).toHaveAttribute("data-sw-item", "repairs-simpler-2");
+  await repair(page, "verb");
+  await page.locator('[data-sw-action="finish"]').click();
+  await expect(page.locator(".sw-stats strong").nth(1)).toHaveText("0");
+  await expect(page.locator(".sw-stats strong").nth(2)).toHaveText("1");
+});
+
+for (const route of [donor, mirror]) {
+  test(`all three lesson drafts resume and clear together: ${route}`, async ({ page }) => {
+    await openRepairs(page, route);
+    await page.locator('[data-sw-repair-choice="who"]').click();
+    await page.locator('[data-sw-action="lesson-endings"]').click();
+    await page.locator('[data-sw-action="start"]').click();
+    await page.locator('[data-sw-ending="?"]').click();
+    await page.locator('[data-sw-action="lesson-boundaries"]').click();
+    await page.locator('[data-sw-action="start"]').click();
+    await page.locator('[data-sw-gap="3"]').click();
+    await page.locator('[data-sw-action="lesson-repairs"]').click();
+    await expect(page.locator('[data-sw-repair-choice="who"]')).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await page.locator('[data-sw-action="clear"]').click();
+    await page.locator("#cancelClearPracticeBtn").click();
+    await expect(page.locator('[data-sw-repair-choice="who"]')).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await page.locator('[data-sw-action="clear"]').click();
+    await page.locator("#confirmClearPracticeBtn").click();
+    await page.locator("#openSentenceWorkshopBtn").click();
+    for (const lesson of ["boundaries", "endings", "repairs"]) {
+      await page.locator(`[data-sw-action="lesson-${lesson}"]`).click();
+      await expect(page.locator('[data-sw-action="start"]')).toBeVisible();
+      await expect(page.locator("[data-sw-item]")).toHaveCount(0);
+    }
+    await page.locator('[data-sw-action="start"]').click();
+    await page.locator('[data-sw-repair-choice="who"]').click();
+    await page.reload();
+    await page.locator("#openSentenceWorkshopBtn").click();
+    await page.locator('[data-sw-action="lesson-repairs"]').click();
+    await expect(page.locator('[data-sw-action="start"]')).toBeVisible();
+  });
+}
+
+test("fragment and run-on editors support keyboard, touch sizing, and missing voice on mobile", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openRepairs(page);
+  const choice = page.locator('[data-sw-repair-choice="who"]');
+  await choice.focus();
+  await choice.press("Enter");
+  await expect(choice).toBeFocused();
+  await expect(choice).toHaveAttribute("aria-pressed", "true");
+  await choice.press("Space");
+  await expect(choice).toHaveAttribute("aria-pressed", "false");
+  await page.evaluate(() => {
+    window.speechSynthesis = undefined;
+  });
+  await page.locator('[data-sw-read-choice="who"]').click();
+  await expect(page.locator("#sw-voice-note")).toContainText("Voice is unavailable");
+  await page
+    .locator("#sentenceWorkshop")
+    .screenshot({ path: testInfo.outputPath("repairs-fragment-mobile.png") });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  for (const answer of ["who", "verb", "main"]) {
+    await repair(page, answer);
+    await page.locator('[data-sw-action="next"]').click();
+  }
+  const gap = page.locator('[data-sw-repair-gap="4"]');
+  const box = await gap.boundingBox();
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  await expect(gap).toBeEmpty();
+  await gap.focus();
+  await gap.press("Enter");
+  await expect(gap).toBeFocused();
+  await page.locator('[data-sw-join="period"]').press("Space");
+  await expect(page.locator(".sw-preview p")).toHaveText(
+    "The library is open. We can return the books."
+  );
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toBeFocused();
+  await page
+    .locator("#sentenceWorkshop")
+    .screenshot({ path: testInfo.outputPath("repairs-runon-mobile.png") });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test.use({ serviceWorkers: "block" });
 test.beforeEach(async ({ context, baseURL }) => {
   const origin = new URL(baseURL).origin;

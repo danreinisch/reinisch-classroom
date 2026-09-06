@@ -1,6 +1,6 @@
 # Sentence Workshop lessons
 
-Sentence Workshop adds guided editing to Language Arts Skill Builder. Sentence boundaries targets placing a period between two complete sentences and capitalizing their beginnings. Directions explicitly require two sentences; the final period is supplied. Sentence endings adds periods, question marks, and exclamation marks matched to a message's purpose. Neither lesson evaluates unrestricted writing or covers all punctuation rules.
+Sentence Workshop adds guided editing to Language Arts Skill Builder. Sentence boundaries targets placing a period between two complete sentences and capitalizing their beginnings. Directions explicitly require two sentences; the final period is supplied. Sentence endings adds periods, question marks, and exclamation marks matched to a message's purpose. Fragments & Run-ons adds missing words, repairs joins between complete thoughts, and preserves sentences that already work. These lessons use authored messages and edits; they do not evaluate unrestricted writing or cover all punctuation rules.
 
 A regular-sized card in the existing skill grid opens the module on demand. Both Skill Builder entry copies use the same versioned assets. The workshop has its own visit-only state and results, separate from the existing 140-question score. Returning to the menu preserves workshop work; End/clear, reload, departure, and restored history clear it. The existing Viewer and dialog contracts are reused.
 
@@ -26,9 +26,23 @@ Each task supplies a complete message and its purpose. Students place one ending
 
 Three completed guided edits open fresh checks. Moving to applied messages requires first-try success without instructional hints in each of three purposes: direct questions, calm statements/directions, and strong emphasis. Several successes in two purposes cannot substitute for the third. Results describe this visit; the coverage rule is provisional, not a mastery claim. Help, distinct-attempt limits, and finite exits follow the original lesson rules. A shorter task matches the purpose that needed support, and at most two detours are offered.
 
-Students can switch between the two lessons without losing either draft or summary. Results remain separate by lesson. End/clear, reload, and departure clear both lessons. The Skill Builder menu retains a single regular-sized Sentence Workshop card.
+Students can switch between lessons without losing a draft or summary. Results remain separate by lesson. End/clear, reload, and departure clear every lesson. The Skill Builder menu retains a single regular-sized Sentence Workshop card.
 
 Content references: [Purdue OWL punctuation overview](https://owl.purdue.edu/owl/multilingual/multilingual_students/punctuation/index.html) and the [Australian Government Style Manual on direct and indirect questions](https://www.stylemanual.gov.au/grammar-punctuation-and-conventions/punctuation/question-marks). These support the punctuation distinctions, not the software's routing thresholds or instructional effectiveness.
+
+## Fragments & Run-ons: content and routing
+
+The third lesson has three introductory models and 35 original tasks: ten guided, ten reserved checks, ten shorter tasks, and five applied messages. A normal independent route uses five guided tasks, five fresh checks, and three message edits. The remaining examples support additional practice; a visit does not have to exhaust the bank. Content and the checker live in `site/assets/js/sentence-workshop-repairs.js`.
+
+Students try authored word additions and read the resulting draft. Feedback distinguishes a missing subject, an incomplete verb, and a dependent thought that needs a main clause. Context supplies the intended meaning. Complete-sentence tasks include short directions with an understood subject and longer sentences with a shared subject and two actions. Students can keep a draft that already works.
+
+For fused sentences and comma splices, students select a quiet blank space between words, then choose a period with capitalization, a semicolon, or a comma with an appropriate supplied coordinating conjunction. All three methods are accepted at the correct boundary. A comma alone receives specific feedback; selecting a valid method at an incorrect location is also checked. The draft and resulting message stay visible. Read controls do not submit an answer. The period tool supplies capitalization so this lesson focuses on the repair location and method; it does not independently assess capitalization production.
+
+Five completed guided tasks open fresh checks. Applying the skill to messages requires a fresh first-try success without instructional hints in each of five areas: subjects, verbs, dependent thoughts, joins, and sentences needing no change. Successes in four areas cannot replace the fifth. This is a provisional coverage rule for practice, not evidence of mastery. A demonstration leads to a different shorter task in the same area, with at most two detours. Repeated checks of an unchanged edit do not consume retries, first attempts remain intact, and exhausting fresh examples ends the visit honestly.
+
+The message tasks include a late-arrival note, a workplace update, and visitor instructions. The editor accepts supplied operations; it is not an open-ended grammar checker. Future classroom review should look for transfer to students' own writing and whether five guided tasks are an appropriate starting length.
+
+Grammar references: [Purdue OWL on fragments](https://owl.purdue.edu/owl/general_writing/mechanics/sentence_fragments.html) and [Purdue OWL on run-ons and comma splices](https://owl.purdue.edu/owl/general_writing/punctuation/independent_and_dependent_clauses/runonsentences.html). Examples and feedback are original. The references support the grammar distinctions, not the lesson's routing thresholds.
 
 ## Accessibility and implementation
 
@@ -48,6 +62,7 @@ Teacher review should check whether students understand the controls, use the he
 
 ## Local review results
 
+- Fragments & Run-ons expansion: all 21 workshop unit checks and 16 original Skill Builder checks passed. All 22 workshop Chromium tests passed with zero failures, skips, or flaky results. The new tests cover every authored answer against a separate editorial key, all join locations and methods, five-area fresh coverage, finite support, the full 13-task route, both mirrored routes, three-lesson resume/clear, read controls, and mobile keyboard/touch operation. Desktop/mobile screenshots were reviewed. Targeted ESLint, inline syntax, original DATA preservation, and mirrored-copy checks passed. Assets use `20260906-sw4`.
 - Release 1 merged in PR #1459 as `965b19ee3d1bbd51fda94f60d6f4cbc8ea3f7238`. Both production HTML routes and all four workshop assets returned HTTP 200 and matched that commit byte for byte on September 6, 2026. The concurrent Pythagorean repair was preserved; its 31 focused checks passed after resolving the shared test-command registration.
 - Sentence endings expansion: 16 workshop unit checks and 16 original Skill Builder checks passed. All 16 workshop Chromium checks passed, including the complete endings route, supported recovery, multiple accepted tones, per-lesson resume/clear on both routes, keyboard/mobile use, narration, and the original readers' speech fallback. Desktop/mobile screenshots were reviewed. No new package command or dependency was needed.
 

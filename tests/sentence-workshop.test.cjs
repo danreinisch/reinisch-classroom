@@ -2,8 +2,224 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw3");
-const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw3");
+const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw4");
+const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw4");
+const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260906-sw4");
+
+test("fragments and run-ons follow the independent editorial key, including valid alternatives", async () => {
+  const c = await repairs;
+  const key = [
+    "who",
+    "verb",
+    "main",
+    4,
+    "keep",
+    "who",
+    "verb",
+    "main",
+    4,
+    "keep",
+    "who",
+    "verb",
+    "main",
+    4,
+    "keep",
+    "who",
+    "verb",
+    "main",
+    4,
+    "keep",
+    "who",
+    "verb",
+    "main",
+    3,
+    "keep",
+    "who",
+    "verb",
+    "main",
+    4,
+    "keep",
+    "main",
+    5,
+    "keep",
+    "verb",
+    4,
+  ];
+  assert.equal(c.models.length, 3);
+  assert.equal(c.allItems.length, key.length);
+  assert.equal(new Set(c.allItems.map((i) => i.id)).size, 35);
+  assert.equal(new Set(c.allItems.map((i) => i.text)).size, 35);
+  for (const [index, item] of c.allItems.entries()) {
+    assert.ok(item.context && item.clue && c.kindNames[item.kind]);
+    if (typeof key[index] === "number") {
+      assert.equal(item.boundary, key[index]);
+      for (let gap = 0; gap <= item.words.length; gap++) {
+        for (const join of ["period", "semicolon", "linked", "comma", "unknown"]) {
+          assert.equal(
+            c.checkEdit(item, { gap, join }).correct,
+            gap === key[index] && ["period", "semicolon", "linked"].includes(join),
+            `${item.id}: ${gap}/${join}`
+          );
+        }
+      }
+      assert.equal(c.checkEdit(item, { choice: "keep" }).correct, false);
+    } else {
+      assert.equal(new Set(item.choices.map((choice) => choice.id)).size, item.choices.length);
+      assert.equal(new Set(item.choices.map((choice) => choice.text)).size, item.choices.length);
+      for (const choice of item.choices) {
+        assert.equal(
+          c.checkEdit(item, { choice: choice.id }).correct,
+          choice.id === key[index],
+          item.id
+        );
+        assert.ok(choice.feedback.length > 20);
+      }
+    }
+    for (const invalid of [undefined, {}, { choice: "unknown", gap: "4", join: "." }]) {
+      assert.equal(c.checkEdit(item, invalid).correct, false);
+    }
+  }
+  const fused = c.bank.practice[3];
+  assert.equal(
+    c.editedText(fused, { gap: 4, join: "period" }),
+    "The library is open. We can return the books."
+  );
+  assert.equal(
+    c.editedText(fused, { gap: 4, join: "semicolon" }),
+    "The library is open; we can return the books."
+  );
+  assert.equal(
+    c.editedText(fused, { gap: 4, join: "linked" }),
+    "The library is open, so we can return the books."
+  );
+  const splice = c.bank.check[3];
+  assert.equal(
+    c.editedText(splice, { gap: 4, join: "linked" }),
+    "The door was heavy, but the handle moved easily."
+  );
+  assert.equal(
+    c.editedText(splice, { gap: 4, join: "period" }),
+    "The door was heavy. The handle moved easily."
+  );
+  assert.equal(
+    c.editedText(c.bank.apply[0], { choice: "main" }),
+    "Because the bus was delayed, I will arrive late."
+  );
+  assert.equal(
+    c.editedText(c.bank.check[4], { choice: "keep" }),
+    "Our class sorted the donations and packed them into labeled boxes after lunch."
+  );
+});
+
+test("repairs require five fresh kinds, then three real-message edits", async () => {
+  const c = await repairs,
+    e = await engine,
+    s = e.createSession("repairs");
+  e.start(s);
+  const ids = [],
+    phases = [];
+  while (s.phase !== "summary") {
+    assert.ok(ids.length < 20);
+    ids.push(s.item.id);
+    phases.push(s.phase);
+    assert.equal(e.submit(s, c.solution(s.item)).correct, true);
+    e.next(s);
+  }
+  assert.equal(new Set(ids).size, 13);
+  assert.deepEqual(phases, [
+    ...Array(5).fill("practice"),
+    ...Array(5).fill("check"),
+    ...Array(3).fill("apply"),
+  ]);
+  assert.deepEqual(e.summary(s), {
+    attempted: 13,
+    freshAttempted: 5,
+    freshIndependent: 5,
+    freshRepairs: 5,
+    freshKinds: ["subject", "verb", "dependent", "runon", "complete"],
+    supported: 0,
+    demonstrations: 0,
+    appliedIndependent: 3,
+    appliedAttempted: 3,
+  });
+});
+
+test("success in four repair kinds cannot substitute for the fifth; helped checks end finitely", async () => {
+  const c = await repairs,
+    e = await engine;
+  for (const missing of Object.keys(c.kindNames)) {
+    const s = e.createSession("repairs");
+    e.start(s);
+    const seen = [];
+    while (s.phase !== "summary") {
+      assert.ok(seen.length < 16);
+      assert.notEqual(s.phase, "apply");
+      seen.push(s.item.id);
+      if (s.phase === "check" && s.item.kind === missing) e.hint(s);
+      e.submit(s, c.solution(s.item));
+      e.next(s);
+    }
+    assert.equal(new Set(seen).size, 15);
+    assert.equal(e.summary(s).freshAttempted, 10);
+    assert.equal(e.summary(s).freshIndependent, 8);
+    assert.equal(e.summary(s).freshKinds.includes(missing), false);
+    assert.match(s.reason, /available examples/);
+  }
+});
+
+test("repairs preserve wrong first tries, require changed edits, and do not score narration", async () => {
+  const c = await repairs,
+    e = await engine,
+    s = e.createSession("repairs");
+  e.start(s);
+  const before = JSON.stringify(s);
+  c.editedText(s.item, c.solution(s.item));
+  assert.equal(JSON.stringify(s), before);
+  e.submit(s, { choice: "when", gap: null, join: null });
+  assert.match(e.submit(s, { choice: "when", gap: null, join: null }).message, /Change your edit/);
+  assert.equal(e.recordFor(s).attempts.length, 1);
+  e.submit(s, c.solution(s.item));
+  assert.equal(e.summary(s).supported, 1);
+  assert.equal(e.recordFor(s).attempts[0].correct, false);
+  e.next(s);
+  e.hint(s);
+  e.hint(s);
+  e.submit(s, c.solution(s.item));
+  assert.equal(e.summary(s).supported, 2);
+});
+
+test("repair demonstrations offer different matching tasks and stop after two detours", async () => {
+  const c = await repairs,
+    e = await engine;
+  for (const kind of Object.keys(c.kindNames)) {
+    const s = e.createSession("repairs");
+    e.start(s);
+    while (s.item.kind !== kind) {
+      e.submit(s, c.solution(s.item));
+      e.next(s);
+    }
+    const original = s.item.id;
+    e.demonstrate(s);
+    e.next(s);
+    assert.equal(s.phase, "simpler");
+    assert.equal(s.item.kind, kind);
+    assert.notEqual(s.item.id, original);
+  }
+  const s = e.createSession("repairs");
+  e.start(s);
+  let count = 0;
+  while (s.phase !== "summary") {
+    assert.ok(++count <= 5);
+    e.submit(s, c.initialEdit());
+    e.submit(s, { choice: "keep" });
+    assert.equal(e.submit(s, c.solution(s.item)), null);
+    e.demonstrate(s);
+    e.next(s);
+  }
+  assert.equal(e.summary(s).demonstrations, 5);
+  assert.equal(e.summary(s).supported, 0);
+  assert.match(s.reason, /ask for help/);
+});
 
 test("reviewed content has distinct examples and the intended sentence boundaries", async () => {
   const { allItems, models, solution, editedText } = await content;
@@ -216,19 +432,24 @@ test("both launch copies match and lesson assets use one version", () => {
     "utf8"
   );
   assert.equal(donor, mirror);
-  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw3/);
-  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw3/);
+  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw4/);
+  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw4/);
   for (const filename of [
     "sentence-workshop.js",
     "sentence-workshop-engine.js",
     "sentence-workshop-content.js",
+    "sentence-workshop-endings.js",
+    "sentence-workshop-repairs.js",
   ]) {
     const js = fs.readFileSync(path.join(root, "site/assets/js", filename), "utf8");
     assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(|XMLHttpRequest|sendBeacon/);
+    for (const imported of js.matchAll(/from "\.\/sentence-workshop[^"?]*\.js\?v=([^"\s]+)"/g)) {
+      assert.equal(imported[1], "20260906-sw4");
+    }
   }
 });
 
-const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw3");
+const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw4");
 
 test("sentence endings follow the reviewed purpose key and accept both allowed tones", async () => {
   const c = await endings;
