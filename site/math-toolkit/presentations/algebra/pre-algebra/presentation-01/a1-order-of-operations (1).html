@@ -590,7 +590,7 @@
   <!-- Input Section -->
   <div class="input-section" id="inputSection">
     <h2><label for="exprInput">✏️ Enter Your Expression</label></h2>
-    <p class="hint" id="expressionGuide">Use * or × for multiply, / or ÷ for divide, and ^ for powers. Write multiplication explicitly: 2*(3+4). Use whole-number exponents from -100 to 100. Enter numbers up to 1 billion with at most 12 decimal places.</p>
+    <p class="hint" id="expressionGuide">Use * or × for multiply, / or ÷ for divide, and ^ for powers. Write multiplication explicitly: 2*(3+4). Exponents must be integers (whole numbers or their negatives), from -100 to 100. Enter numbers up to 1 billion with at most 12 decimal places.</p>
     <div class="input-row">
       <input type="text" class="expr-input" id="exprInput" aria-describedby="expressionGuide errorMsg" maxlength="240" placeholder="e.g. 3 + 6 * 2" autocomplete="off" spellcheck="false">
       <button class="btn-primary" id="startBtn" onclick="startSolving()">Let's Solve It →</button>
@@ -714,7 +714,7 @@ function computeOp(a, op, b) {
   if (op === '*') return fraction(a.n * b.n, a.d * b.d);
   if (op === '/') return fraction(a.n * b.d, a.d * b.n);
   if (b.d !== 1n || b.n < -LIMITS.exponent || b.n > LIMITS.exponent) {
-    throw new Error('This organizer supports whole-number exponents from -100 to 100. Fractional exponents need a different method.');
+    throw new Error('This organizer supports integer exponents from -100 to 100. Fractional exponents need a different method.');
   }
   if (a.n === 0n && b.n === 0n) throw new Error('0^0 is not assigned a value in this organizer. Choose a different expression.');
   if (a.n === 0n && b.n < 0n) throw new Error('Zero cannot have a negative exponent: that would divide by zero.');
