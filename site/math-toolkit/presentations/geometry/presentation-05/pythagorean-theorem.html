@@ -234,7 +234,8 @@
         </svg>
       </div>
       <div class="diagram-info">
-        <div class="diagram-title">🔺 Right Triangle — Key Parts</div>
+        <div class="diagram-title">🔺 Reference Right Triangle — Key Parts</div>
+        <div class="field-hint">Reference diagram only; not drawn to your measurements.</div>
         <div class="diagram-rule" id="diagramRule">
           The <strong>Pythagorean Theorem</strong> only works on <strong>right triangles</strong> — triangles with one 90° angle.
         </div>
@@ -279,6 +280,8 @@
           <span class="unit-hint" id="unitHint">Answer will be in cm</span>
         </div>
         <div class="known-grid" id="knownGrid"></div>
+        <p class="field-hint" id="inputGuide">Use the same unit for every length. Enter decimals or whole numbers, up to 1 billion in magnitude and 12 decimal places. Keep squares and sums exact.</p>
+        <div class="feedback-box" id="knownFeedback" role="status" aria-live="polite"></div>
         <button class="begin-btn" id="beginBtn" onclick="beginSteps()" disabled>Begin Solving →</button>
       </div>
     </div>
@@ -291,16 +294,92 @@
       <div class="final-answer-caption" id="finalCaption"></div>
       <div class="final-actions">
         <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">📋 Copy Problem to Clipboard</button>
-        <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+        <button class="try-again-btn" onclick="selectProblem(currentProbId)">↺ Try Another Problem</button>
       </div>
     </div>
   </div>
 </main>
 
 <script>
-function round2(n) { return Math.round(n * 100) / 100; }
-function round4(n) { return Math.round(n * 10000) / 10000; }
-function isClose(a, b) { return Math.abs(a - b) <= Math.max(0.06, Math.abs(b) * 0.015); }
+// Decimal arithmetic stays exact until the final square root. In particular,
+// a measurement tolerance must never decide whether a triangle is right.
+function readDecimal(value) {
+  const text = String(value).trim();
+  if (text.length > 100 || !/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d{1,3})?$/i.test(text)) return null;
+  const [mantissa, exponent = '0'] = text.toLowerCase().split('e');
+  if (Math.abs(Number(exponent)) > 100) return null;
+  const fraction = (mantissa.split('.')[1] || '').length;
+  let n = BigInt(mantissa.replace('.', ''));
+  let scale = fraction - Number(exponent);
+  if (scale < 0) { n *= 10n ** BigInt(-scale); scale = 0; }
+  while (scale > 0 && n % 10n === 0n) { n /= 10n; scale--; }
+  return { n, scale };
+}
+
+function decimalText({ n, scale }) {
+  const negative = n < 0n;
+  let digits = (negative ? -n : n).toString().padStart(scale + 1, '0');
+  if (scale) digits = (digits.slice(0, -scale) + '.' + digits.slice(-scale)).replace(/\.?0+$/, '');
+  return (negative && n !== 0n ? '-' : '') + digits;
+}
+
+function decimalOperation(a, b, operation) {
+  const left = readDecimal(a), right = readDecimal(b);
+  if (operation === '*') return decimalText({ n: left.n * right.n, scale: left.scale + right.scale });
+  const scale = Math.max(left.scale, right.scale);
+  const x = left.n * 10n ** BigInt(scale - left.scale);
+  const y = right.n * 10n ** BigInt(scale - right.scale);
+  return decimalText({ n: operation === '+' ? x + y : x - y, scale });
+}
+
+function decimalEqual(a, b) {
+  const left = readDecimal(a), right = readDecimal(b);
+  return !!left && !!right && decimalText(left) === decimalText(right);
+}
+
+function decimalLess(a, b) { return readDecimal(decimalOperation(a, b, '-')).n < 0n; }
+function square(value) { return decimalOperation(value, value, '*'); }
+function isRightTriangle(k) { return decimalEqual(decimalOperation(square(k.a), square(k.b), '+'), square(k.c)); }
+
+function integerSquareRoot(n) {
+  let x = n, next = (x + 1n) / 2n;
+  while (next < x) { x = next; next = (x + n / x) / 2n; }
+  return x;
+}
+
+function squareRootAnswer(value) {
+  const { n, scale } = readDecimal(value);
+  const evenN = scale % 2 ? n * 10n : n;
+  const exactRoot = integerSquareRoot(evenN);
+  if (exactRoot * exactRoot === evenN) {
+    return { value: decimalText({ n: exactRoot, scale: Math.ceil(scale / 2) }), exact: true, places: 0 };
+  }
+  const denominator = 10n ** BigInt(scale);
+  // Round at the midpoint between consecutive decimal answers, using integers.
+  // Very small nonzero lengths get extra places instead of becoming zero.
+  for (let places = 2; places <= 20; places++) {
+    const numerator = n * 10n ** BigInt(2 * places);
+    let rounded = integerSquareRoot(numerator / denominator);
+    if (4n * numerator >= (2n * rounded + 1n) ** 2n * denominator) rounded++;
+    if (rounded === 0n || (places > 2 && rounded < 100n)) continue;
+    return { value: decimalText({ n: rounded, scale: places }), exact: false, places };
+  }
+  throw new Error('Square root is outside the supported input range.');
+}
+
+function roundedDecimal(value, places) {
+  const parsed = readDecimal(value);
+  if (!parsed || parsed.n < 0n) return null;
+  if (parsed.scale <= places) return decimalText(parsed);
+  const divisor = 10n ** BigInt(parsed.scale - places);
+  const rounded = parsed.n / divisor + (2n * (parsed.n % divisor) >= divisor ? 1n : 0n);
+  return decimalText({ n: rounded, scale: places });
+}
+
+function deferWorkspace(fn, delay) {
+  const version = workspaceVersion;
+  setTimeout(() => { if (version === workspaceVersion) fn(); }, delay);
+}
 
 function getUnit() { return document.getElementById('unitSelect').value; }
 function getUnitLabel() { const u = getUnit(); return u ? ` ${u}` : ''; }
@@ -343,13 +422,13 @@ const PROBLEMS = {
           {
             exprFn: (k) => `<span class="val">${k.a}</span>² = <span class="val">${k.a}</span> × <span class="val">${k.a}</span> =`,
             answerId: 'a2',
-            answerFn: (k) => round2(k.a * k.a),
+            answerFn: (k) => square(k.a),
             hintFn: (k) => `Multiply ${k.a} × ${k.a}.`
           },
           {
             exprFn: (k) => `<span class="val">${k.b}</span>² = <span class="val">${k.b}</span> × <span class="val">${k.b}</span> =`,
             answerId: 'b2',
-            answerFn: (k) => round2(k.b * k.b),
+            answerFn: (k) => square(k.b),
             hintFn: (k) => `Multiply ${k.b} × ${k.b}.`
           }
         ]
@@ -361,7 +440,7 @@ const PROBLEMS = {
         rows: [{
           exprFn: (k, c) => `<span class="val">${c.a2}</span> + <span class="val">${c.b2}</span> =`,
           answerId: 'c2',
-          answerFn: (k, c) => round2(c.a2 + c.b2),
+          answerFn: (k, c) => decimalOperation(c.a2, c.b2, '+'),
           hintFn: (k, c) => `Add ${c.a2} + ${c.b2}.`
         }]
       },
@@ -371,10 +450,10 @@ const PROBLEMS = {
         type: 'compute',
         sqrtNote: true,
         rows: [{
-          exprFn: (k, c) => `√<span class="val">${c.c2}</span> =`,
+          exprFn: (k, c) => `√<span class="val">${c.c2}</span> ${squareRootAnswer(c.c2).exact ? '=' : '≈'}`,
           answerId: 'c',
-          answerFn: (k, c) => round2(Math.sqrt(c.c2)),
-          hintFn: (k, c) => `Find the square root of ${c.c2}. Use a calculator: √${c.c2} ≈ ${round2(Math.sqrt(c.c2))}`
+          answerFn: (k, c) => squareRootAnswer(c.c2).value,
+          hintFn: (k, c) => `Find the square root of ${c.c2}. Use a calculator: √${c.c2} ≈ ${squareRootAnswer(c.c2).value}`
         }],
         isFinal: true
       }
@@ -409,13 +488,13 @@ const PROBLEMS = {
           {
             exprFn: (k) => `<span class="hval">${k.c}</span>² = <span class="hval">${k.c}</span> × <span class="hval">${k.c}</span> =`,
             answerId: 'c2',
-            answerFn: (k) => round2(k.c * k.c),
+            answerFn: (k) => square(k.c),
             hintFn: (k) => `Multiply ${k.c} × ${k.c}.`
           },
           {
             exprFn: (k) => `<span class="val">${k.b}</span>² = <span class="val">${k.b}</span> × <span class="val">${k.b}</span> =`,
             answerId: 'b2',
-            answerFn: (k) => round2(k.b * k.b),
+            answerFn: (k) => square(k.b),
             hintFn: (k) => `Multiply ${k.b} × ${k.b}.`
           }
         ]
@@ -427,7 +506,7 @@ const PROBLEMS = {
         rows: [{
           exprFn: (k, c) => `<span class="hval">${c.c2}</span> − <span class="val">${c.b2}</span> =`,
           answerId: 'a2',
-          answerFn: (k, c) => round2(c.c2 - c.b2),
+          answerFn: (k, c) => decimalOperation(c.c2, c.b2, '-'),
           hintFn: (k, c) => `Subtract ${c.c2} − ${c.b2}.`
         }]
       },
@@ -437,10 +516,10 @@ const PROBLEMS = {
         type: 'compute',
         sqrtNote: true,
         rows: [{
-          exprFn: (k, c) => `√<span class="val">${c.a2}</span> =`,
+          exprFn: (k, c) => `√<span class="val">${c.a2}</span> ${squareRootAnswer(c.a2).exact ? '=' : '≈'}`,
           answerId: 'a',
-          answerFn: (k, c) => round2(Math.sqrt(c.a2)),
-          hintFn: (k, c) => `Find the square root of ${c.a2}. Use a calculator: √${c.a2} ≈ ${round2(Math.sqrt(c.a2))}`
+          answerFn: (k, c) => squareRootAnswer(c.a2).value,
+          hintFn: (k, c) => `Find the square root of ${c.a2}. Use a calculator: √${c.a2} ≈ ${squareRootAnswer(c.a2).value}`
         }],
         isFinal: true
       }
@@ -476,19 +555,19 @@ const PROBLEMS = {
           {
             exprFn: (k) => `<span class="val">${k.a}</span>² = <span class="val">${k.a}</span> × <span class="val">${k.a}</span> =`,
             answerId: 'a2',
-            answerFn: (k) => round2(k.a * k.a),
+            answerFn: (k) => square(k.a),
             hintFn: (k) => `Multiply ${k.a} × ${k.a}.`
           },
           {
             exprFn: (k) => `<span class="val">${k.b}</span>² = <span class="val">${k.b}</span> × <span class="val">${k.b}</span> =`,
             answerId: 'b2',
-            answerFn: (k) => round2(k.b * k.b),
+            answerFn: (k) => square(k.b),
             hintFn: (k) => `Multiply ${k.b} × ${k.b}.`
           },
           {
             exprFn: (k) => `<span class="hval">${k.c}</span>² = <span class="hval">${k.c}</span> × <span class="hval">${k.c}</span> =`,
             answerId: 'c2',
-            answerFn: (k) => round2(k.c * k.c),
+            answerFn: (k) => square(k.c),
             hintFn: (k) => `Multiply ${k.c} × ${k.c}.`
           }
         ]
@@ -500,7 +579,7 @@ const PROBLEMS = {
         rows: [{
           exprFn: (k, c) => `<span class="val">${c.a2}</span> + <span class="val">${c.b2}</span> =`,
           answerId: 'sum',
-          answerFn: (k, c) => round2(c.a2 + c.b2),
+          answerFn: (k, c) => decimalOperation(c.a2, c.b2, '+'),
           hintFn: (k, c) => `Add ${c.a2} + ${c.b2}.`
         }]
       },
@@ -508,7 +587,7 @@ const PROBLEMS = {
         title: 'Compare: Does a² + b² = c²?',
         instruction: 'Compare your sum to c². Are they equal?',
         type: 'verdict',
-        verdictFn: (k, c) => isClose(c.sum, c.c2),
+        verdictFn: (k) => isRightTriangle(k),
         verdictTrue:  (k, c) => `✓ YES — it IS a right triangle!<br><small>${c.sum} = ${c.c2} ✓ The equation a² + b² = c² holds true.</small>`,
         verdictFalse: (k, c) => `✗ NO — it is NOT a right triangle.<br><small>${c.sum} ≠ ${c.c2}. The equation a² + b² = c² does not hold.</small>`,
         isFinal: true
@@ -537,9 +616,9 @@ const PROBLEMS = {
         title: 'Substitute Your Values',
         type: 'expression',
         displayFn: (k) => {
-          const dx = round2(k.x2 - k.x1);
-          const dy = round2(k.y2 - k.y1);
-          return `d = √((<span class="val">${k.x2}</span>−<span class="val">${k.x1}</span>)² + (<span class="val">${k.y2}</span>−<span class="val">${k.y1}</span>)²)<br>d = √(<span class="val">${dx}</span>² + <span class="val">${dy}</span>²)`;
+          const dx = decimalOperation(k.x2, k.x1, '-');
+          const dy = decimalOperation(k.y2, k.y1, '-');
+          return `d = √((<span class="val">${k.x2}</span>−<span class="val">${k.x1}</span>)² + (<span class="val">${k.y2}</span>−<span class="val">${k.y1}</span>)²)<br>d = √((<span class="val">${dx}</span>)² + (<span class="val">${dy}</span>)²)`;
         }
       },
       {
@@ -550,13 +629,13 @@ const PROBLEMS = {
           {
             exprFn: (k) => `<span class="val">${k.x2}</span> − <span class="val">${k.x1}</span> =`,
             answerId: 'dx',
-            answerFn: (k) => round2(k.x2 - k.x1),
+            answerFn: (k) => decimalOperation(k.x2, k.x1, '-'),
             hintFn: (k) => `Subtract ${k.x2} − ${k.x1}. Be careful with negative numbers!`
           },
           {
             exprFn: (k) => `<span class="val">${k.y2}</span> − <span class="val">${k.y1}</span> =`,
             answerId: 'dy',
-            answerFn: (k) => round2(k.y2 - k.y1),
+            answerFn: (k) => decimalOperation(k.y2, k.y1, '-'),
             hintFn: (k) => `Subtract ${k.y2} − ${k.y1}. Be careful with negative numbers!`
           }
         ]
@@ -569,13 +648,13 @@ const PROBLEMS = {
           {
             exprFn: (k, c) => `(<span class="val">${c.dx}</span>)² = <span class="val">${c.dx}</span> × <span class="val">${c.dx}</span> =`,
             answerId: 'dx2',
-            answerFn: (k, c) => round2(c.dx * c.dx),
+            answerFn: (k, c) => square(c.dx),
             hintFn: (k, c) => `Multiply ${c.dx} × ${c.dx}. A negative × negative = positive!`
           },
           {
             exprFn: (k, c) => `(<span class="val">${c.dy}</span>)² = <span class="val">${c.dy}</span> × <span class="val">${c.dy}</span> =`,
             answerId: 'dy2',
-            answerFn: (k, c) => round2(c.dy * c.dy),
+            answerFn: (k, c) => square(c.dy),
             hintFn: (k, c) => `Multiply ${c.dy} × ${c.dy}.`
           }
         ]
@@ -587,7 +666,7 @@ const PROBLEMS = {
         rows: [{
           exprFn: (k, c) => `<span class="val">${c.dx2}</span> + <span class="val">${c.dy2}</span> =`,
           answerId: 'd2',
-          answerFn: (k, c) => round2(c.dx2 + c.dy2),
+          answerFn: (k, c) => decimalOperation(c.dx2, c.dy2, '+'),
           hintFn: (k, c) => `Add ${c.dx2} + ${c.dy2}.`
         }]
       },
@@ -597,10 +676,10 @@ const PROBLEMS = {
         type: 'compute',
         sqrtNote: true,
         rows: [{
-          exprFn: (k, c) => `√<span class="val">${c.d2}</span> =`,
+          exprFn: (k, c) => `√<span class="val">${c.d2}</span> ${squareRootAnswer(c.d2).exact ? '=' : '≈'}`,
           answerId: 'd',
-          answerFn: (k, c) => round2(Math.sqrt(c.d2)),
-          hintFn: (k, c) => `Find the square root of ${c.d2}. Use a calculator: ≈ ${round2(Math.sqrt(c.d2))}`
+          answerFn: (k, c) => squareRootAnswer(c.d2).value,
+          hintFn: (k, c) => `Find the square root of ${c.d2}. Use a calculator: ≈ ${squareRootAnswer(c.d2).value}`
         }],
         isFinal: true
       }
@@ -636,19 +715,19 @@ const PROBLEMS = {
           {
             exprFn: (k) => `<span class="val">${k.a}</span> × <span class="val">${k.a}</span> =`,
             answerId: 'a2',
-            answerFn: (k) => round2(k.a * k.a),
+            answerFn: (k) => square(k.a),
             hintFn: (k) => `Multiply ${k.a} × ${k.a}.`
           },
           {
             exprFn: (k) => `<span class="val">${k.b}</span> × <span class="val">${k.b}</span> =`,
             answerId: 'b2',
-            answerFn: (k) => round2(k.b * k.b),
+            answerFn: (k) => square(k.b),
             hintFn: (k) => `Multiply ${k.b} × ${k.b}.`
           },
           {
             exprFn: (k) => `<span class="hval">${k.c}</span> × <span class="hval">${k.c}</span> =`,
             answerId: 'c2',
-            answerFn: (k) => round2(k.c * k.c),
+            answerFn: (k) => square(k.c),
             hintFn: (k) => `Multiply ${k.c} × ${k.c}.`
           }
         ]
@@ -660,7 +739,7 @@ const PROBLEMS = {
         rows: [{
           exprFn: (k, c) => `<span class="val">${c.a2}</span> + <span class="val">${c.b2}</span> =`,
           answerId: 'sum',
-          answerFn: (k, c) => round2(c.a2 + c.b2),
+          answerFn: (k, c) => decimalOperation(c.a2, c.b2, '+'),
           hintFn: (k, c) => `Add ${c.a2} + ${c.b2}.`
         }]
       },
@@ -668,7 +747,7 @@ const PROBLEMS = {
         title: 'Does a² + b² = c²?',
         instruction: 'Compare your sum to c². If equal, it\'s a valid triple!',
         type: 'verdict',
-        verdictFn: (k, c) => isClose(c.sum, c.c2),
+        verdictFn: (k) => isRightTriangle(k),
         verdictTrue:  (k, c) => `✓ It's a Pythagorean Triple! ${c.sum} = ${c.c2} ✓<br><small>These three numbers always form a right triangle.</small>`,
         verdictFalse: (k, c) => `✗ Not a Pythagorean Triple. ${c.sum} ≠ ${c.c2}<br><small>Try 3-4-5, 5-12-13, 8-15-17, or 7-24-25.</small>`,
         isFinal: true
@@ -681,8 +760,9 @@ const PROBLEMS = {
    STATE
 ================================================================ */
 let currentProbId = null;
-let knownValues = {}, computedValues = {}, stepAttempts = {};
+let knownValues = {}, referenceValues = {}, computedValues = {}, stepAttempts = {};
 let verdictResult = null;
+let workspaceVersion = 0;
 
 /* ================================================================
    PROBLEM GRID
@@ -746,7 +826,7 @@ function renderWorkspace() {
     const div = document.createElement('div');
     div.className = 'field-group';
     div.innerHTML = `
-      <label class="field-label">
+      <label class="field-label" for="known_${field.id}">
         ${field.label} &nbsp;
         <span class="var-name ${field.isHyp ? 'hyp' : ''}">(${field.varName})</span>
       </label>
@@ -755,6 +835,7 @@ function renderWorkspace() {
         class="known-input ${field.isHyp ? 'hyp-input' : ''}"
         id="known_${field.id}"
         type="number" step="any"
+        aria-describedby="inputGuide knownFeedback"
         ${field.allowNeg ? '' : 'min="0"'}
         placeholder="Enter value..."
         oninput="checkBeginReady()"
@@ -770,26 +851,64 @@ function renderWorkspace() {
   document.getElementById('beginBtn').disabled = true;
   document.getElementById('beginBtn').style.display = '';
   document.querySelectorAll('.known-input').forEach(el => el.disabled = false);
+  document.getElementById('knownFeedback').className = 'feedback-box';
+  document.getElementById('knownFeedback').textContent = '';
+}
+
+function validateKnownValues() {
+  const prob = PROBLEMS[currentProbId];
+  const values = {};
+  if (!prob) return { error: 'Choose a problem type first.' };
+  for (const field of prob.knownFields) {
+    const raw = document.getElementById(`known_${field.id}`).value.trim();
+    const parsed = readDecimal(raw);
+    if (!parsed) return { error: 'Enter a valid number in every known-value box.' };
+    if (parsed.scale > 12 || parsed.n < -1000000000n * 10n ** BigInt(parsed.scale) || parsed.n > 1000000000n * 10n ** BigInt(parsed.scale)) {
+      return { error: 'Use values up to 1 billion in magnitude with at most 12 decimal places.' };
+    }
+    if (!field.allowNeg && parsed.n <= 0n) return { error: 'Every side length must be greater than zero.' };
+    if (currentProbId === 'pythagorean_triples' && parsed.scale !== 0) {
+      return { error: 'A Pythagorean triple uses positive whole numbers. Use “Is It a Right Triangle?” for decimal lengths.' };
+    }
+    values[field.id] = decimalText(parsed);
+  }
+  if (currentProbId === 'leg_a' && !decimalLess(values.b, values.c)) {
+    return { error: 'The hypotenuse c must be longer than the known leg b.' };
+  }
+  if (currentProbId === 'is_right' || currentProbId === 'pythagorean_triples') {
+    if (decimalLess(values.c, values.a) || decimalLess(values.c, values.b)) {
+      return { error: 'Put a longest side in the c box before checking.' };
+    }
+    if (!decimalLess(values.c, decimalOperation(values.a, values.b, '+'))) {
+      return { error: 'These lengths cannot form a triangle: a + b must be greater than c.' };
+    }
+  }
+  return { values };
 }
 
 function checkBeginReady() {
-  const prob = PROBLEMS[currentProbId];
-  if (!prob) return;
-  const allFilled = prob.knownFields.every(f => {
-    const v = document.getElementById(`known_${f.id}`)?.value.trim();
-    return v !== '' && !isNaN(parseFloat(v));
-  });
-  document.getElementById('beginBtn').disabled = !allFilled;
+  const result = validateKnownValues();
+  document.getElementById('beginBtn').disabled = !!result.error;
+  const feedback = document.getElementById('knownFeedback');
+  feedback.textContent = result.error || '';
+  feedback.className = result.error ? 'feedback-box visible hint' : 'feedback-box';
+  return result;
 }
 
 /* ================================================================
    BEGIN SOLVING
 ================================================================ */
 function beginSteps() {
+  const result = checkBeginReady();
+  if (result.error || document.getElementById('beginBtn').style.display === 'none') return;
   const prob = PROBLEMS[currentProbId];
-  knownValues = {}; computedValues = {}; stepAttempts = {}; verdictResult = null;
-  prob.knownFields.forEach(f => {
-    knownValues[f.id] = parseFloat(document.getElementById(`known_${f.id}`).value);
+  workspaceVersion++;
+  knownValues = result.values;
+  referenceValues = {}; computedValues = {}; stepAttempts = {}; verdictResult = null;
+  prob.steps.forEach(step => {
+    if (step.type === 'compute') step.rows.forEach(row => {
+      referenceValues[row.answerId] = row.answerFn(knownValues, referenceValues);
+    });
   });
   document.getElementById('stepKnown').classList.add('complete');
   document.getElementById('badgeKnown').textContent = '✓';
@@ -822,24 +941,26 @@ function renderSteps(prob) {
         const rowId = `row_${idx}_${rIdx}`;
         return `
           <div class="compute-row" id="${rowId}_wrap">
-            <div class="compute-expr">${row.exprFn(knownValues, computedValues)}</div>
-            <input class="answer-box" id="${rowId}_input" type="number" step="any" placeholder="?"
+            <div class="compute-expr">${row.exprFn(knownValues, referenceValues)}</div>
+            <input class="answer-box" id="${rowId}_input" type="number" step="any" placeholder="?" disabled
+              aria-label="${step.title}: ${row.answerId}" aria-describedby="fb_${idx}"
               onkeydown="if(event.key==='Enter') checkRow('${rowId}',${idx},${rIdx})" />
-            <button class="check-btn" id="${rowId}_btn" onclick="checkRow('${rowId}',${idx},${rIdx})">Check</button>
+            <button class="check-btn" id="${rowId}_btn" onclick="checkRow('${rowId}',${idx},${rIdx})" disabled>Check</button>
           </div>`;
       }).join('');
-      bodyHTML += `<div class="feedback-box" id="fb_${idx}"></div>`;
+      bodyHTML += `<div class="feedback-box" id="fb_${idx}" role="status" aria-live="polite"></div>`;
       if (step.sqrtNote) {
-        bodyHTML += `<div class="sqrt-note">💡 <strong>Square root reminder:</strong> The square root "undoes" squaring. √25 = 5 because 5² = 25. Use a calculator for non-perfect squares and round to 2 decimal places.</div>`;
+        const root = squareRootAnswer(referenceValues[step.rows[0].answerId + '2']);
+        bodyHTML += `<div class="sqrt-note">💡 <strong>Square root reminder:</strong> The square root "undoes" squaring. √25 = 5 because 5² = 25. ${root.exact ? 'This square root has an exact whole-number or decimal answer. Keep it exact.' : `Use a calculator and round to ${root.places} decimal places. This final answer is approximate.`}</div>`;
       }
 
     } else if (step.type === 'verdict') {
       bodyHTML = `
         <div style="font-family:var(--mono);font-size:0.97rem;color:var(--text-muted);margin-bottom:1rem;" id="verdictExpr_${idx}"></div>
-        <button class="begin-btn" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text-muted);" onclick="renderVerdict(${idx})">
+        <button class="begin-btn" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text-muted);" onclick="renderVerdict(${idx})" disabled>
           Compare &amp; Check →
         </button>
-        <div class="feedback-box" id="fb_${idx}"></div>
+        <div class="feedback-box" id="fb_${idx}" role="status" aria-live="polite"></div>
       `;
     }
 
@@ -854,7 +975,7 @@ function renderSteps(prob) {
   });
 
   document.getElementById('dynStep_0').classList.remove('locked');
-  if (prob.steps[0].type === 'expression') setTimeout(() => unlockStep(1), 350);
+  if (prob.steps[0].type === 'expression') deferWorkspace(() => unlockStep(1), 350);
 }
 
 /* ================================================================
@@ -866,6 +987,8 @@ function renderVerdict(stepIdx) {
   const fb    = document.getElementById(`fb_${stepIdx}`);
   const badge = document.getElementById(`badge_${stepIdx}`);
   const card  = document.getElementById(`dynStep_${stepIdx}`);
+  if (!step || step.type !== 'verdict' || !card || card.classList.contains('locked')) return;
+  if (prob.steps.slice(0, stepIdx).some(s => s.type === 'compute' && s.rows.some(r => computedValues[r.answerId] === undefined))) return;
 
   // Show the comparison expression
   const exprEl = document.getElementById(`verdictExpr_${stepIdx}`);
@@ -873,26 +996,29 @@ function renderVerdict(stepIdx) {
     exprEl.innerHTML = `<span style="color:var(--accent2)">${computedValues.sum}</span> <span style="color:var(--text-dim)">?=</span> <span style="color:#f87171">${computedValues.c2}</span>`;
   }
 
-  const isRight = step.verdictFn(knownValues, computedValues);
+  const isRight = step.verdictFn(knownValues);
   verdictResult = isRight;
 
   card.classList.add('complete');
   badge.textContent = '✓';
 
-  const msg = isRight ? step.verdictTrue(knownValues, computedValues) : step.verdictFalse(knownValues, computedValues);
+  const msg = isRight ? step.verdictTrue(knownValues, referenceValues) : step.verdictFalse(knownValues, referenceValues);
   showFeedback(fb, isRight ? 'success' : 'error', msg);
 
   // Show final card with verdict
   const finalCard = document.getElementById('finalCard');
-  document.getElementById('finalLabel').textContent = prob.finalLabel;
-  document.getElementById('finalValue').textContent = isRight ? '✓ YES — Right Triangle!' : '✗ NOT a Right Triangle';
+  const isTriple = currentProbId === 'pythagorean_triples';
+  document.getElementById('finalLabel').textContent = '✓ Check Complete';
+  document.getElementById('finalValue').textContent = isTriple
+    ? (isRight ? '✓ Pythagorean Triple!' : '✗ NOT a Pythagorean Triple')
+    : (isRight ? '✓ YES — Right Triangle!' : '✗ NOT a Right Triangle');
   document.getElementById('finalValue').style.color = isRight ? 'var(--success)' : 'var(--error)';
   document.getElementById('finalValue').style.fontSize = '1.5rem';
   document.getElementById('finalCaption').textContent = isRight
     ? `a² + b² = c² ✓ — This is a valid right triangle.`
     : `a² + b² ≠ c² — The sides do not satisfy the Pythagorean theorem.`;
   finalCard.classList.add('visible');
-  setTimeout(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+  deferWorkspace(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 }
 
 /* ================================================================
@@ -901,12 +1027,14 @@ function renderVerdict(stepIdx) {
 function unlockStep(idx) {
   const card = document.getElementById(`dynStep_${idx}`);
   if (!card) return;
-  card.classList.remove('locked');
   const prob = PROBLEMS[currentProbId];
+  if (prob.steps.slice(0, idx).some(step => step.type === 'compute' && step.rows.some(row => computedValues[row.answerId] === undefined))) return;
+  card.classList.remove('locked');
+  card.querySelectorAll('input, button').forEach(control => { control.disabled = false; });
   if (prob && prob.steps[idx] && prob.steps[idx].type === 'expression') {
     const exprEl = card.querySelector('.expr-display');
     if (exprEl) exprEl.innerHTML = prob.steps[idx].displayFn(knownValues);
-    setTimeout(() => unlockStep(idx + 1), 400);
+    deferWorkspace(() => unlockStep(idx + 1), 400);
   }
   // If it's a verdict step, pre-fill expression display
   if (prob && prob.steps[idx] && prob.steps[idx].type === 'verdict') {
@@ -930,15 +1058,22 @@ function checkRow(rowId, stepIdx, rowIdx) {
   const badge = document.getElementById(`badge_${stepIdx}`);
   const card  = document.getElementById(`dynStep_${stepIdx}`);
 
+  if (!card || card.classList.contains('locked') || !input || input.disabled) return;
   if (!input || input.value.trim() === '') { showFeedback(fb, 'hint', 'Please enter a number before checking.'); return; }
 
-  const userAnswer = parseFloat(input.value);
-  const correct    = row.answerFn(knownValues, computedValues);
+  const userAnswer = input.value.trim();
+  const correct = referenceValues[row.answerId];
+  if (!readDecimal(userAnswer)) { showFeedback(fb, 'hint', 'Enter a valid number.'); return; }
+  const root = step.sqrtNote ? squareRootAnswer(referenceValues[row.answerId + '2']) : null;
+  const matches = root && !root.exact
+    ? decimalEqual(roundedDecimal(userAnswer, root.places), correct)
+    : decimalEqual(userAnswer, correct);
   stepAttempts[rowId] = (stepAttempts[rowId] || 0) + 1;
 
-  if (isClose(userAnswer, correct)) {
+  if (matches) {
     input.classList.add('correct'); input.disabled = true; btn.disabled = true;
-    computedValues[row.answerId] = round2(userAnswer);
+    computedValues[row.answerId] = correct;
+    input.value = correct;
 
     const allDone = step.rows.every((r, ri) => {
       const inp = document.getElementById(`row_${stepIdx}_${ri}_input`);
@@ -960,14 +1095,14 @@ function checkRow(rowId, stepIdx, rowIdx) {
             if (exprEl) exprEl.innerHTML = nr.exprFn(knownValues, computedValues);
           });
         }
-        setTimeout(() => unlockStep(nextIdx), 400);
+        deferWorkspace(() => unlockStep(nextIdx), 400);
       }
     } else {
       showFeedback(fb, 'success', `✓ Correct! Complete the remaining calculations in this step.`);
     }
   } else {
     input.classList.add('incorrect'); card.classList.add('error');
-    setTimeout(() => { input.classList.remove('incorrect'); card.classList.remove('error'); }, 600);
+    deferWorkspace(() => { input.classList.remove('incorrect'); card.classList.remove('error'); }, 600);
     const attempts = stepAttempts[rowId];
     let msg = '';
     if (attempts === 1)      msg = `Not quite — double-check your math and try again.`;
@@ -984,12 +1119,16 @@ function showFinalAnswer(step, value) {
   const finalCard = document.getElementById('finalCard');
   const ul = getUnitLabel();
   document.getElementById('finalLabel').textContent = prob.finalLabel;
-  document.getElementById('finalValue').textContent = value + ul;
+  const root = step.sqrtNote ? squareRootAnswer(referenceValues[step.rows[0].answerId + '2']) : null;
+  const approximate = root && !root.exact;
+  document.getElementById('finalValue').textContent = (approximate ? '≈ ' : '') + value + ul;
   document.getElementById('finalValue').style.color = '';
   document.getElementById('finalValue').style.fontSize = '';
-  document.getElementById('finalCaption').textContent = prob.finalCaption ? prob.finalCaption(value, ul) : '';
+  document.getElementById('finalCaption').textContent = approximate
+    ? `Rounded to ${root.places} decimal places. Keep the squares and sums exact until this final square root.`
+    : (prob.finalCaption ? prob.finalCaption(value, ul) : '');
   finalCard.classList.add('visible');
-  setTimeout(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+  deferWorkspace(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 }
 
 /* ================================================================
@@ -1018,7 +1157,9 @@ function buildProblemText() {
       lines.push(`  ${step.displayFn(knownValues).replace(/<[^>]+>/g, '').replace(/<br>/g, '\n  ')}`);
     } else if (step.type === 'compute') {
       step.rows.forEach((row, rIdx) => {
-        const expr = row.exprFn(knownValues, computedValues).replace(/<[^>]+>/g, '');
+        const root = step.sqrtNote ? squareRootAnswer(referenceValues[row.answerId + '2']) : null;
+        let expr = row.exprFn(knownValues, computedValues).replace(/<[^>]+>/g, '');
+        if (root && !root.exact) expr = expr.replace(/=\s*$/, '≈');
         const ans = computedValues[row.answerId];
         const att = stepAttempts[`row_${idx}_${rIdx}`] || 1;
         const note = att === 1 ? ' ✓ (1st try)' : ` (${att} attempts)`;
@@ -1039,7 +1180,8 @@ function buildProblemText() {
   const finalStep = prob.steps.find(s => s.isFinal);
   if (finalStep && finalStep.type === 'compute') {
     const fk = finalStep.rows.slice(-1)[0]?.answerId;
-    lines.push(`${prob.finalLabel.replace('✓ ', '')} = ${computedValues[fk]}${ul}`);
+    const root = finalStep.sqrtNote ? squareRootAnswer(referenceValues[fk + '2']) : null;
+    lines.push(`${prob.finalLabel.replace('✓ ', '')} ${root && !root.exact ? '≈' : '='} ${computedValues[fk]}${ul}`);
   } else if (finalStep && finalStep.type === 'verdict') {
     lines.push(verdictResult ? 'Result: RIGHT TRIANGLE ✓' : 'Result: NOT a right triangle ✗');
   }
@@ -1051,12 +1193,12 @@ function copyToClipboard() {
   const text = buildProblemText(), btn = document.getElementById('copyBtn');
   navigator.clipboard.writeText(text).then(() => {
     btn.textContent = '✓ Copied!'; btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
+    deferWorkspace(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
   }).catch(() => {
     const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
     document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     btn.textContent = '✓ Copied!'; btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
+    deferWorkspace(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
   });
 }
 
@@ -1064,7 +1206,8 @@ function copyToClipboard() {
    RESET
 ================================================================ */
 function resetWorkspace() {
-  knownValues = {}; computedValues = {}; stepAttempts = {}; verdictResult = null;
+  workspaceVersion++;
+  knownValues = {}; referenceValues = {}; computedValues = {}; stepAttempts = {}; verdictResult = null;
   document.getElementById('stepsContainer').innerHTML = '';
   document.getElementById('finalCard').classList.remove('visible');
   document.getElementById('workspace').classList.remove('visible');
