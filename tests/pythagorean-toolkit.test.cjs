@@ -161,10 +161,15 @@ test('hypotenuse, missing-leg, and coordinate-distance ordinary cases remain cor
   f.answer(1, 0, 169); f.answer(1, 1, 25); f.answer(2, 0, 144); f.answer(3, 0, 12);
   assert.equal(f.result(), '12 cm');
   f.select('distance', { x1: 3, y1: -2, x2: -1, y2: 1 }); f.begin();
-  assert.match(f.document.querySelector('#dynStep_0 .expr-display').textContent, /\(-4\)²/);
-  f.answer(1, 0, -4); f.answer(1, 1, 3); f.answer(2, 0, 16); f.answer(2, 1, 9);
+  assert.match(f.document.querySelector('#dynStep_0 .expr-display').textContent, /1−\(-2\)/);
+  assert.doesNotMatch(f.document.querySelector('#dynStep_0 .expr-display').textContent, /\(-4\)²/);
+  f.answer(1, 0, -4); f.answer(1, 1, 3);
+  assert.match(f.document.querySelector('#dynStep_2 .compute-expr').textContent, /\(-4\)²/);
+  f.answer(2, 0, 16); f.answer(2, 1, 9);
   f.answer(3, 0, 25); f.answer(4, 0, 5);
   assert.equal(f.result(), '5 cm');
+  assert.match(f.copied(), /1 − \(-2\) = 3/);
+  assert.doesNotMatch(f.copied(), /<[^>]*>|undefined|NaN/);
 });
 
 test('exact decimal roots stay exact and wrong nearby roots are not accepted', t => {
@@ -209,10 +214,21 @@ test('later controls cannot be used before their prerequisite arithmetic', t => 
   const f = fixture(t);
   f.select('is_right', { a: 3, b: 4, c: 5 }); f.begin();
   assert.equal(f.document.getElementById('row_2_0_input').disabled, true);
+  assert.equal(f.window.getComputedStyle(f.document.querySelector('#dynStep_2 .step-body')).display, 'none');
   assert.equal(f.document.querySelector('#dynStep_3 button').disabled, true);
   f.window.unlockStep(3); f.window.renderVerdict(3);
   assert.equal(f.document.querySelector('#dynStep_3 button').disabled, true);
   assert.equal(f.document.getElementById('finalCard').classList.contains('visible'), false);
+  f.answer(1, 0, 9); f.answer(1, 1, 16); f.answer(1, 2, 25);
+  assert.notEqual(f.window.getComputedStyle(f.document.querySelector('#dynStep_2 .step-body')).display, 'none');
+});
+
+test('decimal parsing handles explicit plus signs and signed exponents', t => {
+  const f = fixture(t);
+  for (const [input, expected] of [['+3', '3'], ['+1.2', '1.2'], ['+.03', '0.03'],
+    ['+3e+2', '300'], ['-3e-2', '-0.03'], ['-0', '0']]) {
+    assert.equal(f.window.decimalText(f.window.readDecimal(input)), expected);
+  }
 });
 
 test('reset and mode changes discard pending callbacks and previous results', t => {

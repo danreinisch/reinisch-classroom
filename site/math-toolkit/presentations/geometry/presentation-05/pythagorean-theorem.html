@@ -102,6 +102,7 @@
     /* ── STEP CARDS ── */
     .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; animation: slideDown 0.25s ease; transition: border-color 0.2s; }
     .step-card.locked { opacity: 0.4; pointer-events: none; }
+    .step-card.locked .step-body { display: none; }
     .step-card.complete { border-color: var(--success); }
     .step-card.error    { border-color: var(--error); }
     .step-header { padding: 0.85rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border); background: var(--surface2); }
@@ -615,25 +616,21 @@ const PROBLEMS = {
       {
         title: 'Substitute Your Values',
         type: 'expression',
-        displayFn: (k) => {
-          const dx = decimalOperation(k.x2, k.x1, '-');
-          const dy = decimalOperation(k.y2, k.y1, '-');
-          return `d = √((<span class="val">${k.x2}</span>−<span class="val">${k.x1}</span>)² + (<span class="val">${k.y2}</span>−<span class="val">${k.y1}</span>)²)<br>d = √((<span class="val">${dx}</span>)² + (<span class="val">${dy}</span>)²)`;
-        }
+        displayFn: (k) => `d = √((<span class="val">${k.x2}</span>−(<span class="val">${k.x1}</span>))² + (<span class="val">${k.y2}</span>−(<span class="val">${k.y1}</span>))²)`
       },
       {
         title: 'Find the Differences (x₂−x₁) and (y₂−y₁)',
-        instruction: 'Subtract to find the horizontal and vertical distances.',
+        instruction: 'Subtract to find the horizontal and vertical changes. These can be negative.',
         type: 'compute',
         rows: [
           {
-            exprFn: (k) => `<span class="val">${k.x2}</span> − <span class="val">${k.x1}</span> =`,
+            exprFn: (k) => `<span class="val">${k.x2}</span> − (<span class="val">${k.x1}</span>) =`,
             answerId: 'dx',
             answerFn: (k) => decimalOperation(k.x2, k.x1, '-'),
             hintFn: (k) => `Subtract ${k.x2} − ${k.x1}. Be careful with negative numbers!`
           },
           {
-            exprFn: (k) => `<span class="val">${k.y2}</span> − <span class="val">${k.y1}</span> =`,
+            exprFn: (k) => `<span class="val">${k.y2}</span> − (<span class="val">${k.y1}</span>) =`,
             answerId: 'dy',
             answerFn: (k) => decimalOperation(k.y2, k.y1, '-'),
             hintFn: (k) => `Subtract ${k.y2} − ${k.y1}. Be careful with negative numbers!`
@@ -1142,7 +1139,7 @@ function buildProblemText() {
   lines.push(`Problem Type: ${prob.name}`);
   if (getUnit()) lines.push(`Units: ${getUnit()}`);
   lines.push(d);
-  lines.push(`Formula: ${prob.formulaText.replace(/<[^>]+>/g, '').replace(/\?=/g, '?=')}`);
+  lines.push(`Formula: ${document.getElementById('formulaText').textContent.trim()}`);
   lines.push('');
   lines.push('Step 1: Known Values');
   prob.knownFields.forEach(f => {
@@ -1154,12 +1151,10 @@ function buildProblemText() {
     const stepNum = idx + 2;
     lines.push(`Step ${stepNum}: ${step.title}`);
     if (step.type === 'expression') {
-      lines.push(`  ${step.displayFn(knownValues).replace(/<[^>]+>/g, '').replace(/<br>/g, '\n  ')}`);
+      lines.push(`  ${document.querySelector(`#dynStep_${idx} .expr-display`).textContent.trim()}`);
     } else if (step.type === 'compute') {
       step.rows.forEach((row, rIdx) => {
-        const root = step.sqrtNote ? squareRootAnswer(referenceValues[row.answerId + '2']) : null;
-        let expr = row.exprFn(knownValues, computedValues).replace(/<[^>]+>/g, '');
-        if (root && !root.exact) expr = expr.replace(/=\s*$/, '≈');
+        const expr = document.querySelector(`#row_${idx}_${rIdx}_wrap .compute-expr`).textContent.trim();
         const ans = computedValues[row.answerId];
         const att = stepAttempts[`row_${idx}_${rIdx}`] || 1;
         const note = att === 1 ? ' ✓ (1st try)' : ` (${att} attempts)`;
