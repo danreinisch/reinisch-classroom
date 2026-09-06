@@ -133,7 +133,7 @@ test(
 );
 
 test(
-  'Center provides one searchable student combobox backed by a listbox',
+  'Center provides one persistent searchable student rail',
   () => {
     const center =
       section(
@@ -144,17 +144,17 @@ test(
 
     assert.match(
       center,
-      /obs-center-student-combobox/
+      /obs-center-student-rail-search/
     );
 
     assert.match(
       center,
-      /aria-autocomplete/
+      /obs-center-student-rail-list/
     );
 
     assert.match(
       center,
-      /obs-center-student-listbox/
+      /obs-center-student-rail-item/
     );
 
     assert.doesNotMatch(
@@ -233,19 +233,20 @@ test(
 test(
   'Student-mode goal cards expose their configured observation period context',
   () => {
-    const center =
+    const goalPeriodMeta =
       section(
         observation,
-        'function initObservationCenter'
+        'const buildGoalPeriodMeta',
+        5000
       );
 
     assert.match(
-      center,
+      goalPeriodMeta,
       /obs-center-goal-period/
     );
 
     assert.match(
-      center,
+      goalPeriodMeta,
       /getConfiguredClassPeriods/
     );
   }
@@ -255,15 +256,9 @@ test(
 test(
   'Class Period options include the loaded bell schedule as a fallback source',
   () => {
-    const center =
-      section(
-        observation,
-        'function initObservationCenter'
-      );
-
     const periods =
       section(
-        center,
+        observation,
         'const configuredPeriods',
         5000
       );
@@ -298,7 +293,7 @@ test(
     const picker =
       section(
         center,
-        'const refreshStudentOptions',
+        'const refreshStudentRail',
         12000
       );
 
