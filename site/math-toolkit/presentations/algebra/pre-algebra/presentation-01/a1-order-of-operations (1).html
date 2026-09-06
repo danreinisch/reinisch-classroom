@@ -520,6 +520,19 @@
     .step-instruction, .step-answer-row, .step-feedback, .step-operation { padding-left: 0; margin-left: 0; }
     .input-row { flex-direction: column; }
   }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  .priority-note, .answer-guide { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; }
+  .priority-note { margin-top: -14px; }
+  .answer-guide { margin-top: 14px; }
+  .examples-toggle { width: 100%; background: transparent; border-radius: 0; text-align: left; }
+  .examples-body.open { max-height: none; }
+  .answer-label { font-family: var(--font-mono); color: var(--text-muted); }
+  .step-answer-row { flex-wrap: wrap; }
+  .step-operation { max-width: 100%; overflow-wrap: anywhere; }
+  .expr-input { min-width: 0; }
+  .history-entry { flex-wrap: wrap; overflow-wrap: anywhere; }
+  .h-rule { margin-left: auto; }
+  button:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -572,60 +585,62 @@
     </div>
   </div>
 
+  <p class="priority-note">Multiply and divide from left to right. Add and subtract from left to right. Each pair shares a priority.</p>
+
   <!-- Input Section -->
   <div class="input-section" id="inputSection">
-    <h2>✏️ Enter Your Expression</h2>
-    <p class="hint">Type in the math expression from your assignment. Use * for multiply, / for divide, ^ for exponents.</p>
+    <h2><label for="exprInput">✏️ Enter Your Expression</label></h2>
+    <p class="hint" id="expressionGuide">Use * or × for multiply, / or ÷ for divide, and ^ for powers. Write multiplication explicitly: 2*(3+4). Use whole-number exponents from -100 to 100. Enter numbers up to 1 billion with at most 12 decimal places.</p>
     <div class="input-row">
-      <input type="text" class="expr-input" id="exprInput" placeholder="e.g. 3 + 6 * 2" autocomplete="off" spellcheck="false">
+      <input type="text" class="expr-input" id="exprInput" aria-describedby="expressionGuide errorMsg" maxlength="240" placeholder="e.g. 3 + 6 * 2" autocomplete="off" spellcheck="false">
       <button class="btn-primary" id="startBtn" onclick="startSolving()">Let's Solve It →</button>
     </div>
-    <div class="error-msg" id="errorMsg"></div>
+    <div class="error-msg" id="errorMsg" role="alert"></div>
     <div class="examples-panel" id="examplesPanel">
-      <div class="examples-toggle" onclick="toggleExamples()">
+      <button type="button" class="examples-toggle" id="examplesToggle" aria-expanded="false" aria-controls="examplesBody" onclick="toggleExamples()">
         <span>📋 Try a Practice Expression</span>
-        <span class="toggle-arrow" id="toggleArrow">▼</span>
-      </div>
-      <div class="examples-body" id="examplesBody">
+        <span class="toggle-arrow" id="toggleArrow" aria-hidden="true">▼</span>
+      </button>
+      <div class="examples-body" id="examplesBody" hidden>
         <div class="example-category">
           <div class="category-label">🟢 Basic (Add, Subtract, Multiply, Divide)</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadExample(this)">3 + 6 * 2</span>
-            <span class="example-chip" onclick="loadExample(this)">10 - 4 + 3</span>
-            <span class="example-chip" onclick="loadExample(this)">8 / 2 + 5</span>
-            <span class="example-chip" onclick="loadExample(this)">7 * 3 - 10</span>
-            <span class="example-chip" onclick="loadExample(this)">12 / 4 + 2 * 3</span>
+            <button type="button" class="example-chip" onclick="loadExample(this)">3 + 6 * 2</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">10 - 4 + 3</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">8 / 2 + 5</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">7 * 3 - 10</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">12 / 4 + 2 * 3</button>
           </div>
         </div>
         <div class="example-category">
           <div class="category-label">🟡 Parentheses</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadExample(this)">(4 + 5) * 3</span>
-            <span class="example-chip" onclick="loadExample(this)">6 * (7 - 2)</span>
-            <span class="example-chip" onclick="loadExample(this)">(10 + 2) / 4</span>
-            <span class="example-chip" onclick="loadExample(this)">(3 + 5) * (2 + 1)</span>
-            <span class="example-chip" onclick="loadExample(this)">20 / (4 + 1) + 3</span>
+            <button type="button" class="example-chip" onclick="loadExample(this)">(4 + 5) * 3</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">6 * (7 - 2)</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">(10 + 2) / 4</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">(3 + 5) * (2 + 1)</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">20 / (4 + 1) + 3</button>
           </div>
         </div>
         <div class="example-category">
           <div class="category-label">🟠 Exponents</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadExample(this)">2^3 + 4</span>
-            <span class="example-chip" onclick="loadExample(this)">5 + 3^2</span>
-            <span class="example-chip" onclick="loadExample(this)">2^3 + 4 * 5</span>
-            <span class="example-chip" onclick="loadExample(this)">10 - 2^3</span>
-            <span class="example-chip" onclick="loadExample(this)">(6 + 2) ^ 2 / 4</span>
+            <button type="button" class="example-chip" onclick="loadExample(this)">2^3 + 4</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">5 + 3^2</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">2^3 + 4 * 5</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">10 - 2^3</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">(6 + 2) ^ 2 / 4</button>
           </div>
         </div>
         <div class="example-category">
           <div class="category-label">🔴 Multi-Step Challenge</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadExample(this)">10 - 3 * 2 + 8 / 4</span>
-            <span class="example-chip" onclick="loadExample(this)">5 * (3 + 7) - 2^2</span>
-            <span class="example-chip" onclick="loadExample(this)">4^2 - 3 * (2 + 1)</span>
-            <span class="example-chip" onclick="loadExample(this)">(8 - 3) * 2 + 7^2</span>
-            <span class="example-chip" onclick="loadExample(this)">6 + 2 * (9 - 4) ^ 2</span>
-            <span class="example-chip" onclick="loadExample(this)">100 / (5 * 2)^2 + 3</span>
+            <button type="button" class="example-chip" onclick="loadExample(this)">10 - 3 * 2 + 8 / 4</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">5 * (3 + 7) - 2^2</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">4^2 - 3 * (2 + 1)</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">(8 - 3) * 2 + 7^2</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">6 + 2 * (9 - 4) ^ 2</button>
+            <button type="button" class="example-chip" onclick="loadExample(this)">100 / (5 * 2)^2 + 3</button>
           </div>
         </div>
       </div>
@@ -634,6 +649,8 @@
 
   <!-- Workspace -->
   <div class="workspace" id="workspace">
+    <button type="button" class="btn-secondary" id="restartBtn" onclick="resetAll()">Start Over</button>
+    <p class="answer-guide" id="answerGuide">Keep answers exact. Use a fraction such as 1/3 for a repeating or long decimal. Equivalent fractions and exact decimals are accepted.</p>
     <div class="expr-display" id="exprDisplay">
       <div class="expr-text" id="exprText"></div>
     </div>
@@ -655,590 +672,377 @@
 </div>
 
 <script>
-// ==================== TOKENIZER & PARSER ====================
-
+// Exact fractions prevent a rounded intermediate step from changing the problem.
+const LIMITS = { expression: 240, digits: 120, groups: 20, exponent: 100n };
 const TOKEN = { NUM: 'NUM', OP: 'OP', LPAREN: 'LPAREN', RPAREN: 'RPAREN' };
 
+function fraction(n, d = 1n) {
+  if (d === 0n) throw new Error('Division by zero is undefined. Check the denominator.');
+  if (d < 0n) { n = -n; d = -d; }
+  let a = n < 0n ? -n : n, b = d;
+  while (b) { const next = a % b; a = b; b = next; }
+  n /= a; d /= a;
+  if (n.toString().length > LIMITS.digits || d.toString().length > LIMITS.digits) {
+    throw new Error('This expression produces numbers too large for this organizer. Try smaller values.');
+  }
+  return { n, d };
+}
+
+function decimalValue(text) {
+  if (text.length > LIMITS.digits || !/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(text)) {
+    throw new Error('Enter a complete number, such as -3, 0.25, or an exact fraction such as 1/3.');
+  }
+  const places = (text.split('.')[1] || '').length;
+  return fraction(BigInt(text.replace('.', '')), 10n ** BigInt(places));
+}
+
+function formatNumber(value) {
+  if (value.d === 1n) return value.n.toString();
+  let d = value.d, twos = 0, fives = 0;
+  while (d % 2n === 0n) { d /= 2n; twos++; }
+  while (d % 5n === 0n) { d /= 5n; fives++; }
+  const places = Math.max(twos, fives);
+  if (d !== 1n || places > 12) return value.n + '/' + value.d;
+  const scaled = value.n * (10n ** BigInt(places) / value.d);
+  const digits = (scaled < 0n ? -scaled : scaled).toString().padStart(places + 1, '0');
+  return (scaled < 0n ? '-' : '') + digits.slice(0, -places) + '.' + digits.slice(-places);
+}
+
+function computeOp(a, op, b) {
+  if (op === '+') return fraction(a.n * b.d + b.n * a.d, a.d * b.d);
+  if (op === '-') return fraction(a.n * b.d - b.n * a.d, a.d * b.d);
+  if (op === '*') return fraction(a.n * b.n, a.d * b.d);
+  if (op === '/') return fraction(a.n * b.d, a.d * b.n);
+  if (b.d !== 1n || b.n < -LIMITS.exponent || b.n > LIMITS.exponent) {
+    throw new Error('This organizer supports whole-number exponents from -100 to 100. Fractional exponents need a different method.');
+  }
+  if (a.n === 0n && b.n === 0n) throw new Error('0^0 is not assigned a value in this organizer. Choose a different expression.');
+  if (a.n === 0n && b.n < 0n) throw new Error('Zero cannot have a negative exponent: that would divide by zero.');
+  const power = b.n < 0n ? -b.n : b.n;
+  return b.n < 0n ? fraction(a.d ** power, a.n ** power) : fraction(a.n ** power, a.d ** power);
+}
+
 function tokenize(expr) {
+  if (expr.length > LIMITS.expression) throw new Error('Use an expression with at most 240 characters.');
+  const s = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
   const tokens = [];
-  let i = 0;
-  const s = expr.replace(/\s+/g, '');
-  while (i < s.length) {
-    // Handle negative numbers at start or after ( or after operator
-    if (s[i] === '-' && (i === 0 || s[i-1] === '(' || ['+','-','*','/','^'].includes(s[i-1]))) {
-      let num = '-';
-      i++;
-      while (i < s.length && (isDigit(s[i]) || s[i] === '.')) { num += s[i]; i++; }
-      if (num === '-') throw new Error('Invalid expression');
-      tokens.push({ type: TOKEN.NUM, value: parseFloat(num), raw: num });
-    } else if (isDigit(s[i]) || s[i] === '.') {
-      let num = '';
-      while (i < s.length && (isDigit(s[i]) || s[i] === '.')) { num += s[i]; i++; }
-      tokens.push({ type: TOKEN.NUM, value: parseFloat(num), raw: num });
-    } else if (s[i] === '(') {
-      tokens.push({ type: TOKEN.LPAREN, value: '(' }); i++;
-    } else if (s[i] === ')') {
-      tokens.push({ type: TOKEN.RPAREN, value: ')' }); i++;
-    } else if (['+','-','*','/','^'].includes(s[i])) {
-      tokens.push({ type: TOKEN.OP, value: s[i] }); i++;
-    } else if (s[i] === '×') {
-      tokens.push({ type: TOKEN.OP, value: '*' }); i++;
-    } else if (s[i] === '÷') {
-      tokens.push({ type: TOKEN.OP, value: '/' }); i++;
+  for (let i = 0; i < s.length;) {
+    if (/\s/.test(s[i])) { i++; continue; }
+    const number = s.slice(i).match(/^(?:\d+\.?\d*|\.\d+)/);
+    if (number) {
+      const raw = number[0];
+      if ((raw.split('.')[1] || '').length > 12) throw new Error('Use numbers with at most 12 decimal places.');
+      const value = decimalValue(raw);
+      if (value.n > 1000000000n * value.d) throw new Error('Use numbers no larger than 1 billion.');
+      tokens.push({ type: TOKEN.NUM, value }); i += raw.length;
+    } else if ('+-*/^'.includes(s[i])) {
+      tokens.push({ type: TOKEN.OP, value: s[i++] });
+    } else if (s[i] === '(' || s[i] === ')') {
+      tokens.push({ type: s[i] === '(' ? TOKEN.LPAREN : TOKEN.RPAREN, value: s[i++] });
     } else {
-      throw new Error(`Unknown character: "${s[i]}"`);
+      throw new Error('Use numbers, parentheses, and +, -, *, /, or ^. Check for an extra decimal point or unsupported notation.');
     }
   }
   return tokens;
 }
 
-function isDigit(c) { return c >= '0' && c <= '9'; }
-
-function validateTokens(tokens) {
-  let depth = 0;
-  for (const t of tokens) {
-    if (t.type === TOKEN.LPAREN) depth++;
-    if (t.type === TOKEN.RPAREN) depth--;
-    if (depth < 0) throw new Error('Mismatched parentheses');
+// Unary signs bind less tightly than powers; powers group from the right.
+// This distinguishes -3^2 from (-3)^2 and permits 2^-3 without using eval.
+function parseTokens(tokens) {
+  let pos = 0, nextId = 0, depth = 0;
+  const node = fields => ({ ...fields, id: nextId++ });
+  const at = op => tokens[pos]?.type === TOKEN.OP && tokens[pos].value === op;
+  function primary() {
+    const token = tokens[pos++];
+    if (!token) throw new Error('An operation is missing a number. Check the end of the expression.');
+    if (token.type === TOKEN.NUM) return node({ kind: 'number', value: token.value });
+    if (token.type !== TOKEN.LPAREN) throw new Error('Expected a number or an opening parenthesis. Check the operators.');
+    if (++depth > LIMITS.groups) throw new Error('Use at most 20 nested groups of parentheses.');
+    const inner = sum();
+    if (tokens[pos]?.type !== TOKEN.RPAREN) throw new Error('Check the parentheses and use * between quantities you want to multiply.');
+    pos++; depth--;
+    return node({ kind: 'group', inner });
   }
-  if (depth !== 0) throw new Error('Mismatched parentheses');
-  if (tokens.length === 0) throw new Error('Empty expression');
-  // Check at least one operator exists
-  const ops = tokens.filter(t => t.type === TOKEN.OP);
-  if (ops.length === 0 && tokens.filter(t => t.type === TOKEN.NUM).length <= 1) {
-    throw new Error('Expression needs at least one operation');
+  function power() {
+    const left = primary();
+    if (!at('^')) return left;
+    pos++;
+    return node({ kind: 'binary', op: '^', left, right: unary() });
   }
-}
-
-// ==================== STEP FINDER ====================
-// Find the next operation to perform using PEMDAS
-
-function tokensToString(tokens) {
-  let result = '';
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t.type === TOKEN.NUM) {
-      result += formatNumber(t.value);
-    } else {
-      result += t.value;
+  function unary() {
+    if (at('+') || at('-')) {
+      const op = tokens[pos++].value;
+      return node({ kind: 'unary', op, right: unary() });
     }
-    // Add spaces around operators
-    if (t.type === TOKEN.OP) {
-      result = result.slice(0, -t.value.length) + ' ' + displayOp(t.value) + ' ';
-    }
+    return power();
   }
-  return result.trim();
-}
-
-function displayOp(op) {
-  if (op === '*') return '×';
-  if (op === '/') return '÷';
-  return op;
-}
-
-function formatNumber(n) {
-  if (Number.isInteger(n)) return n.toString();
-  // Show up to 4 decimal places, trim trailing zeros
-  let s = n.toFixed(4);
-  s = s.replace(/\.?0+$/, '');
-  return s;
-}
-
-function findInnermostParens(tokens) {
-  let lastOpen = -1;
-  for (let i = 0; i < tokens.length; i++) {
-    if (tokens[i].type === TOKEN.LPAREN) lastOpen = i;
-    if (tokens[i].type === TOKEN.RPAREN && lastOpen >= 0) {
-      return { start: lastOpen, end: i };
+  function product() {
+    let left = unary();
+    while (at('*') || at('/')) {
+      const op = tokens[pos++].value;
+      left = node({ kind: 'binary', op, left, right: unary() });
     }
+    return left;
   }
+  function sum() {
+    let left = product();
+    while (at('+') || at('-')) {
+      const op = tokens[pos++].value;
+      left = node({ kind: 'binary', op, left, right: product() });
+    }
+    return left;
+  }
+  if (!tokens.length) throw new Error('Please enter a math expression first.');
+  const root = sum();
+  if (pos !== tokens.length) throw new Error('Check the entire expression. Use * for multiplication, as in 2*(3+4), and check the parentheses.');
+  return root;
+}
+function validateTokens(tokens) { parseTokens(tokens); }
+function displayOp(op) { return op === '*' ? '×' : op === '/' ? '÷' : op; }
+
+// Keep negative results and fractions grouped when substituting them into a
+// larger expression. Removing (-3)'s grouping before a power changes meaning.
+function expressionParts(node, targetId = null, nested = false, highlighted = false) {
+  const active = highlighted || node.id === targetId;
+  const text = value => ({ text: value, highlighted: active });
+  const child = value => expressionParts(value, targetId, true, active);
+  if (node.kind === 'number') {
+    const value = formatNumber(node.value);
+    return [text(nested && (node.value.n < 0n || value.includes('/')) ? '(' + value + ')' : value)];
+  }
+  if (node.kind === 'group') return [text('('), ...child(node.inner), text(')')];
+  if (node.kind === 'unary') return [text(node.op), ...child(node.right)];
+  return [...child(node.left), text(' ' + displayOp(node.op) + ' '), ...child(node.right)];
+}
+function expressionText(node) { return expressionParts(node).map(p => p.text).join(''); }
+function tokensToString(tokens) { return expressionText(parseTokens(tokens)); }
+function replaceNode(root, id, replacement) {
+  if (root.id === id) return replacement;
+  if (root.kind === 'group') return { ...root, inner: replaceNode(root.inner, id, replacement) };
+  if (root.kind === 'unary') return { ...root, right: replaceNode(root.right, id, replacement) };
+  if (root.kind === 'binary') return { ...root, left: replaceNode(root.left, id, replacement), right: replaceNode(root.right, id, replacement) };
+  return root;
+}
+function innermostGroup(node) {
+  if (node.kind === 'group') return innermostGroup(node.inner) || node;
+  if (node.kind === 'unary') return innermostGroup(node.right);
+  if (node.kind === 'binary') return innermostGroup(node.left) || innermostGroup(node.right);
   return null;
 }
-
-function findNextOp(tokens, startIdx, endIdx) {
-  // Within a range of tokens (no parens), find the next op to evaluate
-  // Priority: ^ first (right to left), then * and / (left to right), then + and - (left to right)
-
-  // Look for exponents (right to left → find leftmost for step-by-step clarity)
-  for (let i = startIdx; i <= endIdx; i++) {
-    if (tokens[i].type === TOKEN.OP && tokens[i].value === '^') {
-      return i;
+function nextOperation(node) {
+  const ready = [];
+  function visit(n) {
+    if (n.kind === 'unary') {
+      visit(n.right);
+      if (n.right.kind === 'number') ready.push({ node: n, rank: 1 });
+    }
+    if (n.kind === 'binary') {
+      visit(n.left); visit(n.right);
+      if (n.left.kind === 'number' && n.right.kind === 'number') {
+        ready.push({ node: n, rank: n.op === '^' ? 0 : '*/'.includes(n.op) ? 2 : 3 });
+      }
     }
   }
-  // Look for * and / (left to right)
-  for (let i = startIdx; i <= endIdx; i++) {
-    if (tokens[i].type === TOKEN.OP && (tokens[i].value === '*' || tokens[i].value === '/')) {
-      return i;
-    }
-  }
-  // Look for + and - (left to right)
-  for (let i = startIdx; i <= endIdx; i++) {
-    if (tokens[i].type === TOKEN.OP && (tokens[i].value === '+' || tokens[i].value === '-')) {
-      return i;
-    }
-  }
-  return -1;
+  visit(node);
+  return ready.reduce((best, item) => !best || item.rank < best.rank ? item : best, null)?.node;
 }
-
-function getOpRule(op) {
-  if (op === '^') return { letter: 'E', name: 'Exponents' };
-  if (op === '*') return { letter: 'M', name: 'Multiplication' };
-  if (op === '/') return { letter: 'D', name: 'Division' };
-  if (op === '+') return { letter: 'A', name: 'Addition' };
-  if (op === '-') return { letter: 'S', name: 'Subtraction' };
-  return { letter: '?', name: '?' };
+function operationRule(node) {
+  if (node.kind === 'unary') return { rule: 'N', name: 'Apply the Sign', hint: node.op === '-' ? 'The minus sign takes the opposite of the value that follows it. An ungrouped minus is applied after a power.' : 'A leading plus sign keeps the value unchanged.' };
+  const rules = {
+    '^': ['E', 'Exponents', 'Evaluate powers before multiplication or division. Chained powers group from the right: 2^3^2 means 2^(3^2).'],
+    '*': ['M', 'Multiplication', 'Multiplication and division share a priority. Work from left to right.'],
+    '/': ['D', 'Division', 'Multiplication and division share a priority. Work from left to right. Keep a repeating decimal as an exact fraction.'],
+    '+': ['A', 'Addition', 'Addition and subtraction share a priority. Work from left to right after multiplication and division.'],
+    '-': ['S', 'Subtraction', 'Addition and subtraction share a priority. Work from left to right after multiplication and division.'],
+  };
+  const [rule, name, hint] = rules[node.op];
+  return { rule, name, hint };
 }
-
-function computeOp(a, op, b) {
-  switch (op) {
-    case '+': return a + b;
-    case '-': return a - b;
-    case '*': return a * b;
-    case '/': return b !== 0 ? a / b : NaN;
-    case '^': return Math.pow(a, b);
-  }
-}
-
-// ==================== STEP GENERATION ====================
 
 function generateAllSteps(tokens) {
+  let current = parseTokens(tokens);
   const steps = [];
-  let current = [...tokens];
-
-  while (true) {
-    // Check if we're done (single number left)
-    const nums = current.filter(t => t.type === TOKEN.NUM);
-    const ops = current.filter(t => t.type === TOKEN.OP);
-    if (ops.length === 0 && current.filter(t => t.type === TOKEN.LPAREN).length === 0) {
-      break;
+  while (current.kind !== 'number') {
+    const group = innermostGroup(current);
+    if (group?.inner.kind === 'number') {
+      current = replaceNode(current, group.id, { ...group.inner, id: group.id });
+      continue;
     }
-
-    // Check for parentheses first
-    const parens = findInnermostParens(current);
-    if (parens) {
-      const inner = current.slice(parens.start + 1, parens.end);
-      // If inside is just a number, remove the parens
-      if (inner.length === 1 && inner[0].type === TOKEN.NUM) {
-        steps.push({
-          type: 'parens-remove',
-          rule: 'P',
-          ruleName: 'Parentheses (simplify)',
-          operation: `(${formatNumber(inner[0].value)})`,
-          answer: inner[0].value,
-          opIdx: parens.start,
-          replaceStart: parens.start,
-          replaceEnd: parens.end,
-          beforeTokens: [...current],
-        });
-        current = [
-          ...current.slice(0, parens.start),
-          { type: TOKEN.NUM, value: inner[0].value, raw: formatNumber(inner[0].value) },
-          ...current.slice(parens.end + 1)
-        ];
-        continue;
-      }
-      // Find next op inside parens
-      const opIdx = findNextOp(current, parens.start + 1, parens.end - 1);
-      if (opIdx >= 0) {
-        const left = current[opIdx - 1];
-        const right = current[opIdx + 1];
-        const op = current[opIdx].value;
-        const result = computeOp(left.value, op, right.value);
-        const rule = getOpRule(op);
-        steps.push({
-          type: 'compute',
-          rule: 'P',
-          ruleName: `Parentheses → ${rule.name}`,
-          subRule: rule.letter,
-          operation: `${formatNumber(left.value)} ${displayOp(op)} ${formatNumber(right.value)}`,
-          answer: result,
-          opIdx: opIdx,
-          replaceStart: opIdx - 1,
-          replaceEnd: opIdx + 1,
-          beforeTokens: [...current],
-          highlightStart: parens.start,
-          highlightEnd: parens.end,
-        });
-        current = [
-          ...current.slice(0, opIdx - 1),
-          { type: TOKEN.NUM, value: result, raw: formatNumber(result) },
-          ...current.slice(opIdx + 2)
-        ];
-        continue;
-      }
-    }
-
-    // No parens — find next op in full expression
-    const opIdx = findNextOp(current, 0, current.length - 1);
-    if (opIdx < 0) break;
-
-    const left = current[opIdx - 1];
-    const right = current[opIdx + 1];
-    const op = current[opIdx].value;
-    const result = computeOp(left.value, op, right.value);
-    const rule = getOpRule(op);
-
-    steps.push({
-      type: 'compute',
-      rule: rule.letter,
-      ruleName: rule.name,
-      operation: `${formatNumber(left.value)} ${displayOp(op)} ${formatNumber(right.value)}`,
-      answer: result,
-      opIdx: opIdx,
-      replaceStart: opIdx - 1,
-      replaceEnd: opIdx + 1,
-      beforeTokens: [...current],
-    });
-
-    current = [
-      ...current.slice(0, opIdx - 1),
-      { type: TOKEN.NUM, value: result, raw: formatNumber(result) },
-      ...current.slice(opIdx + 2)
-    ];
+    const operation = nextOperation(group ? group.inner : current);
+    if (!operation) throw new Error('Could not identify a valid next operation. Check the expression.');
+    const answer = operation.kind === 'unary'
+      ? fraction(operation.op === '-' ? -operation.right.value.n : operation.right.value.n, operation.right.value.d)
+      : computeOp(operation.left.value, operation.op, operation.right.value);
+    const rule = operationRule(operation);
+    const after = replaceNode(current, operation.id, { kind: 'number', value: answer, id: operation.id });
+    steps.push({ answer, operation: expressionText(operation), beforeParts: expressionParts(current, operation.id),
+      afterExpr: expressionText(after), rule: group ? 'P' : rule.rule, subRule: group ? rule.rule : null,
+      ruleName: (group ? 'Parentheses → ' : '') + rule.name, hint: rule.hint });
+    current = after;
   }
-
-  return { steps, finalValue: current.length > 0 && current[0].type === TOKEN.NUM ? current[0].value : NaN };
+  return { steps, finalValue: current.value };
 }
 
-// ==================== UI STATE ====================
+function readAnswer(raw) {
+  const text = raw.trim();
+  if (text.length > 2 * LIMITS.digits + 1) throw new Error('That answer is too long.');
+  const parts = text.split('/').map(p => p.trim());
+  if (parts.length === 1) return decimalValue(parts[0]);
+  if (parts.length !== 2 || !/^[+-]?\d+$/.test(parts[0]) || !/^[+-]?\d+$/.test(parts[1])) {
+    throw new Error('Enter one complete number or a fraction such as -1/3.');
+  }
+  return fraction(BigInt(parts[0]), BigInt(parts[1]));
+}
 
-let state = {
-  originalExpr: '',
-  tokens: [],
-  steps: [],
-  finalValue: NaN,
-  currentStep: 0,
-  attempts: 0,
-  correctFirst: 0,
-  history: [],
-  completedRules: new Set(),
-};
-
+// ==================== STUDENT WORKSPACE ====================
+let state = null;
+let workspaceVersion = 0;
+function deferWorkspace(fn, delay) {
+  const version = workspaceVersion;
+  setTimeout(() => { if (version === workspaceVersion) fn(); }, delay);
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
 function loadExample(el) {
   document.getElementById('exprInput').value = el.textContent;
+  document.getElementById('errorMsg').classList.remove('show');
   document.getElementById('exprInput').focus();
 }
-
 function toggleExamples() {
-  const body = document.getElementById('examplesBody');
-  const arrow = document.getElementById('toggleArrow');
-  body.classList.toggle('open');
-  arrow.classList.toggle('open');
+  const open = document.getElementById('examplesBody').classList.toggle('open');
+  document.getElementById('examplesBody').hidden = !open;
+  document.getElementById('examplesToggle').setAttribute('aria-expanded', String(open));
+  document.getElementById('toggleArrow').classList.toggle('open', open);
 }
-
 function showError(msg) {
   const el = document.getElementById('errorMsg');
   el.textContent = msg;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 4000);
 }
-
 function startSolving() {
+  if (state) return;
   const input = document.getElementById('exprInput').value.trim();
-  if (!input) { showError('Please enter a math expression first!'); return; }
-
-  let tokens;
+  let tokens, result;
   try {
     tokens = tokenize(input);
-    validateTokens(tokens);
-  } catch(e) {
-    showError(e.message || 'Could not understand that expression. Try something like: 3 + 6 * 2');
-    return;
-  }
-
-  const { steps, finalValue } = generateAllSteps(tokens);
-  if (steps.length === 0) {
-    showError('That expression doesn\'t need any steps to solve!');
-    return;
-  }
-
-  state = {
-    originalExpr: input,
-    tokens: tokens,
-    steps: steps,
-    finalValue: finalValue,
-    currentStep: 0,
-    attempts: 0,
-    correctFirst: 0,
-    history: [],
-    completedRules: new Set(),
-  };
-
-  // Record original expression
-  state.history.push({ expr: tokensToString(tokens), rule: 'Start' });
-
-  // Show workspace
+    result = generateAllSteps(tokens);
+    if (!result.steps.length) throw new Error('That expression already has a single value. Include an operation to practice.');
+  } catch (e) { showError(e.message); return; }
+  workspaceVersion++;
+  state = { originalExpr: input, ...result, currentStep: 0, attempts: 0, stepTries: 0, correctFirst: 0,
+    history: [{ expr: tokensToString(tokens), rule: 'Original' }], completedRules: new Set() };
+  document.getElementById('errorMsg').classList.remove('show');
   document.getElementById('inputSection').style.display = 'none';
   document.getElementById('workspace').classList.add('visible');
-
-  // Reset PEMDAS banner
-  document.querySelectorAll('.pemdas-step').forEach(el => {
-    el.classList.remove('active', 'done');
-  });
-
-  // Reset containers
   document.getElementById('stepsContainer').innerHTML = '';
   document.getElementById('resultSection').classList.remove('visible');
-
-  // Show first step
   showCurrentStep();
 }
-
 function showCurrentStep() {
-  const step = state.steps[state.currentStep];
+  if (!state) return;
+  const idx = state.currentStep, step = state.steps[idx];
   if (!step) { showResult(); return; }
-
-  // Update expression display with highlighting
+  if (document.getElementById('step-' + idx)) return;
   updateExprDisplay(step);
-
-  // Update PEMDAS banner
   updatePEMDAS(step);
-
-  // Create step card
-  const stepNum = state.currentStep + 1;
   const card = document.createElement('div');
-  card.className = 'step-card';
-  card.id = `step-${state.currentStep}`;
-
-  const ruleLabel = step.ruleName;
-  let instruction = '';
-  if (step.type === 'parens-remove') {
-    instruction = 'The parentheses contain just one number. What is the value inside?';
-  } else {
-    instruction = `Compute this operation. What is <strong>${step.operation}</strong> ?`;
-  }
-
+  card.className = 'step-card'; card.id = 'step-' + idx;
   card.innerHTML = `
-    <div class="step-header">
-      <div class="step-num">${stepNum}</div>
-      <div class="step-title">${ruleLabel}</div>
-    </div>
-    <div class="step-instruction">${instruction}</div>
-    <div class="step-operation">${step.operation}</div>
+    <div class="step-header"><div class="step-num">${idx + 1}</div><div class="step-title">${step.ruleName}</div></div>
+    <div class="step-instruction">${step.hint}</div>
+    <div class="step-operation">${escapeHtml(step.operation)}</div>
     <div class="step-answer-row">
-      <span style="font-family:var(--font-mono);color:var(--text-dim);font-size:0.9rem;">= </span>
-      <input type="text" class="step-answer-input" id="answer-${state.currentStep}" 
-             placeholder="?" autocomplete="off" 
-             onkeydown="if(event.key==='Enter')checkAnswer(${state.currentStep})">
-      <button class="btn-check" onclick="checkAnswer(${state.currentStep})">Check</button>
+      <label for="answer-${idx}" class="answer-label">= <span class="sr-only">Step ${idx + 1} answer</span></label>
+      <input type="text" class="step-answer-input" id="answer-${idx}" placeholder="?" autocomplete="off"
+        aria-describedby="answerGuide feedback-${idx}" onkeydown="if(event.key==='Enter')checkAnswer(${idx})">
+      <button class="btn-check" onclick="checkAnswer(${idx})">Check</button>
     </div>
-    <div class="step-feedback" id="feedback-${state.currentStep}"></div>
-  `;
-
+    <div class="step-feedback" id="feedback-${idx}" role="status" aria-live="polite"></div>`;
   document.getElementById('stepsContainer').appendChild(card);
-
-  // Focus the input
-  setTimeout(() => {
-    const input = document.getElementById(`answer-${state.currentStep}`);
-    if (input) input.focus();
-  }, 100);
+  deferWorkspace(() => document.getElementById('answer-' + idx)?.focus(), 100);
 }
-
 function updateExprDisplay(step) {
-  const tokens = step.beforeTokens;
-  let html = '';
-
-  // Determine highlight range
-  let hlStart = step.replaceStart;
-  let hlEnd = step.replaceEnd;
-  if (step.highlightStart !== undefined) {
-    hlStart = step.highlightStart;
-    hlEnd = step.highlightEnd;
+  const groups = [];
+  for (const part of step.beforeParts) {
+    const last = groups[groups.length - 1];
+    if (last && last.highlighted === part.highlighted) last.text += part.text;
+    else groups.push({ ...part });
   }
-
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    const isHighlighted = (i >= hlStart && i <= hlEnd);
-    let text = '';
-    if (t.type === TOKEN.NUM) text = formatNumber(t.value);
-    else if (t.type === TOKEN.OP) text = ` ${displayOp(t.value)} `;
-    else text = t.value;
-
-    if (isHighlighted) {
-      // Only open/close the highlight span at boundaries
-      if (i === hlStart) html += '<span class="highlight">';
-      html += text;
-      if (i === hlEnd) html += '</span>';
-    } else {
-      html += text;
-    }
-  }
-
-  document.getElementById('exprText').innerHTML = html;
+  document.getElementById('exprText').innerHTML = groups.map(p => p.highlighted
+    ? '<span class="highlight">' + escapeHtml(p.text) + '</span>' : escapeHtml(p.text)).join('');
 }
-
 function updatePEMDAS(step) {
-  // Reset all to default first
-  document.querySelectorAll('.pemdas-step').forEach(el => {
-    el.classList.remove('active');
-  });
-
-  // Mark completed rules as done
-  state.completedRules.forEach(rule => {
-    const el = document.getElementById(`pemdas-${rule}`);
-    if (el) el.classList.add('done');
-  });
-
-  // Determine which letter to light up
-  let activeLetter = step.rule;
-  if (step.subRule) {
-    // Inside parentheses — light up P and the sub-operation
-    document.getElementById('pemdas-P').classList.add('active');
-    const sub = document.getElementById(`pemdas-${step.subRule}`);
-    if (sub) sub.classList.add('active');
-  } else {
-    const el = document.getElementById(`pemdas-${activeLetter}`);
-    if (el) el.classList.add('active');
-  }
+  document.querySelectorAll('.pemdas-step').forEach(el => el.classList.remove('active', 'done'));
+  const active = new Set([step.rule, step.subRule]);
+  if (active.has('M') || active.has('D')) { active.add('M'); active.add('D'); }
+  if (active.has('A') || active.has('S')) { active.add('A'); active.add('S'); }
+  active.forEach(rule => document.getElementById('pemdas-' + rule)?.classList.add('active'));
 }
-
-function checkAnswer(stepIdx) {
-  if (stepIdx !== state.currentStep) return;
-
-  const input = document.getElementById(`answer-${stepIdx}`);
-  const feedback = document.getElementById(`feedback-${stepIdx}`);
-  const card = document.getElementById(`step-${stepIdx}`);
-  const step = state.steps[stepIdx];
-  const userVal = parseFloat(input.value.trim());
-
-  if (isNaN(userVal) || input.value.trim() === '') {
-    feedback.textContent = 'Please enter a number.';
+function checkAnswer(idx) {
+  if (!state || idx !== state.currentStep) return;
+  const input = document.getElementById('answer-' + idx);
+  if (!input || input.disabled) return;
+  const step = state.steps[idx], feedback = document.getElementById('feedback-' + idx);
+  let answer;
+  try { answer = readAnswer(input.value); }
+  catch (e) {
+    feedback.textContent = e.message;
     feedback.className = 'step-feedback show incorrect';
-    input.classList.add('incorrect');
-    setTimeout(() => input.classList.remove('incorrect'), 600);
     return;
   }
-
-  state.attempts++;
-  const correct = Math.abs(userVal - step.answer) < 0.005;
-
-  if (correct) {
-    if (!feedback.classList.contains('show') || !feedback.classList.contains('incorrect')) {
-      state.correctFirst++;
-    }
-    input.classList.add('correct');
-    input.value = formatNumber(step.answer);
-    input.disabled = true;
-
-    const encouragements = ['Great job! ✓', 'Correct! ✓', 'Nice work! ✓', 'You got it! ✓', 'Perfect! ✓'];
-    feedback.textContent = encouragements[Math.floor(Math.random() * encouragements.length)];
-    feedback.className = 'step-feedback show correct';
-
-    // Mark step as completed
-    card.classList.add('completed');
-    card.querySelector('.step-num').classList.add('done');
-
-    // Mark PEMDAS rule as completed
+  state.attempts++; state.stepTries++;
+  if (answer.n === step.answer.n && answer.d === step.answer.d) {
+    if (state.stepTries === 1) state.correctFirst++;
+    input.classList.remove('incorrect'); input.classList.add('correct');
+    input.value = formatNumber(step.answer); input.disabled = true;
+    feedback.textContent = 'Correct! ✓'; feedback.className = 'step-feedback show correct';
+    const card = document.getElementById('step-' + idx);
+    card.classList.add('completed'); card.querySelector('.step-num').classList.add('done');
+    card.querySelector('.btn-check').disabled = true;
     state.completedRules.add(step.rule);
     if (step.subRule) state.completedRules.add(step.subRule);
-
-    // Record history
-    // Build the expression AFTER this step
-    let afterTokens = [...step.beforeTokens];
-    if (step.type === 'parens-remove') {
-      afterTokens = [
-        ...afterTokens.slice(0, step.replaceStart),
-        { type: TOKEN.NUM, value: step.answer },
-        ...afterTokens.slice(step.replaceEnd + 1)
-      ];
-    } else {
-      afterTokens = [
-        ...afterTokens.slice(0, step.replaceStart),
-        { type: TOKEN.NUM, value: step.answer },
-        ...afterTokens.slice(step.replaceEnd + 1)
-      ];
-    }
-    state.history.push({
-      expr: tokensToString(afterTokens),
-      rule: step.ruleName,
-      operation: step.operation + ' = ' + formatNumber(step.answer)
-    });
-
-    // Move to next step
-    state.currentStep++;
-    setTimeout(() => {
-      if (state.currentStep < state.steps.length) {
-        showCurrentStep();
-      } else {
-        showResult();
-      }
-    }, 600);
+    state.history.push({ expr: step.afterExpr, rule: step.ruleName });
+    state.currentStep++; state.stepTries = 0;
+    deferWorkspace(() => showCurrentStep(), 400);
   } else {
     input.classList.add('incorrect');
-    setTimeout(() => input.classList.remove('incorrect'), 600);
-
-    // Give increasingly helpful hints
-    const tryCount = parseInt(input.dataset.tries || '0') + 1;
-    input.dataset.tries = tryCount;
-
-    if (tryCount >= 3) {
-      feedback.innerHTML = `Think carefully: <strong>${step.operation}</strong> = ? <span style="color:var(--accent-orange)">The answer is ${formatNumber(step.answer)}</span>`;
-      feedback.className = 'step-feedback show hint-text';
-    } else if (tryCount >= 2) {
-      feedback.textContent = `Not quite. Try again — what is ${step.operation}?`;
-      feedback.className = 'step-feedback show incorrect';
-    } else {
-      feedback.textContent = 'Not quite — give it another try!';
-      feedback.className = 'step-feedback show incorrect';
-    }
-    input.value = '';
+    feedback.textContent = state.stepTries >= 3
+      ? 'The exact answer is ' + formatNumber(step.answer) + '. ' + step.hint
+      : state.stepTries === 2 ? 'Try again. ' + step.hint : 'Not quite. Check the operation and keep the answer exact.';
+    feedback.className = 'step-feedback show incorrect';
     input.focus();
   }
 }
-
 function showResult() {
-  // Update display to show final value
-  document.getElementById('exprText').innerHTML = formatNumber(state.finalValue);
-
-  // Mark all PEMDAS as done
+  if (!state || state.currentStep !== state.steps.length) return;
+  document.getElementById('exprText').textContent = formatNumber(state.finalValue);
   document.querySelectorAll('.pemdas-step').forEach(el => {
     el.classList.remove('active');
-    if (state.completedRules.has(el.dataset.rule)) {
-      el.classList.add('done');
-    }
+    el.classList.toggle('done', state.completedRules.has(el.dataset.rule));
   });
-
-  // Show result section
-  const result = document.getElementById('resultSection');
-  document.getElementById('resultExpr').textContent =
-    state.originalExpr + ' = ' + formatNumber(state.finalValue);
-  document.getElementById('resultStats').textContent =
-    `Completed in ${state.steps.length} step${state.steps.length > 1 ? 's' : ''}`;
-
-  // Build history
-  const histEl = document.getElementById('historyEntries');
-  histEl.innerHTML = '';
+  document.getElementById('resultExpr').textContent = state.originalExpr + ' = ' + formatNumber(state.finalValue);
+  document.getElementById('resultStats').textContent = 'Completed in ' + state.steps.length + ' step' + (state.steps.length === 1 ? '' : 's') + '. Every step kept the value exact.';
+  const history = document.getElementById('historyEntries'); history.innerHTML = '';
   state.history.forEach((h, i) => {
-    const entry = document.createElement('div');
-    entry.className = 'history-entry';
-    if (i === 0) {
-      entry.innerHTML = `<span class="h-step">${i}.</span><span class="h-expr">${escapeHtml(h.expr)}</span><span class="h-rule" style="margin-left:auto">Original</span>`;
-    } else {
-      entry.innerHTML = `<span class="h-step">${i}.</span><span class="h-expr">${escapeHtml(h.expr)}</span><span class="h-rule" style="margin-left:auto">${h.rule}</span>`;
-    }
-    histEl.appendChild(entry);
+    const entry = document.createElement('div'); entry.className = 'history-entry';
+    entry.innerHTML = '<span class="h-step">' + i + '.</span><span class="h-expr">' + escapeHtml(h.expr) + '</span><span class="h-rule">' + h.rule + '</span>';
+    history.appendChild(entry);
   });
-
-  result.classList.add('visible');
+  document.getElementById('resultSection').classList.add('visible');
 }
-
-function escapeHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
 function resetAll() {
+  workspaceVersion++; state = null;
   document.getElementById('inputSection').style.display = '';
   document.getElementById('workspace').classList.remove('visible');
   document.getElementById('exprInput').value = '';
   document.getElementById('stepsContainer').innerHTML = '';
+  document.getElementById('historyEntries').innerHTML = '';
   document.getElementById('resultSection').classList.remove('visible');
-  document.querySelectorAll('.pemdas-step').forEach(el => {
-    el.classList.remove('active', 'done');
-  });
+  document.getElementById('errorMsg').classList.remove('show');
+  document.querySelectorAll('.pemdas-step').forEach(el => el.classList.remove('active', 'done'));
   document.getElementById('exprInput').focus();
 }
-
-// Enter key on main input
 document.getElementById('exprInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') startSolving();
 });
