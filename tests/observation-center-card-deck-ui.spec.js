@@ -246,7 +246,7 @@ async function installRoutes(page) {
 async function chooseCasey(page) {
   const input =
     page.locator(
-      '.obs-center-student-combobox'
+      '.obs-center-student-rail-search'
     );
 
   await input.click();
@@ -272,9 +272,10 @@ async function chooseCasey(page) {
   await option.click();
 
   await expect(
-    input
-  ).toHaveValue(
-    'Casey Example (SYN103)'
+    option
+  ).toHaveAttribute(
+    'aria-selected',
+    'true'
   );
 }
 
@@ -325,11 +326,11 @@ test.describe(
     );
 
     test(
-      'uses one searchable student combobox and removes legacy student controls',
+      'uses one persistent searchable student rail and removes legacy popup controls',
       async ({ page }) => {
         const input =
           page.locator(
-            '.obs-center-student-combobox'
+            '.obs-center-student-rail-search'
           );
 
         await expect(
@@ -339,8 +340,8 @@ test.describe(
         await expect(
           input
         ).toHaveAttribute(
-          'aria-autocomplete',
-          'list'
+          'aria-label',
+          'Search students'
         );
 
         await expect(

@@ -133,7 +133,7 @@ test(
 );
 
 test(
-  'Center provides one searchable student combobox backed by a listbox',
+  'Center provides one persistent searchable student rail',
   () => {
     const center =
       section(
@@ -144,17 +144,17 @@ test(
 
     assert.match(
       center,
-      /obs-center-student-combobox/
+      /obs-center-student-rail-search/
     );
 
     assert.match(
       center,
-      /aria-autocomplete/
+      /obs-center-student-rail-list/
     );
 
     assert.match(
       center,
-      /obs-center-student-listbox/
+      /obs-center-student-rail-item/
     );
 
     assert.doesNotMatch(
@@ -298,7 +298,7 @@ test(
     const picker =
       section(
         center,
-        'const refreshStudentOptions',
+        'const refreshStudentRail',
         12000
       );
 
