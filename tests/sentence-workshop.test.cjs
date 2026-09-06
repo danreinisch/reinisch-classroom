@@ -2,8 +2,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw2");
-const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw2");
+const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw3");
+const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw3");
 
 test("reviewed content has distinct examples and the intended sentence boundaries", async () => {
   const { allItems, models, solution, editedText } = await content;
@@ -216,8 +216,8 @@ test("both launch copies match and lesson assets use one version", () => {
     "utf8"
   );
   assert.equal(donor, mirror);
-  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw2/);
-  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw2/);
+  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw3/);
+  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw3/);
   for (const filename of [
     "sentence-workshop.js",
     "sentence-workshop-engine.js",
@@ -226,4 +226,171 @@ test("both launch copies match and lesson assets use one version", () => {
     const js = fs.readFileSync(path.join(root, "site/assets/js", filename), "utf8");
     assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(|XMLHttpRequest|sendBeacon/);
   }
+});
+
+const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw3");
+
+test("sentence endings follow the reviewed purpose key and accept both allowed tones", async () => {
+  const c = await endings;
+  const keys = [
+    "?",
+    ".",
+    "!",
+    "?",
+    ".",
+    "!",
+    "?",
+    ".",
+    ".!",
+    "?",
+    ".",
+    "!",
+    "?",
+    ".",
+    "!",
+    "?",
+    ".",
+    "!",
+    "?",
+    ".",
+    "!",
+    "?",
+    ".",
+    "!",
+    "?",
+    ".",
+    "!",
+    ".!",
+    "?",
+    ".",
+  ];
+  assert.equal(c.models.length, 3);
+  assert.equal(c.allItems.length, keys.length);
+  assert.equal(new Set(c.allItems.map((i) => i.id)).size, keys.length);
+  assert.equal(new Set(c.allItems.map((i) => i.text)).size, keys.length);
+  for (const [index, item] of c.allItems.entries()) {
+    assert.equal(item.accepted.join(""), keys[index]);
+    assert.ok(item.context && item.clue);
+    for (const ending of [null, undefined, "", ".", "?", "!", "?!", "...", "!."]) {
+      const r = c.checkEdit(item, { ending });
+      assert.equal(
+        r.correct,
+        typeof ending === "string" && ending.length === 1 && keys[index].includes(ending),
+        `${item.id}: ${ending}`
+      );
+      assert.equal(r.ending, r.correct);
+      assert.ok(r.message.length > 30);
+    }
+    assert.equal(c.editedText(item, c.initialEdit(item)), item.text);
+    assert.ok(c.editedText(item, c.solution(item), true).includes(c.markNames[keys[index][0]]));
+  }
+  assert.equal(c.checkEdit(c.bank.practice[4], { ending: "?" }).correct, false); // I wonder when...
+  assert.equal(c.checkEdit(c.bank.practice[5], { ending: "!" }).correct, true); // What a...
+  for (const mark of [".", "!"])
+    assert.equal(c.checkEdit(c.bank.apply[3], { ending: mark }).correct, true);
+});
+
+test("endings progress through three purposes and four applied messages", async () => {
+  const c = await endings,
+    e = await engine,
+    s = e.createSession("endings");
+  const phases = [],
+    ids = [];
+  e.start(s);
+  while (s.phase !== "summary") {
+    assert.ok(ids.length < 15);
+    phases.push(s.phase);
+    ids.push(s.item.id);
+    e.submit(s, c.solution(s.item));
+    e.next(s);
+  }
+  assert.deepEqual(phases, [
+    "practice",
+    "practice",
+    "practice",
+    "check",
+    "check",
+    "check",
+    "apply",
+    "apply",
+    "apply",
+    "apply",
+  ]);
+  assert.equal(new Set(ids).size, 10);
+  const result = e.summary(s);
+  assert.equal(result.freshIndependent, 3);
+  assert.deepEqual(new Set(result.freshKinds), new Set(["question", "statement", "strong"]));
+  assert.equal(result.appliedIndependent, 4);
+  assert.equal(result.supported, 0);
+  assert.equal(result.freshBoundary, undefined);
+});
+
+test("success with two ending purposes cannot stand in for the third", async () => {
+  const c = await endings,
+    e = await engine,
+    s = e.createSession("endings");
+  e.start(s);
+  while (s.phase !== "summary") {
+    assert.notEqual(s.phase, "apply");
+    if (s.phase === "check" && s.item.intent === "question") e.hint(s);
+    e.submit(s, c.solution(s.item));
+    e.next(s);
+  }
+  const result = e.summary(s);
+  assert.equal(result.freshIndependent, 6);
+  assert.equal(result.freshAttempted, 9);
+  assert.deepEqual(new Set(result.freshKinds), new Set(["statement", "strong"]));
+  assert.match(s.reason, /available examples/);
+});
+
+test("endings preserve first attempts, ignore repeated wrong checks, and cap recovery", async () => {
+  const c = await endings,
+    e = await engine,
+    s = e.createSession("endings");
+  e.start(s);
+  for (let i = 0; i < 10; i++) e.submit(s, { ending: "." });
+  assert.equal(e.recordFor(s).attempts.length, 1);
+  e.submit(s, { ending: "?" });
+  assert.equal(e.summary(s).supported, 1);
+  assert.equal(e.submit(s, { ending: "?" }), null);
+  const other = e.createSession("endings");
+  e.start(other);
+  const ids = [];
+  while (other.phase !== "summary") {
+    assert.ok(ids.length < 8);
+    ids.push(other.item.id);
+    e.submit(other, c.initialEdit());
+    e.submit(other, { ending: other.item.accepted.includes("?") ? "." : "?" });
+    assert.equal(e.submit(other, c.solution(other.item)), null);
+    e.demonstrate(other);
+    e.next(other);
+  }
+  assert.equal(new Set(ids).size, 5);
+  assert.equal(e.summary(other).demonstrations, 5);
+  assert.equal(e.summary(other).freshIndependent, 0);
+  assert.match(other.reason, /ask for help/);
+});
+
+test("shorter endings task matches the purpose needing support; lessons stay separate", async () => {
+  const c = await endings,
+    e = await engine,
+    s = e.createSession("endings");
+  const old = e.createSession();
+  e.start(old);
+  const oldSnapshot = JSON.stringify(old);
+  e.start(s);
+  for (let i = 0; i < 2; i++) {
+    e.submit(s, c.solution(s.item));
+    e.next(s);
+  }
+  assert.equal(s.item.intent, "strong");
+  e.demonstrate(s);
+  e.next(s);
+  assert.equal(s.phase, "simpler");
+  assert.equal(s.item.id, "endings-simpler-3");
+  assert.equal(s.item.intent, "strong");
+  assert.equal(JSON.stringify(old), oldSnapshot);
+  assert.equal(e.summary(old).attempted, 0);
+  e.finish(s);
+  assert.equal(e.submit(s, { ending: "!" }), null);
 });

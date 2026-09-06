@@ -151,6 +151,44 @@
   padding: 8px 15px;
   background: #edf5ef;
 }
+.sw .sw-lessons {
+  margin-bottom: 18px;
+}
+.sw .sw-lessons [aria-pressed="true"],
+.sw .sw-ending-choice[aria-pressed="true"] {
+  background: #165e4c;
+  color: #fff;
+  border-color: #9effdd;
+  box-shadow: inset 0 -3px 0 #9effdd;
+}
+.sw .sw-ending-editor {
+  margin: 24px 0;
+  padding: 20px;
+  background: #e6f0e9;
+  border: 1px solid #94b09f;
+  border-radius: 16px;
+}
+.sw .sw-ending-message {
+  font-size: clamp(1.25rem, 3vw, 1.65rem);
+  line-height: 1.5;
+  margin: 0 0 18px;
+}
+.sw .sw-ending-mark {
+  display: inline-block;
+  min-width: 0.8em;
+  font-weight: 800;
+  border-bottom: 2px solid #719986;
+}
+.sw .sw-ending-tail {
+  white-space: nowrap;
+}
+.sw .sw-ending-choice span {
+  font-size: 1.3rem;
+  margin-right: 5px;
+}
+.sw .sw-ending-models {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .sw .sw-editor {
   display: flex;
   align-items: center;

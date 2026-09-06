@@ -296,3 +296,188 @@ test("choosing a different skill during loading takes precedence over the pendin
   await page.locator("#openSentenceWorkshopBtn").click();
   await expect(page.locator('[data-sw-action="start"]')).toBeVisible();
 });
+
+async function openEndings(page, route = donor) {
+  await page.goto(route);
+  await page.locator("#openSentenceWorkshopBtn").click();
+  await page.locator('[data-sw-action="lesson-endings"]').click();
+  await page.locator('[data-sw-action="start"]').click();
+}
+
+async function chooseEnding(page, mark) {
+  await page.locator(`[data-sw-ending="${mark}"]`).click();
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText("Edit complete");
+}
+
+test("endings support three purposes, accepted alternative tone, narration, and their own summary", async ({
+  page,
+}, testInfo) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await openEndings(page);
+  await page.locator('[data-sw-action="read-task"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("Ask your coach");
+  const answers = ["?", ".", "!", "?", ".", "!", "?", ".", "!", "!"];
+  for (const [index, mark] of answers.entries()) {
+    await chooseEnding(page, mark);
+    await page.locator('[data-sw-action="read-marks"]').click();
+    expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain(
+      mark === "?" ? "question mark" : mark === "!" ? "exclamation mark" : "period"
+    );
+    await page.locator('[data-sw-action="read-feedback"]').click();
+    if (index === 9) {
+      await expect(page.locator("#sw-feedback")).toContainText("period would also fit");
+      await page
+        .locator("#sentenceWorkshop")
+        .screenshot({ path: testInfo.outputPath("endings-flexible-tone.png") });
+    }
+    await page.locator('[data-sw-action="next"]').click();
+  }
+  await expect(page.locator(".sw-stats strong").first()).toHaveText("3 / 3");
+  await expect(page.locator(".sw-card")).toContainText("4 / 4 attempted");
+  await expect(page.locator(".sw-card")).not.toContainText("undefined");
+  await page.locator('[data-sw-action="read-report"]').click();
+  await page.locator('.sw-card [data-sw-action="menu"]').click();
+  await expect(page.locator("#scoreNumMenu")).toHaveText("0");
+  await expect(page.locator("#scoreTotalMenu")).toHaveText("140");
+  await page.locator("#openSentenceWorkshopBtn").click();
+  await expect(page.locator(".sw-stats strong").first()).toHaveText("3 / 3");
+  await page.locator('[data-sw-action="lesson-boundaries"]').click();
+  await expect(page.locator('[data-sw-action="start"]')).toBeVisible();
+  await page.locator('[data-sw-action="lesson-endings"]').click();
+  await expect(page.locator(".sw-stats strong").first()).toHaveText("3 / 3");
+  expect(errors).toEqual([]);
+});
+
+test("endings wrong edits, hints, and worked examples lead to a different shorter task", async ({
+  page,
+}, testInfo) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await openEndings(page);
+  await page.locator('[data-sw-ending="."]').click();
+  await page.locator('[data-sw-action="check"]').click();
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText("Change your edit");
+  await expect(page.locator('[data-sw-action="check"]')).toBeEnabled();
+  await page.locator('[data-sw-action="read-feedback"]').click();
+  await page.locator('[data-sw-action="hint"]').click();
+  await page.locator('[data-sw-action="read-hint"]').click();
+  await page.locator('[data-sw-action="hint"]').click();
+  await expect(page.locator('[data-sw-ending="?"]')).toHaveClass(/sw-cue/);
+  await page.locator('[data-sw-action="read-hint"]').click();
+  await page.locator('[data-sw-ending="!"]').click();
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator('[data-sw-action="check"]')).toBeDisabled();
+  await page.locator('[data-sw-action="demonstrate"]').click();
+  await page.locator('[data-sw-action="read-solution"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("question mark");
+  await page
+    .locator("#sentenceWorkshop")
+    .screenshot({ path: testInfo.outputPath("endings-support.png") });
+  await page.locator('[data-sw-action="next"]').click();
+  await expect(page.locator("[data-sw-item]")).toHaveAttribute("data-sw-item", "endings-simpler-1");
+  await page.locator('[data-sw-action="hint"]').click();
+  await chooseEnding(page, "?");
+  await page.locator('[data-sw-action="finish"]').click();
+  await expect(page.locator(".sw-stats strong").nth(1)).toHaveText("1");
+  await expect(page.locator(".sw-stats strong").nth(2)).toHaveText("1");
+  expect(errors).toEqual([]);
+});
+
+for (const route of [donor, mirror]) {
+  test(`both lesson drafts resume and clear together: ${route}`, async ({ page }) => {
+    await open(page, route);
+    await page.locator('[data-sw-gap="3"]').click();
+    await page.locator('[data-sw-action="lesson-endings"]').click();
+    await page.locator('[data-sw-action="start"]').click();
+    await page.locator('[data-sw-ending="?"]').click();
+    await page.locator('[data-sw-action="lesson-boundaries"]').click();
+    await expect(page.locator('[data-sw-gap="3"]')).toHaveAttribute("aria-pressed", "true");
+    await page.locator('[data-sw-action="lesson-endings"]').click();
+    await expect(page.locator('[data-sw-ending="?"]')).toHaveAttribute("aria-pressed", "true");
+    await page.locator('[data-sw-action="clear"]').click();
+    await page.locator("#cancelClearPracticeBtn").click();
+    await expect(page.locator('[data-sw-ending="?"]')).toHaveAttribute("aria-pressed", "true");
+    await page.locator('[data-sw-action="clear"]').click();
+    await page.locator("#confirmClearPracticeBtn").click();
+    await page.locator("#openSentenceWorkshopBtn").click();
+    await expect(page.locator('[data-sw-action="start"]')).toBeVisible();
+    await page.locator('[data-sw-action="lesson-endings"]').click();
+    await expect(page.locator('[data-sw-action="start"]')).toBeVisible();
+    await page.locator('[data-sw-action="start"]').click();
+    await expect(page.locator('[data-sw-ending][aria-pressed="true"]')).toHaveCount(0);
+    await page.locator('[data-sw-ending="!"]').click();
+    await page.reload();
+    await page.locator("#openSentenceWorkshopBtn").click();
+    await page.locator('[data-sw-action="lesson-endings"]').click();
+    await expect(page.locator('[data-sw-action="start"]')).toBeVisible();
+  });
+}
+
+test("endings keyboard controls and text fallback fit a narrow screen", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openEndings(page);
+  const question = page.getByRole("button", { name: "question mark", exact: true });
+  await question.focus();
+  await question.press("Enter");
+  await expect(question).toBeFocused();
+  await expect(question).toHaveAttribute("aria-pressed", "true");
+  await question.press("Space");
+  await expect(question).toHaveAttribute("aria-pressed", "false");
+  await page.evaluate(() => {
+    window.speechSynthesis = undefined;
+  });
+  await page.locator('[data-sw-action="read-task"]').click();
+  await expect(page.locator("#sw-voice-note")).toContainText("Voice is unavailable");
+  await question.press("Enter");
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText("Edit complete");
+  await page
+    .locator("#sentenceWorkshop")
+    .screenshot({ path: testInfo.outputPath("endings-mobile.png") });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("legacy read controls fail gracefully when speech is partial or throws", async ({ page }) => {
+  const errors = [],
+    dialogs = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("dialog", async (d) => {
+    dialogs.push(d.message());
+    await d.dismiss();
+  });
+  await page.goto(donor);
+  for (const kind of ["missing", "methods", "throws"]) {
+    await page.evaluate((kind) => {
+      window.speechSynthesis =
+        kind === "missing"
+          ? undefined
+          : kind === "methods"
+            ? {}
+            : {
+                speak() {
+                  throw Error("Voice unavailable");
+                },
+              };
+    }, kind);
+    await page.locator("#readIntroBtn").click();
+    await expect(page.locator("#mainMenu .speech-status")).toBeVisible();
+    await page.locator('[data-open-skill="verbs"]').click();
+    await page.locator('[data-choice-read="0"]').click();
+    await expect(page.locator("#practiceScreen .speech-status")).toContainText(
+      "Voice is unavailable"
+    );
+    await expect(page.locator(".feedback")).toHaveCount(0);
+    await page.locator("#backMenuBtn").click();
+  }
+  await page.locator('[data-open-skill="writing"]').click();
+  await page.locator("#topicBox").fill("A synthetic writing draft.");
+  await page.locator('[data-field-read="topicBox"]').click();
+  await expect(page.locator("#topicBox")).toHaveValue("A synthetic writing draft.");
+  expect(errors).toEqual([]);
+  expect(dialogs).toEqual([]);
+});
