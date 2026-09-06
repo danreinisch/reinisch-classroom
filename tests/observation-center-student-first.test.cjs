@@ -133,20 +133,36 @@ test(
 );
 
 test(
-  'Center provides a dedicated student search and picker',
+  'Center provides one searchable student combobox backed by a listbox',
   () => {
     const center =
       section(
         observation,
-        'function initObservationCenter'
+        'function initObservationCenter',
+        30000
       );
 
     assert.match(
       center,
-      /obs-center-student-search/
+      /obs-center-student-combobox/
     );
 
     assert.match(
+      center,
+      /aria-autocomplete/
+    );
+
+    assert.match(
+      center,
+      /obs-center-student-listbox/
+    );
+
+    assert.doesNotMatch(
+      center,
+      /obs-center-student-search/
+    );
+
+    assert.doesNotMatch(
       center,
       /obs-center-student-select/
     );
@@ -275,11 +291,19 @@ test(
     const center =
       section(
         observation,
-        'function initObservationCenter'
+        'function initObservationCenter',
+        50000
+      );
+
+    const picker =
+      section(
+        center,
+        'const refreshStudentOptions',
+        12000
       );
 
     assert.match(
-      center,
+      picker,
       /No students.*observation goals|No students with observation goals/i
     );
   }

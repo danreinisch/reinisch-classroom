@@ -261,7 +261,7 @@ test.describe(
     );
 
     test(
-      'Previous Today Next controls behave safely',
+      'Previous Today Next controls skip non-instructional days safely',
       async ({ page }) => {
         const dateInput =
           page.locator(
@@ -276,7 +276,7 @@ test.describe(
         await expect(
           dateInput
         ).toHaveValue(
-          LABOR_DAY
+          HISTORICAL_INSTRUCTIONAL_DAY
         );
 
         await expect(
@@ -286,14 +286,23 @@ test.describe(
           )
         ).toBeEnabled();
 
+        await expect(
+          page.getByRole(
+            'button',
+            { name: 'Next' }
+          )
+        ).toBeEnabled();
+
         await page.getByRole(
           'button',
-          { name: 'Today' }
+          { name: 'Next' }
         ).click();
 
         await expect(
           dateInput
-        ).toHaveValue(TODAY);
+        ).toHaveValue(
+          TODAY
+        );
 
         await expect(
           page.getByRole(
@@ -301,6 +310,22 @@ test.describe(
             { name: 'Next' }
           )
         ).toBeDisabled();
+
+        await page.getByRole(
+          'button',
+          { name: 'Previous' }
+        ).click();
+
+        await page.getByRole(
+          'button',
+          { name: 'Today' }
+        ).click();
+
+        await expect(
+          dateInput
+        ).toHaveValue(
+          TODAY
+        );
       }
     );
 
