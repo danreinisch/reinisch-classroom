@@ -83,7 +83,7 @@
   .toggle-arrow{font-size:.7rem;transition:transform .3s ease}
   .toggle-arrow.open{transform:rotate(180deg)}
   .examples-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
-  .examples-body.open{max-height:700px}
+  .examples-body.open{max-height:none}
   .example-category{padding:4px 18px 14px;border-top:1px solid var(--border)}
   .category-label{font-size:.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-top:12px}
   .examples{display:flex;flex-wrap:wrap;gap:8px}
@@ -157,13 +157,38 @@
   .result-expression{font-family:var(--font-mono);font-size:1.2rem;color:var(--text);background:var(--formula-bg);display:inline-block;padding:12px 24px;border-radius:10px;border:1px solid var(--border);margin:12px 0}
   .actions{display:flex;gap:10px;justify-content:center;margin-top:20px}
 
+  [hidden]{display:none!important}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--accent-blue);outline-offset:3px}
+  button:disabled{cursor:default}
+  .examples-toggle{width:100%;background:transparent;border-radius:0;text-align:left}
+  .frac-input-row{display:grid;grid-template-columns:1fr auto 1fr;gap:10px}
+  .number-entry{border:0;min-width:0}
+  .number-entry legend{font-weight:600;font-size:.9rem;margin-bottom:12px}
+  .number-entry label{display:block;font-size:.73rem;color:var(--text-muted);text-align:center}
+  .frac-widget{justify-content:center}
+  .frac-whole,.frac-num,.frac-den{width:110px;font-size:1rem;padding:8px 4px}
+  .frac-bar{width:110px}
+  .op-selector-row{margin:0;display:grid;grid-template-columns:repeat(2,44px);gap:6px}
+  .math-number,.mixed-number,.mixed-visual,.grouped-number{display:inline-flex;align-items:center;gap:5px;vertical-align:middle;max-width:100%}
+  .fd-num,.fd-den,.fd-whole,.result-expression,.step-rule-box{overflow-wrap:anywhere;max-width:100%}
+  .fd-result .fd-whole{color:var(--success)}
+  .answer-field{max-width:100%;display:flex;flex-direction:column;gap:4px}
+  .answer-input{width:220px;max-width:100%}
+  .answer-row{align-items:flex-end}
+  .answer-label{font-family:var(--font-body);color:var(--text-muted)}
+  .answer-help,.result-note{font-size:.82rem;color:var(--text-muted);margin-top:12px}
+  .step-card.completed{opacity:1}
+  .workspace-actions{display:flex;justify-content:flex-end;margin-bottom:16px}
+  .btn-secondary{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);padding:10px 18px}
+  @media(max-width:700px){.frac-input-row{grid-template-columns:1fr;justify-items:center;gap:18px}.op-selector-row{grid-template-columns:repeat(4,44px)}}
   @media(max-width:600px){
     .container{padding:16px}
     .input-section,.workspace{padding:20px}
     h1{font-size:1.4rem}
     .frac-input-row{gap:10px}
-    .frac-whole{width:42px;font-size:1.1rem}
-    .frac-num,.frac-den{width:46px;font-size:1rem}
+    .frac-whole{width:110px;font-size:1rem}
+    .frac-num,.frac-den{width:110px;font-size:1rem}
     .step-body{padding-left:0}
     .proc-step .p-label{font-size:.5rem}
     .fd-num,.fd-den{font-size:1.1rem}
@@ -205,88 +230,93 @@
   <!-- Input Section -->
   <div class="input-section" id="inputSection">
     <h2>✏️ Enter Your Fraction Problem</h2>
-    <p class="hint">Enter two fractions (with optional whole numbers for mixed numbers) and pick an operation.</p>
+    <p class="hint" id="entryHelp">For a fraction, leave Whole blank. For −2 1/3, enter Whole = −2, Numerator = 1, Denominator = 3. The minus sign applies to the entire mixed number. Its fractional part must be nonnegative and less than 1.</p>
+    <p class="hint">Enter integers in the boxes, without decimals or commas. Each input can be from −1,000,000,000 to 1,000,000,000; denominators cannot be zero. To enter a whole number by itself, use it as the numerator with denominator 1.</p>
 
     <div class="frac-input-row">
       <!-- Fraction A -->
-      <div class="frac-widget">
-        <input type="text" class="frac-whole" id="wholeA" placeholder="W" title="Whole number (optional)">
+      <fieldset class="number-entry"><legend>First Number</legend><div class="frac-widget">
+        <div class="whole-field"><label for="wholeA">Whole (optional)</label><input type="text" class="frac-whole" id="wholeA" aria-label="First whole part (optional)" aria-describedby="entryHelp" placeholder="Whole" maxlength="100" autocomplete="off" spellcheck="false"></div>
         <div class="frac-stack">
-          <input type="text" class="frac-num" id="numA" placeholder="num">
-          <div class="frac-bar"></div>
-          <input type="text" class="frac-den" id="denA" placeholder="den">
+          <label for="numA">Numerator</label><input type="text" class="frac-num" id="numA" aria-label="First numerator" placeholder="Top" maxlength="100" autocomplete="off" spellcheck="false">
+          <div class="frac-bar" aria-hidden="true"></div>
+          <input type="text" class="frac-den" id="denA" aria-label="First denominator" placeholder="Bottom" maxlength="100" autocomplete="off" spellcheck="false"><label for="denA">Denominator</label>
         </div>
-      </div>
+      </div></fieldset>
 
       <!-- Operation -->
-      <div class="op-selector-row">
-        <div class="op-btn" data-op="+" onclick="selectOp(this)">+</div>
-        <div class="op-btn" data-op="-" onclick="selectOp(this)">−</div>
-        <div class="op-btn" data-op="*" onclick="selectOp(this)">×</div>
-        <div class="op-btn" data-op="/" onclick="selectOp(this)">÷</div>
+      <div class="op-selector-row" role="group" aria-label="Operation">
+        <button type="button" class="op-btn" data-op="+" aria-label="Add" aria-pressed="false" onclick="selectOp(this)">+</button>
+        <button type="button" class="op-btn" data-op="-" aria-label="Subtract" aria-pressed="false" onclick="selectOp(this)">−</button>
+        <button type="button" class="op-btn" data-op="*" aria-label="Multiply" aria-pressed="false" onclick="selectOp(this)">×</button>
+        <button type="button" class="op-btn" data-op="/" aria-label="Divide" aria-pressed="false" onclick="selectOp(this)">÷</button>
       </div>
 
       <!-- Fraction B -->
-      <div class="frac-widget">
-        <input type="text" class="frac-whole" id="wholeB" placeholder="W" title="Whole number (optional)">
+      <fieldset class="number-entry"><legend>Second Number</legend><div class="frac-widget">
+        <div class="whole-field"><label for="wholeB">Whole (optional)</label><input type="text" class="frac-whole" id="wholeB" aria-label="Second whole part (optional)" aria-describedby="entryHelp" placeholder="Whole" maxlength="100" autocomplete="off" spellcheck="false"></div>
         <div class="frac-stack">
-          <input type="text" class="frac-num" id="numB" placeholder="num">
-          <div class="frac-bar"></div>
-          <input type="text" class="frac-den" id="denB" placeholder="den">
+          <label for="numB">Numerator</label><input type="text" class="frac-num" id="numB" aria-label="Second numerator" placeholder="Top" maxlength="100" autocomplete="off" spellcheck="false">
+          <div class="frac-bar" aria-hidden="true"></div>
+          <input type="text" class="frac-den" id="denB" aria-label="Second denominator" placeholder="Bottom" maxlength="100" autocomplete="off" spellcheck="false"><label for="denB">Denominator</label>
         </div>
-      </div>
+      </div></fieldset>
     </div>
 
     <div class="start-row">
-      <button class="btn-primary" onclick="startSolving()">Let's Solve It →</button>
+      <button type="button" class="btn-primary" id="startBtn" onclick="startSolving()">Let's Solve It →</button>
     </div>
-    <div class="error-msg" id="errorMsg"></div>
+    <div class="error-msg" id="errorMsg" role="alert" aria-atomic="true"></div>
 
     <!-- Examples -->
     <div class="examples-panel">
-      <div class="examples-toggle" onclick="toggleExamples()">
+      <button type="button" class="examples-toggle" id="examplesToggle" aria-expanded="false" aria-controls="examplesBody" onclick="toggleExamples()">
         <span>📋 Try a Practice Problem</span>
-        <span class="toggle-arrow" id="toggleArrow">▼</span>
-      </div>
-      <div class="examples-body" id="examplesBody">
+        <span class="toggle-arrow" id="toggleArrow" aria-hidden="true">▼</span>
+      </button>
+      <div class="examples-body" id="examplesBody" hidden>
         <div class="example-category">
           <div class="category-label">🟢 Adding Fractions</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadEx(0,1,4,'+',0,2,4)">¼ + 2/4</span>
-            <span class="example-chip" onclick="loadEx(0,1,3,'+',0,1,6)">⅓ + ⅙</span>
-            <span class="example-chip" onclick="loadEx(0,2,5,'+',0,1,3)">⅖ + ⅓</span>
-            <span class="example-chip" onclick="loadEx(0,3,8,'+',0,1,4)">⅜ + ¼</span>
-            <span class="example-chip" onclick="loadEx(1,1,2,'+',2,1,3)">1½ + 2⅓</span>
+            <button type="button" class="example-chip" onclick="loadEx(0,1,4,'+',0,2,4)">¼ + 2/4</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,1,3,'+',0,1,6)">⅓ + ⅙</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,2,5,'+',0,1,3)">⅖ + ⅓</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,3,8,'+',0,1,4)">⅜ + ¼</button>
+            <button type="button" class="example-chip" onclick="loadEx(1,1,2,'+',2,1,3)">1½ + 2⅓</button>
+            <button type="button" class="example-chip" onclick="loadEx(-2,1,3,'+',0,0,1)">−2⅓ + 0</button>
           </div>
         </div>
         <div class="example-category">
           <div class="category-label">🟡 Subtracting Fractions</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadEx(0,3,4,'-',0,1,4)">¾ − ¼</span>
-            <span class="example-chip" onclick="loadEx(0,5,6,'-',0,1,3)">⅚ − ⅓</span>
-            <span class="example-chip" onclick="loadEx(0,7,8,'-',0,1,2)">⅞ − ½</span>
-            <span class="example-chip" onclick="loadEx(3,1,4,'-',1,2,3)">3¼ − 1⅔</span>
-            <span class="example-chip" onclick="loadEx(5,1,2,'-',2,3,4)">5½ − 2¾</span>
+            <button type="button" class="example-chip" onclick="loadEx(0,3,4,'-',0,1,4)">¾ − ¼</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,5,6,'-',0,1,3)">⅚ − ⅓</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,7,8,'-',0,1,2)">⅞ − ½</button>
+            <button type="button" class="example-chip" onclick="loadEx(3,1,4,'-',1,2,3)">3¼ − 1⅔</button>
+            <button type="button" class="example-chip" onclick="loadEx(5,1,2,'-',2,3,4)">5½ − 2¾</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,1,2,'-',0,1,2)">½ − ½</button>
           </div>
         </div>
         <div class="example-category">
           <div class="category-label">🟠 Multiplying Fractions</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadEx(0,2,3,'*',0,3,4)">⅔ × ¾</span>
-            <span class="example-chip" onclick="loadEx(0,1,2,'*',0,4,5)">½ × ⅘</span>
-            <span class="example-chip" onclick="loadEx(0,5,6,'*',0,3,10)">⅚ × 3/10</span>
-            <span class="example-chip" onclick="loadEx(1,1,3,'*',0,3,4)">1⅓ × ¾</span>
-            <span class="example-chip" onclick="loadEx(2,1,2,'*',1,1,5)">2½ × 1⅕</span>
+            <button type="button" class="example-chip" onclick="loadEx(0,2,3,'*',0,3,4)">⅔ × ¾</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,1,2,'*',0,4,5)">½ × ⅘</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,5,6,'*',0,3,10)">⅚ × 3/10</button>
+            <button type="button" class="example-chip" onclick="loadEx(1,1,3,'*',0,3,4)">1⅓ × ¾</button>
+            <button type="button" class="example-chip" onclick="loadEx(2,1,2,'*',1,1,5)">2½ × 1⅕</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,-2,3,'*',0,3,4)">−⅔ × ¾</button>
           </div>
         </div>
         <div class="example-category">
           <div class="category-label">🔴 Dividing Fractions</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadEx(0,3,4,'/',0,1,2)">¾ ÷ ½</span>
-            <span class="example-chip" onclick="loadEx(0,2,3,'/',0,4,5)">⅔ ÷ ⅘</span>
-            <span class="example-chip" onclick="loadEx(0,5,8,'/',0,1,4)">⅝ ÷ ¼</span>
-            <span class="example-chip" onclick="loadEx(2,1,2,'/',0,3,4)">2½ ÷ ¾</span>
-            <span class="example-chip" onclick="loadEx(1,2,3,'/',1,1,6)">1⅔ ÷ 1⅙</span>
+            <button type="button" class="example-chip" onclick="loadEx(0,3,4,'/',0,1,2)">¾ ÷ ½</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,2,3,'/',0,4,5)">⅔ ÷ ⅘</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,5,8,'/',0,1,4)">⅝ ÷ ¼</button>
+            <button type="button" class="example-chip" onclick="loadEx(2,1,2,'/',0,3,4)">2½ ÷ ¾</button>
+            <button type="button" class="example-chip" onclick="loadEx(1,2,3,'/',1,1,6)">1⅔ ÷ 1⅙</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,1,2,'/',0,-1,3)">½ ÷ (−⅓)</button>
           </div>
         </div>
       </div>
@@ -295,12 +325,14 @@
 
   <!-- Workspace -->
   <div class="workspace" id="workspace">
+    <div class="workspace-actions"><button type="button" class="btn-secondary" onclick="resetAll()">Start Over</button></div>
     <div class="frac-display" id="fracDisplay"></div>
     <div id="stepsContainer"></div>
     <div class="result-section" id="resultSection">
       <div class="result-icon">🎉</div>
       <div class="result-title">Problem Solved!</div>
       <div class="result-expression" id="resultExpr"></div>
+      <p class="result-note" id="resultNote"></p>
       <div class="actions">
         <button class="btn-primary" onclick="resetAll()">Solve Another →</button>
       </div>
@@ -309,660 +341,308 @@
 </div>
 
 <script>
-// ==================== MATH UTILITIES ====================
-function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a}
-function lcm(a,b){return Math.abs(a*b)/gcd(a,b)}
+// Every numerator, denominator, and intermediate calculation stays exact.
+const COMPONENT_LIMIT = 1000000000n;
+let selectedOp = null;
+let S = null;
+let currentStep = 0;
+let stepsData = [];
+let workspaceVersion = 0;
 
-function simplifyFrac(n,d){
-  if(d===0)return{n,d};
-  if(n===0)return{n:0,d:1};
-  // Keep denominator positive
-  if(d<0){n=-n;d=-d}
-  const g=gcd(Math.abs(n),Math.abs(d));
-  return{n:n/g,d:d/g};
+function abs(n) { return n < 0n ? -n : n; }
+function gcd(a, b) { a = abs(a); b = abs(b); while (b) { const r = a % b; a = b; b = r; } return a; }
+function lcm(a, b) { return abs(a / gcd(a, b) * b); }
+function positiveDenominator(n, d) {
+  if (d === 0n) throw new Error('A denominator cannot be zero.');
+  return d < 0n ? { n: -n, d: -d } : { n, d };
+}
+function simplifyFrac(n, d) {
+  const f = positiveDenominator(n, d), g = gcd(f.n, f.d);
+  return { n: f.n / g, d: f.d / g };
+}
+function toImproper(w, n, d) {
+  return w === 0n ? positiveDenominator(n, d) : { n: (w < 0n ? -1n : 1n) * (abs(w) * d + n), d };
+}
+function toMixed(n, d) {
+  const f = simplifyFrac(n, d), whole = abs(f.n) / f.d, remainder = abs(f.n) % f.d;
+  return { w: f.n < 0n ? -whole : whole, n: whole === 0n ? f.n : remainder, d: f.d };
+}
+function fractionText(n, d) { return d === 1n ? String(n) : `${n}/${d}`; }
+function mixedText(w, n, d) { return w === 0n ? fractionText(n, d) : n === 0n ? String(w) : `${w} ${n}/${d}`; }
+function grouped(n) { return n < 0n ? `(${n})` : String(n); }
+function displayOp(op) { return ({ '+': '+', '-': '−', '*': '×', '/': '÷' })[op]; }
+
+function readInteger(raw, label, inputLimit = false) {
+  const text = raw.trim().replace(/−/g, '-');
+  if (text.length > 100 || !/^[+-]?\d+$/.test(text)) {
+    throw new Error(`${label}: enter an integer using digits and an optional sign, without decimals, fractions, or extra text.`);
+  }
+  const value = BigInt(text);
+  if (inputLimit && abs(value) > COMPONENT_LIMIT) {
+    throw new Error(`${label}: use an integer from -1,000,000,000 to 1,000,000,000.`);
+  }
+  return value;
 }
 
-function toImproper(w,n,d){
-  // Convert mixed number to improper fraction
-  if(w===0)return{n,d};
-  const sign=w<0?-1:1;
-  return{n:sign*(Math.abs(w)*d+Math.abs(n)),d};
+function readOperand(side) {
+  const name = side === 'A' ? 'First number' : 'Second number';
+  const rawW = document.getElementById('whole' + side).value.trim().replace(/−/g, '-');
+  const w = rawW === '' ? 0n : readInteger(rawW, name + ' whole part', true);
+  const n = readInteger(document.getElementById('num' + side).value, name + ' numerator', true);
+  const d = readInteger(document.getElementById('den' + side).value, name + ' denominator', true);
+  if (d === 0n) throw new Error(name + ': the denominator cannot be zero.');
+  if (w === 0n && rawW.startsWith('-')) {
+    throw new Error(name + ': leave the whole part blank and put the minus sign on the numerator for a negative fraction between -1 and 0.');
+  }
+  if (w !== 0n && (n < 0n || d < 0n || n >= d)) {
+    throw new Error(name + ': for a mixed number, put the sign on the whole part, use a positive denominator, and a numerator from 0 up to one less than the denominator. For an improper fraction, leave the whole part blank.');
+  }
+  return { w, n, d, improper: toImproper(w, n, d) };
 }
 
-function toMixed(n,d){
-  if(d===0)return{w:0,n,d};
-  if(n===0)return{w:0,n:0,d:1};
-  const sign=(n<0)!==(d<0)?-1:1;
-  const absN=Math.abs(n),absD=Math.abs(d);
-  const w=Math.floor(absN/absD);
-  const rem=absN%absD;
-  if(w===0)return{w:0,n:sign*absN,d:absD};
-  return{w:sign*w,n:rem,d:absD};
+// A screen reader gets a fraction as one value, rather than adjacent digits.
+function inlineFrac(n, d) {
+  return `<span class="math-number"><span class="sr-only">${n} over ${d}</span><span class="ifrac" aria-hidden="true"><span class="in">${n}</span><span class="ibar"></span><span class="in">${d}</span></span></span>`;
+}
+function fracHTML(n, d) {
+  return `<span class="math-number"><span class="sr-only">${n} over ${d}</span><span class="fd-frac" aria-hidden="true"><span class="fd-num">${n}</span><span class="fd-bar"></span><span class="fd-den">${d}</span></span></span>`;
+}
+function mixedHTML(w, n, d) {
+  if (w === 0n) return fracHTML(n, d);
+  return `<span class="mixed-number"><span class="sr-only">${w < 0n ? 'negative ' : ''}${abs(w)}${n ? ` and ${n} over ${d}` : ''}</span>` +
+    `<span class="mixed-visual" aria-hidden="true"><span class="fd-whole">${w}</span>${n ? `<span class="fd-frac"><span class="fd-num">${n}</span><span class="fd-bar"></span><span class="fd-den">${d}</span></span>` : ''}</span></span>`;
 }
 
-function fracStr(n,d){
-  const s=simplifyFrac(n,d);
-  return `${s.n}/${s.d}`;
+function selectOp(el) {
+  if (S) return;
+  selectedOp = el.dataset.op;
+  document.querySelectorAll('.op-btn').forEach(button => {
+    const selected = button.dataset.op === selectedOp;
+    button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected));
+  });
 }
-
-function fracHTML(n,d,cls){
-  cls=cls||'';
-  return `<span class="fd-frac ${cls}"><span class="fd-num">${n}</span><span class="fd-bar"></span><span class="fd-den">${d}</span></span>`;
+function loadEx(wA, nA, dA, op, wB, nB, dB) {
+  if (S) return;
+  const values = { wholeA: wA || '', numA: nA, denA: dA, wholeB: wB || '', numB: nB, denB: dB };
+  Object.entries(values).forEach(([id, value]) => { document.getElementById(id).value = value; });
+  selectOp(Array.from(document.querySelectorAll('.op-btn')).find(button => button.dataset.op === op));
+  clearError(); document.getElementById('startBtn').focus();
 }
-
-function mixedHTML(w,n,d,cls){
-  cls=cls||'';
-  if(w===0) return fracHTML(n,d,cls);
-  if(n===0) return `<span class="fd-whole ${cls}">${w}</span>`;
-  return `<span class="fd-whole ${cls}">${w}</span>${fracHTML(n,d,cls)}`;
+function toggleExamples() {
+  const body = document.getElementById('examplesBody'); body.hidden = !body.hidden;
+  body.classList.toggle('open', !body.hidden);
+  document.getElementById('toggleArrow').classList.toggle('open', !body.hidden);
+  document.getElementById('examplesToggle').setAttribute('aria-expanded', String(!body.hidden));
 }
-
-function inlineFrac(n,d){
-  return `<span class="ifrac"><span class="in">${n}</span><span class="ibar"></span><span class="in">${d}</span></span>`;
+function clearError() {
+  const el = document.getElementById('errorMsg'); el.textContent = ''; el.classList.remove('show');
 }
-
-function displayOp(op){
-  if(op==='*')return '×';if(op==='/')return '÷';if(op==='-')return '−';return op;
-}
-
-// ==================== STATE ====================
-let selectedOp=null;
-let S={};
-let currentStep=0;
-let stepsData=[];
-
-function selectOp(el){
-  document.querySelectorAll('.op-btn').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedOp=el.dataset.op;
-}
-
-function loadEx(wA,nA,dA,op,wB,nB,dB){
-  document.getElementById('wholeA').value=wA||'';
-  document.getElementById('numA').value=nA;
-  document.getElementById('denA').value=dA;
-  document.getElementById('wholeB').value=wB||'';
-  document.getElementById('numB').value=nB;
-  document.getElementById('denB').value=dB;
-  selectedOp=op;
-  document.querySelectorAll('.op-btn').forEach(b=>b.classList.toggle('selected',b.dataset.op===op));
-}
-
-function toggleExamples(){
-  document.getElementById('examplesBody').classList.toggle('open');
-  document.getElementById('toggleArrow').classList.toggle('open');
-}
-
-function showError(msg){
-  const el=document.getElementById('errorMsg');
-  el.textContent=msg;el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),4000);
-}
-
-// ==================== START ====================
-function startSolving(){
-  const wA=parseInt(document.getElementById('wholeA').value)||0;
-  const nA=parseInt(document.getElementById('numA').value);
-  const dA=parseInt(document.getElementById('denA').value);
-  const wB=parseInt(document.getElementById('wholeB').value)||0;
-  const nB=parseInt(document.getElementById('numB').value);
-  const dB=parseInt(document.getElementById('denB').value);
-
-  if(isNaN(nA)||isNaN(dA)||isNaN(nB)||isNaN(dB)){showError('Please fill in both numerators and denominators.');return}
-  if(!selectedOp){showError('Please select an operation (+, −, ×, ÷).');return}
-  if(dA===0||dB===0){showError('Denominators cannot be zero!');return}
-  if(selectedOp==='/'&&nB===0&&wB===0){showError('Cannot divide by zero!');return}
-
-  // Convert to improper fractions
-  const impA=toImproper(wA,nA,dA);
-  const impB=toImproper(wB,nB,dB);
-
-  const hasMixedA=wA!==0;
-  const hasMixedB=wB!==0;
-
-  S={wA,nA,dA,wB,nB,dB,op:selectedOp,impA,impB,hasMixedA,hasMixedB};
-
-  stepsData=[];
-  currentStep=0;
-
+function startSolving() {
+  if (S) return;
+  try {
+    const a = readOperand('A'), b = readOperand('B');
+    if (!['+', '-', '*', '/'].includes(selectedOp)) throw new Error('Please select an operation (+, −, ×, ÷).');
+    if (selectedOp === '/' && b.improper.n === 0n) throw new Error('Division by zero is undefined. The second fraction must be nonzero.');
+    S = { a, b, impA: a.improper, impB: b.improper, op: selectedOp, finished: false };
+  } catch (error) {
+    const el = document.getElementById('errorMsg'); el.textContent = error.message; el.classList.add('show'); return;
+  }
+  workspaceVersion++; currentStep = 0; stepsData = []; clearError();
   buildSteps();
-
-  // Show workspace
-  document.getElementById('inputSection').style.display='none';
+  document.getElementById('inputSection').style.display = 'none';
   document.getElementById('workspace').classList.add('visible');
   document.getElementById('resultSection').classList.remove('visible');
-  document.getElementById('stepsContainer').innerHTML='';
-  document.querySelectorAll('.proc-step').forEach(s=>s.classList.remove('active','done'));
-
-  updateFracDisplay();
-  showStep(0);
+  document.getElementById('stepsContainer').replaceChildren();
+  updateFracDisplay(false); showStep(0);
 }
 
-// ==================== BUILD STEPS ====================
-function buildSteps(){
-  const {op,impA,impB,hasMixedA,hasMixedB,wA,nA,dA,wB,nB,dB}=S;
+function addStep(title, proc, instruction, fields = [], extra = {}) {
+  stepsData.push({ title, proc, instruction, fields, type: fields.length ? 'numeric' : 'info', ...extra });
+}
+function field(key, label, answer) { return { key, label, answer }; }
 
-  // Step: Convert mixed numbers if needed
-  if(hasMixedA||hasMixedB){
-    let instruction=`Mixed numbers must be converted to <strong>improper fractions</strong> before we can compute.`;
-    let ruleHTML='<strong>Rule:</strong> Multiply the whole number by the denominator, then add the numerator.<br>';
-    const checks=[];
-
-    if(hasMixedA){
-      ruleHTML+=`<br><span class="mono">${wA}</span> × <span class="mono">${dA}</span> + <span class="mono">${nA}</span> = <span class="rule-highlight">?</span> → ${inlineFrac('?',dA)}`;
-      checks.push({label:`Convert ${wA} ${inlineFrac(nA,dA)} → numerator:`,answer:impA.n,den:impA.d});
+function buildSteps() {
+  const { a, b, impA, impB, op } = S;
+  for (const [operand, name] of [[a, 'First'], [b, 'Second']]) {
+    const { w, n, d, improper } = operand;
+    if (w !== 0n) {
+      const numerator = w < 0n ? `−(${abs(w)} × ${d} + ${n})` : `${w} × ${d} + ${n}`;
+      addStep(`Convert ${name} Mixed Number`, 'convert',
+        `Convert ${mixedText(w, n, d)} to an improper fraction. Multiply the magnitude of the whole part by the denominator, add the numerator, and keep the denominator.` +
+        (w < 0n ? ' The minus sign applies to the entire mixed number: negate the whole sum.' : ''),
+        [field('numerator', 'Improper numerator', improper.n)],
+        { ruleHTML: `<span class="mono">${numerator} = ?</span>; denominator stays ${d}.` });
+    } else if (d < 0n) {
+      addStep(`Normalize ${name} Denominator`, 'convert',
+        'Move the minus sign to the numerator by multiplying both numerator and denominator by -1. The value stays the same.',
+        [], { ruleHTML: `${inlineFrac(n, d)} = ${inlineFrac(-n, -d)}` });
     }
-    if(hasMixedB){
-      ruleHTML+=`<br><span class="mono">${wB}</span> × <span class="mono">${dB}</span> + <span class="mono">${nB}</span> = <span class="rule-highlight">?</span> → ${inlineFrac('?',dB)}`;
-      checks.push({label:`Convert ${wB} ${inlineFrac(nB,dB)} → numerator:`,answer:impB.n,den:impB.d});
-    }
-
-    stepsData.push({
-      title:'Convert Mixed Numbers',
-      proc:'convert',
-      instruction,
-      type:'multi-numeric',
-      ruleHTML,
-      checks
-    });
   }
-
-  // Now work with improper fractions
-  let aN=impA.n, aD=impA.d, bN=impB.n, bD=impB.d;
-
-  if(op==='+'||op==='-'){
-    // Step: Find LCD
-    const lcd=lcm(aD,bD);
-    const multA=lcd/aD, multB=lcd/bD;
-    const newAN=aN*multA, newBN=bN*multB;
-
-    if(aD!==bD){
-      stepsData.push({
-        title:'Find the LCD (Least Common Denominator)',
-        proc:'lcd',
-        instruction:`The denominators are <strong>${aD}</strong> and <strong>${bD}</strong>. We need a common denominator to ${op==='+'?'add':'subtract'}.`,
-        type:'numeric-single',
-        question:`What is the LCD of ${aD} and ${bD}?`,
-        answer:lcd,
-      });
-
-      // Step: Convert fractions to LCD
-      const convChecks=[];
-      if(multA!==1){
-        convChecks.push({label:`${inlineFrac(aN,aD)} → ${inlineFrac('?',lcd)}  (multiply top & bottom by ${multA})`,answer:newAN});
-      }
-      if(multB!==1){
-        convChecks.push({label:`${inlineFrac(bN,bD)} → ${inlineFrac('?',lcd)}  (multiply top & bottom by ${multB})`,answer:newBN});
-      }
-      if(convChecks.length>0){
-        stepsData.push({
-          title:'Build Equivalent Fractions',
-          proc:'lcd',
-          instruction:`Rewrite each fraction with the LCD of <strong>${lcd}</strong> as the denominator.`,
-          type:'multi-numeric',
-          checks:convChecks
-        });
-      }
+  let aN = impA.n, aD = impA.d, bN = impB.n, bD = impB.d;
+  if (op === '+' || op === '-') {
+    const lcd = lcm(aD, bD), ma = lcd / aD, mb = lcd / bD;
+    const newA = aN * ma, newB = bN * mb;
+    if (aD === bD) {
+      addStep('Denominators Already Match', 'lcd', `Both denominators are ${aD}. Keep this denominator; only ${op === '+' ? 'add' : 'subtract'} the numerators.`);
     } else {
-      stepsData.push({
-        title:'Denominators Already Match',
-        proc:'lcd',
-        instruction:`Both fractions already have a denominator of <strong>${aD}</strong> — no conversion needed!`,
-        type:'info',
-      });
+      addStep('Find the LCD', 'lcd', `The least common denominator is the smallest positive number divisible by both ${aD} and ${bD}.`,
+        [field('lcd', 'Least common denominator', lcd)]);
+      const fields = [], rules = [];
+      if (ma !== 1n) { fields.push(field('first', 'First equivalent numerator', newA)); rules.push(`${inlineFrac(aN, aD)} = ${inlineFrac(`${aN} × ${ma}`, `${aD} × ${ma}`)} = ${inlineFrac('?', lcd)}`); }
+      if (mb !== 1n) { fields.push(field('second', 'Second equivalent numerator', newB)); rules.push(`${inlineFrac(bN, bD)} = ${inlineFrac(`${bN} × ${mb}`, `${bD} × ${mb}`)} = ${inlineFrac('?', lcd)}`); }
+      addStep('Build Equivalent Fractions', 'lcd', `Multiply each numerator and its denominator by the same factor to make the denominator ${lcd}.`, fields,
+        { ruleHTML: rules.join('<br>') });
     }
-
-    // Step: Add/Subtract numerators
-    const resultN=op==='+'?newAN+newBN:newAN-newBN;
-    const resultD=lcd;
-
-    stepsData.push({
-      title:`${op==='+'?'Add':'Subtract'} the Numerators`,
-      proc:'compute',
-      instruction:`Keep the denominator of <strong>${lcd}</strong>. ${op==='+'?'Add':'Subtract'} the numerators: <span class="mono">${newAN} ${displayOp(op)} ${newBN}</span>`,
-      type:'numeric-single',
-      question:`${newAN} ${displayOp(op)} ${newBN} = ?`,
-      answer:resultN,
-    });
-
-    S.rawN=resultN;
-    S.rawD=resultD;
-  } else if(op==='*'){
-    // Division: Keep-Change-Flip first
-    // Multiply: straight across
-    stepsData.push({
-      title:'Multiply the Numerators',
-      proc:'compute',
-      instruction:`Multiply straight across the top: <span class="mono">${aN} × ${bN}</span>`,
-      type:'numeric-single',
-      question:`${aN} × ${bN} = ?`,
-      answer:aN*bN,
-    });
-    stepsData.push({
-      title:'Multiply the Denominators',
-      proc:'compute',
-      instruction:`Multiply straight across the bottom: <span class="mono">${aD} × ${bD}</span>`,
-      type:'numeric-single',
-      question:`${aD} × ${bD} = ?`,
-      answer:aD*bD,
-    });
-    S.rawN=aN*bN;
-    S.rawD=aD*bD;
-  } else if(op==='/'){
-    // Keep-Change-Flip
-    stepsData.push({
-      title:'Keep — Change — Flip',
-      proc:'compute',
-      instruction:`To divide fractions: <strong>Keep</strong> the first fraction, <strong>Change</strong> ÷ to ×, and <strong>Flip</strong> the second fraction.`,
-      type:'kcf',
-      keepN:aN,keepD:aD,flipN:bD,flipD:bN,
-    });
-
-    // Now multiply
-    const mN=aN*bD, mD=aD*bN;
-    stepsData.push({
-      title:'Multiply the Numerators',
-      proc:'compute',
-      instruction:`Now multiply across the top: <span class="mono">${aN} × ${bD}</span>`,
-      type:'numeric-single',
-      question:`${aN} × ${bD} = ?`,
-      answer:mN,
-    });
-    stepsData.push({
-      title:'Multiply the Denominators',
-      proc:'compute',
-      instruction:`Multiply across the bottom: <span class="mono">${aD} × ${Math.abs(bN)}</span>`,
-      type:'numeric-single',
-      question:`${aD} × ${Math.abs(bN)} = ?`,
-      answer:Math.abs(mD),
-    });
-    // Handle sign
-    S.rawN=mN;
-    S.rawD=mD;
-    // Fix sign
-    if(S.rawD<0){S.rawN=-S.rawN;S.rawD=-S.rawD;}
-  }
-
-  // Step: Simplify
-  const simplified=simplifyFrac(S.rawN,S.rawD);
-  const canSimplify=simplified.n!==S.rawN||simplified.d!==S.rawD;
-  const g=gcd(Math.abs(S.rawN),Math.abs(S.rawD));
-
-  if(canSimplify&&S.rawN!==0){
-    stepsData.push({
-      title:'Simplify the Fraction',
-      proc:'simplify',
-      instruction:`Find the GCF (Greatest Common Factor) of <strong>${Math.abs(S.rawN)}</strong> and <strong>${S.rawD}</strong> and divide both by it.`,
-      type:'simplify',
-      rawN:S.rawN,
-      rawD:S.rawD,
-      gcf:g,
-      simpN:simplified.n,
-      simpD:simplified.d,
-    });
-  }
-
-  // Step: Convert to mixed number if improper
-  const finalFrac=canSimplify?simplified:{n:S.rawN,d:S.rawD};
-  const mixed=toMixed(finalFrac.n,finalFrac.d);
-  if(mixed.w!==0&&mixed.n!==0){
-    stepsData.push({
-      title:'Convert to Mixed Number',
-      proc:'simplify',
-      instruction:`${inlineFrac(finalFrac.n,finalFrac.d)} is an improper fraction. Divide <strong>${Math.abs(finalFrac.n)}</strong> by <strong>${finalFrac.d}</strong> to get the whole number and remainder.`,
-      type:'mixed-convert',
-      impN:finalFrac.n,
-      impD:finalFrac.d,
-      whole:mixed.w,
-      remN:mixed.n,
-      remD:mixed.d,
-    });
-  }
-
-  S.finalN=finalFrac.n;
-  S.finalD=finalFrac.d;
-  S.finalMixed=mixed;
-}
-
-// ==================== DISPLAY ====================
-function updateFracDisplay(extra){
-  const {impA,impB,op,hasMixedA,hasMixedB,wA,nA,dA,wB,nB,dB}=S;
-  let html='';
-
-  if(hasMixedA) html+=mixedHTML(wA,nA,dA);
-  else html+=fracHTML(impA.n,impA.d);
-
-  html+=`<span class="fd-op">${displayOp(op)}</span>`;
-
-  if(hasMixedB) html+=mixedHTML(wB,nB,dB);
-  else html+=fracHTML(impB.n,impB.d);
-
-  if(extra) html+=extra;
-
-  document.getElementById('fracDisplay').innerHTML=html;
-}
-
-function showFinalDisplay(){
-  const {finalMixed,finalN,finalD}=S;
-  let resultHTML='';
-  if(finalMixed.w!==0&&finalMixed.n!==0){
-    resultHTML=`<span class="fd-eq">=</span>${mixedHTML(finalMixed.w,finalMixed.n,finalMixed.d,'fd-result')}`;
-  } else if(finalMixed.w!==0){
-    resultHTML=`<span class="fd-eq">=</span><span class="fd-whole fd-result" style="color:var(--success)">${finalMixed.w}</span>`;
+    S.rawN = op === '+' ? newA + newB : newA - newB; S.rawD = lcd;
+    addStep(op === '+' ? 'Add the Numerators' : 'Subtract the Numerators', 'compute',
+      `Keep the denominator ${lcd}. Compute the numerator: ${newA} ${displayOp(op)} ${grouped(newB)}.`,
+      [field('numerator', 'Result numerator', S.rawN)]);
   } else {
-    const s=simplifyFrac(finalN,finalD);
-    if(s.d===1) resultHTML=`<span class="fd-eq">=</span><span class="fd-whole fd-result" style="color:var(--success)">${s.n}</span>`;
-    else resultHTML=`<span class="fd-eq">=</span>${fracHTML(s.n,s.d,'fd-result')}`;
-  }
-  updateFracDisplay(resultHTML);
-}
-
-// ==================== RENDER STEPS ====================
-function showStep(idx){
-  if(idx>=stepsData.length){finishProblem();return}
-  const step=stepsData[idx];
-  const container=document.getElementById('stepsContainer');
-  const card=document.createElement('div');
-  card.className='step-card';
-  card.id=`step-${idx}`;
-
-  // Activate process banner
-  if(step.proc){
-    document.querySelectorAll('.proc-step').forEach(s=>s.classList.remove('active'));
-    document.getElementById(`proc-${step.proc}`).classList.add('active');
-  }
-
-  let bodyHTML='';
-
-  if(step.type==='info'){
-    bodyHTML=`
-      <div class="step-instruction">${step.instruction}</div>
-      <button class="btn-primary btn-sm" onclick="completeStep(${idx})">Got It →</button>
-    `;
-  } else if(step.type==='multi-numeric'){
-    let checksHTML='';
-    if(step.ruleHTML) checksHTML+=`<div class="step-rule-box">${step.ruleHTML}</div>`;
-    step.checks.forEach((c,ci)=>{
-      checksHTML+=`
-        <div style="margin-bottom:12px">
-          <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px">${c.label}</div>
-          <div class="answer-row">
-            <input type="text" class="answer-input" id="ans-${idx}-${ci}" placeholder="?" autocomplete="off"
-                   onkeydown="if(event.key==='Enter')checkMultiNum(${idx},${ci})">
-            <button class="btn-check" id="btn-${idx}-${ci}" onclick="checkMultiNum(${idx},${ci})">Check</button>
-          </div>
-          <div class="step-feedback" id="fb-${idx}-${ci}"></div>
-        </div>
-      `;
-    });
-    bodyHTML=`<div class="step-instruction">${step.instruction}</div>${checksHTML}`;
-  } else if(step.type==='numeric-single'){
-    bodyHTML=`
-      <div class="step-instruction">${step.instruction}</div>
-      <div class="answer-row">
-        <span class="answer-label">${step.question||''} </span>
-        <input type="text" class="answer-input" id="ans-${idx}" placeholder="?" autocomplete="off"
-               onkeydown="if(event.key==='Enter')checkSingleNum(${idx})">
-        <button class="btn-check" onclick="checkSingleNum(${idx})">Check</button>
-      </div>
-      <div class="step-feedback" id="fb-${idx}"></div>
-    `;
-  } else if(step.type==='simplify'){
-    bodyHTML=`
-      <div class="step-instruction">${step.instruction}</div>
-      <div style="margin-bottom:12px">
-        <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px">What is the GCF of ${Math.abs(step.rawN)} and ${step.rawD}?</div>
-        <div class="answer-row">
-          <input type="text" class="answer-input" id="ans-${idx}-gcf" placeholder="GCF" autocomplete="off"
-                 onkeydown="if(event.key==='Enter')checkGCF(${idx})">
-          <button class="btn-check" id="btn-${idx}-gcf" onclick="checkGCF(${idx})">Check</button>
-        </div>
-        <div class="step-feedback" id="fb-${idx}-gcf"></div>
-      </div>
-      <div id="simplifyPart2-${idx}" style="display:none">
-        <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px">Divide both by ${step.gcf}: ${inlineFrac(step.rawN+' ÷ '+step.gcf, step.rawD+' ÷ '+step.gcf)} = ${inlineFrac('?','?')}</div>
-        <div class="answer-row">
-          <span class="answer-label">Num:</span>
-          <input type="text" class="answer-input" id="ans-${idx}-sn" placeholder="?" autocomplete="off" style="width:70px"
-                 onkeydown="if(event.key==='Enter')checkSimplified(${idx})">
-          <span class="answer-label">Den:</span>
-          <input type="text" class="answer-input" id="ans-${idx}-sd" placeholder="?" autocomplete="off" style="width:70px"
-                 onkeydown="if(event.key==='Enter')checkSimplified(${idx})">
-          <button class="btn-check" id="btn-${idx}-simp" onclick="checkSimplified(${idx})">Check</button>
-        </div>
-        <div class="step-feedback" id="fb-${idx}-simp"></div>
-      </div>
-    `;
-  } else if(step.type==='mixed-convert'){
-    bodyHTML=`
-      <div class="step-instruction">${step.instruction}</div>
-      <div class="answer-row" style="flex-wrap:wrap;gap:8px">
-        <span class="answer-label">Whole:</span>
-        <input type="text" class="answer-input" id="ans-${idx}-w" placeholder="?" autocomplete="off" style="width:70px">
-        <span class="answer-label">Remainder num:</span>
-        <input type="text" class="answer-input" id="ans-${idx}-rn" placeholder="?" autocomplete="off" style="width:70px">
-        <span class="answer-label">Den:</span>
-        <input type="text" class="answer-input" id="ans-${idx}-rd" placeholder="?" autocomplete="off" style="width:70px"
-               onkeydown="if(event.key==='Enter')checkMixedConvert(${idx})">
-        <button class="btn-check" onclick="checkMixedConvert(${idx})">Check</button>
-      </div>
-      <div class="step-feedback" id="fb-${idx}"></div>
-    `;
-  } else if(step.type==='kcf'){
-    bodyHTML=`
-      <div class="step-instruction">${step.instruction}</div>
-      <div class="step-rule-box">
-        <strong>Keep:</strong> ${inlineFrac(step.keepN,step.keepD)}<br>
-        <strong>Change:</strong> ÷ → ×<br>
-        <strong>Flip:</strong> ${inlineFrac(S.impB.n,S.impB.d)} → <span class="rule-highlight">${inlineFrac(step.flipN,step.flipD)}</span>
-      </div>
-      <div style="font-size:.88rem;color:var(--text-muted);margin-bottom:10px">New problem: ${inlineFrac(step.keepN,step.keepD)} <strong>×</strong> ${inlineFrac(step.flipN,step.flipD)}</div>
-      <button class="btn-primary btn-sm" onclick="completeStep(${idx})">Got It →</button>
-    `;
-  }
-
-  card.innerHTML=`
-    <div class="step-header">
-      <div class="step-num">${idx+1}</div>
-      <div class="step-title">${step.title}</div>
-    </div>
-    <div class="step-body">${bodyHTML}</div>
-  `;
-  container.appendChild(card);
-  card.scrollIntoView({behavior:'smooth',block:'nearest'});
-
-  // Focus first input
-  setTimeout(()=>{
-    const inp=card.querySelector('.answer-input');
-    if(inp)inp.focus();
-  },150);
-}
-
-// ==================== CHECK ANSWERS ====================
-const multiDone={};
-
-function completeStep(idx){
-  markDone(idx);
-  currentStep=idx+1;
-  showStep(idx+1);
-}
-
-function markDone(idx){
-  const card=document.getElementById(`step-${idx}`);
-  if(card){card.classList.add('completed');card.querySelector('.step-num').classList.add('done')}
-  const step=stepsData[idx];
-  if(step.proc){
-    document.getElementById(`proc-${step.proc}`).classList.add('done');
-  }
-}
-
-function checkMultiNum(stepIdx,checkIdx){
-  const step=stepsData[stepIdx];
-  const check=step.checks[checkIdx];
-  const inp=document.getElementById(`ans-${stepIdx}-${checkIdx}`);
-  const fb=document.getElementById(`fb-${stepIdx}-${checkIdx}`);
-  const val=parseInt(inp.value.trim());
-
-  if(isNaN(val)){fb.textContent='Enter a number.';fb.className='step-feedback show incorrect';return}
-
-  if(val===check.answer){
-    inp.classList.add('correct');inp.disabled=true;
-    document.getElementById(`btn-${stepIdx}-${checkIdx}`).style.display='none';
-    fb.textContent='Correct! ✓';fb.className='step-feedback show correct';
-    if(!multiDone[stepIdx])multiDone[stepIdx]=new Set();
-    multiDone[stepIdx].add(checkIdx);
-    if(multiDone[stepIdx].size===step.checks.length){
-      setTimeout(()=>{markDone(stepIdx);currentStep=stepIdx+1;showStep(stepIdx+1)},700);
+    if (op === '/') {
+      const reciprocal = positiveDenominator(bD, bN);
+      addStep('Multiply by the Reciprocal', 'compute',
+        'Dividing by a nonzero fraction is the same as multiplying by its reciprocal. Keep the first fraction, change division to multiplication, and flip the second fraction.' +
+        (bN < 0n ? ' Keep the negative sign: a negative denominator can be moved to the numerator.' : ''), [],
+        { ruleHTML: `Reciprocal: ${inlineFrac(bD, bN)}` + (bN < 0n ? ` = ${inlineFrac(reciprocal.n, reciprocal.d)}` : '') +
+          `<br>New problem: ${inlineFrac(aN, aD)} × ${inlineFrac(reciprocal.n, reciprocal.d)}` });
+      bN = reciprocal.n; bD = reciprocal.d;
     }
+    S.rawN = aN * bN; S.rawD = aD * bD;
+    addStep('Multiply the Numerators', 'compute', `Multiply across the top: ${aN} × ${grouped(bN)}.`,
+      [field('numerator', 'Result numerator', S.rawN)]);
+    addStep('Multiply the Denominators', 'compute', `Multiply across the bottom: ${aD} × ${bD}. A common denominator is not needed for multiplication.`,
+      [field('denominator', 'Result denominator', S.rawD)]);
+  }
+  const final = simplifyFrac(S.rawN, S.rawD), g = gcd(S.rawN, S.rawD);
+  S.finalN = final.n; S.finalD = final.d; S.finalMixed = toMixed(final.n, final.d);
+  if (S.rawN === 0n) {
+    addStep('A Zero Numerator', 'simplify', `A fraction with a zero numerator and a nonzero denominator equals zero: 0/${S.rawD} = 0.`);
+  } else if (g > 1n) {
+    addStep('Find the GCF', 'simplify', `Simplify ${fractionText(S.rawN, S.rawD)} by finding the greatest common factor of ${abs(S.rawN)} and ${S.rawD}. Use the magnitude when the numerator is negative.`,
+      [field('gcf', 'Greatest common factor', g)]);
+    addStep('Simplify the Fraction', 'simplify', `Divide both numerator and denominator by ${g}. Keep the denominator positive and write the fraction in simplest form.`,
+      [field('numerator', 'Simplified numerator', final.n), field('denominator', 'Simplified denominator', final.d)],
+      { type: 'fraction', ruleHTML: `${inlineFrac(`${S.rawN} ÷ ${g}`, `${S.rawD} ÷ ${g}`)} = ${inlineFrac('?', '?')}` });
   } else {
-    inp.classList.add('incorrect');
-    setTimeout(()=>inp.classList.remove('incorrect'),600);
-    const tries=parseInt(inp.dataset.tries||'0')+1;
-    inp.dataset.tries=tries;
-    if(tries>=3){fb.innerHTML=`The answer is <strong>${check.answer}</strong>`;fb.className='step-feedback show hint-text'}
-    else{fb.textContent='Not quite — try again!';fb.className='step-feedback show incorrect'}
-    inp.value='';inp.focus();
+    addStep('Already in Simplest Form', 'simplify', `${fractionText(final.n, final.d)} is in simplest form because ${abs(final.n)} and ${final.d} have a greatest common factor of 1.`);
+  }
+  const mixed = S.finalMixed;
+  if (mixed.w !== 0n && mixed.n !== 0n) {
+    addStep('Convert to Mixed Number', 'simplify',
+      `Divide ${abs(final.n)} by ${final.d}. The integer quotient gives the magnitude of the whole part; the remainder becomes the numerator. Keep the denominator.` +
+      (final.n < 0n ? ' The result is negative: put the minus sign on the whole part, with a positive remainder. That sign applies to the entire mixed number.' : ''),
+      [field('whole', 'Signed whole part', mixed.w), field('numerator', 'Remainder numerator', mixed.n), field('denominator', 'Denominator', mixed.d)], { type: 'mixed' });
   }
 }
 
-function checkSingleNum(stepIdx){
-  const step=stepsData[stepIdx];
-  const inp=document.getElementById(`ans-${stepIdx}`);
-  const fb=document.getElementById(`fb-${stepIdx}`);
-  const val=parseFloat(inp.value.trim());
-
-  if(isNaN(val)){fb.textContent='Enter a number.';fb.className='step-feedback show incorrect';return}
-
-  if(Math.abs(val-step.answer)<0.01){
-    inp.classList.add('correct');inp.disabled=true;
-    inp.value=step.answer;
-    fb.textContent='Correct! ✓';fb.className='step-feedback show correct';
-    setTimeout(()=>{markDone(stepIdx);currentStep=stepIdx+1;showStep(stepIdx+1)},700);
-  } else {
-    inp.classList.add('incorrect');
-    setTimeout(()=>inp.classList.remove('incorrect'),600);
-    const tries=parseInt(inp.dataset.tries||'0')+1;
-    inp.dataset.tries=tries;
-    if(tries>=3){fb.innerHTML=`The answer is <strong>${step.answer}</strong>`;fb.className='step-feedback show hint-text'}
-    else if(tries>=2){fb.textContent='Not quite — try once more!';fb.className='step-feedback show incorrect'}
-    else{fb.textContent='Not quite — give it another try!';fb.className='step-feedback show incorrect'}
-    inp.value='';inp.focus();
+function updateFracDisplay(showAnswer) {
+  let html = mixedHTML(S.a.w, S.a.n, S.a.d) + `<span class="fd-op">${displayOp(S.op)}</span>`;
+  const negativeB = S.b.improper.n < 0n;
+  html += `<span class="grouped-number">${negativeB ? '<span class="fd-op">(</span>' : ''}${mixedHTML(S.b.w, S.b.n, S.b.d)}${negativeB ? '<span class="fd-op">)</span>' : ''}</span>`;
+  if (showAnswer) {
+    const { w, n, d } = S.finalMixed;
+    html += '<span class="fd-eq">=</span><span class="fd-result grouped-number">' +
+      (S.finalD === 1n ? `<span class="fd-whole">${S.finalN}</span>` : mixedHTML(w, n, d)) + '</span>';
   }
+  document.getElementById('fracDisplay').innerHTML = html;
 }
 
-function checkGCF(stepIdx){
-  const step=stepsData[stepIdx];
-  const inp=document.getElementById(`ans-${stepIdx}-gcf`);
-  const fb=document.getElementById(`fb-${stepIdx}-gcf`);
-  const val=parseInt(inp.value.trim());
-
-  if(isNaN(val)){fb.textContent='Enter a number.';fb.className='step-feedback show incorrect';return}
-
-  if(val===step.gcf){
-    inp.classList.add('correct');inp.disabled=true;
-    document.getElementById(`btn-${stepIdx}-gcf`).style.display='none';
-    fb.textContent='Correct! ✓';fb.className='step-feedback show correct';
-    document.getElementById(`simplifyPart2-${stepIdx}`).style.display='';
-    setTimeout(()=>{
-      const next=document.getElementById(`ans-${stepIdx}-sn`);
-      if(next)next.focus();
-    },200);
-  } else {
-    inp.classList.add('incorrect');
-    setTimeout(()=>inp.classList.remove('incorrect'),600);
-    const tries=parseInt(inp.dataset.tries||'0')+1;
-    inp.dataset.tries=tries;
-    if(tries>=3){fb.innerHTML=`The GCF is <strong>${step.gcf}</strong>`;fb.className='step-feedback show hint-text'}
-    else{fb.textContent='Not quite — what is the largest number that divides evenly into both?';fb.className='step-feedback show incorrect'}
-    inp.value='';inp.focus();
+function updateProgress() {
+  document.querySelectorAll('.proc-step').forEach(cell => {
+    const steps = stepsData.filter(step => step.proc === cell.dataset.proc);
+    const done = steps.length > 0 && steps.every(step => step.accepted);
+    const active = !done && stepsData[currentStep]?.proc === cell.dataset.proc;
+    cell.classList.toggle('done', done); cell.classList.toggle('active', active);
+    if (active) cell.setAttribute('aria-current', 'step'); else cell.removeAttribute('aria-current');
+  });
+}
+function showStep(idx) {
+  if (!S || S.finished || idx !== currentStep) return;
+  if (idx === stepsData.length) { finishProblem(); return; }
+  if (document.getElementById('step-' + idx)) return;
+  const step = stepsData[idx], card = document.createElement('div');
+  card.id = 'step-' + idx; card.className = 'step-card';
+  const fields = step.fields.map(f => `<div class="answer-field"><label class="answer-label" for="ans-${idx}-${f.key}">${f.label}</label>` +
+    `<input type="text" class="answer-input" id="ans-${idx}-${f.key}" placeholder="?" autocomplete="off" spellcheck="false" maxlength="100" aria-describedby="help-${idx} fb-${idx}" onkeydown="if(event.key==='Enter')checkStep(${idx})"></div>`).join('');
+  card.innerHTML = `<div class="step-header"><div class="step-num">${idx + 1}</div><h2 class="step-title">${step.title}</h2></div>` +
+    `<div class="step-body"><div class="step-instruction">${step.instruction}</div>${step.ruleHTML ? `<div class="step-rule-box">${step.ruleHTML}</div>` : ''}` +
+    (step.type === 'info' ? `<button type="button" class="btn-primary btn-sm" onclick="completeStep(${idx})">Got It →</button>` :
+      `<div class="answer-row">${fields}<button type="button" class="btn-check" onclick="checkStep(${idx})">Check</button></div><p class="answer-help" id="help-${idx}">Enter an integer in each box. Follow the form requested in this step.</p>`) +
+    `<div class="step-feedback" id="fb-${idx}" role="status" aria-live="polite" aria-atomic="true"></div></div>`;
+  document.getElementById('stepsContainer').appendChild(card); updateProgress();
+  card.querySelector('input, button').focus({ preventScroll: true });
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function activeStep(idx) { return S && !S.finished && idx === currentStep && !stepsData[idx]?.accepted ? stepsData[idx] : null; }
+function feedback(idx, message, correct = false) {
+  const el = document.getElementById('fb-' + idx); el.textContent = message;
+  el.className = 'step-feedback show ' + (correct ? 'correct' : 'incorrect');
+}
+function acceptStep(idx, delay = 500) {
+  const step = activeStep(idx); if (!step) return;
+  step.accepted = true;
+  const card = document.getElementById('step-' + idx);
+  card.classList.add('completed'); card.querySelector('.step-num').classList.add('done');
+  card.querySelectorAll('input, button').forEach(control => { control.disabled = true; }); updateProgress();
+  const version = workspaceVersion;
+  const advance = () => { if (version !== workspaceVersion || !S || currentStep !== idx) return; currentStep++; showStep(currentStep); };
+  if (delay) setTimeout(advance, delay); else advance();
+}
+function completeStep(idx) { if (activeStep(idx)?.type === 'info') acceptStep(idx, 0); }
+function checkStep(idx) {
+  const step = activeStep(idx); if (!step || step.type === 'info') return;
+  const inputs = step.fields.map(f => document.getElementById(`ans-${idx}-${f.key}`));
+  let values;
+  try { values = inputs.map((input, i) => readInteger(input.value, step.fields[i].label)); }
+  catch (error) { feedback(idx, error.message); return; }
+  if (values.every((value, i) => value === step.fields[i].answer)) {
+    inputs.forEach((input, i) => { input.classList.remove('incorrect'); input.classList.add('correct'); input.removeAttribute('aria-invalid'); input.value = String(values[i]); });
+    feedback(idx, 'Correct! ✓', true); acceptStep(idx); return;
   }
-}
-
-function checkSimplified(stepIdx){
-  const step=stepsData[stepIdx];
-  const inpN=document.getElementById(`ans-${stepIdx}-sn`);
-  const inpD=document.getElementById(`ans-${stepIdx}-sd`);
-  const fb=document.getElementById(`fb-${stepIdx}-simp`);
-  const vn=parseInt(inpN.value.trim());
-  const vd=parseInt(inpD.value.trim());
-
-  if(isNaN(vn)||isNaN(vd)){fb.textContent='Fill in both numerator and denominator.';fb.className='step-feedback show incorrect';return}
-
-  if(vn===step.simpN&&vd===step.simpD){
-    inpN.classList.add('correct');inpD.classList.add('correct');
-    inpN.disabled=true;inpD.disabled=true;
-    document.getElementById(`btn-${stepIdx}-simp`).style.display='none';
-    fb.textContent='Simplified! ✓';fb.className='step-feedback show correct';
-    setTimeout(()=>{markDone(stepIdx);currentStep=stepIdx+1;showStep(stepIdx+1)},700);
-  } else {
-    inpN.classList.add('incorrect');inpD.classList.add('incorrect');
-    setTimeout(()=>{inpN.classList.remove('incorrect');inpD.classList.remove('incorrect')},600);
-    const tries=parseInt(inpN.dataset.tries||'0')+1;
-    inpN.dataset.tries=tries;
-    if(tries>=3){fb.innerHTML=`The simplified fraction is <strong>${inlineFrac(step.simpN,step.simpD)}</strong>`;fb.className='step-feedback show hint-text'}
-    else{fb.textContent='Not quite — divide both numbers by the GCF.';fb.className='step-feedback show incorrect'}
+  inputs.forEach((input, i) => { const wrong = values[i] !== step.fields[i].answer; input.classList.toggle('incorrect', wrong); input.setAttribute('aria-invalid', String(wrong)); });
+  let message = 'Not quite. Check the operation and signs in this step.';
+  if (step.type === 'fraction') {
+    const [n, d] = values;
+    if (d === 0n) message = 'A denominator cannot be zero.';
+    else if (n * step.fields[1].answer === step.fields[0].answer * d) {
+      message = d < 0n ? 'That fraction is equivalent. Move the minus sign to the numerator so the denominator is positive.'
+        : 'That fraction is equivalent, but it is not in simplest form. Divide both parts by their greatest common factor.';
+    } else message = 'Divide both the numerator and denominator by the GCF. Keep the sign of the numerator.';
+  } else if (step.type === 'mixed') {
+    message = 'Use the integer quotient, the nonnegative remainder, and the original denominator. For a negative result, put the minus sign on the whole part.';
   }
+  step.tries = (step.tries || 0) + 1;
+  if (step.tries >= 3) message += ' Check your work: ' + step.fields.map(f => `${f.label} = ${f.answer}`).join('; ') + '.';
+  feedback(idx, message); inputs.find((input, i) => values[i] !== step.fields[i].answer).focus();
 }
 
-function checkMixedConvert(stepIdx){
-  const step=stepsData[stepIdx];
-  const inpW=document.getElementById(`ans-${stepIdx}-w`);
-  const inpRN=document.getElementById(`ans-${stepIdx}-rn`);
-  const inpRD=document.getElementById(`ans-${stepIdx}-rd`);
-  const fb=document.getElementById(`fb-${stepIdx}`);
-
-  const vw=parseInt(inpW.value.trim());
-  const vrn=parseInt(inpRN.value.trim());
-  const vrd=parseInt(inpRD.value.trim());
-
-  if(isNaN(vw)||isNaN(vrn)||isNaN(vrd)){fb.textContent='Fill in all three values.';fb.className='step-feedback show incorrect';return}
-
-  if(vw===step.whole&&vrn===step.remN&&vrd===step.remD){
-    [inpW,inpRN,inpRD].forEach(i=>{i.classList.add('correct');i.disabled=true});
-    fb.textContent='Perfect! ✓';fb.className='step-feedback show correct';
-    setTimeout(()=>{markDone(stepIdx);currentStep=stepIdx+1;showStep(stepIdx+1)},700);
-  } else {
-    [inpW,inpRN,inpRD].forEach(i=>{i.classList.add('incorrect');setTimeout(()=>i.classList.remove('incorrect'),600)});
-    const tries=parseInt(inpW.dataset.tries||'0')+1;
-    inpW.dataset.tries=tries;
-    if(tries>=3){fb.innerHTML=`The answer is <strong>${step.whole} ${inlineFrac(step.remN,step.remD)}</strong>`;fb.className='step-feedback show hint-text'}
-    else{fb.textContent=`Divide ${Math.abs(step.impN)} by ${step.impD}. The quotient is the whole number, the remainder is the numerator.`;fb.className='step-feedback show incorrect'}
-  }
+function finishProblem() {
+  if (!S || S.finished || currentStep !== stepsData.length) return;
+  S.finished = true; updateProgress(); updateFracDisplay(true);
+  const left = mixedText(S.a.w, S.a.n, S.a.d), right = mixedText(S.b.w, S.b.n, S.b.d);
+  const { w, n, d } = S.finalMixed;
+  const answer = S.finalD === 1n ? String(S.finalN) : mixedText(w, n, d);
+  document.getElementById('resultExpr').textContent = `${left} ${displayOp(S.op)} ${S.b.improper.n < 0n ? '(' + right + ')' : right} = ${answer}`;
+  document.getElementById('resultNote').textContent = w !== 0n && n !== 0n ? `As an improper fraction: ${S.finalN}/${S.finalD}.` + (w < 0n ? ' The minus sign applies to the entire mixed number.' : '') : '';
+  const result = document.getElementById('resultSection'); result.classList.add('visible');
+  result.querySelector('button').focus({ preventScroll: true }); result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
-
-// ==================== FINISH ====================
-function finishProblem(){
-  document.querySelectorAll('.proc-step').forEach(s=>s.classList.remove('active'));
-
-  showFinalDisplay();
-
-  const {finalMixed,finalN,finalD,op,wA,nA,dA,wB,nB,dB,hasMixedA,hasMixedB}=S;
-
-  // Build result string
-  let leftStr=hasMixedA?`${wA} ${nA}/${dA}`:`${nA}/${dA}`;
-  let rightStr=hasMixedB?`${wB} ${nB}/${dB}`:`${nB}/${dB}`;
-  let ansStr='';
-  if(finalMixed.w!==0&&finalMixed.n!==0) ansStr=`${finalMixed.w} ${finalMixed.n}/${finalMixed.d}`;
-  else if(finalMixed.w!==0) ansStr=`${finalMixed.w}`;
-  else{const s=simplifyFrac(finalN,finalD);ansStr=s.d===1?`${s.n}`:`${s.n}/${s.d}`}
-
-  document.getElementById('resultExpr').textContent=`${leftStr} ${displayOp(op)} ${rightStr} = ${ansStr}`;
-  document.getElementById('resultSection').classList.add('visible');
-  document.getElementById('resultSection').scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-
-function resetAll(){
-  document.getElementById('inputSection').style.display='';
+function resetAll() {
+  workspaceVersion++; S = null; selectedOp = null; stepsData = []; currentStep = 0;
+  document.getElementById('inputSection').style.display = '';
   document.getElementById('workspace').classList.remove('visible');
-  ['wholeA','numA','denA','wholeB','numB','denB'].forEach(id=>document.getElementById(id).value='');
-  selectedOp=null;
-  document.querySelectorAll('.op-btn').forEach(b=>b.classList.remove('selected'));
-  document.getElementById('stepsContainer').innerHTML='';
+  ['wholeA', 'numA', 'denA', 'wholeB', 'numB', 'denB'].forEach(id => { document.getElementById(id).value = ''; });
+  document.querySelectorAll('.op-btn').forEach(button => { button.classList.remove('selected'); button.setAttribute('aria-pressed', 'false'); });
+  document.getElementById('stepsContainer').replaceChildren(); document.getElementById('fracDisplay').replaceChildren();
   document.getElementById('resultSection').classList.remove('visible');
-  document.querySelectorAll('.proc-step').forEach(s=>s.classList.remove('active','done'));
-  Object.keys(multiDone).forEach(k=>delete multiDone[k]);
-  document.getElementById('numA').focus();
+  document.getElementById('resultExpr').textContent = ''; document.getElementById('resultNote').textContent = '';
+  updateProgress(); clearError(); document.getElementById('numA').focus();
 }
+const entryIds = ['wholeA', 'numA', 'denA', 'wholeB', 'numB', 'denB'];
+entryIds.forEach((id, i) => document.getElementById(id).addEventListener('keydown', event => {
+  if (event.key !== 'Enter') return;
+  if (i === entryIds.length - 1) startSolving(); else document.getElementById(entryIds[i + 1]).focus();
+}));
 </script>
 </body>
 </html>
