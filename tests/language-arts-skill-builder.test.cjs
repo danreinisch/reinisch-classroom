@@ -58,7 +58,7 @@ function stats(document) {
 test('both donor copies match; all existing skills and the writing scaffold remain', () => {
   assert.equal(html, fs.readFileSync(path.join(root, mirror), 'utf8'));
   assert.deepEqual(data.skills.map(skill => [skill.id, skill.questions.length]), [
-    ['verbs', 20], ['context', 20], ['sentences', 20],
+    ['verbs', 20], ['context', 20], ['wordparts', 20], ['sentences', 20],
     ['inferences', 20], ['cause', 20], ['compare', 20],
   ]);
   assert.equal(data.writingPrompt.title, 'Written Response Practice');
@@ -277,4 +277,67 @@ test('all six writing fields have readable directions that preserve the draft', 
   assert.equal(document.getElementById('writingOutput').textContent, '');
   click(document, '#readParagraphBtn');
   assert.equal(spoken.at(-1), 'Synthetic draft for paragraphBox.');
+});
+
+test('Word Parts opens, reads all 20 questions and choices, and counts toward 140', t => {
+  const { document, spoken } = fixture(t);
+  const skill = data.skills.find(item => item.id === 'wordparts');
+  const answers = [
+    're-', 'Prefix', '-ful', 'Suffix', 'help', 'play', 'struct',
+    'Help can stand alone; struct needs other word parts.',
+    'again', 'not', 'before', 'full of; having', 'without',
+    'A person who does something', 'unsafe', 'Makes a comparison',
+    'Play that part again.', 'Read it incorrectly.',
+    'Not useful for helping.', 'Build it again.',
+  ];
+  assert.equal(document.querySelector('#scoreTotalMenu').textContent, '140');
+  assert.equal(document.querySelectorAll('[data-open-skill]').length, 8);
+  click(document, '[data-open-skill="wordparts"]');
+  assert.equal(document.querySelectorAll('[data-q-nav]').length, 20);
+  for (const [index, answer] of answers.entries()) {
+    click(document, `[data-q-nav="${index}"]`);
+    const question = skill.questions[index];
+    assert.equal(new Set(question.choices.map(choice => choice.text)).size, 4);
+    assert.equal(document.querySelector('.prompt').textContent, question.prompt);
+    click(document, '.card-top [data-speak]');
+    assert.ok(spoken.at(-1).includes(question.teaching));
+    assert.ok(spoken.at(-1).includes(question.prompt));
+    const readers = [...document.querySelectorAll('[data-choice-read]')];
+    assert.equal(readers.length, 4);
+    readers.forEach((button, choiceIndex) => {
+      button.click();
+      assert.equal(spoken.at(-1), `Choice ${String.fromCharCode(65 + choiceIndex)}. ${question.choices[choiceIndex].text}`);
+    });
+    assert.equal(document.querySelector('.feedback'), null);
+    choose(document, answer);
+    assert.ok(document.querySelector('.feedback').classList.contains('correct'));
+  }
+  click(document, '#seeFeedbackBtn');
+  assert.deepEqual(stats(document), ['20/20', '20', '0']);
+  assert.match(document.querySelector('#firstTrySummary').textContent, /100%\. 0 unattempted/);
+  click(document, '#reportBackMenu');
+  assert.equal(document.querySelector('#scoreNumMenu').textContent, '20');
+  assert.match(document.querySelector('#summaryTextMenu').textContent, /Unattempted: 120/);
+});
+
+test('Word Parts corrections preserve first-try scoring and leave other skills untouched', t => {
+  const { document, window } = fixture(t);
+  click(document, '[data-open-skill="wordparts"]');
+  click(document, '#seeFeedbackBtn');
+  assert.deepEqual(stats(document), ['0/20', '0', '0']);
+  click(document, '#reportKeepPracticing');
+  choose(document, 'play');
+  assert.match(document.querySelector('.feedback').textContent, /Play is the base word/);
+  click(document, '#retryBtn');
+  choose(document, 're-');
+  click(document, '#seeFeedbackBtn');
+  assert.deepEqual(stats(document), ['1/20', '0', '1']);
+  assert.match(document.querySelector('#firstTrySummary').textContent, /0%\. 19 unattempted/);
+  click(document, '#reportBackMenu');
+  click(document, '[data-open-skill="verbs"]');
+  click(document, '#seeFeedbackBtn');
+  assert.deepEqual(stats(document), ['0/20', '0', '0']);
+  window.dispatchEvent(new window.PageTransitionEvent('pagehide', { persisted: true }));
+  assert.equal(document.querySelector('#scoreNumMenu').textContent, '0');
+  assert.equal(document.querySelector('#scoreTotalMenu').textContent, '140');
 });
