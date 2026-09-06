@@ -260,7 +260,7 @@ test('Skill Builder opens from Activities and exits with the student session int
   await expect(page.locator('#studentDashboardView')).toBeVisible();
   await expect(page.locator('#loginView')).toBeHidden();
   await expect(page.locator('#tabActivities')).toBeVisible();
-  await expect(page.locator('#tabActivities .st-activity-card')).toHaveCount(3);
+  await expect(page.locator('#tabActivities .st-activity-card')).toHaveCount(4);
 
   const card = page.locator('#tabActivities .st-activity-card').filter({
     hasText: 'Language Arts Skill Builder'
