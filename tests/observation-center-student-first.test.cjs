@@ -233,19 +233,20 @@ test(
 test(
   'Student-mode goal cards expose their configured observation period context',
   () => {
-    const center =
+    const goalPeriodMeta =
       section(
         observation,
-        'function initObservationCenter'
+        'const buildGoalPeriodMeta',
+        5000
       );
 
     assert.match(
-      center,
+      goalPeriodMeta,
       /obs-center-goal-period/
     );
 
     assert.match(
-      center,
+      goalPeriodMeta,
       /getConfiguredClassPeriods/
     );
   }
@@ -255,15 +256,9 @@ test(
 test(
   'Class Period options include the loaded bell schedule as a fallback source',
   () => {
-    const center =
-      section(
-        observation,
-        'function initObservationCenter'
-      );
-
     const periods =
       section(
-        center,
+        observation,
         'const configuredPeriods',
         5000
       );
