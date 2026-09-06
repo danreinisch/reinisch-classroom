@@ -326,3 +326,96 @@ test('Skill Builder opens from Activities and exits with the student session int
     code: sessionStorage.getItem('rc_user_code')
   }))).toEqual({ role: 'student', code: 'S010' });
 });
+
+
+test('Skill Builder clear confirmation works inside Viewer', async ({ page }, testInfo) => {
+  let nativeDialogs = 0;
+  page.on('dialog', async dialog => {
+    nativeDialogs++;
+    await dialog.dismiss();
+  });
+  await seedSyntheticStudentSession(page);
+  await page.goto('/student/?tab=activities');
+  await page.locator('#tabActivities .st-activity-card').filter({
+    hasText: 'Language Arts Skill Builder'
+  }).click();
+
+  const sandbox = await page.locator('#contentIframe').getAttribute('sandbox');
+  expect(sandbox).not.toBeNull();
+  expect(sandbox.split(/\s+/)).not.toContain('allow-modals');
+
+  const builder = page.frameLocator('#contentIframe');
+  const dialog = builder.getByRole('dialog', { name: 'End this practice?' });
+  const keep = dialog.getByRole('button', { name: 'Keep practicing', exact: true });
+  const clear = dialog.getByRole('button', { name: 'Clear this visit', exact: true });
+
+  await builder.locator('[data-open-skill="wordparts"]').click();
+  await builder.locator('.choice').filter({ hasText: 're-' }).click();
+  await expect(builder.locator('.feedback')).toHaveClass(/correct/);
+  await builder.locator('#endPracticeBtn').click();
+  await expect(dialog).toBeVisible();
+  await expect(keep).toBeFocused();
+
+  await page.screenshot({
+    path: testInfo.outputPath('clear-practice-dialog.png')
+  });
+
+  // Dialog keys must not navigate the question behind it.
+  await keep.press('ArrowRight');
+  await expect(builder.locator('.prompt')).toHaveText(
+    'Which part of replay is the prefix?'
+  );
+  await keep.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(builder.locator('#practiceScreen')).toBeVisible();
+  await expect(builder.locator('#endPracticeBtn')).toBeFocused();
+  await expect(builder.locator('.feedback')).toHaveClass(/correct/);
+
+  await builder.locator('#menuDoneBtn').click();
+  await expect(builder.locator('#scoreNumMenu')).toHaveText('1');
+  await builder.locator('[data-open-skill="writing"]').click();
+  await builder.locator('#topicBox').fill('Synthetic topic.');
+  await builder.locator('#paragraphBox').fill('Synthetic draft to preserve on cancel.');
+
+  await builder.locator('#endPracticeBtn').click();
+  await expect(dialog).toBeVisible();
+  await keep.click();
+  await expect(dialog).toBeHidden();
+  await expect(builder.locator('#paragraphBox')).toHaveValue(
+    'Synthetic draft to preserve on cancel.'
+  );
+
+  await builder.locator('#endPracticeBtn').click();
+  await clear.click();
+  await expect(dialog).toBeHidden();
+  await expect(builder.locator('#mainMenu')).toBeVisible();
+  await expect(builder.locator('#practiceScreen')).toBeHidden();
+  await expect(builder.locator('#practiceContent')).toBeEmpty();
+  await expect(builder.locator('#scoreNumMenu')).toHaveText('0');
+  await expect(builder.locator('#answeredNumMenu')).toHaveText('0');
+  await expect(builder.locator('#resetBtn')).toBeFocused();
+
+  await builder.locator('[data-open-skill="writing"]').click();
+  await expect(builder.locator('#topicBox')).toHaveValue('');
+  await expect(builder.locator('#paragraphBox')).toHaveValue('');
+  await builder.locator('#menuDoneBtn').click();
+
+  // The main-menu Clear control must use the same working confirmation.
+  await builder.locator('[data-open-skill="wordparts"]').click();
+  await builder.locator('.choice').filter({ hasText: 're-' }).click();
+  await builder.locator('#menuDoneBtn').click();
+  await expect(builder.locator('#scoreNumMenu')).toHaveText('1');
+  await builder.locator('#resetBtn').click();
+  await expect(dialog).toBeVisible();
+  await clear.click();
+  await expect(builder.locator('#scoreNumMenu')).toHaveText('0');
+  expect(nativeDialogs).toBe(0);
+
+  await page.locator('#exitActivityBtn').click();
+  await expect(page).toHaveURL(/\/student\/\?tab=activities$/);
+  await expect(page.locator('#studentDashboardView')).toBeVisible();
+  expect(await page.evaluate(() => ({
+    role: sessionStorage.getItem('rc_user_role'),
+    code: sessionStorage.getItem('rc_user_code')
+  }))).toEqual({ role: 'student', code: 'S010' });
+});

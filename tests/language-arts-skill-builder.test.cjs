@@ -21,7 +21,14 @@ function fixture(t, blockedStorage = false) {
     virtualConsole: console,
     beforeParse(window) {
       window.scrollTo = () => {};
-      window.confirm = () => true;
+      window.confirm = () => { throw new Error('Native confirmation must not be used'); };
+      // Model dialog open/close in jsdom. Chromium verifies real modal behavior.
+      window.HTMLDialogElement.prototype.showModal = function () {
+        this.setAttribute('open', '');
+      };
+      window.HTMLDialogElement.prototype.close = function () {
+        this.removeAttribute('open');
+      };
       window.speechSynthesis = { cancel() {}, speak(message) { spoken.push(message.text); } };
       window.SpeechSynthesisUtterance = function (text) { this.text = text; };
       if (blockedStorage) {
@@ -165,11 +172,14 @@ test('legacy browser data is ignored, writing is not persisted, and End clears t
   assert.equal(field.value, '');
   field.value = 'NEW SYNTHETIC DRAFT';
   field.dispatchEvent(new window.Event('input', { bubbles: true }));
-  window.confirm = () => false;
   click(document, '#endPracticeBtn');
+  assert.equal(document.querySelector('#clearPracticeDialog').open, true);
   assert.equal(document.querySelector('#paragraphBox').value, 'NEW SYNTHETIC DRAFT');
-  window.confirm = () => true;
+  click(document, '#cancelClearPracticeBtn');
+  assert.equal(document.querySelector('#clearPracticeDialog').open, false);
+  assert.equal(document.querySelector('#paragraphBox').value, 'NEW SYNTHETIC DRAFT');
   click(document, '#endPracticeBtn');
+  click(document, '#confirmClearPracticeBtn');
   assert.equal(document.querySelector('#practiceContent').textContent, '');
   click(document, '[data-open-skill="writing"]');
   assert.equal(document.querySelector('#paragraphBox').value, '');
@@ -197,6 +207,7 @@ test('practice and reset work when browser storage is unavailable', t => {
   click(document, '#menuDoneBtn');
   assert.equal(document.querySelector('#scoreNumMenu').textContent, '1');
   click(document, '#resetBtn');
+  click(document, '#confirmClearPracticeBtn');
   assert.equal(document.querySelector('#scoreNumMenu').textContent, '0');
 });
 
@@ -340,4 +351,24 @@ test('Word Parts corrections preserve first-try scoring and leave other skills u
   window.dispatchEvent(new window.PageTransitionEvent('pagehide', { persisted: true }));
   assert.equal(document.querySelector('#scoreNumMenu').textContent, '0');
   assert.equal(document.querySelector('#scoreTotalMenu').textContent, '140');
+});
+
+
+test('departure and history restoration close an open clear dialog and remove drafts', t => {
+  const { document, window } = fixture(t);
+  for (const type of ['pagehide', 'pageshow']) {
+    click(document, '[data-open-skill="writing"]');
+    const field = document.querySelector('#paragraphBox');
+    field.value = 'SYNTHETIC DEPARTURE DRAFT';
+    field.dispatchEvent(new window.Event('input', { bubbles: true }));
+    click(document, '#endPracticeBtn');
+    assert.equal(document.querySelector('#clearPracticeDialog').open, true);
+    window.dispatchEvent(new window.PageTransitionEvent(type, { persisted: true }));
+    assert.equal(document.querySelector('#clearPracticeDialog').open, false);
+    assert.equal(document.querySelector('#practiceContent').textContent, '');
+    assert.equal(document.querySelector('#mainMenu').classList.contains('hidden'), false);
+    click(document, '[data-open-skill="writing"]');
+    assert.equal(document.querySelector('#paragraphBox').value, '');
+    click(document, '#menuDoneBtn');
+  }
 });
