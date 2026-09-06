@@ -51,6 +51,7 @@
   outline:3px solid #075b51;outline-offset:3px;
 }
 </style>
+<link rel="stylesheet" href="/assets/css/sentence-workshop.css?v=20260906-sw1" />
 </head>
 <body>
 <main id="mainMenu" class="screen">
@@ -74,6 +75,12 @@
     <button class="btn secondary" id="overallFeedbackBtn">Read overall progress</button>
     <button class="btn warning" id="resetBtn">End / clear practice</button>
   </section>
+  <section class="sw-launch" aria-labelledby="sentenceWorkshopLabel">
+    <div><p class="sw-eyebrow">Interactive lesson</p><h2 id="sentenceWorkshopLabel">Sentence Workshop</h2>
+      <p>Edit sentences, get a useful hint, and try your skills in a real message. Practice periods and sentence capitals.</p>
+      <p id="sentenceWorkshopStatus" role="status"></p></div>
+    <button type="button" class="sw-button" id="openSentenceWorkshopBtn">Open Sentence Workshop →</button>
+  </section>
   <section class="skill-grid" id="skillMenuGrid" aria-label="Skill menu"></section>
   <p class="menu-note">Practice lasts for this open visit. Leaving or reloading clears answers and writing. Copy any writing you want to keep. Choose End / clear practice before sharing this device.</p>
 </main>
@@ -96,6 +103,8 @@
   <section class="question-nav" id="questionNav" aria-label="Question navigation"></section>
   <section class="practice-layout" id="practiceContent"></section>
 </main>
+
+<main id="sentenceWorkshop" class="screen sw hidden" aria-label="Sentence Workshop"></main>
 
 <dialog id="clearPracticeDialog"
   aria-labelledby="clearPracticeTitle"
@@ -148,12 +157,12 @@ function totalAnswered(){return moduleData.reduce((total,skill)=>total+answeredC
 function statusForSkill(skill){return firstTryCountForSkill(skill)+' first try • '+correctedCountForSkill(skill)+' corrected • '+answeredCountForSkill(skill)+' / '+skill.questions.length+' attempted'}
 function updateProgress(){const total=allItems();const earned=totalCorrect();const answered=totalAnswered();const pct=total ? earned/total*100 : 0;document.getElementById('scoreNumMenu').textContent=earned;document.getElementById('scoreTotalMenu').textContent=total;document.getElementById('answeredNumMenu').textContent=answered;document.getElementById('progressBarMenu').style.width=pct+'%';document.getElementById('summaryTextMenu').textContent='First try: '+totalFirstTry()+'. Corrected with feedback: '+totalCorrected()+'. Unattempted: '+(total-answered)+'.'}
 function speak(text){if(!('speechSynthesis' in window)){alert('Text-to-speech is not available in this browser.');return}window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(text));u.rate=.92;u.pitch=1;window.speechSynthesis.speak(u)}
-function stopSpeech(){if('speechSynthesis' in window) window.speechSynthesis.cancel()}
+function stopSpeech(){if(window.speechSynthesis&&typeof window.speechSynthesis.cancel==='function')window.speechSynthesis.cancel()}
 function getQuestionText(skill,q,idx){return skill.title+'. Question '+(idx+1)+' of '+skill.questions.length+'. Skill reminder: '+q.teaching+' Question: '+q.prompt+' Choices: '+q.choices.map((c,i)=>String.fromCharCode(65+i)+'. '+c.text).join('. ')}
 function renderMenu(){updateProgress();let html='';moduleData.forEach(skill=>{const done=correctCountForSkill(skill);const complete=done===skill.questions.length;html+=`<button class="skill-card ${complete?'done':''}" data-open-skill="${skill.id}"><span><span class="skill-icon">${skill.icon}</span><h2>${escapeHTML(skill.title)}</h2><p>${escapeHTML(skill.blurb)}</p></span><span class="skill-status">${escapeHTML(statusForSkill(skill))}</span></button>`});html+=`<button class="skill-card" data-open-skill="writing"><span><span class="skill-icon">${writingPrompt.icon}</span><h2>${escapeHTML(writingPrompt.title)}</h2><p>${escapeHTML(writingPrompt.blurb)}</p></span><span class="skill-status">Paragraph practice</span></button>`;skillMenuGrid.innerHTML=html;document.querySelectorAll('[data-open-skill]').forEach(btn=>btn.addEventListener('click',()=>openSkill(btn.getAttribute('data-open-skill'))))}
 function openSkill(skillId){currentSkillId=skillId;currentQuestionIndex=firstQuestionIndex(skillId);currentMode='question';mainMenu.classList.add('hidden');practiceScreen.classList.remove('hidden');window.scrollTo({top:0,behavior:'auto'});renderPractice()}
 function firstQuestionIndex(skillId){if(skillId==='writing')return 0;const skill=moduleData.find(s=>s.id===skillId);if(!skill)return 0;const firstUnfinished=skill.questions.findIndex((_,idx)=>!isCorrect(skillId,idx));return firstUnfinished>=0?firstUnfinished:0}
-function backToMenu(){stopSpeech();practiceScreen.classList.add('hidden');mainMenu.classList.remove('hidden');renderMenu();window.scrollTo({top:0,behavior:'auto'})}
+function backToMenu(){stopSpeech();document.getElementById('sentenceWorkshop').classList.add('hidden');practiceScreen.classList.add('hidden');mainMenu.classList.remove('hidden');renderMenu();window.scrollTo({top:0,behavior:'auto'})}
 function currentSkill(){return moduleData.find(s=>s.id===currentSkillId)}
 function renderPractice(){if(currentSkillId==='writing'){renderWritingPractice();return}if(currentMode==='report'){renderSkillReport();return}const skill=currentSkill()||moduleData[0];const q=skill.questions[currentQuestionIndex]||skill.questions[0];document.getElementById('practiceTitle').textContent=skill.icon+' '+skill.title;document.getElementById('practiceBlurb').textContent=skill.blurb+' • '+statusForSkill(skill);document.getElementById('readSkillBtn').onclick=()=>speak(skill.title+'. '+skill.blurb);document.getElementById('finishSkillBtn').classList.remove('hidden');document.getElementById('finishSkillBtn').onclick=()=>{currentMode='report';renderPractice();window.scrollTo({top:0,behavior:'auto'})};renderQuestionNav(skill);practiceContent.innerHTML=renderQuestionCard(skill,q,currentQuestionIndex);bindPracticeEvents()}
 function renderQuestionNav(skill){if(currentMode==='report'){questionNav.innerHTML='';return}let html='<span class="score-label" style="margin-right:4px;white-space:nowrap;">Questions:</span>';skill.questions.forEach((_,idx)=>{const e=entry(skill.id,idx);let cls='q-pill';if(idx===currentQuestionIndex)cls+=' active';if(e&&e.correct)cls+=' correct';else if(isAnswered(skill.id,idx))cls+=' wrong';html+=`<button class="${cls}" data-q-nav="${idx}" title="Question ${idx+1}">${idx+1}</button>`});questionNav.innerHTML=html;document.querySelectorAll('[data-q-nav]').forEach(btn=>btn.addEventListener('click',()=>{currentMode='question';currentQuestionIndex=Number(btn.getAttribute('data-q-nav'));renderPractice();window.scrollTo({top:0,behavior:'auto'})}))}
@@ -228,11 +237,53 @@ function clearPractice(){
   if(clearPracticeDialog.open)clearPracticeDialog.close();
   clearPracticeReturnFocus=null;
   stopSpeech();
+  resetSentenceWorkshop();
   state={};currentSkillId=null;currentQuestionIndex=0;currentMode='question';
   practiceContent.innerHTML='';questionNav.innerHTML='';
   practiceScreen.classList.add('hidden');mainMenu.classList.remove('hidden');
   renderMenu();
 }
+let sentenceWorkshop=null;
+let sentenceWorkshopLoading=false;
+let sentenceWorkshopGeneration=0;
+function resetSentenceWorkshop(){
+  sentenceWorkshopGeneration++;
+  sentenceWorkshopLoading=false;
+  if(sentenceWorkshop)sentenceWorkshop.reset();
+  document.getElementById('sentenceWorkshop').classList.add('hidden');
+  document.getElementById('openSentenceWorkshopBtn').disabled=false;
+  document.getElementById('sentenceWorkshopStatus').textContent='';
+}
+async function openSentenceWorkshop(){
+  if(sentenceWorkshopLoading)return;
+  stopSpeech();
+  const generation=sentenceWorkshopGeneration;
+  const button=document.getElementById('openSentenceWorkshopBtn');
+  const status=document.getElementById('sentenceWorkshopStatus');
+  sentenceWorkshopLoading=true;
+  button.disabled=true;
+  status.textContent='Opening Sentence Workshop…';
+  try{
+    const {mountSentenceWorkshop}=await import('/assets/js/sentence-workshop.js?v=20260906-sw1');
+    if(generation!==sentenceWorkshopGeneration)return;
+    if(mainMenu.classList.contains('hidden')){status.textContent='';return;}
+    const root=document.getElementById('sentenceWorkshop');
+    if(!sentenceWorkshop)sentenceWorkshop=mountSentenceWorkshop(root,{
+      onMenu:()=>{backToMenu();button.focus()},onClear:confirmClearPractice,stopSpeech
+    });
+    mainMenu.classList.add('hidden');
+    practiceScreen.classList.add('hidden');
+    root.classList.remove('hidden');
+    status.textContent='';
+    sentenceWorkshop.open();
+    window.scrollTo({top:0,behavior:'auto'});
+  }catch{
+    if(generation===sentenceWorkshopGeneration)status.textContent='Sentence Workshop could not open. Please try reloading the page. Your current practice is still available.';
+  }finally{
+    if(generation===sentenceWorkshopGeneration){sentenceWorkshopLoading=false;button.disabled=false;}
+  }
+}
+document.getElementById('openSentenceWorkshopBtn').addEventListener('click',openSentenceWorkshop);
 const clearPracticeDialog=document.getElementById('clearPracticeDialog');
 let clearPracticeReturnFocus=null;
 
@@ -260,7 +311,7 @@ document.getElementById('confirmClearPracticeBtn').addEventListener('click',()=>
 });
 window.addEventListener('pagehide',clearPractice);
 window.addEventListener('pageshow',event=>{if(event.persisted)clearPractice()});
-document.getElementById('readIntroBtn').addEventListener('click',()=>speak('Language Arts Practice. Choose a skill card. Each skill has twenty practice questions. You can answer one question at a time, use speaker buttons, and choose Finish or See Feedback whenever you want to stop early. Practice lasts for this open visit. Leaving or reloading clears answers and writing. Copy any writing you want to keep. Choose End / clear practice before sharing this device.'));
+document.getElementById('readIntroBtn').addEventListener('click',()=>speak('Language Arts Practice. Choose Sentence Workshop for an interactive lesson, or a skill card for twenty practice questions. You can answer one question at a time, use speaker buttons, and choose Finish or See Feedback whenever you want to stop early. Practice lasts for this open visit. Leaving or reloading clears answers and writing. Copy any writing you want to keep. Choose End / clear practice before sharing this device.'));
 document.getElementById('stopSpeechBtn').addEventListener('click',stopSpeech);document.getElementById('stopSpeechBtn2').addEventListener('click',stopSpeech);document.getElementById('backMenuBtn').addEventListener('click',backToMenu);document.getElementById('finishSkillBtn').addEventListener('click',()=>{if(currentSkillId&&currentSkillId!=='writing'){currentMode='report';renderPractice();window.scrollTo({top:0,behavior:'auto'})}});document.getElementById('resetBtn').addEventListener('click',confirmClearPractice);document.getElementById('endPracticeBtn').addEventListener('click',confirmClearPractice);document.getElementById('overallFeedbackBtn').addEventListener('click',()=>{speak('This visit: '+totalFirstTry()+' correct on the first try and '+totalCorrected()+' corrected with feedback. Questions attempted: '+totalAnswered()+'. Unattempted questions: '+(allItems()-totalAnswered())+'.')});document.addEventListener('keydown',e=>{if(clearPracticeDialog.open)return;if(practiceScreen.classList.contains('hidden'))return;if(e.key==='Escape'){backToMenu()}else if(e.key==='ArrowRight'&&currentSkillId!=='writing'&&currentMode==='question'){const skill=currentSkill();if(currentQuestionIndex<skill.questions.length-1){currentQuestionIndex++;renderPractice()}}else if(e.key==='ArrowLeft'&&currentSkillId!=='writing'&&currentMode==='question'){if(currentQuestionIndex>0){currentQuestionIndex--;renderPractice()}}});renderMenu();
 </script>
 </body>
