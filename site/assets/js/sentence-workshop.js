@@ -3,7 +3,7 @@ import {
   initialEdit,
   solution,
   editedText,
-} from "./sentence-workshop-content.js?v=20260906-sw4";
+} from "./sentence-workshop-content.js?v=20260906-sw5";
 import {
   createSession,
   start,
@@ -14,9 +14,10 @@ import {
   finish,
   recordFor,
   summary,
-} from "./sentence-workshop-engine.js?v=20260906-sw4";
-import * as endings from "./sentence-workshop-endings.js?v=20260906-sw4";
-import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw4";
+} from "./sentence-workshop-engine.js?v=20260906-sw5";
+import * as endings from "./sentence-workshop-endings.js?v=20260906-sw5";
+import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw5";
+import * as commas from "./sentence-workshop-commas.js?v=20260906-sw5";
 
 const escape = (value) =>
   String(value).replace(
@@ -39,10 +40,23 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
   const visits = new Map();
   const isEndings = () => session.lessonId === "endings";
   const isRepairs = () => session.lessonId === "repairs";
+  const isCommas = () => session.lessonId === "commas";
   const lessonName = () =>
-    isRepairs() ? "Fragments & Run-ons" : isEndings() ? "Sentence endings" : "Sentence boundaries";
+    isCommas()
+      ? "Commas in lists"
+      : isRepairs()
+        ? "Fragments & Run-ons"
+        : isEndings()
+          ? "Sentence endings"
+          : "Sentence boundaries";
   const content = () =>
-    isRepairs() ? repairs : isEndings() ? endings : { initialEdit, solution, editedText };
+    isCommas()
+      ? commas
+      : isRepairs()
+        ? repairs
+        : isEndings()
+          ? endings
+          : { initialEdit, solution, editedText };
 
   function selectLesson(id) {
     if (id === session.lessonId) return;
@@ -81,6 +95,15 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
   }
 
   function intro() {
+    if (isCommas())
+      return `<section class="sw-card"><p class="sw-eyebrow">Commas in lists</p>
+      <h2 id="sw-heading" tabindex="-1">Separate the items. Keep their words together.</h2>
+      <p>Use commas to separate three or more items in a sentence list. One item can be a word or a group of words. A list can also name actions.</p>
+      <div class="sw-model-grid sw-ending-models">${commas.models.map((model) => `<div><h3>${escape(model.title)}</h3><p class="sw-example">${escape(model.text)}</p><p>${escape(model.why)}</p></div>`).join("")}</div>
+      <p>The examples use the final <strong>Oxford comma</strong>. In these clear lists, your edit may include it or leave it out. Follow your teacher's requested style in other writing.</p>
+      <p>Some drafts need commas added, some need extras removed, and some already work. Read the whole message before editing.</p>
+      <div class="sw-actions">${button("read-models", "Read examples")}${button("start", "Try the lesson →", 'data-primary="true"')}</div>
+      <p class="sw-muted">A regular visit has three guided tasks, fresh checks, and three practical message edits. You can ask for help or finish at any time.</p></section>`;
     if (isRepairs())
       return `<section class="sw-card"><p class="sw-eyebrow">Fragments &amp; Run-ons</p>
       <h2 id="sw-heading" tabindex="-1">Build a complete thought. Give it a clear join.</h2>
@@ -112,6 +135,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
   }
 
   function task() {
+    if (isCommas()) return commasTask();
     if (isRepairs()) return repairsTask();
     if (isEndings()) return endingsTask();
     const item = session.item;
@@ -245,19 +269,59 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       ${session.phase === "check" ? '<p class="sw-muted">This is a new example. Help is always available; your summary distinguishes work with help.</p>' : ""}</section>`;
   }
 
+  function commasTask() {
+    const item = session.item;
+    const record = recordFor(session);
+    const locked = record.resolved || record.attempts.length >= 2;
+    const hintText =
+      record.help === 1
+        ? "Name the separate things or actions. One item may have several words. Look for the word and or the word or before the last item. Count the items before deciding where commas belong."
+        : record.help >= 2
+          ? commas.clue(item)
+          : "";
+    const pieces = item.words
+      .map((word, index) => {
+        const gap = index + 1;
+        const selected = draft.commas.includes(gap);
+        const required = item.required.includes(gap);
+        const optional = gap === item.optional;
+        return `<span class="sw-piece"><span class="sw-repair-word">${escape(word)}</span>${gap < item.words.length ? `<button type="button" class="sw-gap ${record.help >= 2 && (required || optional) ? "sw-cue" : ""}" data-sw-comma="${gap}" aria-label="Comma after ${escape(word)}, word ${gap}" aria-pressed="${selected}" ${locked ? "disabled" : ""}>${selected ? "," : ""}</button>` : '<span class="sw-final-period" aria-label="period">.</span>'}</span>`;
+      })
+      .join("");
+    return `<section class="sw-card" data-sw-item="${item.id}"><p class="sw-eyebrow">${phaseNames[session.phase]} · Commas in lists</p>
+      <h2 id="sw-heading" tabindex="-1">Make the list easy to read.</h2><p class="sw-context">${escape(item.context)}</p>
+      <p id="sw-directions">${escape(commas.directions)}</p>
+      <div class="sw-actions">${button("read-task", "Read directions & draft")}${button("read-edit", "Read my message")}${button("read-marks", "Read comma positions")}</div>
+      <div class="sw-repair-draft"><span class="sw-muted">Starting draft</span><p>${escape(commas.editedText(item, commas.initialEdit(item)))}</p></div>
+      <div class="sw-editor" role="group" aria-label="List comma editor" aria-describedby="sw-directions">${pieces}</div>
+      <div class="sw-preview"><span class="sw-muted">Your message</span><p>${escape(commas.editedText(item, draft))}</p></div>
+      ${hintText ? `<aside class="sw-hint"><strong>Here is a clue</strong><p>${escape(hintText)}</p>${record.help >= 2 && item.optional !== null ? '<p class="sw-muted">The outlined spaces include both needed commas and the optional final comma.</p>' : ""}${button("read-hint", "Read clue")}</aside>` : ""}
+      <div id="sw-feedback" class="sw-feedback ${record.resolved && !record.demonstrated ? "sw-success" : ""}" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${escape(feedback)}</div>
+      ${feedback ? button("read-feedback", "Read feedback") : ""}
+      ${record.demonstrated ? `<aside class="sw-hint"><strong>Worked example</strong><p class="sw-example">${escape(commas.editedText(item, commas.solution(item)))}</p><p>${escape(commas.clue(item))}</p>${button("read-solution", "Read worked example")}</aside>` : ""}
+      <div class="sw-actions sw-bottom">${button("check", "Check my edit", `data-primary="true" ${locked ? "disabled" : ""}`)}
+      ${button("hint", record.help ? "Show the clue" : "Give me a hint", record.resolved || record.help >= 2 ? "disabled" : "")}
+      ${button("demonstrate", "Show a worked example", record.resolved ? "disabled" : "")}
+      ${record.resolved ? button("next", record.demonstrated && !["simpler", "apply"].includes(session.phase) ? (session.cursors.simpler >= 2 ? "See my summary →" : "Try a shorter task →") : "Continue →", 'data-primary="true"') : ""}</div>
+      ${locked && !record.resolved ? '<p class="sw-muted">Choose “Show a worked example” to see the steps, or finish for now.</p>' : ""}
+      ${session.phase === "check" ? '<p class="sw-muted">This is a new example. Help is always available; your summary distinguishes work with help.</p>' : ""}</section>`;
+  }
+
   function report() {
     const s = summary(session);
-    const recommendation = isRepairs()
-      ? "Review a message you will write today. Check that each sentence is complete. If two thoughts could stand alone, give them a proper join. Keep sentences that already work."
-      : isEndings()
-        ? "Look for a message you will write today. Decide whether you need to ask, calmly tell, or add emphasis. Choose an ending that fits."
-        : s.freshAttempted === 0
-          ? "Try a fresh example on another visit when you are ready."
-          : s.freshBoundary < s.freshAttempted
-            ? "Practice finding where one complete sentence ends and another begins."
-            : s.freshCapitals < s.freshAttempted
-              ? "Practice using a capital at the beginning of each sentence."
-              : "Try using periods and sentence capitals in your next message.";
+    const recommendation = isCommas()
+      ? "Try editing a supply request or a list of jobs. Find the whole items, separate three or more with commas, and check whether a two-item list needs any commas."
+      : isRepairs()
+        ? "Review a message you will write today. Check that each sentence is complete. If two thoughts could stand alone, give them a proper join. Keep sentences that already work."
+        : isEndings()
+          ? "Look for a message you will write today. Decide whether you need to ask, calmly tell, or add emphasis. Choose an ending that fits."
+          : s.freshAttempted === 0
+            ? "Try a fresh example on another visit when you are ready."
+            : s.freshBoundary < s.freshAttempted
+              ? "Practice finding where one complete sentence ends and another begins."
+              : s.freshCapitals < s.freshAttempted
+                ? "Practice using a capital at the beginning of each sentence."
+                : "Try using periods and sentence capitals in your next message.";
     return `<section class="sw-card"><p class="sw-eyebrow">Your visit · ${escape(lessonName())}</p><h2 id="sw-heading" tabindex="-1">Here is what you practiced.</h2>
       <p>${escape(session.reason)}</p><div class="sw-stats">
       <div><strong>${s.freshIndependent} / ${s.freshAttempted}</strong><span>fresh examples correct on the first try without hints</span></div>
@@ -266,18 +330,27 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       <p>You attempted ${s.attempted} tasks. Unattempted tasks are not mistakes. Worked examples are not counted as completed edits.</p>
       ${
         s.freshAttempted
-          ? isRepairs()
-            ? `<p>Fresh first-try work without hints covered ${s.freshKinds.length} of 5 sentence checks:</p><ul>${Object.entries(
-                repairs.kindNames
+          ? isCommas()
+            ? `<p>Fresh first-try work without hints covered ${s.freshKinds.length} of 3 list types:</p><ul>${Object.entries(
+                commas.kindNames
               )
                 .map(
                   ([kind, name]) =>
                     `<li>${escape(name)}: ${s.freshKinds.includes(kind) ? "correct without hints on a fresh first try" : "not yet shown without hints on a fresh first try"}.</li>`
                 )
                 .join("")}</ul>`
-            : isEndings()
-              ? `<p>Ending choices on fresh first tries without hints: ${s.freshEnding} / ${s.freshAttempted}. Practice covered ${s.freshKinds.length} of 3 message purposes independently: calm statements or directions, direct questions, and strong emphasis.</p>`
-              : `<ul><li>Sentence boundaries on fresh first tries without hints: ${s.freshBoundary} / ${s.freshAttempted}.</li><li>Sentence capitals on fresh first tries without hints: ${s.freshCapitals} / ${s.freshAttempted}.</li></ul>`
+            : isRepairs()
+              ? `<p>Fresh first-try work without hints covered ${s.freshKinds.length} of 5 sentence checks:</p><ul>${Object.entries(
+                  repairs.kindNames
+                )
+                  .map(
+                    ([kind, name]) =>
+                      `<li>${escape(name)}: ${s.freshKinds.includes(kind) ? "correct without hints on a fresh first try" : "not yet shown without hints on a fresh first try"}.</li>`
+                  )
+                  .join("")}</ul>`
+              : isEndings()
+                ? `<p>Ending choices on fresh first tries without hints: ${s.freshEnding} / ${s.freshAttempted}. Practice covered ${s.freshKinds.length} of 3 message purposes independently: calm statements or directions, direct questions, and strong emphasis.</p>`
+                : `<ul><li>Sentence boundaries on fresh first tries without hints: ${s.freshBoundary} / ${s.freshAttempted}.</li><li>Sentence capitals on fresh first tries without hints: ${s.freshCapitals} / ${s.freshAttempted}.</li></ul>`
           : "<p>No fresh checks were attempted, so there is no fresh-check accuracy to report.</p>"
       }
       <p>Message edits correct on the first try without hints: ${s.appliedIndependent} / ${s.appliedAttempted} attempted.</p>
@@ -291,7 +364,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
     root.innerHTML = `<header class="sw-header"><div><p class="sw-eyebrow">Language Arts Skill Builder · Interactive lesson</p>
       <h1>Sentence Workshop</h1><p>One complete message at a time.</p></div>
       <div class="sw-actions">${button("menu", "← Skill Builder")}${button("finish", "Finish for now", session.phase === "summary" ? "disabled" : "")}${button("stop", "Stop voice")}${button("clear", "End / clear practice")}</div></header>
-      <nav class="sw-actions sw-lessons" aria-label="Workshop lessons">${button("lesson-boundaries", "Sentence boundaries", `aria-pressed="${session.lessonId === "boundaries"}"`)}${button("lesson-endings", "Sentence endings", `aria-pressed="${isEndings()}"`)}${button("lesson-repairs", "Fragments &amp; Run-ons", `aria-pressed="${isRepairs()}"`)}</nav>
+      <nav class="sw-actions sw-lessons" aria-label="Workshop lessons">${button("lesson-boundaries", "Sentence boundaries", `aria-pressed="${session.lessonId === "boundaries"}"`)}${button("lesson-endings", "Sentence endings", `aria-pressed="${isEndings()}"`)}${button("lesson-repairs", "Fragments &amp; Run-ons", `aria-pressed="${isRepairs()}"`)}${button("lesson-commas", "Commas in lists", `aria-pressed="${isCommas()}"`)}</nav>
       <p class="sw-visit-note">Practice lasts for this open visit. Leaving or reloading clears your work.</p>
       ${session.phase === "intro" ? intro() : session.phase === "summary" ? report() : task()}
       <p id="sw-voice-note" class="sw-visit-note" role="status"></p>`;
@@ -303,7 +376,9 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
     const control = event.target.closest("button");
     if (!control || !root.contains(control) || control.disabled) return;
     const action = control.dataset.swAction;
-    if (["lesson-boundaries", "lesson-endings", "lesson-repairs"].includes(action)) {
+    if (
+      ["lesson-boundaries", "lesson-endings", "lesson-repairs", "lesson-commas"].includes(action)
+    ) {
       stopSpeech();
       selectLesson(action.slice("lesson-".length));
       return;
@@ -328,6 +403,24 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
     }
     if (action?.startsWith("read-")) {
       const item = session.item;
+      if (isCommas()) {
+        const texts = {
+          "read-models": root.querySelector(".sw-card")?.textContent || "",
+          "read-task": item
+            ? `${item.context} ${commas.directions} Starting draft: ${commas.editedText(item, commas.initialEdit(item))}`
+            : "",
+          "read-edit": item ? commas.editedText(item, draft) : "",
+          "read-marks": item ? commas.editedText(item, draft, true) : "",
+          "read-solution": item
+            ? `${commas.editedText(item, commas.solution(item), true)} ${commas.clue(item)}`
+            : "",
+          "read-hint": root.querySelector(".sw-hint")?.textContent || "",
+          "read-feedback": feedback,
+          "read-report": root.querySelector(".sw-card")?.textContent || "",
+        };
+        speak(texts[action]);
+        return;
+      }
       if (isRepairs()) {
         const texts = {
           "read-models": root.querySelector(".sw-card")?.textContent || "",
@@ -383,6 +476,22 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       return;
     }
     stopSpeech();
+    if (control.dataset.swComma !== undefined) {
+      if (
+        !isCommas() ||
+        !session.item ||
+        recordFor(session).resolved ||
+        recordFor(session).attempts.length >= 2
+      )
+        return;
+      const gap = Number(control.dataset.swComma);
+      draft.commas = draft.commas.includes(gap)
+        ? draft.commas.filter((value) => value !== gap)
+        : [...draft.commas, gap];
+      feedback = "";
+      render(`[data-sw-comma="${gap}"]`);
+      return;
+    }
     if (
       control.dataset.swRepairChoice !== undefined ||
       control.dataset.swRepairGap !== undefined ||

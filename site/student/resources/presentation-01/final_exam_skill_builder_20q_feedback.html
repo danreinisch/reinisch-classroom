@@ -51,7 +51,7 @@
   outline:3px solid #075b51;outline-offset:3px;
 }
 </style>
-<link rel="stylesheet" href="/assets/css/sentence-workshop.css?v=20260906-sw4" />
+<link rel="stylesheet" href="/assets/css/sentence-workshop.css?v=20260906-sw5" />
 </head>
 <body>
 <main id="mainMenu" class="screen">
@@ -79,7 +79,7 @@
   <section class="skill-grid" id="skillMenuGrid" aria-label="Skill menu">
     <button type="button" class="skill-card" id="openSentenceWorkshopBtn" aria-label="Open Sentence Workshop" aria-describedby="sentenceWorkshopStatus">
       <span><span class="skill-icon" aria-hidden="true">📝</span><h2>Sentence Workshop</h2>
-      <p>Practice complete sentences, ending marks, fragments, and run-ons. Edit messages, use hints, and try fresh examples.</p></span>
+      <p>Practice complete sentences, ending marks, fragments, run-ons, and list commas. Edit messages, use hints, and try fresh examples.</p></span>
       <span class="skill-status">Interactive lesson</span>
     </button>
   </section>
@@ -277,7 +277,7 @@ async function openSentenceWorkshop(){
   button.disabled=true;
   status.textContent='Opening Sentence Workshop…';
   try{
-    const {mountSentenceWorkshop}=await import('/assets/js/sentence-workshop.js?v=20260906-sw4');
+    const {mountSentenceWorkshop}=await import('/assets/js/sentence-workshop.js?v=20260906-sw5');
     if(generation!==sentenceWorkshopGeneration)return;
     if(mainMenu.classList.contains('hidden')){status.textContent='';return;}
     const root=document.getElementById('sentenceWorkshop');

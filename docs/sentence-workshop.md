@@ -1,6 +1,6 @@
 # Sentence Workshop lessons
 
-Sentence Workshop adds guided editing to Language Arts Skill Builder. Sentence boundaries targets placing a period between two complete sentences and capitalizing their beginnings. Directions explicitly require two sentences; the final period is supplied. Sentence endings adds periods, question marks, and exclamation marks matched to a message's purpose. Fragments & Run-ons adds missing words, repairs joins between complete thoughts, and preserves sentences that already work. These lessons use authored messages and edits; they do not evaluate unrestricted writing or cover all punctuation rules.
+Sentence Workshop adds guided editing to Language Arts Skill Builder. Sentence boundaries targets placing a period between two complete sentences and capitalizing their beginnings. Directions explicitly require two sentences; the final period is supplied. Sentence endings adds periods, question marks, and exclamation marks matched to a message's purpose. Fragments & Run-ons adds missing words, repairs joins between complete thoughts, and preserves sentences that already work. Commas in lists adds item separators, multiword item grouping, and two-item lists. These lessons use authored messages and edits; they do not evaluate unrestricted writing or cover all punctuation rules.
 
 A regular-sized card in the existing skill grid opens the module on demand. Both Skill Builder entry copies use the same versioned assets. The workshop has its own visit-only state and results, separate from the existing 140-question score. Returning to the menu preserves workshop work; End/clear, reload, departure, and restored history clear it. The existing Viewer and dialog contracts are reused.
 
@@ -52,7 +52,23 @@ The browser adapter owns rendering and draft edits; the engine owns attempts, in
 
 The original Skill Builder readers now show an on-screen notice when speech is absent, incomplete, or throws. They preserve answers and writing, and do not depend on native alerts inside Viewer. The ending mark stays attached to the last word when the sentence wraps on a narrow screen.
 
+## Commas in lists: content and routing
+
+The fourth lesson has three introductory models and 23 original tasks: five guided, nine reserved checks, six shorter tasks, and three applied messages. A normal independent route uses three guided tasks, three fresh checks, and three applied edits. Content and its checker live in `site/assets/js/sentence-workshop-commas.js`.
+
+Students add or remove commas by choosing quiet blank spaces between supplied words. Words and the final period remain fixed. Some drafts already work and can be checked unchanged. Lists include single-word objects, multiword objects, and shared-subject actions joined by `and` or `or`. Feedback distinguishes missing separators, commas inside one item, misplaced commas beside the conjunction, and unnecessary commas in two-item lists.
+
+For the authored clear lists of three or more items, both versions—with and without the final Oxford comma—are accepted. Models and worked examples use the Oxford comma, while directions, feedback, and hints explain the accepted alternative. All earlier item separators remain required. Two-item lists need no comma here. Ambiguous lists, appositives, introductory phrases, independent-clause joins, dates/addresses, and unrestricted writing are outside this lesson; no general comma parser is implied. Students can follow a teacher's requested style in other writing.
+
+Three completed guided tasks open fresh checks. Applied work requires fresh first-try success without hints in each of three targets: separating single-word items, keeping multiword items together, and recognizing two-item lists. Repeated success in two targets cannot replace the third. The summary names coverage and support from this visit; the rule is a provisional routing threshold, not a mastery standard. Shorter tasks match the target needing help, at most two detours are offered, and the finite exit and unchanged-submission rules remain in effect. Read-aloud and the comma-position reader do not count as instructional help.
+
+All four lessons preserve their individual draft and summary during a visit and clear together. Both entry pages share the `20260906-sw5` assets; the menu retains one regular-sized workshop card and the separate 140-question score.
+
+Content references: [Purdue OWL list-comma rules](https://owl.purdue.edu/owl/general_writing/punctuation/commas/extended_rules_for_commas.html) and [Chicago Manual of Style on when the serial comma is necessary](https://www.chicagomanualofstyle.org/qanda/data/faq/topics/Commas/faq0077.html). These ground punctuation choices; they do not validate the lesson's routing rules or learning effectiveness.
+
 ## Verification
+
+- Commas in lists: 26 workshop unit checks and 16 original Skill Builder checks passed. All 26 workshop Chromium tests passed with no failures, skips, or flaky results. Browser coverage includes both serial-comma styles, missing and extra marks, multiword-item feedback, unchanged correct drafts, narration, supported recovery, four-lesson resume/clear/reload/history on both entry routes, keyboard/mobile use, and commas inside the real Viewer sandbox. Desktop, mobile, and support screenshots were reviewed. The independent editorial key checks every selectable comma combination for all 23 tasks, invalid inputs, three-target fresh coverage, unchanged-submission handling, matching shorter tasks, and finite exits. Targeted ESLint and inline JavaScript syntax checks passed; the HTML copies match and original question/writing DATA is unchanged. Main advanced to `710ac4ac` with Observation Center changes outside these eight files; that update was fast-forwarded without overlap.
 
 Run `node tests/sentence-workshop.test.cjs` (also registered in `test:unit`), `node tests/language-arts-skill-builder.test.cjs`, and `node tests/student-activities-word-search-contract.test.cjs`. Run Playwright on `tests/sentence-workshop.spec.js` and `tests/student-activities-word-search.spec.js` using the repository's local static-server setup.
 
