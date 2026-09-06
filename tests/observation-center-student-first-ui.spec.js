@@ -289,26 +289,45 @@ test.describe(
           'false'
         );
 
-        const studentSelect =
-          page.getByRole(
-            'combobox',
-            {
-              name:
-                'Select student',
-            }
+        const studentCombobox =
+          page.locator(
+            '.obs-center-student-combobox'
           );
 
         await expect(
-          studentSelect
-        ).toContainText(
-          'Alex Example (SYN101)'
-        );
+          studentCombobox
+        ).toHaveCount(1);
 
         await expect(
-          studentSelect
-        ).toContainText(
-          'Bailey Sample (SYN102)'
+          studentCombobox
+        ).toHaveAttribute(
+          'aria-autocomplete',
+          'list'
         );
+
+        await studentCombobox.click();
+
+        await expect(
+          page.getByRole(
+            'option',
+            {
+              name:
+                'Alex Example (SYN101)',
+              exact: true,
+            }
+          )
+        ).toBeVisible();
+
+        await expect(
+          page.getByRole(
+            'option',
+            {
+              name:
+                'Bailey Sample (SYN102)',
+              exact: true,
+            }
+          )
+        ).toBeVisible();
 
         await expect(
           page.getByText(
@@ -321,57 +340,63 @@ test.describe(
     test(
       'student search filters the existing observation roster',
       async ({ page }) => {
-        const search =
-          page.getByRole(
-            'searchbox',
-            {
-              name:
-                'Search students',
-            }
+        const studentCombobox =
+          page.locator(
+            '.obs-center-student-combobox'
           );
 
-        const studentSelect =
-          page.getByRole(
-            'combobox',
-            {
-              name:
-                'Select student',
-            }
-          );
+        await studentCombobox.click();
 
-        await search.fill(
+        await studentCombobox.fill(
           'Bailey'
         );
 
         await expect(
-          studentSelect
-        ).toContainText(
-          'Bailey Sample (SYN102)'
-        );
+          page.getByRole(
+            'option',
+            {
+              name:
+                'Bailey Sample (SYN102)',
+              exact: true,
+            }
+          )
+        ).toBeVisible();
 
         await expect(
-          studentSelect
-        ).not.toContainText(
-          'Alex Example (SYN101)'
-        );
+          page.getByRole(
+            'option',
+            {
+              name:
+                'Alex Example (SYN101)',
+              exact: true,
+            }
+          )
+        ).toHaveCount(0);
       }
     );
 
     test(
       'selecting a student renders that student observation goal without requiring class-mode selection',
       async ({ page }) => {
-        const studentSelect =
-          page.getByRole(
-            'combobox',
-            {
-              name:
-                'Select student',
-            }
+        const studentCombobox =
+          page.locator(
+            '.obs-center-student-combobox'
           );
 
-        await studentSelect.selectOption(
-          'SYN102'
+        await studentCombobox.click();
+
+        await studentCombobox.fill(
+          'Bailey'
         );
+
+        await page.getByRole(
+          'option',
+          {
+            name:
+              'Bailey Sample (SYN102)',
+            exact: true,
+          }
+        ).click();
 
         await expect(
           page.getByText(
@@ -410,6 +435,10 @@ test.describe(
     test(
       'bell schedule supplies period choices even beyond configured goal periods',
       async ({ page }) => {
+        await page.locator(
+          '.obs-center-view-period'
+        ).click();
+
         const periodSelect =
           page.getByRole(
             'combobox',
@@ -418,6 +447,10 @@ test.describe(
                 'Select class period',
             }
           );
+
+        await expect(
+          periodSelect
+        ).toBeVisible();
 
         await expect(
           periodSelect
@@ -505,18 +538,25 @@ test.describe(
     test(
       'historical Student mode shows goals but keeps capture locked until period is explicit',
       async ({ page }) => {
-        const studentSelect =
-          page.getByRole(
-            'combobox',
-            {
-              name:
-                'Select student',
-            }
+        const studentCombobox =
+          page.locator(
+            '.obs-center-student-combobox'
           );
 
-        await studentSelect.selectOption(
-          'SYN101'
+        await studentCombobox.click();
+
+        await studentCombobox.fill(
+          'Alex'
         );
+
+        await page.getByRole(
+          'option',
+          {
+            name:
+              'Alex Example (SYN101)',
+            exact: true,
+          }
+        ).click();
 
         const dateInput =
           page.locator(
@@ -563,6 +603,10 @@ test.describe(
 
         await expect(
           periodSelect
+        ).toBeVisible();
+
+        await expect(
+          periodSelect
         ).toHaveValue('');
 
         await periodSelect.selectOption(
@@ -590,5 +634,6 @@ test.describe(
         );
       }
     );
+
   }
 );

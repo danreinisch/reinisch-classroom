@@ -103,9 +103,30 @@ test(
 test(
   'Observation Center keeps the signed Teacher observation runtime',
   () => {
-    assert.match(
-      observations,
-      /\/web\/tc-observation\.js\?v=20260905-obs7-student-first/
+    const observationRuntime =
+      observations.match(
+        /\/web\/tc-observation\.js\?v=([^"']+)/
+      );
+
+    const studentsRuntime =
+      students.match(
+        /\/web\/tc-observation\.js\?v=([^"']+)/
+      );
+
+    assert.ok(
+      observationRuntime,
+      'Observation Center must load a versioned tc-observation runtime'
+    );
+
+    assert.ok(
+      studentsRuntime,
+      'Students page must load a versioned tc-observation runtime'
+    );
+
+    assert.equal(
+      observationRuntime[1],
+      studentsRuntime[1],
+      'Teacher pages must load the same tc-observation runtime version'
     );
   }
 );
