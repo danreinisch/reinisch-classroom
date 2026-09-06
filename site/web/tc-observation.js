@@ -2712,7 +2712,7 @@ const persistedDispositions = [];
 
         .obs-center-student-layout {
           display:grid;
-          grid-template-columns:minmax(240px,300px) minmax(0,1fr);
+          grid-template-columns:minmax(220px,260px) minmax(0,1fr);
           gap:14px;
           align-items:start;
         }
@@ -2749,18 +2749,30 @@ const persistedDispositions = [];
         }
 
         .obs-center-student-rail-item {
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:8px;
           width:100%;
           min-width:0;
-          padding:10px 11px;
+          padding:8px 9px;
           border:1px solid transparent;
-          border-radius:10px;
+          border-radius:9px;
           background:rgba(255,255,255,.025);
           color:rgba(240,255,250,.84);
           font:inherit;
           font-size:13px;
-          line-height:1.35;
+          line-height:1.25;
           text-align:left;
           cursor:pointer;
+        }
+
+        .obs-center-student-rail-name {
+          flex:1;
+          min-width:0;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
         }
 
         .obs-center-student-rail-item:hover {
@@ -2774,6 +2786,35 @@ const persistedDispositions = [];
           background:rgba(34,197,94,.12);
           color:#ecfdf5;
           box-shadow:inset 3px 0 0 rgba(34,197,94,.72);
+        }
+
+        .obs-center-student-rail-status {
+          flex:none;
+          padding:2px 6px;
+          border-radius:999px;
+          border:1px solid rgba(255,255,255,.10);
+          font-size:10px;
+          font-weight:800;
+          line-height:1.3;
+          letter-spacing:.01em;
+        }
+
+        .obs-center-student-rail-status.is-due {
+          border-color:rgba(250,204,21,.30);
+          background:rgba(250,204,21,.09);
+          color:#fef08a;
+        }
+
+        .obs-center-student-rail-status.is-urgent {
+          border-color:rgba(248,113,113,.34);
+          background:rgba(248,113,113,.10);
+          color:#fecaca;
+        }
+
+        .obs-center-student-rail-status.is-satisfied {
+          border-color:rgba(34,197,94,.28);
+          background:rgba(34,197,94,.09);
+          color:#bbf7d0;
         }
 
         .obs-center-student-empty {
@@ -3400,8 +3441,98 @@ const persistedDispositions = [];
       };
 
     const studentDisplayLabel =
-      student =>
-        `${student.name || student.code} (${student.code})`;
+      student => {
+        const code =
+          String(
+            student?.code ||
+              ''
+          ).trim();
+
+        const name =
+          String(
+            student?.name ||
+              ''
+          ).trim();
+
+        if (!name) {
+          return code;
+        }
+
+        if (
+          !code ||
+          name === code
+        ) {
+          return name;
+        }
+
+        return `${name} (${code})`;
+      };
+
+    const getStudentRailStatus =
+      studentCode => {
+        if (
+          selectedDate !==
+            todayStr() &&
+          !selectedPeriod
+        ) {
+          return null;
+        }
+
+        const states =
+          allGoals
+            .filter(
+              goal =>
+                goal.student_code ===
+                  studentCode
+            )
+            .map(
+              goal =>
+                getGoalDueState(
+                  goal,
+                  selectedDate,
+                  selectedPeriod ||
+                    null
+                ).state
+            );
+
+        if (
+          states.includes(
+            'urgent'
+          )
+        ) {
+          return {
+            kind: 'urgent',
+            label: 'Urgent',
+          };
+        }
+
+        if (
+          states.includes(
+            'due'
+          )
+        ) {
+          return {
+            kind: 'due',
+            label: 'Due',
+          };
+        }
+
+        if (
+          states.length > 0 &&
+          states.every(
+            state =>
+              state ===
+                'satisfied'
+          )
+        ) {
+          return {
+            kind: 'satisfied',
+            label: '✓',
+          };
+        }
+
+        return null;
+      };
 
     const refreshStudentRail =
       () => {
@@ -3494,10 +3625,56 @@ const persistedDispositions = [];
             item.dataset.studentCode =
               student.code;
 
-            item.textContent =
+            const itemName =
+              document.createElement(
+                'span'
+              );
+
+            itemName.className =
+              'obs-center-student-rail-name';
+
+            itemName.textContent =
               studentDisplayLabel(
                 student
               );
+
+            item.appendChild(
+              itemName
+            );
+
+            const railStatus =
+              getStudentRailStatus(
+                student.code
+              );
+
+            item.dataset.railStatus =
+              railStatus?.kind ||
+              'none';
+
+            if (railStatus) {
+              const status =
+                document.createElement(
+                  'span'
+                );
+
+              status.className =
+                `obs-center-student-rail-status is-${railStatus.kind}`;
+
+              status.textContent =
+                railStatus.label;
+
+              status.setAttribute(
+                'aria-label',
+                railStatus.kind ===
+                  'satisfied'
+                  ? 'Observation cadence satisfied'
+                  : `Observation ${railStatus.label.toLowerCase()}`
+              );
+
+              item.appendChild(
+                status
+              );
+            }
 
             item.addEventListener(
               'click',
@@ -3843,6 +4020,7 @@ const persistedDispositions = [];
                 `Saved for ${formatCenterDate(selectedDate)}`;
 
               updateTrayBadge();
+              refreshStudentRail();
             },
             dueState,
             periodOverride
@@ -3886,7 +4064,8 @@ const persistedDispositions = [];
       (
         studentCode,
         goals,
-        periodOverride = null
+        periodOverride = null,
+        showStudentName = true
       ) => {
         const student =
           allStudents.find(
@@ -3912,7 +4091,12 @@ const persistedDispositions = [];
           'obs-student-name';
 
         name.textContent =
-          `${student?.name || studentCode} (${studentCode})`;
+          studentDisplayLabel(
+            student || {
+              code:
+                studentCode,
+            }
+          );
 
         const grid =
           document.createElement(
@@ -3935,8 +4119,13 @@ const persistedDispositions = [];
           );
         }
 
-        section.append(
-          name,
+        if (showStudentName) {
+          section.appendChild(
+            name
+          );
+        }
+
+        section.appendChild(
           grid
         );
 
@@ -4039,10 +4228,15 @@ const persistedDispositions = [];
             );
 
           heading.className =
-            'obs-center-period-heading';
+            'obs-center-period-heading obs-center-student-heading';
 
           heading.textContent =
-            `${student?.name || selectedStudentCode} — ${formatCenterDate(selectedDate)}`;
+            `${studentDisplayLabel(
+              student || {
+                code:
+                  selectedStudentCode,
+              }
+            )} — ${formatCenterDate(selectedDate)}`;
 
           workspace.appendChild(
             heading
@@ -4064,7 +4258,8 @@ const persistedDispositions = [];
               selectedStudentCode,
               matchingGoals,
               selectedPeriod ||
-                null
+                null,
+              false
             )
           );
 
