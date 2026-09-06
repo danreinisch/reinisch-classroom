@@ -78,16 +78,16 @@ console.log(
 );
 
 test(
-  'Center uses one searchable student combobox rather than separate search and select controls',
+  'Center uses one persistent searchable student rail rather than separate search and select controls',
   () => {
     assert.match(
       center,
-      /obs-center-student-combobox/
+      /obs-center-student-rail-search/
     );
 
     assert.match(
       center,
-      /aria-autocomplete/
+      /obs-center-student-rail-list/
     );
 
     assert.doesNotMatch(

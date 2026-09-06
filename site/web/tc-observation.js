@@ -2588,16 +2588,9 @@ const persistedDispositions = [];
           color:#dcfce7;
         }
 
-        .obs-center-student-grid {
-          display:grid;
-          grid-template-columns:minmax(160px,.7fr) minmax(220px,1fr);
-          gap:8px;
-        }
-
         .obs-center-date-input,
         .obs-center-period-select,
-        .obs-center-student-combobox,
-        .obs-center-student-listbox {
+        .obs-center-student-rail-search {
           min-height:42px;
           padding:8px 11px;
           border-radius:10px;
@@ -2607,8 +2600,7 @@ const persistedDispositions = [];
         }
 
         .obs-center-period-select,
-        .obs-center-student-combobox,
-        .obs-center-student-listbox {
+        .obs-center-student-rail-search {
           width:100%;
         }
 
@@ -2718,56 +2710,117 @@ const persistedDispositions = [];
           background:rgba(34,197,94,.11);
         }
 
-        .obs-center-student-grid {
-          position:relative;
-          display:block;
+        .obs-center-student-layout {
+          display:grid;
+          grid-template-columns:minmax(220px,260px) minmax(0,1fr);
+          gap:14px;
+          align-items:start;
         }
 
-        .obs-center-student-combobox {
-          width:100%;
-          min-height:46px;
-          font-size:15px;
+        .obs-center-student-layout.period-mode {
+          grid-template-columns:minmax(0,1fr);
+        }
+
+        .obs-center-student-workspace {
+          min-width:0;
+        }
+
+        .obs-center-student-rail {
+          position:sticky;
+          top:16px;
+          min-width:0;
+          padding:12px;
+        }
+
+        .obs-center-student-rail-search {
+          min-height:44px;
+          font-size:14px;
           font-weight:650;
         }
 
-        .obs-center-student-listbox {
-          position:absolute;
-          z-index:40;
-          top:calc(100% + 6px);
-          left:0;
-          right:0;
+        .obs-center-student-rail-list {
+          display:grid;
+          gap:5px;
+          margin-top:9px;
+          max-height:520px;
+          overflow-y:auto;
+          overscroll-behavior:contain;
+          padding:1px 4px 1px 1px;
+        }
+
+        .obs-center-student-rail-item {
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:8px;
           width:100%;
-          min-height:0;
-          max-height:300px;
-          overflow:auto;
-          padding:6px;
-          border:1px solid rgba(255,255,255,.14);
-          border-radius:14px;
-          background:rgba(13,17,21,.98);
-          box-shadow:0 20px 55px rgba(0,0,0,.48);
-          backdrop-filter:blur(14px);
-        }
-
-        .obs-center-student-listbox[hidden] {
-          display:none;
-        }
-
-        .obs-center-student-option {
-          padding:10px 11px;
+          min-width:0;
+          padding:8px 9px;
+          border:1px solid transparent;
           border-radius:9px;
+          background:rgba(255,255,255,.025);
+          color:rgba(240,255,250,.84);
+          font:inherit;
+          font-size:13px;
+          line-height:1.25;
+          text-align:left;
           cursor:pointer;
-          font-size:14px;
-          color:rgba(240,255,250,.88);
         }
 
-        .obs-center-student-option:hover,
-        .obs-center-student-option[aria-selected="true"] {
-          background:rgba(34,197,94,.11);
+        .obs-center-student-rail-name {
+          flex:1;
+          min-width:0;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
+        }
+
+        .obs-center-student-rail-item:hover {
+          border-color:rgba(255,255,255,.10);
+          background:rgba(255,255,255,.055);
+          color:#f0fffa;
+        }
+
+        .obs-center-student-rail-item[aria-selected="true"] {
+          border-color:rgba(34,197,94,.40);
+          background:rgba(34,197,94,.12);
           color:#ecfdf5;
+          box-shadow:inset 3px 0 0 rgba(34,197,94,.72);
+        }
+
+        .obs-center-student-rail-status {
+          flex:none;
+          padding:2px 6px;
+          border-radius:999px;
+          border:1px solid rgba(255,255,255,.10);
+          font-size:10px;
+          font-weight:800;
+          line-height:1.3;
+          letter-spacing:.01em;
+        }
+
+        .obs-center-student-rail-status.is-due {
+          border-color:rgba(250,204,21,.30);
+          background:rgba(250,204,21,.09);
+          color:#fef08a;
+        }
+
+        .obs-center-student-rail-status.is-urgent {
+          border-color:rgba(248,113,113,.34);
+          background:rgba(248,113,113,.10);
+          color:#fecaca;
+        }
+
+        .obs-center-student-rail-status.is-satisfied {
+          border-color:rgba(34,197,94,.28);
+          background:rgba(34,197,94,.09);
+          color:#bbf7d0;
         }
 
         .obs-center-student-empty {
-          padding:10px 11px;
+          padding:11px;
+          border:1px dashed rgba(255,255,255,.10);
+          border-radius:10px;
           color:rgba(240,255,250,.56);
           font-size:13px;
         }
@@ -2839,8 +2892,16 @@ const persistedDispositions = [];
         @media (max-width: 760px) {
           .obs-center-controls,
           .obs-center-selectors,
-          .obs-center-student-grid {
+          .obs-center-student-layout {
             grid-template-columns:1fr;
+          }
+
+          .obs-center-student-rail {
+            position:static;
+          }
+
+          .obs-center-student-rail-list {
+            max-height:260px;
           }
         }
       `;
@@ -3087,7 +3148,7 @@ const persistedDispositions = [];
       );
 
     studentPanel.className =
-      'obs-center-panel';
+      'obs-center-panel obs-center-student-rail';
 
     const studentLabel =
       document.createElement(
@@ -3098,77 +3159,49 @@ const persistedDispositions = [];
       'obs-center-label';
 
     studentLabel.textContent =
-      'Student';
+      'Students';
 
-    const studentGrid =
-      document.createElement(
-        'div'
-      );
-
-    studentGrid.className =
-      'obs-center-student-grid';
-
-    const studentCombobox =
+    const studentRailSearch =
       document.createElement(
         'input'
       );
 
-    studentCombobox.type =
+    studentRailSearch.type =
       'search';
 
-    studentCombobox.className =
-      'obs-center-student-combobox';
+    studentRailSearch.id =
+      'obsCenterStudentRailSearch';
 
-    studentCombobox.placeholder =
-      'Search or choose a student…';
+    studentRailSearch.className =
+      'obs-center-student-rail-search';
 
-    studentCombobox.setAttribute(
-      'role',
-      'combobox'
-    );
+    studentRailSearch.placeholder =
+      'Search students…';
 
-    studentCombobox.setAttribute(
+    studentRailSearch.setAttribute(
       'aria-label',
       'Search students'
     );
 
-    studentCombobox.setAttribute(
-      'aria-autocomplete',
-      'list'
-    );
+    studentLabel.htmlFor =
+      'obsCenterStudentRailSearch';
 
-    studentCombobox.setAttribute(
-      'aria-expanded',
-      'false'
-    );
-
-    studentCombobox.setAttribute(
-      'aria-controls',
-      'obsCenterStudentListbox'
-    );
-
-    const studentListbox =
+    const studentRailList =
       document.createElement(
         'div'
       );
 
-    studentListbox.id =
-      'obsCenterStudentListbox';
+    studentRailList.className =
+      'obs-center-student-rail-list';
 
-    studentListbox.className =
-      'obs-center-student-listbox';
-
-    studentListbox.setAttribute(
+    studentRailList.setAttribute(
       'role',
       'listbox'
     );
 
-    studentListbox.hidden =
-      true;
-
-    studentGrid.append(
-      studentCombobox,
-      studentListbox
+    studentRailList.setAttribute(
+      'aria-label',
+      'Students with observation goals'
     );
 
     const studentHelp =
@@ -3184,7 +3217,8 @@ const persistedDispositions = [];
 
     studentPanel.append(
       studentLabel,
-      studentGrid,
+      studentRailSearch,
+      studentRailList,
       studentHelp
     );
 
@@ -3232,7 +3266,6 @@ const persistedDispositions = [];
     );
 
     selectors.append(
-      studentPanel,
       periodPanel
     );
 
@@ -3242,13 +3275,26 @@ const persistedDispositions = [];
       );
 
     workspace.className =
-      'obs-center-panel obs-center-workspace';
+      'obs-center-panel obs-center-workspace obs-center-student-workspace';
+
+    const studentLayout =
+      document.createElement(
+        'div'
+      );
+
+    studentLayout.className =
+      'obs-center-student-layout';
+
+    studentLayout.append(
+      studentPanel,
+      workspace
+    );
 
     center.append(
       head,
       controls,
       selectors,
-      workspace
+      studentLayout
     );
 
     app.appendChild(
@@ -3395,24 +3441,101 @@ const persistedDispositions = [];
       };
 
     const studentDisplayLabel =
-      student =>
-        `${student.name || student.code} (${student.code})`;
+      student => {
+        const code =
+          String(
+            student?.code ||
+              ''
+          ).trim();
 
-    const closeStudentList =
-      () => {
-        studentListbox.hidden =
-          true;
+        const name =
+          String(
+            student?.name ||
+              ''
+          ).trim();
 
-        studentCombobox.setAttribute(
-          'aria-expanded',
-          'false'
-        );
+        if (!name) {
+          return code;
+        }
+
+        if (
+          !code ||
+          name === code
+        ) {
+          return name;
+        }
+
+        return `${name} (${code})`;
       };
 
-    const refreshStudentOptions =
-      (
-        openList = false
-      ) => {
+    const getStudentRailStatus =
+      studentCode => {
+        if (
+          selectedDate !==
+            todayStr() &&
+          !selectedPeriod
+        ) {
+          return null;
+        }
+
+        const states =
+          allGoals
+            .filter(
+              goal =>
+                goal.student_code ===
+                  studentCode
+            )
+            .map(
+              goal =>
+                getGoalDueState(
+                  goal,
+                  selectedDate,
+                  selectedPeriod ||
+                    null
+                ).state
+            );
+
+        if (
+          states.includes(
+            'urgent'
+          )
+        ) {
+          return {
+            kind: 'urgent',
+            label: 'Urgent',
+          };
+        }
+
+        if (
+          states.includes(
+            'due'
+          )
+        ) {
+          return {
+            kind: 'due',
+            label: 'Due',
+          };
+        }
+
+        if (
+          states.length > 0 &&
+          states.every(
+            state =>
+              state ===
+                'satisfied'
+          )
+        ) {
+          return {
+            kind: 'satisfied',
+            label: '✓',
+          };
+        }
+
+        return null;
+      };
+
+    const refreshStudentRail =
+      () => {
         const students =
           getObservationCenterStudents();
 
@@ -3421,7 +3544,7 @@ const persistedDispositions = [];
           !students.some(
             student =>
               student.code ===
-              selectedStudentCode
+                selectedStudentCode
           )
         ) {
           selectedStudentCode =
@@ -3429,7 +3552,7 @@ const persistedDispositions = [];
         }
 
         const query =
-          studentCombobox.value
+          studentRailSearch.value
             .trim()
             .toLowerCase();
 
@@ -3447,7 +3570,7 @@ const persistedDispositions = [];
               )
             : students;
 
-        studentListbox.innerHTML =
+        studentRailList.innerHTML =
           '';
 
         if (
@@ -3467,7 +3590,7 @@ const persistedDispositions = [];
               ? 'No students with observation goals'
               : 'No matching students';
 
-          studentListbox.appendChild(
+          studentRailList.appendChild(
             empty
           );
         } else {
@@ -3475,20 +3598,23 @@ const persistedDispositions = [];
             const student
             of visibleStudents
           ) {
-            const option =
+            const item =
               document.createElement(
-                'div'
+                'button'
               );
 
-            option.className =
-              'obs-center-student-option';
+            item.type =
+              'button';
 
-            option.setAttribute(
+            item.className =
+              'obs-center-student-rail-item';
+
+            item.setAttribute(
               'role',
               'option'
             );
 
-            option.setAttribute(
+            item.setAttribute(
               'aria-selected',
               String(
                 student.code ===
@@ -3496,57 +3622,79 @@ const persistedDispositions = [];
               )
             );
 
-            option.dataset.studentCode =
+            item.dataset.studentCode =
               student.code;
 
-            option.textContent =
+            const itemName =
+              document.createElement(
+                'span'
+              );
+
+            itemName.className =
+              'obs-center-student-rail-name';
+
+            itemName.textContent =
               studentDisplayLabel(
                 student
               );
 
-            option.addEventListener(
-              'mousedown',
-              event => {
-                event.preventDefault();
-              }
+            item.appendChild(
+              itemName
             );
 
-            option.addEventListener(
+            const railStatus =
+              getStudentRailStatus(
+                student.code
+              );
+
+            item.dataset.railStatus =
+              railStatus?.kind ||
+              'none';
+
+            if (railStatus) {
+              const status =
+                document.createElement(
+                  'span'
+                );
+
+              status.className =
+                `obs-center-student-rail-status is-${railStatus.kind}`;
+
+              status.textContent =
+                railStatus.label;
+
+              status.setAttribute(
+                'aria-label',
+                railStatus.kind ===
+                  'satisfied'
+                  ? 'Observation cadence satisfied'
+                  : `Observation ${railStatus.label.toLowerCase()}`
+              );
+
+              item.appendChild(
+                status
+              );
+            }
+
+            item.addEventListener(
               'click',
               async () => {
                 selectedStudentCode =
                   student.code;
 
-                studentCombobox.value =
-                  studentDisplayLabel(
-                    student
-                  );
-
                 saveStatus.textContent =
                   '';
 
-                closeStudentList();
+                refreshStudentRail();
 
                 await renderWorkspace();
               }
             );
 
-            studentListbox.appendChild(
-              option
+            studentRailList.appendChild(
+              item
             );
           }
-        }
-
-        if (openList) {
-          studentListbox.hidden =
-            false;
-
-          studentCombobox.setAttribute(
-            'aria-expanded',
-            'true'
-          );
-        } else {
-          closeStudentList();
         }
 
         return students;
@@ -3688,6 +3836,11 @@ const persistedDispositions = [];
 
         studentPanel.hidden =
           !studentMode;
+
+        studentLayout.classList.toggle(
+          'period-mode',
+          !studentMode
+        );
 
         periodPanel.hidden =
           studentMode &&
@@ -3867,6 +4020,7 @@ const persistedDispositions = [];
                 `Saved for ${formatCenterDate(selectedDate)}`;
 
               updateTrayBadge();
+              refreshStudentRail();
             },
             dueState,
             periodOverride
@@ -3910,7 +4064,8 @@ const persistedDispositions = [];
       (
         studentCode,
         goals,
-        periodOverride = null
+        periodOverride = null,
+        showStudentName = true
       ) => {
         const student =
           allStudents.find(
@@ -3936,7 +4091,12 @@ const persistedDispositions = [];
           'obs-student-name';
 
         name.textContent =
-          `${student?.name || studentCode} (${studentCode})`;
+          studentDisplayLabel(
+            student || {
+              code:
+                studentCode,
+            }
+          );
 
         const grid =
           document.createElement(
@@ -3959,8 +4119,13 @@ const persistedDispositions = [];
           );
         }
 
-        section.append(
-          name,
+        if (showStudentName) {
+          section.appendChild(
+            name
+          );
+        }
+
+        section.appendChild(
           grid
         );
 
@@ -3986,7 +4151,7 @@ const persistedDispositions = [];
           selectedDate;
 
         const observationStudents =
-          refreshStudentOptions();
+          refreshStudentRail();
 
         refreshPeriodOptions();
         syncBrowseControls();
@@ -4063,10 +4228,15 @@ const persistedDispositions = [];
             );
 
           heading.className =
-            'obs-center-period-heading';
+            'obs-center-period-heading obs-center-student-heading';
 
           heading.textContent =
-            `${student?.name || selectedStudentCode} — ${formatCenterDate(selectedDate)}`;
+            `${studentDisplayLabel(
+              student || {
+                code:
+                  selectedStudentCode,
+              }
+            )} — ${formatCenterDate(selectedDate)}`;
 
           workspace.appendChild(
             heading
@@ -4088,7 +4258,8 @@ const persistedDispositions = [];
               selectedStudentCode,
               matchingGoals,
               selectedPeriod ||
-                null
+                null,
+              false
             )
           );
 
@@ -4428,83 +4599,10 @@ const persistedDispositions = [];
       }
     );
 
-    studentCombobox.addEventListener(
-      'focus',
-      () => {
-        refreshStudentOptions(
-          true
-        );
-      }
-    );
-
-    studentCombobox.addEventListener(
-      'click',
-      () => {
-        refreshStudentOptions(
-          true
-        );
-      }
-    );
-
-    studentCombobox.addEventListener(
+    studentRailSearch.addEventListener(
       'input',
       () => {
-        selectedStudentCode =
-          '';
-
-        saveStatus.textContent =
-          '';
-
-        refreshStudentOptions(
-          true
-        );
-      }
-    );
-
-    studentCombobox.addEventListener(
-      'keydown',
-      event => {
-        if (
-          event.key ===
-          'Escape'
-        ) {
-          closeStudentList();
-
-          return;
-        }
-
-        if (
-          event.key !==
-          'Enter'
-        ) {
-          return;
-        }
-
-        const firstOption =
-          studentListbox.querySelector(
-            '[role="option"]'
-          );
-
-        if (!firstOption) {
-          return;
-        }
-
-        event.preventDefault();
-
-        firstOption.click();
-      }
-    );
-
-    document.addEventListener(
-      'click',
-      event => {
-        if (
-          !studentGrid.contains(
-            event.target
-          )
-        ) {
-          closeStudentList();
-        }
+        refreshStudentRail();
       }
     );
 

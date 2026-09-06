@@ -291,7 +291,7 @@ test.describe(
 
         const studentCombobox =
           page.locator(
-            '.obs-center-student-combobox'
+            '.obs-center-student-rail-search'
           );
 
         await expect(
@@ -301,8 +301,8 @@ test.describe(
         await expect(
           studentCombobox
         ).toHaveAttribute(
-          'aria-autocomplete',
-          'list'
+          'aria-label',
+          'Search students'
         );
 
         await studentCombobox.click();
@@ -342,7 +342,7 @@ test.describe(
       async ({ page }) => {
         const studentCombobox =
           page.locator(
-            '.obs-center-student-combobox'
+            '.obs-center-student-rail-search'
           );
 
         await studentCombobox.click();
@@ -380,7 +380,7 @@ test.describe(
       async ({ page }) => {
         const studentCombobox =
           page.locator(
-            '.obs-center-student-combobox'
+            '.obs-center-student-rail-search'
           );
 
         await studentCombobox.click();
@@ -540,7 +540,7 @@ test.describe(
       async ({ page }) => {
         const studentCombobox =
           page.locator(
-            '.obs-center-student-combobox'
+            '.obs-center-student-rail-search'
           );
 
         await studentCombobox.click();
