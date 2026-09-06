@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const childProcess = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -325,4 +326,18 @@ if (failed > 0) {
 
 console.log(
   '\n✅ OBS-9A student navigation rail contract passed'
+);
+
+childProcess.execFileSync(
+  process.execPath,
+  [
+    path.join(
+      root,
+      'tests/observation-center-goal-quick-capture.test.cjs'
+    ),
+  ],
+  {
+    cwd: root,
+    stdio: 'inherit',
+  }
 );
