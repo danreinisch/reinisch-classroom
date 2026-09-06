@@ -4475,13 +4475,10 @@
           <div class="st-builder-feedback" id="builderDetail2Feedback"></div>
         </div>
         
-        <!-- Add Detail 3 Button -->
-        <button class="st-builder-add-detail-btn" id="builderAddDetail3Btn">+ Add Third Detail (Optional)</button>
-        
-        <!-- Supporting Detail 3 (Hidden by default) -->
-        <div class="st-builder-section" data-section="detail" id="builderDetail3Section" style="display: none;">
+        <!-- Supporting Detail 3 -->
+        <div class="st-builder-section" data-section="detail" id="builderDetail3Section">
           <div class="st-builder-section-header">
-            <span>Supporting Detail 3 (Optional)</span>
+            <span>Supporting Detail 3</span>
             <span class="st-builder-word-count" id="builderDetail3Count">0 words</span>
           </div>
           <select class="st-builder-select" id="builderTransition3">
@@ -4494,7 +4491,7 @@
           <textarea 
             class="st-builder-textarea" 
             id="builderDetail3"
-            placeholder="Provide a third piece of evidence or example (optional)..."></textarea>
+            placeholder="Provide a third piece of evidence or example..."></textarea>
           <div class="st-builder-feedback" id="builderDetail3Feedback"></div>
         </div>
         
@@ -4581,13 +4578,10 @@
               <div class="st-builder-feedback" id="builderDetail2Feedback_p${p}"></div>
             </div>
 
-            <!-- Add Detail 3 Button -->
-            <button class="st-builder-add-detail-btn" id="builderAddDetail3Btn_p${p}">+ Add Third Detail (Optional)</button>
-
-            <!-- Supporting Detail 3 (Hidden by default) -->
-            <div class="st-builder-section" data-section="detail" id="builderDetail3Section_p${p}" style="display: none;">
+            <!-- Supporting Detail 3 -->
+            <div class="st-builder-section" data-section="detail" id="builderDetail3Section_p${p}">
               <div class="st-builder-section-header">
-                <span>Supporting Detail 3 (Optional)</span>
+                <span>Supporting Detail 3</span>
                 <span class="st-builder-word-count" id="builderDetail3Count_p${p}">0 words</span>
               </div>
               <select class="st-builder-select" id="builderTransition3_p${p}">
@@ -4600,7 +4594,7 @@
               <textarea
                 class="st-builder-textarea"
                 id="builderDetail3_p${p}"
-                placeholder="Provide a third piece of evidence or example (optional)..."></textarea>
+                placeholder="Provide a third piece of evidence or example..."></textarea>
               <div class="st-builder-feedback" id="builderDetail3Feedback_p${p}"></div>
             </div>
 
@@ -4737,12 +4731,6 @@
           };
           conclusionInput.addEventListener('input', handler);
         }
-        
-        // Add detail 3 button
-        const addDetail3Btn = container.querySelector('#builderAddDetail3Btn');
-        if (addDetail3Btn) {
-          addDetail3Btn.addEventListener('click', () => toggleDetail3());
-        }
       } else {
         // Multi-paragraph event handlers — iterate over all paragraph sections
         for (let p = 1; p <= paragraphCount; p++) {
@@ -4786,11 +4774,6 @@
               updateBuilderWordCount(`builderConclusion_p${p}`, `builderConclusionCount_p${p}`);
               validateConclusion(`builderConclusion_p${p}`, `builderConclusionFeedback_p${p}`, `builderTopicSentence_p${p}`);
             });
-          }
-
-          const addDetail3Btn = container.querySelector(`#builderAddDetail3Btn${pSuffix}`);
-          if (addDetail3Btn) {
-            addDetail3Btn.addEventListener('click', () => toggleDetail3(`_p${p}`));
           }
         }
       }
@@ -5346,12 +5329,6 @@
         const el = document.getElementById(id);
         if (el) el.textContent = '0 words';
       });
-
-      // Reset optional detail 3 to hidden
-      const detail3Section = document.getElementById('builderDetail3Section');
-      if (detail3Section) detail3Section.style.display = 'none';
-      const addDetail3Btn = document.getElementById('builderAddDetail3Btn');
-      if (addDetail3Btn) addDetail3Btn.style.display = '';
     } else {
       // Multi-paragraph: iterate over all paragraph sections
       for (let p = 1; p <= paragraphCount; p++) {
@@ -5378,24 +5355,7 @@
           const el = document.getElementById(id);
           if (el) el.textContent = '0 words';
         });
-
-        // Reset optional detail 3 to hidden
-        const detail3Section = document.getElementById(`builderDetail3Section_p${p}`);
-        if (detail3Section) detail3Section.style.display = 'none';
-        const addDetail3Btn = document.getElementById(`builderAddDetail3Btn_p${p}`);
-        if (addDetail3Btn) addDetail3Btn.style.display = '';
       }
-    }
-  }
-  
-  function toggleDetail3(suffix = '') {
-    const detail3Section = document.getElementById(`builderDetail3Section${suffix}`);
-    const addBtn = document.getElementById(`builderAddDetail3Btn${suffix}`);
-    if (!detail3Section || !addBtn) return;
-    
-    if (detail3Section.style.display === 'none' || !detail3Section.style.display) {
-      detail3Section.style.display = 'block';
-      addBtn.style.display = 'none';
     }
   }
   

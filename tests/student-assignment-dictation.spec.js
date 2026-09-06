@@ -129,16 +129,58 @@ test('short-answer dictation updates the real answer map and autosave payload', 
   await expect.poll(() => posts.find(p => p.answers?.['1_2'] === 'Practice helps me improve.')?.answers).toEqual({ '1_1': 'I want to learn cooking.', '1_2': 'Practice helps me improve.' });
 });
 
-test('Writing Builder dictation updates word counts and transfers to the response', async ({ page, context, baseURL }) => {
-  await setup(page, context, baseURL);
+for (const paragraphCount of [1, 3]) test(`Writing Builder shows and saves all three details for ${paragraphCount} paragraph(s)`, async ({ page, context, baseURL }) => {
+  const { posts, errors } = await setup(page, context, baseURL, {
+    settings: { writing_config: { paragraph_count: paragraphCount } }
+  });
   await page.locator('#builderToggleBtn').click();
-  await buttonFor(page, 'builderTopicSentence').click();
-  await emit(page, [['Learning to cook is useful for me.']]);
-  await end(page);
-  await expect(page.locator('#builderTopicCount')).toContainText('7 words');
+  await expect(page.locator('[id^="builderAddDetail3Btn"]')).toHaveCount(0);
+  const paragraphs = [];
+  for (let p = 1; p <= paragraphCount; p++) {
+    const suffix = paragraphCount === 1 ? '' : `_p${p}`;
+    for (const detail of [1, 2, 3]) await expect(page.locator(`#builderDetail${detail}${suffix}`)).toBeVisible();
+    await expect(page.locator(`#builderDetail3Section${suffix} .st-builder-section-header > span`).first()).toHaveText('Supporting Detail 3');
+    await buttonFor(page, `builderTopicSentence${suffix}`).click();
+    await emit(page, [['Learning to cook is useful for me.']]);
+    await end(page);
+    await expect(page.locator(`#builderTopicCount${suffix}`)).toHaveText('7 words');
+    await page.locator(`#builderDetail1${suffix}`).fill(`I can practice skill ${p} at home.`);
+    await page.locator(`#builderDetail2${suffix}`).fill(`I can use skill ${p} every day.`);
+    await page.locator(`#builderTransition3${suffix}`).selectOption('Finally,');
+    await buttonFor(page, `builderDetail3${suffix}`).click();
+    await emit(page, [[`Skill ${p} helps me cook for my family.`]]);
+    await end(page);
+    await expect(page.locator(`#builderDetail3Count${suffix}`)).toHaveText('8 words');
+    await page.locator(`#builderConclusion${suffix}`).fill('Practice helps me improve.');
+    paragraphs.push(`Learning to cook is useful for me. I can practice skill ${p} at home. I can use skill ${p} every day. Finally, Skill ${p} helps me cook for my family. Practice helps me improve.`);
+  }
+  const response = paragraphs.join('\n\n');
   await page.locator('#builderTransferBtn').click();
-  await expect(page.locator('#writingResponse')).toHaveValue(/Learning to cook is useful for me\./);
-  await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem('rc_student_answers_' + id) || '{}').writing_4, ID)).toMatch(/Learning to cook is useful for me\./);
+  await expect(page.locator('#writingResponse')).toHaveValue(response);
+  await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem('rc_student_answers_' + id) || '{}').writing_4, ID)).toBe(response);
+  await page.locator('#builderClearBtn').click();
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  for (let p = 1; p <= paragraphCount; p++) {
+    const suffix = paragraphCount === 1 ? '' : `_p${p}`;
+    for (const detail of [1, 2, 3]) {
+      await expect(page.locator(`#builderDetail${detail}${suffix}`)).toBeVisible();
+      await expect(page.locator(`#builderDetail${detail}${suffix}`)).toHaveValue('');
+    }
+    await expect(page.locator(`#builderDetail3Count${suffix}`)).toHaveText('0 words');
+    await expect(page.locator(`#builderTransition3${suffix}`)).toHaveValue('');
+  }
+  await expect(page.locator('#writingResponse')).toHaveValue(response);
+  await page.locator('#panelCloseBtn').click();
+  await expect(page.locator('#assignmentPanel')).toHaveCount(0);
+  await page.locator(`[data-instance-id="${ID}"]:visible`).first().click();
+  await chooseWriting(page);
+  await expect(page.locator('#writingResponse')).toHaveValue(response);
+  await page.locator('#builderToggleBtn').click();
+  await expect(page.locator('[id^="builderDetail3Section"]:visible')).toHaveCount(paragraphCount);
+  await page.locator('#submitWritingBtn').click();
+  await page.getByRole('button', { name: 'Submit', exact: true }).click();
+  await expect.poll(() => posts.find(p => p.submit === true)?.writing_response).toBe(response);
+  expect(errors).toEqual([]);
 });
 
 test('read-aloud and dictation stop each other without restarting old speech', async ({ page, context, baseURL }) => {
