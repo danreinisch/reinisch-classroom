@@ -1,9 +1,12 @@
-import { bank, checkEdit } from "./sentence-workshop-content.js?v=20260906-sw6";
-import * as endings from "./sentence-workshop-endings.js?v=20260906-sw6";
-import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw6";
-import * as commas from "./sentence-workshop-commas.js?v=20260906-sw6";
+import { bank, checkEdit } from "./sentence-workshop-content.js?v=20260906-sw7";
+import * as endings from "./sentence-workshop-endings.js?v=20260906-sw7";
+import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw7";
+import * as commas from "./sentence-workshop-commas.js?v=20260906-sw7";
+import * as openings from "./sentence-workshop-openings.js?v=20260906-sw7";
 
 function lessonFor(session) {
+  if (session.lessonId === "openings")
+    return { bank: openings.bank, check: openings.checkEdit, guided: 4, applied: 4 };
   if (session.lessonId === "commas")
     return { bank: commas.bank, check: commas.checkEdit, guided: 3, applied: 3 };
   if (session.lessonId === "repairs")
@@ -15,7 +18,7 @@ function lessonFor(session) {
 
 // Visit-only routing. First submissions and demonstrations are never overwritten.
 export function createSession(lessonId = "boundaries") {
-  if (!["boundaries", "endings", "repairs", "commas"].includes(lessonId))
+  if (!["boundaries", "endings", "repairs", "commas", "openings"].includes(lessonId))
     throw new Error("Unknown workshop lesson");
   return {
     lessonId,
@@ -37,7 +40,7 @@ function selectNext(session, phase) {
     session.lessonId !== "boundaries" && phase === "simpler"
       ? items.find(
           (item) =>
-            (["repairs", "commas"].includes(session.lessonId)
+            (["repairs", "commas", "openings"].includes(session.lessonId)
               ? item.kind === session.item?.kind
               : item.intent === session.item?.intent) && !session.records[item.id]
         ) || items.find((item) => !session.records[item.id])
@@ -118,16 +121,15 @@ export function demonstrate(session) {
 export function submit(session, edit) {
   const record = recordFor(session);
   if (!canEdit(session)) return null;
-  const key =
-    session.lessonId === "commas"
-      ? JSON.stringify(
-          Array.isArray(edit?.commas) ? [...edit.commas].sort((a, b) => a - b) : edit?.commas
-        )
-      : session.lessonId === "repairs"
-        ? JSON.stringify([edit.choice, edit.gap, edit.join])
-        : session.lessonId === "endings"
-          ? JSON.stringify(edit.ending)
-          : JSON.stringify([edit.period, [...edit.capitals].sort((a, b) => a - b)]);
+  const key = ["commas", "openings"].includes(session.lessonId)
+    ? JSON.stringify(
+        Array.isArray(edit?.commas) ? [...edit.commas].sort((a, b) => a - b) : edit?.commas
+      )
+    : session.lessonId === "repairs"
+      ? JSON.stringify([edit.choice, edit.gap, edit.join])
+      : session.lessonId === "endings"
+        ? JSON.stringify(edit.ending)
+        : JSON.stringify([edit.period, [...edit.capitals].sort((a, b) => a - b)]);
   if (record.lastEditKey === key)
     return {
       ...record.attempts.at(-1),
@@ -148,27 +150,32 @@ export function summary(session) {
     attempted: records.filter((r) => r.attempts.length).length,
     freshAttempted: checks.length,
     freshIndependent: checks.filter(independent).length,
-    ...(session.lessonId === "commas"
+    ...(session.lessonId === "openings"
       ? {
-          freshCommas: checks.filter(independent).length,
+          freshOpenings: checks.filter(independent).length,
           freshKinds: [...new Set(checks.filter(independent).map((r) => r.attempts[0].kind))],
         }
-      : session.lessonId === "repairs"
+      : session.lessonId === "commas"
         ? {
-            freshRepairs: checks.filter(independent).length,
+            freshCommas: checks.filter(independent).length,
             freshKinds: [...new Set(checks.filter(independent).map((r) => r.attempts[0].kind))],
           }
-        : session.lessonId === "endings"
+        : session.lessonId === "repairs"
           ? {
-              freshEnding: checks.filter(independent).length,
+              freshRepairs: checks.filter(independent).length,
               freshKinds: [...new Set(checks.filter(independent).map((r) => r.attempts[0].kind))],
             }
-          : {
-              freshBoundary: checks.filter((r) => r.attempts[0].boundary && !r.attempts[0].help)
-                .length,
-              freshCapitals: checks.filter((r) => r.attempts[0].capitals && !r.attempts[0].help)
-                .length,
-            }),
+          : session.lessonId === "endings"
+            ? {
+                freshEnding: checks.filter(independent).length,
+                freshKinds: [...new Set(checks.filter(independent).map((r) => r.attempts[0].kind))],
+              }
+            : {
+                freshBoundary: checks.filter((r) => r.attempts[0].boundary && !r.attempts[0].help)
+                  .length,
+                freshCapitals: checks.filter((r) => r.attempts[0].capitals && !r.attempts[0].help)
+                  .length,
+              }),
     supported: records.filter((r) => r.attempts.some((a) => a.correct) && !independent(r)).length,
     demonstrations: records.filter((r) => r.demonstrated).length,
     appliedIndependent: records.filter((r) => r.phase === "apply" && independent(r)).length,
@@ -207,13 +214,15 @@ export function next(session, { skip = false } = {}) {
     if (session.cursors.simpler >= 2) {
       finish(
         session,
-        session.lessonId === "commas"
-          ? "You worked through examples with support. Try another short practice later, or ask for help finding the separate items in a list."
-          : session.lessonId === "repairs"
-            ? "You worked through examples with support. Try another short practice later, or ask for help finding what a sentence needs to be complete."
-            : session.lessonId === "endings"
-              ? "You worked through examples with support. Try another short practice later, or ask for help deciding whether a message tells, asks, or adds emphasis."
-              : "You worked through examples with support. Try another short practice later, or ask for help finding where a complete sentence ends.",
+        session.lessonId === "openings"
+          ? "You worked through examples with support. Try another short practice later, or ask for help finding where an opening ends and the main message begins."
+          : session.lessonId === "commas"
+            ? "You worked through examples with support. Try another short practice later, or ask for help finding the separate items in a list."
+            : session.lessonId === "repairs"
+              ? "You worked through examples with support. Try another short practice later, or ask for help finding what a sentence needs to be complete."
+              : session.lessonId === "endings"
+                ? "You worked through examples with support. Try another short practice later, or ask for help deciding whether a message tells, asks, or adds emphasis."
+                : "You worked through examples with support. Try another short practice later, or ask for help finding where a complete sentence ends.",
         true
       );
       return;
@@ -230,13 +239,17 @@ export function next(session, { skip = false } = {}) {
   } else if (phase === "check") {
     const results = summary(session);
     const ready =
-      session.lessonId === "commas"
-        ? Object.keys(commas.kindNames).every((kind) => results.freshKinds.includes(kind))
-        : session.lessonId === "repairs"
-          ? Object.keys(repairs.kindNames).every((kind) => results.freshKinds.includes(kind))
-          : session.lessonId === "endings"
-            ? ["statement", "question", "strong"].every((kind) => results.freshKinds.includes(kind))
-            : results.freshIndependent >= 2;
+      session.lessonId === "openings"
+        ? Object.keys(openings.kindNames).every((kind) => results.freshKinds.includes(kind))
+        : session.lessonId === "commas"
+          ? Object.keys(commas.kindNames).every((kind) => results.freshKinds.includes(kind))
+          : session.lessonId === "repairs"
+            ? Object.keys(repairs.kindNames).every((kind) => results.freshKinds.includes(kind))
+            : session.lessonId === "endings"
+              ? ["statement", "question", "strong"].every((kind) =>
+                  results.freshKinds.includes(kind)
+                )
+              : results.freshIndependent >= 2;
     selectNext(session, ready ? "apply" : "check");
   } else if (phase === "apply") {
     if (session.cursors.apply >= lessonFor(session).applied)

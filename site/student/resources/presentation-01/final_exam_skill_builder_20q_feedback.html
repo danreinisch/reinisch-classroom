@@ -51,7 +51,7 @@
   outline:3px solid #075b51;outline-offset:3px;
 }
 </style>
-<link rel="stylesheet" href="/assets/css/sentence-workshop.css?v=20260906-sw6" />
+<link rel="stylesheet" href="/assets/css/sentence-workshop.css?v=20260906-sw7" />
 </head>
 <body>
 <main id="mainMenu" class="screen">
@@ -277,7 +277,7 @@ async function openSentenceWorkshop(){
   button.disabled=true;
   status.textContent='Opening Sentence Workshop…';
   try{
-    const {mountSentenceWorkshop}=await import('/assets/js/sentence-workshop.js?v=20260906-sw6');
+    const {mountSentenceWorkshop}=await import('/assets/js/sentence-workshop.js?v=20260906-sw7');
     if(generation!==sentenceWorkshopGeneration)return;
     if(mainMenu.classList.contains('hidden')){status.textContent='';return;}
     const root=document.getElementById('sentenceWorkshop');
