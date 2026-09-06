@@ -507,5 +507,83 @@ test.describe(
         ).toBeVisible();
       }
     );
+
+    test(
+      'rail polish stays compact, shows due state, and uses one student heading',
+      async ({ page }) => {
+        const rail =
+          page.locator(
+            '.obs-center-student-rail'
+          );
+
+        const firstStudent =
+          page.locator(
+            '.obs-center-student-rail-item[data-student-code="SYN01"]'
+          );
+
+        await expect(
+          rail
+        ).toBeVisible();
+
+        const railWidth =
+          await rail.evaluate(
+            element =>
+              element.getBoundingClientRect().width
+          );
+
+        expect(
+          railWidth
+        ).toBeLessThanOrEqual(
+          280
+        );
+
+        const rowHeight =
+          await firstStudent.evaluate(
+            element =>
+              element.getBoundingClientRect().height
+          );
+
+        expect(
+          rowHeight
+        ).toBeLessThanOrEqual(
+          44
+        );
+
+        await expect(
+          firstStudent.locator(
+            '.obs-center-student-rail-status'
+          )
+        ).toContainText(
+          /Due|Urgent|✓/
+        );
+
+        await firstStudent.click();
+
+        const workspace =
+          page.locator(
+            '.obs-center-student-workspace'
+          );
+
+        await expect(
+          workspace.locator(
+            '.obs-center-student-heading'
+          )
+        ).toHaveCount(1);
+
+        await expect(
+          workspace.locator(
+            '.obs-student-name'
+          )
+        ).toHaveCount(0);
+
+        await expect(
+          workspace.locator(
+            '.obs-center-student-heading'
+          )
+        ).toContainText(
+          'Student 01 Example (SYN01)'
+        );
+      }
+    );
   }
 );
