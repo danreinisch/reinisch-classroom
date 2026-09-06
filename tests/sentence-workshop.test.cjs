@@ -2,9 +2,223 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw4");
-const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw4");
-const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260906-sw4");
+const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw6");
+const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw6");
+const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260906-sw6");
+const commas = import("../site/assets/js/sentence-workshop-commas.js?v=20260906-sw6");
+
+test("list comma answer sets match the editorial key across every selectable combination", async () => {
+  const c = await commas;
+  // Independently counted positions: required commas and optional serial comma.
+  const key = [
+    [[2], 3],
+    [[3], 5],
+    [[], null],
+    [[3, 4], 5],
+    [[5], 8],
+    [[2], 3],
+    [[5], 8],
+    [[], null],
+    [[4, 5], 6],
+    [[5], 8],
+    [[], null],
+    [[2], 3],
+    [[4], 6],
+    [[], null],
+    [[2], 3],
+    [[3], 5],
+    [[], null],
+    [[2], 3],
+    [[4], 6],
+    [[], null],
+    [[3], 4],
+    [[5], 8],
+    [[], null],
+  ];
+  assert.equal(c.models.length, 3);
+  assert.equal(c.allItems.length, 23);
+  assert.equal(new Set(c.allItems.map((item) => item.id)).size, 23);
+  assert.equal(new Set(c.allItems.map((item) => item.words.join(" "))).size, 23);
+  for (const [i, item] of c.allItems.entries()) {
+    const [needed, optional] = key[i];
+    assert.deepEqual(item.required, needed, item.id);
+    assert.equal(item.optional, optional, item.id);
+    for (let mask = 0; mask < 2 ** (item.words.length - 1); mask++) {
+      const selected = Array.from({ length: item.words.length - 1 }, (_, i) => i + 1).filter(
+        (gap) => mask & (2 ** (gap - 1))
+      );
+      const accepted =
+        needed.every((gap) => selected.includes(gap)) &&
+        selected.every((gap) => needed.includes(gap) || gap === optional);
+      assert.equal(
+        c.checkEdit(item, { commas: selected }).correct,
+        accepted,
+        `${item.id}: ${selected}`
+      );
+    }
+    for (const invalid of [
+      undefined,
+      {},
+      { commas: null },
+      { commas: [0] },
+      { commas: [1, 1] },
+      { commas: ["2"] },
+      { commas: [1.5] },
+      { commas: [item.words.length] },
+    ]) {
+      assert.equal(c.checkEdit(item, invalid).correct, false);
+    }
+    const draft = c.initialEdit(item);
+    draft.commas.push(999);
+    assert.equal(item.initial.includes(999), false);
+    assert.ok(item.context && c.kindNames[item.kind]);
+  }
+  assert.equal(
+    c.editedText(c.bank.practice[0], { commas: [2, 3] }),
+    "Pack socks, shirts, and shoes."
+  );
+  assert.equal(c.editedText(c.bank.practice[0], { commas: [2] }), "Pack socks, shirts and shoes.");
+  assert.equal(
+    c.editedText(c.bank.practice[1], { commas: [3, 5] }),
+    "Bring blue folders, spare pencils, and blank paper."
+  );
+  assert.equal(
+    c.editedText(c.bank.practice[2], { commas: [] }),
+    "Take your notebook and your charger."
+  );
+  assert.equal(
+    c.editedText(c.bank.apply[1], { commas: [5, 8] }),
+    "We will set the tables, fill the pitchers, and greet the guests."
+  );
+  assert.match(
+    c.checkEdit(c.bank.practice[1], { commas: [2, 3] }).message,
+    /blue folders.*one item/
+  );
+  assert.match(
+    c.checkEdit(c.bank.practice[0], { commas: [2, 4] }).message,
+    /before and, not after/
+  );
+  assert.match(
+    c.checkEdit(c.bank.practice[0], { commas: [3] }).message,
+    /between “socks” and “shirts”/
+  );
+  assert.match(c.checkEdit(c.bank.practice[2], { commas: [3] }).message, /two items/);
+});
+
+test("commas normal route requires all three fresh list types and uses practical messages", async () => {
+  const e = await engine,
+    c = await commas,
+    s = e.createSession("commas");
+  e.start(s);
+  const ids = [],
+    phases = [];
+  while (s.phase !== "summary") {
+    assert.ok(ids.length < 12);
+    ids.push(s.item.id);
+    phases.push(s.phase);
+    // Alternate accepted serial-comma styles. Neither is marked as a correction.
+    const edit = ids.length % 2 ? { commas: [...s.item.required] } : c.solution(s.item);
+    assert.equal(e.submit(s, edit).correct, true);
+    e.next(s);
+  }
+  assert.equal(new Set(ids).size, 9);
+  assert.deepEqual(phases, [
+    ...Array(3).fill("practice"),
+    ...Array(3).fill("check"),
+    ...Array(3).fill("apply"),
+  ]);
+  assert.deepEqual(e.summary(s), {
+    attempted: 9,
+    freshAttempted: 3,
+    freshIndependent: 3,
+    freshCommas: 3,
+    freshKinds: ["single", "grouped", "pair"],
+    supported: 0,
+    demonstrations: 0,
+    appliedIndependent: 3,
+    appliedAttempted: 3,
+  });
+});
+
+test("single-word successes cannot substitute for grouped or two-item list work", async () => {
+  const e = await engine,
+    c = await commas;
+  for (const missing of Object.keys(c.kindNames)) {
+    const s = e.createSession("commas");
+    e.start(s);
+    const seen = [];
+    while (s.phase !== "summary") {
+      assert.ok(seen.length < 13);
+      assert.notEqual(s.phase, "apply");
+      seen.push(s.item.id);
+      if (s.phase === "check" && s.item.kind === missing) e.hint(s);
+      e.submit(s, c.solution(s.item));
+      e.next(s);
+    }
+    assert.equal(new Set(seen).size, 12);
+    assert.equal(e.summary(s).freshAttempted, 9);
+    assert.equal(e.summary(s).freshIndependent, 6);
+    assert.equal(e.summary(s).freshKinds.includes(missing), false);
+    assert.match(s.reason, /available examples/);
+  }
+});
+
+test("comma editing preserves first attempts and treats reordered identical edits as repeats", async () => {
+  const e = await engine,
+    c = await commas,
+    s = e.createSession("commas");
+  e.start(s);
+  const before = JSON.stringify(s);
+  c.editedText(s.item, c.solution(s.item), true);
+  assert.equal(JSON.stringify(s), before);
+  e.submit(s, { commas: [1, 2] });
+  assert.match(e.submit(s, { commas: [2, 1] }).message, /Change your edit/);
+  assert.equal(e.recordFor(s).attempts.length, 1);
+  e.submit(s, { commas: [2] });
+  assert.equal(e.summary(s).supported, 1);
+  assert.equal(e.recordFor(s).attempts[0].correct, false);
+  e.next(s);
+  e.hint(s);
+  e.hint(s);
+  e.submit(s, c.solution(s.item));
+  assert.equal(e.summary(s).supported, 2);
+  e.next(s);
+  e.submit(s, { commas: [] });
+  assert.equal(e.summary(s).supported, 2);
+});
+
+test("comma support matches the list type, uses new examples, and has a finite exit", async () => {
+  const e = await engine,
+    c = await commas;
+  for (const kind of Object.keys(c.kindNames)) {
+    const s = e.createSession("commas");
+    e.start(s);
+    while (s.item.kind !== kind) {
+      e.submit(s, c.solution(s.item));
+      e.next(s);
+    }
+    const id = s.item.id;
+    e.demonstrate(s);
+    e.next(s);
+    assert.equal(s.phase, "simpler");
+    assert.equal(s.item.kind, kind);
+    assert.notEqual(s.item.id, id);
+  }
+  const s = e.createSession("commas");
+  e.start(s);
+  let count = 0;
+  while (s.phase !== "summary") {
+    assert.ok(++count <= 5);
+    e.submit(s, { commas: [1] });
+    e.submit(s, { commas: [1, 2] });
+    assert.equal(e.submit(s, c.solution(s.item)), null);
+    e.demonstrate(s);
+    e.next(s);
+  }
+  assert.equal(e.summary(s).demonstrations, 5);
+  assert.equal(e.summary(s).supported, 0);
+  assert.match(s.reason, /ask for help/);
+});
 
 test("fragments and run-ons follow the independent editorial key, including valid alternatives", async () => {
   const c = await repairs;
@@ -432,24 +646,25 @@ test("both launch copies match and lesson assets use one version", () => {
     "utf8"
   );
   assert.equal(donor, mirror);
-  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw4/);
-  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw4/);
+  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw6/);
+  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw6/);
   for (const filename of [
     "sentence-workshop.js",
     "sentence-workshop-engine.js",
     "sentence-workshop-content.js",
     "sentence-workshop-endings.js",
     "sentence-workshop-repairs.js",
+    "sentence-workshop-commas.js",
   ]) {
     const js = fs.readFileSync(path.join(root, "site/assets/js", filename), "utf8");
     assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(|XMLHttpRequest|sendBeacon/);
     for (const imported of js.matchAll(/from "\.\/sentence-workshop[^"?]*\.js\?v=([^"\s]+)"/g)) {
-      assert.equal(imported[1], "20260906-sw4");
+      assert.equal(imported[1], "20260906-sw6");
     }
   }
 });
 
-const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw4");
+const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw6");
 
 test("sentence endings follow the reviewed purpose key and accept both allowed tones", async () => {
   const c = await endings;
@@ -614,4 +829,153 @@ test("shorter endings task matches the purpose needing support; lessons stay sep
   assert.equal(e.summary(old).attempted, 0);
   e.finish(s);
   assert.equal(e.submit(s, { ending: "!" }), null);
+});
+
+async function navigationCases() {
+  const modules = {
+    boundaries: await content,
+    endings: await endings,
+    repairs: await repairs,
+    commas: await commas,
+  };
+  return Object.entries(modules).map(([id, c]) => ({
+    id,
+    c,
+    wrong:
+      id === "boundaries"
+        ? [
+            { period: null, capitals: [0] },
+            { period: 1, capitals: [0] },
+          ]
+        : id === "endings"
+          ? [{ ending: "." }, { ending: "!" }]
+          : id === "repairs"
+            ? [c.initialEdit(c.bank.practice[0]), { choice: "when", gap: null, join: null }]
+            : [{ commas: [] }, { commas: [1] }],
+  }));
+}
+
+test("all lessons reopen after two misses without erasing the original submissions", async () => {
+  const e = await engine;
+  for (const { id, c, wrong } of await navigationCases()) {
+    const s = e.createSession(id);
+    e.start(s);
+    const record = e.recordFor(s);
+    for (const edit of wrong) assert.equal(e.submit(s, edit).correct, false, id);
+    const original = structuredClone(record.attempts);
+    assert.equal(e.canEdit(s), false);
+    assert.equal(e.submit(s, c.solution(s.item)), null);
+    e.retry(s);
+    assert.equal(e.canEdit(s), true);
+    assert.equal(e.submit(s, c.solution(s.item)).correct, true);
+    assert.deepEqual(record.attempts.slice(0, 2), original);
+    assert.equal(e.summary(s).attempted, 1);
+    assert.equal(e.summary(s).supported, 1);
+    e.retry(s);
+    e.submit(s, c.solution(s.item));
+    assert.equal(e.summary(s).supported, 1, "repeating does not count a second completed item");
+    assert.equal(e.summary(s).freshIndependent, 0);
+  }
+});
+
+test("practice after a worked example remains supported and history preserves shorter routing", async () => {
+  const e = await engine;
+  for (const { id, c } of await navigationCases()) {
+    const s = e.createSession(id);
+    e.start(s);
+    const first = s.item;
+    e.demonstrate(s);
+    assert.equal(e.summary(s).attempted, 0);
+    e.retry(s);
+    assert.equal(e.canEdit(s), true);
+    e.submit(s, c.solution(s.item));
+    assert.equal(e.recordFor(s).attempts[0].help, 3);
+    assert.equal(e.summary(s).supported, 1);
+    assert.equal(e.summary(s).demonstrations, 1);
+    e.forward(s);
+    assert.equal(s.phase, "simpler");
+    const shorter = s.item;
+    const counts = structuredClone(s.cursors);
+    e.previous(s);
+    assert.equal(s.item, first);
+    e.forward(s);
+    assert.equal(s.item, shorter);
+    assert.equal(s.returnPhase, "practice");
+    assert.deepEqual(s.cursors, counts);
+    assert.equal(s.history.length, 2);
+    e.forward(s); // Skipping a shorter task still returns to the correct phase.
+    assert.equal(s.phase, "practice");
+    assert.notEqual(s.item.id, first.id);
+  }
+});
+
+test("skipping and traversing history never submit answers; exhausted visits can still be reviewed", async () => {
+  const e = await engine;
+  for (const { id, c } of await navigationCases()) {
+    const s = e.createSession(id);
+    e.start(s);
+    const first = s.item;
+    e.forward(s);
+    const second = s.item;
+    const record = e.recordFor(s);
+    const counts = structuredClone(s.cursors);
+    e.previous(s);
+    assert.equal(s.item, first);
+    e.forward(s);
+    assert.equal(s.item, second);
+    assert.equal(e.recordFor(s), record);
+    assert.deepEqual(s.cursors, counts);
+    assert.equal(e.summary(s).attempted, 0);
+    e.finish(s);
+    e.previous(s);
+    assert.equal(s.item, second, "early finish returns to the exact task left");
+    while (s.phase !== "summary") {
+      assert.ok(s.history.length <= c.bank.practice.length);
+      e.forward(s);
+    }
+    assert.equal(e.summary(s).attempted, 0);
+    assert.equal(e.summary(s).freshAttempted, 0);
+    const total = s.history.length;
+    const reason = s.reason;
+    for (let i = 0; i < 3; i++) {
+      e.previous(s);
+      assert.equal(s.position, total - 1);
+      assert.ok(s.item);
+      e.forward(s);
+      assert.equal(s.phase, "summary");
+      assert.equal(s.reason, reason);
+      assert.equal(s.history.length, total);
+    }
+  }
+});
+
+test("revisiting a corrected fresh check cannot overwrite its first-try evidence", async () => {
+  const e = await engine,
+    c = await commas,
+    s = e.createSession("commas");
+  e.start(s);
+  for (let i = 0; i < 3; i++) {
+    e.submit(s, c.solution(s.item));
+    e.forward(s);
+  }
+  const firstCheck = s.item;
+  e.submit(s, { commas: [] });
+  e.demonstrate(s);
+  e.retry(s);
+  e.submit(s, c.solution(s.item));
+  const record = e.recordFor(s);
+  const firstSubmission = structuredClone(record.attempts[0]);
+  e.forward(s);
+  const shorter = s.item;
+  e.previous(s);
+  assert.equal(s.item, firstCheck);
+  e.retry(s);
+  e.submit(s, c.solution(s.item));
+  assert.deepEqual(record.attempts[0], firstSubmission);
+  assert.equal(e.summary(s).freshAttempted, 1);
+  assert.equal(e.summary(s).freshIndependent, 0);
+  assert.deepEqual(e.summary(s).freshKinds, []);
+  assert.equal(e.summary(s).supported, 1);
+  e.forward(s);
+  assert.equal(s.item, shorter);
 });
