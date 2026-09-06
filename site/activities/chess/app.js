@@ -3,7 +3,10 @@ import { LESSONS, CHALLENGES, exerciseGame, exerciseSolved } from './lessons.js'
 
 const $ = id => document.getElementById(id);
 let browserStorage;
-try { browserStorage = window.localStorage; } catch { browserStorage = { getItem() { throw new Error('Browser storage is unavailable.'); }, setItem() { throw new Error('Browser storage is unavailable.'); } }; }
+try { browserStorage = window.localStorage; } catch {
+  const unavailable = () => { throw new Error('Browser storage is unavailable.'); };
+  browserStorage = { getItem: unavailable, setItem: unavailable, removeItem: unavailable };
+}
 let session;
 try { session = window.sessionStorage; } catch { session = { getItem() { return null; } }; }
 const store = new ChessStore(browserStorage, session);
@@ -182,7 +185,7 @@ function engineRequest(isHint = false) {
     renderBoard(); renderPlayPanel();
   };
   try {
-    worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./worker.js?v=20260906-chess-2', import.meta.url), { type: 'module' });
     thinking = true;
     $('retryComputerBtn').hidden = true;
     worker.onerror = fail;

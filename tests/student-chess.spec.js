@@ -80,7 +80,7 @@ test('computer can play either color and replies only once per turn', async ({ p
 });
 
 test('leaving or undoing during a delayed computer turn cannot apply a stale move', async ({ page }) => {
-  await page.route('**/activities/chess/worker.js', route => route.fulfill({ contentType: 'text/javascript', body: 'self.onmessage = e => setTimeout(() => self.postMessage({id:e.data.id,move:{from:"e7",to:"e5"}}), 450);' }));
+  await page.route('**/activities/chess/worker.js*', route => route.fulfill({ contentType: 'text/javascript', body: 'self.onmessage = e => setTimeout(() => self.postMessage({id:e.data.id,move:{from:"e7",to:"e5"}}), 450);' }));
   await setup(page, { mode: 'computer' }); await move(page, 'e2', 'e4');
   await page.locator('[data-view="learn"]').click();
   await expect(page.locator('#catalogTitle')).toBeVisible();
@@ -167,6 +167,47 @@ test('storage failure is visible and does not erase the game being played', asyn
   await expect(page.locator('#storageStatus')).toContainText('Saving needs attention');
   await expect(page.locator('[data-square="e4"]')).toHaveAttribute('aria-label', 'e4, White pawn');
   expect(await saved(page)).toBeNull();
+});
+
+test('blocked browser storage reports the limitation and keeps the board playable', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new DOMException('Test storage blocked', 'SecurityError'); } });
+  });
+  await page.reload();
+  await expect(page.locator('#board button')).toHaveCount(64);
+  await expect(page.locator('#storageStatus')).toContainText('Browser storage is unavailable.');
+  await move(page, 'e2', 'e4');
+  await expect(page.locator('#moveCount')).toHaveText('2 moves played');
+  await expect(page.locator('#positionStatus')).toContainText('White to move');
+  await page.locator('[data-view="saves"]').click();
+  await expect(page.locator('#saveCards')).toContainText('This browser could not read saved games.');
+  await expect(page.getByRole('button', { name: /^Delete Game/ })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('computer worker reports malformed requests and handles the next valid request', async ({ page }) => {
+  const responses = await page.evaluate(async () => {
+    const worker = new Worker('/activities/chess/worker.js?v=20260906-chess-2', { type: 'module' });
+    const send = data => new Promise((resolve, reject) => {
+      worker.onmessage = event => resolve(event.data);
+      worker.onerror = event => reject(new Error(event.message));
+      worker.postMessage(data);
+    });
+    try {
+      return [await send(null), await send(undefined), await send({ id: 37, moves: null }), await send({ id: 38, moves: [], level: 'starter' })];
+    } finally { worker.terminate(); }
+  });
+  for (const [index, id] of [null, null, 37].entries()) {
+    expect(responses[index]).toEqual({ id, error: 'The computer could not choose a move. Try again.' });
+  }
+  expect(responses[3].id).toBe(38);
+  expect(responses[3].error).toBeUndefined();
+  expect(await page.evaluate(async candidate => {
+    const { Chess } = await import('/activities/chess/core.js');
+    return Boolean(new Chess().move(candidate));
+  }, responses[3].move)).toBe(true);
 });
 
 test('corrupt saves survive viewing and require explicit confirmation to delete', async ({ page }) => {
