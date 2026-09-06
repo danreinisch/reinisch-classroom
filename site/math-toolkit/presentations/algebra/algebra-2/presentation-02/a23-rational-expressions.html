@@ -161,6 +161,21 @@ button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;b
   .frac-block input{width:120px}.frac-line{width:110px}
   .cancel-visual{gap:8px;padding:12px}
 }
+
+[hidden]{display:none!important}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent-blue);outline-offset:3px}
+button:disabled{cursor:default;transform:none}fieldset{border:0;min-width:0}legend{font-weight:600;margin-bottom:10px}
+.examples-toggle{width:100%;background:transparent;text-align:left;border-radius:0}.examples-body.open{max-height:none}
+.example-chip{overflow-wrap:anywhere;max-width:100%}
+.workspace-actions{display:flex;justify-content:flex-end;margin-bottom:12px}.btn-secondary{padding:9px 16px;background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.answer-format{font-size:.82rem;color:var(--text-muted);margin-bottom:16px}
+.answer-field{display:flex;flex-direction:column;gap:5px;max-width:100%}.answer-field label{font-size:.8rem;color:var(--text-muted)}.answer-input{width:220px;max-width:100%}
+.restriction-options{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}.restriction-option{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:8px;padding:10px 14px;max-width:100%;overflow-wrap:anywhere}.restriction-option input{width:18px;height:18px;flex-shrink:0;accent-color:var(--accent)}
+.domain-source{padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:10px}.step-instruction p{margin-top:12px}
+.step-card.completed{opacity:.85}.mono,.result-expression,.result-detail,.ifrac,.math-number{overflow-wrap:anywhere;max-width:100%}.math-number{display:inline-block}.ifrac .num,.ifrac .den{max-width:100%;line-height:1.4}
+.frac-block .fb-label{margin-top:5px}.step-rule-box{overflow-wrap:anywhere}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
@@ -185,44 +200,48 @@ button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;b
 
   <div class="input-section" id="inputSection">
     <h2>✏️ What Type of Problem?</h2>
-    <p class="hint">Select the operation, then enter the numerator(s) and denominator(s).</p>
+    <p class="hint">Each box accepts a polynomial in x with integer coefficients and degree at most 2: for example, 6x, x^2−9, or (x+2)(x−3). Use separate numerator and denominator boxes. Coefficients after expansion must be between −1,000,000 and 1,000,000; use at most 160 characters per box.</p>
 
-    <div class="mode-tabs">
-      <div class="mode-tab" onclick="setMode('simplify')" id="tab-simplify">Simplify</div>
-      <div class="mode-tab" onclick="setMode('multiply')" id="tab-multiply">Multiply</div>
-      <div class="mode-tab" onclick="setMode('divide')" id="tab-divide">Divide</div>
-      <div class="mode-tab" onclick="setMode('restrict')" id="tab-restrict">Find Restrictions</div>
+    <div class="mode-tabs" role="group" aria-label="Problem type">
+      <button type="button" class="mode-tab" aria-pressed="false" onclick="setMode('simplify')" id="tab-simplify">Simplify</button>
+      <button type="button" class="mode-tab" aria-pressed="false" onclick="setMode('multiply')" id="tab-multiply">Multiply</button>
+      <button type="button" class="mode-tab" aria-pressed="false" onclick="setMode('divide')" id="tab-divide">Divide</button>
+      <button type="button" class="mode-tab" aria-pressed="false" onclick="setMode('restrict')" id="tab-restrict">Find Restrictions</button>
     </div>
 
     <!-- Simplify -->
     <div class="mode-panel" id="panel-simplify">
-      <p class="hint">Enter the numerator and denominator to simplify. Use expressions like "6x", "x+3", "x^2-9".</p>
+      <p class="hint">Enter the numerator and denominator. Use x^2 or x² for a square. Original denominator restrictions remain after simplification.</p>
       <div class="frac-input-group">
         <div class="frac-block">
-          <span class="fb-label blue">Numerator</span>
+          <label class="fb-label blue" for="sNum">Numerator</label>
           <input type="text" id="sNum" placeholder='e.g. 4x + 8'>
           <div class="frac-line"></div>
           <input type="text" id="sDen" placeholder='e.g. 2x + 4'>
-          <span class="fb-label orange">Denominator</span>
+          <label class="fb-label orange" for="sDen">Denominator</label>
         </div>
       </div>
     </div>
 
     <!-- Multiply -->
     <div class="mode-panel" id="panel-multiply">
-      <p class="hint">Enter two fractions to multiply.</p>
+      <p class="hint">Enter two rational expressions to multiply. Both original denominators must be nonzero.</p>
       <div class="frac-input-group">
         <div class="frac-block">
           <span class="fb-label blue">Fraction 1</span>
+          <label class="fb-label blue" for="mN1">Fraction 1 numerator</label>
           <input type="text" id="mN1" placeholder='numerator'>
           <div class="frac-line"></div>
+          <label class="fb-label orange" for="mD1">Fraction 1 denominator</label>
           <input type="text" id="mD1" placeholder='denominator'>
         </div>
         <span class="frac-op">×</span>
         <div class="frac-block">
           <span class="fb-label orange">Fraction 2</span>
+          <label class="fb-label blue" for="mN2">Fraction 2 numerator</label>
           <input type="text" id="mN2" placeholder='numerator'>
           <div class="frac-line"></div>
+          <label class="fb-label orange" for="mD2">Fraction 2 denominator</label>
           <input type="text" id="mD2" placeholder='denominator'>
         </div>
       </div>
@@ -230,19 +249,23 @@ button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;b
 
     <!-- Divide -->
     <div class="mode-panel" id="panel-divide">
-      <p class="hint">Enter two fractions to divide (first ÷ second).</p>
+      <p class="hint">Enter first ÷ second. Both original denominators must be nonzero, and the second expression cannot be zero.</p>
       <div class="frac-input-group">
         <div class="frac-block">
           <span class="fb-label blue">Fraction 1</span>
+          <label class="fb-label blue" for="dN1">Fraction 1 numerator</label>
           <input type="text" id="dN1" placeholder='numerator'>
           <div class="frac-line"></div>
+          <label class="fb-label orange" for="dD1">Fraction 1 denominator</label>
           <input type="text" id="dD1" placeholder='denominator'>
         </div>
         <span class="frac-op">÷</span>
         <div class="frac-block">
           <span class="fb-label orange">Fraction 2</span>
+          <label class="fb-label blue" for="dN2">Fraction 2 numerator</label>
           <input type="text" id="dN2" placeholder='numerator'>
           <div class="frac-line"></div>
+          <label class="fb-label orange" for="dD2">Fraction 2 denominator</label>
           <input type="text" id="dD2" placeholder='denominator'>
         </div>
       </div>
@@ -253,56 +276,66 @@ button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;b
       <p class="hint">Enter a rational expression to find the values that make the denominator zero.</p>
       <div class="frac-input-group">
         <div class="frac-block">
-          <span class="fb-label blue">Numerator</span>
+          <label class="fb-label blue" for="rNum">Numerator</label>
           <input type="text" id="rNum" placeholder='e.g. x + 1'>
           <div class="frac-line"></div>
           <input type="text" id="rDen" placeholder='e.g. x^2 - 4'>
-          <span class="fb-label orange">Denominator</span>
+          <label class="fb-label orange" for="rDen">Denominator</label>
         </div>
       </div>
     </div>
 
     <div class="start-row" id="startRow" style="display:none">
-      <button class="btn-primary" onclick="startSolving()">Let's Solve It →</button>
+      <button type="button" class="btn-primary" id="startBtn" onclick="startSolving()">Let's Solve It →</button>
     </div>
-    <div class="error-msg" id="errorMsg"></div>
+    <div class="error-msg" id="errorMsg" role="alert"></div>
 
     <div class="examples-panel">
-      <div class="examples-toggle" onclick="toggleExamples()">
+      <button type="button" class="examples-toggle" id="examplesToggle" aria-expanded="false" aria-controls="examplesBody" onclick="toggleExamples()">
         <span>📋 Try a Practice Problem</span>
-        <span class="toggle-arrow" id="toggleArrow">▼</span>
-      </div>
-      <div class="examples-body" id="examplesBody">
+        <span class="toggle-arrow" id="toggleArrow" aria-hidden="true">▼</span>
+      </button>
+      <div class="examples-body" id="examplesBody" hidden>
         <div class="example-category"><div class="category-label">🟢 Simplify</div><div class="examples">
-          <span class="example-chip" onclick="loadS('4x+8','2x+4')">4x+8 / 2x+4</span>
-          <span class="example-chip" onclick="loadS('6x','3x^2')">6x / 3x²</span>
-          <span class="example-chip" onclick="loadS('x^2-9','x+3')">x²−9 / x+3</span>
-          <span class="example-chip" onclick="loadS('x^2+5x+6','x+2')">x²+5x+6 / x+2</span>
-          <span class="example-chip" onclick="loadS('2x^2-8','2x+4')">2x²−8 / 2x+4</span>
+          <button type="button" class="example-chip" onclick="loadS('4x+8','2x+4')">(4x+8) / (2x+4)</button>
+          <button type="button" class="example-chip" onclick="loadS('6x','3x^2')">(6x) / (3x²)</button>
+          <button type="button" class="example-chip" onclick="loadS('x^2-9','x+3')">(x²-9) / (x+3)</button>
+          <button type="button" class="example-chip" onclick="loadS('x^2+5x+6','x+2')">(x²+5x+6) / (x+2)</button>
+          <button type="button" class="example-chip" onclick="loadS('2x^2-8','2x+4')">(2x²-8) / (2x+4)</button>
+          <button type="button" class="example-chip" onclick="loadS('2x^2','x')">(2x²) / (x)</button>
+          <button type="button" class="example-chip" onclick="loadS('6x^2+5x+1','2x+1')">(6x²+5x+1) / (2x+1)</button>
+          <button type="button" class="example-chip" onclick="loadS('0','x-3')">(0) / (x-3)</button>
         </div></div>
         <div class="example-category"><div class="category-label">🟡 Multiply</div><div class="examples">
-          <span class="example-chip" onclick="loadM('3x','x+2','x+2','6')">3x/(x+2) × (x+2)/6</span>
-          <span class="example-chip" onclick="loadM('x+1','x-3','x-3','x+1')"> (x+1)/(x−3) × (x−3)/(x+1)</span>
-          <span class="example-chip" onclick="loadM('2x','5','10','x^2')">2x/5 × 10/x²</span>
-          <span class="example-chip" onclick="loadM('x^2-4','3x','9x^2','x+2')">(x²−4)/3x × 9x²/(x+2)</span>
+          <button type="button" class="example-chip" onclick="loadM('3x','x+2','x+2','6')">(3x) / (x+2) × (x+2) / (6)</button>
+          <button type="button" class="example-chip" onclick="loadM('x+1','x-3','x-3','x+1')">(x+1) / (x-3) × (x-3) / (x+1)</button>
+          <button type="button" class="example-chip" onclick="loadM('2x','5','10','x^2')">(2x) / (5) × (10) / (x²)</button>
+          <button type="button" class="example-chip" onclick="loadM('x^2-4','3x','9x^2','x+2')">(x²-4) / (3x) × (9x²) / (x+2)</button>
+          <button type="button" class="example-chip" onclick="loadM('x^2+1','x-1','x-1','x^2+1')">(x²+1) / (x-1) × (x-1) / (x²+1)</button>
         </div></div>
         <div class="example-category"><div class="category-label">🟠 Divide</div><div class="examples">
-          <span class="example-chip" onclick="loadD('4x','3','8x^2','9')">4x/3 ÷ 8x²/9</span>
-          <span class="example-chip" onclick="loadD('x+5','x','x+5','x^2')"> (x+5)/x ÷ (x+5)/x²</span>
-          <span class="example-chip" onclick="loadD('x^2-1','x+3','x-1','x+3')">(x²−1)/(x+3) ÷ (x−1)/(x+3)</span>
-          <span class="example-chip" onclick="loadD('6x','x-2','3','x-2')">6x/(x−2) ÷ 3/(x−2)</span>
+          <button type="button" class="example-chip" onclick="loadD('4x','3','8x^2','9')">(4x) / (3) ÷ (8x²) / (9)</button>
+          <button type="button" class="example-chip" onclick="loadD('x+5','x','x+5','x^2')">(x+5) / (x) ÷ (x+5) / (x²)</button>
+          <button type="button" class="example-chip" onclick="loadD('x^2-1','x+3','x-1','x+3')">(x²-1) / (x+3) ÷ (x-1) / (x+3)</button>
+          <button type="button" class="example-chip" onclick="loadD('6x','x-2','3','x-2')">(6x) / (x-2) ÷ (3) / (x-2)</button>
+          <button type="button" class="example-chip" onclick="loadD('1','x-2','x+1','x-2')">(1) / (x-2) ÷ (x+1) / (x-2)</button>
         </div></div>
         <div class="example-category"><div class="category-label">🔴 Find Restrictions</div><div class="examples">
-          <span class="example-chip" onclick="loadR('x+1','x-3')">x+1 / x−3</span>
-          <span class="example-chip" onclick="loadR('5','x^2-4')">5 / x²−4</span>
-          <span class="example-chip" onclick="loadR('2x','x^2+x-6')">2x / x²+x−6</span>
-          <span class="example-chip" onclick="loadR('1','3x')">1 / 3x</span>
+          <button type="button" class="example-chip" onclick="loadR('x+1','x-3')">(x+1) / (x-3)</button>
+          <button type="button" class="example-chip" onclick="loadR('5','x^2-4')">(5) / (x²-4)</button>
+          <button type="button" class="example-chip" onclick="loadR('2x','x^2+x-6')">(2x) / (x²+x-6)</button>
+          <button type="button" class="example-chip" onclick="loadR('1','3x')">(1) / (3x)</button>
+          <button type="button" class="example-chip" onclick="loadR('1','x^2+1')">(1) / (x²+1)</button>
+          <button type="button" class="example-chip" onclick="loadR('1','x^2-2')">(1) / (x²-2)</button>
+          <button type="button" class="example-chip" onclick="loadR('1','(x-1)^2')">(1) / ((x-1)²)</button>
         </div></div>
       </div>
     </div>
   </div>
 
   <div class="workspace" id="workspace">
+    <div class="workspace-actions"><button type="button" class="btn-secondary" onclick="resetAll()">Start Over</button></div>
+    <p class="answer-format" id="answerFormat">Enter exact polynomial answers with integer coefficients. Factored and expanded forms are accepted; answer polynomials may have degree up to 4 after multiplication.</p>
     <div class="problem-display" id="problemDisplay"></div>
     <div id="stepsContainer"></div>
     <div class="result-section" id="resultSection">
@@ -316,422 +349,286 @@ button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;b
 </div>
 
 <script>
-// ========== EXPRESSION ENGINE ==========
-// Parses linear/quadratic expressions for factoring and GCF
-function parseExpr(s){
-  s=s.replace(/\s+/g,'').replace(/−/g,'-');
-  // Check for known factored forms: (x+a)(x+b)
-  // Try to parse as polynomial ax^2+bx+c or ax+b or constant
-  var m;
-  // ax^2+bx+c
-  m=s.match(/^(-?\d*)x\^2([+-]\d*)x([+-]\d+)$/);
-  if(m){var a2=m[1]===''||m[1]==='+'?1:m[1]==='-'?-1:parseInt(m[1]);var b2=m[2]===''||m[2]==='+'?1:m[2]==='-'?-1:parseInt(m[2]);return{type:'quad',a:a2,b:b2,c:parseInt(m[3]),str:s}}
-  // ax^2+bx
-  m=s.match(/^(-?\d*)x\^2([+-]\d*)x$/);
-  if(m){var a3=m[1]===''||m[1]==='+'?1:m[1]==='-'?-1:parseInt(m[1]);var b3=m[2]===''||m[2]==='+'?1:m[2]==='-'?-1:parseInt(m[2]);return{type:'quad',a:a3,b:b3,c:0,str:s}}
-  // ax^2+c
-  m=s.match(/^(-?\d*)x\^2([+-]\d+)$/);
-  if(m){var a4=m[1]===''||m[1]==='+'?1:m[1]==='-'?-1:parseInt(m[1]);return{type:'quad',a:a4,b:0,c:parseInt(m[2]),str:s}}
-  // ax^2
-  m=s.match(/^(-?\d*)x\^2$/);
-  if(m){var a5=m[1]===''||m[1]==='+'?1:m[1]==='-'?-1:parseInt(m[1]);return{type:'quad',a:a5,b:0,c:0,str:s}}
-  // ax+b
-  m=s.match(/^(-?\d*)x([+-]\d+)$/);
-  if(m){var a6=m[1]===''||m[1]==='+'?1:m[1]==='-'?-1:parseInt(m[1]);return{type:'linear',a:a6,b:parseInt(m[2]),str:s}}
-  // ax
-  m=s.match(/^(-?\d*)x$/);
-  if(m){var a7=m[1]===''||m[1]==='+'?1:m[1]==='-'?-1:parseInt(m[1]);return{type:'linear',a:a7,b:0,str:s}}
-  // constant
-  m=s.match(/^(-?\d+)$/);
-  if(m) return{type:'const',val:parseInt(m[1]),str:s};
-  return{type:'unknown',str:s};
+// Polynomial coefficients stay exact integers, stored from constant term upward.
+// Inputs are linear/quadratic; multiplying two inputs can produce degree four.
+const COEFFICIENT_LIMIT = 1000000n;
+let mode = null, S = null, stepsData = [], currentStep = 0, workspaceVersion = 0;
+function abs(n) { return n < 0n ? -n : n; }
+function gcd(a,b) { a=abs(a);b=abs(b);while(b){const r=a%b;a=b;b=r;}return a; }
+function trim(p) { p=p.slice();while(p.length>1&&p[p.length-1]===0n)p.pop();return p; }
+function isZero(p) { return p.length===1&&p[0]===0n; }
+function samePoly(a,b) { return a.length===b.length&&a.every((v,i)=>v===b[i]); }
+function polyAdd(a,b) { return trim(Array.from({length:Math.max(a.length,b.length)},(_,i)=>(a[i]||0n)+(b[i]||0n))); }
+function polyScale(p,k) { return trim(p.map(v=>v*k)); }
+function polyMultiply(a,b) {
+  const out=Array(a.length+b.length-1).fill(0n);
+  a.forEach((v,i)=>b.forEach((w,j)=>{out[i+j]+=v*w;}));return trim(out);
 }
-
-function factorExpr(p){
-  if(p.type==='const') return[{type:'const',val:p.val,str:''+p.val}];
-  if(p.type==='linear'){
-    // GCF of coefficients
-    var g=gcd(Math.abs(p.a),Math.abs(p.b));
-    if(g>1&&p.b!==0) return[{type:'const',val:g,str:''+g},{type:'linear',a:p.a/g,b:p.b/g,str:fmtLinear(p.a/g,p.b/g)}];
-    return[{type:'linear',a:p.a,b:p.b,str:fmtLinear(p.a,p.b)}];
-  }
-  if(p.type==='quad'){
-    // Try difference of squares: a=1,b=0,c<0
-    if(p.a===1&&p.b===0&&p.c<0){
-      var sq=Math.sqrt(-p.c);
-      if(Number.isInteger(sq)) return[{type:'linear',a:1,b:sq,str:fmtLinear(1,sq)},{type:'linear',a:1,b:-sq,str:fmtLinear(1,-sq)}];
+function content(p) { return p.reduce((g,v)=>gcd(g,v),0n); }
+function primitive(p) {
+  if(isZero(p))return [0n];const divisor=content(p)*(p[p.length-1]<0n?-1n:1n);return p.map(v=>v/divisor);
+}
+// Primitive pseudo-remainders avoid floating point and preserve the gcd over Q[x].
+function polyGCD(a,b) {
+  a=primitive(a);b=primitive(b);
+  while(!isZero(b)){
+    let r=a;
+    while(!isZero(r)&&r.length>=b.length){
+      const offset=r.length-b.length,lead=r[r.length-1];
+      r=polyAdd(polyScale(r,b[b.length-1]),Array(offset).fill(0n).concat(polyScale(b,-lead)));
+      r=primitive(r);
     }
-    // Factor ax^2+bx+c where a=1
-    if(p.a===1&&p.c!==0){
-      // Find two numbers that multiply to c and add to b
-      for(var i=-Math.abs(p.c*2);i<=Math.abs(p.c*2);i++){
-        if(i===0)continue;
-        if(p.c%i===0){var j=p.c/i;if(i+j===p.b)return[{type:'linear',a:1,b:i,str:fmtLinear(1,i)},{type:'linear',a:1,b:j,str:fmtLinear(1,j)}]}
-      }
+    a=b;b=r;
+  }
+  return primitive(a);
+}
+function exactDivide(a,b) {
+  if(isZero(b))throw new Error('Cannot divide by the zero polynomial.');
+  let r=a.slice();const q=Array(Math.max(1,a.length-b.length+1)).fill(0n);
+  while(!isZero(r)&&r.length>=b.length){
+    const offset=r.length-b.length,lead=r[r.length-1],divisor=b[b.length-1];
+    if(lead%divisor!==0n)throw new Error('This is not an integer-polynomial factor.');
+    const term=lead/divisor;q[offset]+=term;
+    r=polyAdd(r,Array(offset).fill(0n).concat(polyScale(b,-term)));
+  }
+  if(!isZero(r))throw new Error('This is not a factor of the entire polynomial.');
+  return trim(q);
+}
+function reduceExpression(n,d) {
+  if(isZero(d))throw new Error('A denominator is identically zero, so the original expression is undefined for every x.');
+  const common=polyScale(polyGCD(n,d),gcd(content(n),content(d)));
+  let numerator=exactDivide(n,common),denominator=exactDivide(d,common);
+  if(denominator[denominator.length-1]<0n){numerator=polyScale(numerator,-1n);denominator=polyScale(denominator,-1n);}
+  return {numerator,denominator,common};
+}
+function parseExpr(raw,answer=false) {
+  const source=raw.trim().replace(/−/g,'-').replace(/²/g,'^2').replace(/[×·]/g,'*').replace(/X/g,'x');
+  const maxDegree=answer?4:2,limit=answer?10n**30n:COEFFICIENT_LIMIT;
+  if(!source||source.length>(answer?240:160))throw new Error('Enter an expression of '+(answer?'1–240':'1–160')+' characters.');
+  const tokens=[];
+  for(let i=0;i<source.length;){
+    const char=source[i];if(/\s/.test(char)){i++;continue;}
+    if(/[0-9]/.test(char)){let j=i+1;while(j<source.length&&/[0-9]/.test(source[j]))j++;const value=BigInt(source.slice(i,j));if(value>limit)throw new Error('A coefficient is too large.');tokens.push({type:'number',value});i=j;continue;}
+    if('x+-*^()'.includes(char)){tokens.push({type:char});i++;continue;}
+    throw new Error('Use only x, integer coefficients, +, −, multiplication, parentheses, and positive integer powers. Put the numerator and denominator in separate boxes.');
+  }
+  let position=0,depth=0;
+  const peek=()=>tokens[position]?.type;
+  const bound=p=>{if(p.length-1>maxDegree)throw new Error('Each '+(answer?'answer':'input')+' polynomial must have degree at most '+maxDegree+'.');if(p.some(v=>abs(v)>limit))throw new Error('An expanded coefficient is too large'+(answer?'.':' (maximum absolute value 1,000,000).'));return p;};
+  function atom(){
+    const token=tokens[position++];if(!token)throw new Error('The expression is incomplete.');
+    if(token.type==='number')return [token.value];
+    if(token.type==='x')return [0n,1n];
+    if(token.type==='('){if(++depth>12)throw new Error('Use no more than 12 nested parentheses.');const p=sum();if(peek()!==')')throw new Error('Close every opening parenthesis.');position++;depth--;return p;}
+    throw new Error('Expected a number, x, or an opening parenthesis.');
+  }
+  function power(){
+    let p=atom();if(peek()==='^'){
+      position++;const token=tokens[position++];
+      if(token?.type!=='number'||token.value<1n||token.value>BigInt(maxDegree))throw new Error('Use positive integer powers from 1 to '+maxDegree+'.');
+      const base=p;p=[1n];for(let i=0n;i<token.value;i++)p=bound(polyMultiply(p,base));
     }
-    // GCF factor out
-    if(p.a!==0){
-      var g2=gcd(gcd(Math.abs(p.a),Math.abs(p.b)),Math.abs(p.c)||Math.abs(p.a));
-      if(g2>1){
-        var inner={type:p.c/g2===0&&p.b/g2===0?'linear':'quad',a:p.a/g2,b:p.b/g2,c:p.c/g2};
-        var innerFactors=factorExpr(inner);
-        return[{type:'const',val:g2,str:''+g2}].concat(innerFactors);
-      }
+    return p;
+  }
+  function unary(){if(peek()==='+'||peek()==='-'){const sign=peek();position++;return sign==='-'?polyScale(unary(),-1n):unary();}return power();}
+  function product(){let p=unary();while(peek()==='*'||peek()==='x'||peek()==='('){if(peek()==='*')position++;p=bound(polyMultiply(p,unary()));}return p;}
+  function sum(){let p=product();while(peek()==='+'||peek()==='-'){const sign=peek();position++;p=bound(polyAdd(p,polyScale(product(),sign==='-'?-1n:1n)));}return p;}
+  const result=bound(sum());if(position!==tokens.length)throw new Error('Unexpected text or missing multiplication sign. Check every term and parenthesis.');return result;
+}
+function polyText(p) {
+  if(isZero(p))return '0';const terms=[];
+  for(let power=p.length-1;power>=0;power--){const value=p[power];if(value===0n)continue;const magnitude=abs(value);const term=(power===0||magnitude!==1n?String(magnitude):'')+(power===0?'':power===1?'x':'x^'+power);terms.push((value<0n?'-':terms.length?'+':'')+term);}
+  return terms.join('');
+}
+function fraction(n,d) { if(d<0n){n=-n;d=-d;}const g=gcd(n,d);return {n:n/g,d:d/g}; }
+function fractionText(value) { return value.d===1n?String(value.n):value.n+'/'+value.d; }
+function squareRoot(n) {
+  if(n<0n)throw new Error('A real square root requires a nonnegative value.');
+  if(n<2n)return n;let x=n,y=(x+1n)/2n;while(y<x){x=y;y=(x+n/x)/2n;}return x;
+}
+function factorExpr(p) {
+  if(p.length===1)return {scalar:p[0],factors:[]};
+  const scalar=content(p)*(p[p.length-1]<0n?-1n:1n),q=p.map(v=>v/scalar);
+  if(q.length===2)return {scalar,factors:[q]};
+  const [c,b,a]=q,discriminant=b*b-4n*a*c;
+  if(discriminant>=0n){const root=squareRoot(discriminant);if(root*root===discriminant){const value=fraction(-b-root,2n*a);const first=[-value.n,value.d];return {scalar,factors:[first,exactDivide(q,first)]};}}
+  return {scalar,factors:[q]};
+}
+function factorText(f) {
+  if(f.scalar===0n)return '0';const pieces=[];
+  if(f.scalar!==1n||f.factors.length===0)pieces.push(String(f.scalar));
+  f.factors.forEach(p=>pieces.push(p.length===2&&p[0]===0n&&p[1]===1n?'x':'('+polyText(p)+')'));
+  return pieces.join(' · ');
+}
+function rationalRoot(n,d) { const value=fraction(n,d);return {kind:'rational',...value,key:'q:'+fractionText(value),text:fractionText(value)}; }
+function findZeros(p) {
+  if(isZero(p))throw new Error('The zero polynomial is zero for every x.');
+  if(p.length===1)return [];
+  const q=primitive(p);if(q.length===2)return [rationalRoot(-q[0],q[1])];
+  if(q.length!==3)throw new Error('Restriction inputs must be linear or quadratic.');
+  const [c,b,a]=q,discriminant=b*b-4n*a*c;if(discriminant<0n)return [];
+  const root=squareRoot(discriminant);
+  if(root*root===discriminant){const first=rationalRoot(-b-root,2n*a);return discriminant===0n?[first]:[first,rationalRoot(-b+root,2n*a)];}
+  return [-1,1].map(sign=>({kind:'irrational',poly:q,discriminant,sign,key:'s:'+q.join(',')+':'+sign,text:`(${-b} ${sign<0?'−':'+'} √${discriminant})/${2n*a}`}));
+}
+function collectRestrictions(sources) {
+  const roots=new Map();sources.forEach(source=>{source.roots=findZeros(source.poly);source.roots.forEach(root=>roots.set(root.key,root));});
+  return Array.from(roots.values());
+}
+function expressionText(n,d) { return samePoly(d,[1n])?polyText(n):'('+polyText(n)+') / ('+polyText(d)+')'; }
+function solveProblem(operation,parts) {
+  const [n1,d1,n2,d2]=parts;
+  if(isZero(d1)||d2&&isZero(d2))throw new Error('An original denominator is identically zero. The problem is undefined for every x; there is no valid cancellation.');
+  if(operation==='divide'&&isZero(n2))throw new Error('The divisor is identically zero wherever it is defined. Division by zero is undefined.');
+  const sources=[{name:parts.length===2?'Original denominator':'First original denominator',poly:d1}];
+  if(parts.length===4)sources.push({name:'Second original denominator',poly:d2});
+  if(operation==='divide')sources.push({name:'Divisor numerator (the divisor must be nonzero)',poly:n2});
+  const restrictions=collectRestrictions(sources);
+  const rawN=parts.length===2?n1:polyMultiply(n1,operation==='divide'?d2:n2);
+  const rawD=parts.length===2?d1:polyMultiply(d1,operation==='divide'?n2:d2);
+  return {parts,sources,restrictions,rawN,rawD,...reduceExpression(rawN,rawD)};
+}
+function escHtml(value) { return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function exprDisplay(value) { return escHtml(value).replace(/\^([234])/g,'<sup>$1</sup>'); }
+function inlineFrac(n,d) { return `<span class="math-number"><span class="sr-only">(${escHtml(n)}) over (${escHtml(d)})</span><span class="ifrac" aria-hidden="true"><span class="num">${exprDisplay(n)}</span><span class="fbar"></span><span class="den">${exprDisplay(d)}</span></span></span>`; }
+function math(text) { return '<span class="mono">'+exprDisplay(text)+'</span>'; }
+function restrictionText(roots) { return roots.length?roots.map(root=>'x ≠ '+root.text).join('; '):'No excluded real values'; }
+function clearError() { const el=document.getElementById('errorMsg');el.textContent='';el.classList.remove('show'); }
+function showError(message) { const el=document.getElementById('errorMsg');el.textContent=message;el.classList.add('show'); }
+function setMode(next) {
+  if(S||!['simplify','multiply','divide','restrict'].includes(next))return;mode=next;clearError();
+  document.querySelectorAll('.mode-tab').forEach(tab=>{const selected=tab.id==='tab-'+next;tab.classList.toggle('selected',selected);tab.setAttribute('aria-pressed',String(selected));});
+  document.querySelectorAll('.mode-panel').forEach(panel=>panel.classList.toggle('active',panel.id==='panel-'+next));document.getElementById('startRow').style.display='flex';
+}
+function loadValues(next,ids,values) { if(S)return;setMode(next);ids.forEach((id,i)=>{document.getElementById(id).value=values[i];});document.getElementById('startBtn').focus(); }
+function loadS(n,d) { loadValues('simplify',['sNum','sDen'],[n,d]); }
+function loadM(n1,d1,n2,d2) { loadValues('multiply',['mN1','mD1','mN2','mD2'],[n1,d1,n2,d2]); }
+function loadD(n1,d1,n2,d2) { loadValues('divide',['dN1','dD1','dN2','dD2'],[n1,d1,n2,d2]); }
+function loadR(n,d) { loadValues('restrict',['rNum','rDen'],[n,d]); }
+function toggleExamples() { const body=document.getElementById('examplesBody');body.hidden=!body.hidden;body.classList.toggle('open',!body.hidden);document.getElementById('toggleArrow').classList.toggle('open',!body.hidden);document.getElementById('examplesToggle').setAttribute('aria-expanded',String(!body.hidden)); }
+function info(title,proc,instruction) { stepsData.push({type:'info',title,proc,instruction}); }
+function pairStep(title,proc,instruction,n,d,kind) { stepsData.push({type:'pair',title,proc,instruction,n,d,kind}); }
+function buildSteps() {
+  const {parts,sources,restrictions,rawN,rawD,numerator,denominator,common}=S;
+  info(mode==='restrict'?'Identify the Domain':'Identify the Operation','identify',mode==='divide'?'Divide by multiplying by the reciprocal of the <strong>second</strong> fraction. Both original denominators must be nonzero, and the divisor itself must be nonzero.':mode==='multiply'?'Multiply the numerators and multiply the denominators. Factor first to find common factors. Both original denominators must be nonzero.':mode==='restrict'?'Find the real x-values that make the <strong>original denominator</strong> zero. Those values are excluded, even if a factor later cancels.':'Simplify by dividing out factors shared by the <strong>entire numerator and denominator</strong>. Original denominator restrictions remain after cancellation.');
+  if(mode==='divide')pairStep('Write the Reciprocal','factor','Swap the second fraction’s numerator and denominator. Enter the original expressions in their new positions, without simplifying yet.',parts[3],parts[2],'reciprocal');
+  const names=parts.length===2?['Numerator','Denominator']:['First numerator','First denominator','Second numerator','Second denominator'];
+  parts.forEach((poly,i)=>{
+    if(mode==='restrict'&&i!==1)return;
+    const factors=factorExpr(poly);let note='';
+    if(isZero(poly))note='This is the zero polynomial.';
+    else if(poly.length===1)note='This is a constant.';
+    else if(factors.factors.some(f=>f.length===3))note='The quadratic factor has no rational linear factors, so keep it intact.';
+    else note='Expand this product to check that every coefficient and power is preserved.';
+    info('Factor '+names[i],'factor',`${math(polyText(poly))} = <strong>${math(factorText(factors))}</strong><br>${note}`);
+  });
+  const sourceWork=sources.map(source=>{
+    const p=primitive(source.poly);let explanation;
+    if(p.length===1)explanation='This is a nonzero constant, so it excludes no values.';
+    else if(p.length===2)explanation=`Solving ${math(polyText(p)+' = 0')} gives ${source.roots.map(root=>math('x = '+root.text)).join(' or ')}.`;
+    else{
+      const [c,b,a]=p,disc=b*b-4n*a*c;
+      explanation=`For ${math(polyText(p)+' = 0')}, the discriminant b² − 4ac is ${disc}. `+(disc<0n?'It is negative, so this quadratic has no real zeros.':`The quadratic formula gives ${source.roots.map(root=>math('x = '+root.text)).join(' or ')}. These are exact values.`);
     }
-    // x common factor: ax^2+bx = x(ax+b)
-    if(p.c===0&&p.b!==0){
-      return[{type:'linear',a:1,b:0,str:'x'},{type:'linear',a:p.a,b:p.b,str:fmtLinear(p.a,p.b)}];
-    }
-    return[{type:'quad',a:p.a,b:p.b,c:p.c,str:p.str}];
-  }
-  return[{type:'unknown',str:p.str}];
-}
-
-function fmtLinear(a,b){
-  var s='';
-  if(a===1)s='x';else if(a===-1)s='-x';else s=a+'x';
-  if(b>0)s+='+'+b;else if(b<0)s+=''+b;
-  return s;
-}
-
-function gcd(a,b){a=Math.abs(a);b=Math.abs(b);if(b===0)return a;while(b){var t=b;b=a%t;a=t}return a}
-
-function exprDisplay(s){return s.replace(/\^2/g,'²').replace(/\*/g,'·')}
-
-function inlineFrac(n,d){return'<span class="ifrac"><span class="num">'+exprDisplay(n)+'</span><span class="fbar"></span><span class="den">'+exprDisplay(d)+'</span></span>'}
-
-// Find zeros of denominator for restrictions
-function findZeros(p){
-  if(p.type==='const')return[];
-  if(p.type==='linear'){
-    if(p.a===0)return[];
-    return[{val:-p.b/p.a,str:p.b===0?'0':(-p.b/p.a)%1===0?''+(-p.b/p.a):(-p.b)+'/'+p.a}];
-  }
-  if(p.type==='quad'){
-    var disc=p.b*p.b-4*p.a*p.c;
-    if(disc<0)return[];
-    if(disc===0){var r=-p.b/(2*p.a);return[{val:r,str:r%1===0?''+r:(-p.b)+'/'+(2*p.a)}]}
-    var sq=Math.sqrt(disc);
-    if(!Number.isInteger(sq))return[{val:(-p.b+sq)/(2*p.a),str:'('+(-p.b)+'+√'+disc+')/'+(2*p.a)},{val:(-p.b-sq)/(2*p.a),str:'('+(-p.b)+'-√'+disc+')/'+(2*p.a)}];
-    var r1=(-p.b+sq)/(2*p.a),r2=(-p.b-sq)/(2*p.a);
-    return[{val:r1,str:r1%1===0?''+r1:(-p.b+sq)+'/'+(2*p.a)},{val:r2,str:r2%1===0?''+r2:(-p.b-sq)+'/'+(2*p.a)}];
-  }
-  return[];
-}
-
-function fmtNum(n){if(Number.isInteger(n))return''+n;return n.toFixed(4).replace(/\.?0+$/,'')}
-
-// ========== UI ==========
-var mode=null,S={},stepsData=[],currentStep=0;
-
-function setMode(m){
-  mode=m;
-  document.querySelectorAll('.mode-tab').forEach(function(t){t.classList.remove('selected')});
-  document.getElementById('tab-'+m).classList.add('selected');
-  document.querySelectorAll('.mode-panel').forEach(function(p){p.classList.remove('active')});
-  document.getElementById('panel-'+m).classList.add('active');
-  document.getElementById('startRow').style.display='flex';
-}
-
-function loadS(n,d){setMode('simplify');document.getElementById('sNum').value=n;document.getElementById('sDen').value=d}
-function loadM(n1,d1,n2,d2){setMode('multiply');document.getElementById('mN1').value=n1;document.getElementById('mD1').value=d1;document.getElementById('mN2').value=n2;document.getElementById('mD2').value=d2}
-function loadD(n1,d1,n2,d2){setMode('divide');document.getElementById('dN1').value=n1;document.getElementById('dD1').value=d1;document.getElementById('dN2').value=n2;document.getElementById('dD2').value=d2}
-function loadR(n,d){setMode('restrict');document.getElementById('rNum').value=n;document.getElementById('rDen').value=d}
-
-function toggleExamples(){document.getElementById('examplesBody').classList.toggle('open');document.getElementById('toggleArrow').classList.toggle('open')}
-function showError(msg){var el=document.getElementById('errorMsg');el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show')},4000)}
-
-function startSolving(){
-  if(!mode){showError('Select a problem type first.');return}
-  stepsData=[];currentStep=0;S={mode:mode};
-  var fn={simplify:startSimplify,multiply:startMultiply,divide:startDivide,restrict:startRestrict};
-  fn[mode]();
-}
-function launchWorkspace(){
-  document.getElementById('inputSection').style.display='none';
-  document.getElementById('workspace').classList.add('visible');
-  document.getElementById('resultSection').classList.remove('visible');
-  document.getElementById('stepsContainer').innerHTML='';
-  document.querySelectorAll('.proc-step').forEach(function(s){s.classList.remove('active','done')});
-  showStep(0);
-}
-
-// =========== 1. SIMPLIFY ===========
-function startSimplify(){
-  var numStr=document.getElementById('sNum').value.trim(),denStr=document.getElementById('sDen').value.trim();
-  if(!numStr||!denStr){showError('Enter both numerator and denominator.');return}
-  var numP=parseExpr(numStr),denP=parseExpr(denStr);
-  var numF=factorExpr(numP),denF=factorExpr(denP);
-  var numFStr=numF.map(function(f){return f.str}).join(' · ');
-  var denFStr=denF.map(function(f){return f.str}).join(' · ');
-
-  // Find common factors
-  var numUsed=numF.map(function(){return false}),denUsed=denF.map(function(){return false});
-  var cancelled=[];
-  for(var i=0;i<numF.length;i++){
-    for(var j=0;j<denF.length;j++){
-      if(!numUsed[i]&&!denUsed[j]&&numF[i].str===denF[j].str){
-        numUsed[i]=true;denUsed[j]=true;cancelled.push(numF[i].str);break;
-      }
-    }
-  }
-  // Also check numeric GCF between const factors
-  var numConsts=numF.filter(function(f,i){return f.type==='const'&&!numUsed[i]});
-  var denConsts=denF.filter(function(f,j){return f.type==='const'&&!denUsed[j]});
-
-  var remainNum=numF.filter(function(f,i){return!numUsed[i]}).map(function(f){return f.str});
-  var remainDen=denF.filter(function(f,j){return!denUsed[j]}).map(function(f){return f.str});
-  if(remainNum.length===0)remainNum=['1'];
-  if(remainDen.length===0)remainDen=['1'];
-
-  var resultNum=remainNum.join(' · '),resultDen=remainDen.join(' · ');
-  var resultStr=resultDen==='1'?resultNum:resultNum+' / '+resultDen;
-
-  // Restrictions
-  var zeros=findZeros(denP);
-  var restrictStr=zeros.length?zeros.map(function(z){return'x ≠ '+z.str}).join(', '):'none';
-
-  Object.assign(S,{numStr:numStr,denStr:denStr,numFStr:numFStr,denFStr:denFStr,cancelled:cancelled,resultNum:resultNum,resultDen:resultDen,resultStr:resultStr,restrictStr:restrictStr});
-
-  document.getElementById('problemDisplay').innerHTML=inlineFrac(numStr,denStr);
-
-  stepsData.push({title:'Identify the Rational Expression',proc:'identify',type:'info',instruction:'A rational expression is a fraction with polynomials. We need to:<br>1. Factor the numerator and denominator<br>2. Cancel common factors<div class="step-rule-box" style="margin-top:10px">'+inlineFrac(exprDisplay(numStr),exprDisplay(denStr))+'</div>'});
-
-  stepsData.push({title:'Factor the Numerator',proc:'factor',type:'info',instruction:'Factor <span class="mono" style="color:var(--accent-blue)">'+exprDisplay(numStr)+'</span>:<div class="step-rule-box" style="margin-top:10px"><span class="mono" style="color:var(--accent-blue)">'+exprDisplay(numFStr)+'</span></div>'});
-
-  stepsData.push({title:'Factor the Denominator',proc:'factor',type:'info',instruction:'Factor <span class="mono" style="color:var(--accent-orange)">'+exprDisplay(denStr)+'</span>:<div class="step-rule-box" style="margin-top:10px"><span class="mono" style="color:var(--accent-orange)">'+exprDisplay(denFStr)+'</span></div>'});
-
-  if(cancelled.length>0){
-    stepsData.push({title:'Cancel Common Factors',proc:'cancel',type:'choice',instruction:'Which factor(s) appear in <strong>both</strong> the numerator and denominator?<br>'+inlineFrac(exprDisplay(numFStr),exprDisplay(denFStr)),question:'Common factor:',answer:exprDisplay(cancelled[0]),options:shuffleUniq([exprDisplay(cancelled[0])].concat(remainNum.slice(0,1).map(exprDisplay)).concat(remainDen.slice(0,1).map(exprDisplay)).concat(['1']))});
-  } else {
-    stepsData.push({title:'Check for Common Factors',proc:'cancel',type:'info',instruction:'No common factors found — the expression is already in simplest form.'});
-  }
-
-  if(zeros.length>0){
-    stepsData.push({title:'State Restrictions',proc:'cancel',type:'info',instruction:'The denominator cannot equal zero. Set each denominator factor = 0 to find <strong>restricted values</strong>:<div style="margin-top:10px">'+zeros.map(function(z){return'<span class="restrict-badge">x ≠ '+z.str+'</span>'}).join(' ')+'</div>'});
-  }
-
-  stepsData.push({title:'Simplified Expression',proc:'answer',type:'info',instruction:'<div style="font-size:1.2rem;margin:12px 0">'+(resultDen==='1'?'<span class="mono" style="color:var(--success)">'+exprDisplay(resultNum)+'</span>':inlineFrac('<span style="color:var(--success)">'+exprDisplay(resultNum)+'</span>','<span style="color:var(--success)">'+exprDisplay(resultDen)+'</span>'))+'</div>'+(zeros.length?'<div style="font-size:.85rem;color:var(--text-dim)">where '+restrictStr+'</div>':'')});
-  launchWorkspace();
-}
-
-// =========== 2. MULTIPLY ===========
-function startMultiply(){
-  var n1=document.getElementById('mN1').value.trim(),d1=document.getElementById('mD1').value.trim();
-  var n2=document.getElementById('mN2').value.trim(),d2=document.getElementById('mD2').value.trim();
-  if(!n1||!d1||!n2||!d2){showError('Enter all four parts.');return}
-
-  var nF1=factorExpr(parseExpr(n1)),dF1=factorExpr(parseExpr(d1));
-  var nF2=factorExpr(parseExpr(n2)),dF2=factorExpr(parseExpr(d2));
-  var allNum=nF1.concat(nF2),allDen=dF1.concat(dF2);
-  var allNumStr=allNum.map(function(f){return f.str}).join(' · ');
-  var allDenStr=allDen.map(function(f){return f.str}).join(' · ');
-
-  // Cancel
-  var nUsed=allNum.map(function(){return false}),dUsed=allDen.map(function(){return false});
-  var cancelled=[];
-  for(var i=0;i<allNum.length;i++){
-    for(var j=0;j<allDen.length;j++){
-      if(!nUsed[i]&&!dUsed[j]&&allNum[i].str===allDen[j].str){
-        nUsed[i]=true;dUsed[j]=true;cancelled.push(allNum[i].str);break;
-      }
-    }
-  }
-  var rn=allNum.filter(function(f,i){return!nUsed[i]}).map(function(f){return f.str});
-  var rd=allDen.filter(function(f,j){return!dUsed[j]}).map(function(f){return f.str});
-  if(rn.length===0)rn=['1'];if(rd.length===0)rd=['1'];
-  var resultStr=rd.join('·')==='1'?rn.join(' · '):rn.join(' · ')+' / '+rd.join(' · ');
-
-  Object.assign(S,{n1:n1,d1:d1,n2:n2,d2:d2,allNumStr:allNumStr,allDenStr:allDenStr,cancelled:cancelled,rn:rn,rd:rd,resultStr:resultStr});
-  document.getElementById('problemDisplay').innerHTML=inlineFrac(n1,d1)+' <span style="color:var(--accent);font-weight:700;font-size:1.3rem">×</span> '+inlineFrac(n2,d2);
-
-  stepsData.push({title:'Rule for Multiplying',proc:'identify',type:'info',instruction:'To multiply rational expressions: multiply numerators together, multiply denominators together, then simplify.<div class="step-rule-box" style="margin-top:10px">'+inlineFrac('N₁ · N₂','D₁ · D₂')+'</div>'});
-  stepsData.push({title:'Factor Everything',proc:'factor',type:'info',instruction:'Factor each piece before multiplying:<div class="step-rule-box" style="margin-top:10px">'+inlineFrac(exprDisplay(allNumStr),exprDisplay(allDenStr))+'</div>'});
-
-  if(cancelled.length>0){
-    var howMany=cancelled.length;
-    stepsData.push({title:'Cancel Common Factors',proc:'cancel',type:'numeric',instruction:'Look across the entire numerator and denominator for matching factors to cancel.<br>'+inlineFrac(exprDisplay(allNumStr),exprDisplay(allDenStr))+'<br><br>How many factors can be cancelled?',question:'# cancelled =',answer:howMany});
-  } else {
-    stepsData.push({title:'Check for Common Factors',proc:'cancel',type:'info',instruction:'No common factors to cancel.'});
-  }
-
-  stepsData.push({title:'Final Answer',proc:'answer',type:'info',instruction:'After cancelling:<div style="font-size:1.2rem;margin:12px 0">'+(rd.join('·')==='1'?'<span class="mono" style="color:var(--success)">'+exprDisplay(rn.join(' · '))+'</span>':inlineFrac('<span style="color:var(--success)">'+exprDisplay(rn.join(' · '))+'</span>','<span style="color:var(--success)">'+exprDisplay(rd.join(' · '))+'</span>'))+'</div>'});
-  launchWorkspace();
-}
-
-// =========== 3. DIVIDE ===========
-function startDivide(){
-  var n1=document.getElementById('dN1').value.trim(),d1=document.getElementById('dD1').value.trim();
-  var n2=document.getElementById('dN2').value.trim(),d2=document.getElementById('dD2').value.trim();
-  if(!n1||!d1||!n2||!d2){showError('Enter all four parts.');return}
-
-  Object.assign(S,{n1:n1,d1:d1,n2:n2,d2:d2});
-  document.getElementById('problemDisplay').innerHTML=inlineFrac(n1,d1)+' <span style="color:var(--error);font-weight:700;font-size:1.3rem">÷</span> '+inlineFrac(n2,d2);
-
-  stepsData.push({title:'Dividing = Multiply by Reciprocal',proc:'identify',type:'info',instruction:'To divide rational expressions, <strong>flip the second fraction</strong> and multiply:<div class="step-rule-box" style="margin-top:10px">'+inlineFrac(n1,d1)+' ÷ '+inlineFrac(n2,d2)+' → '+inlineFrac(n1,d1)+' × '+inlineFrac(d2,n2)+'</div>'});
-
-  stepsData.push({title:'Write the Reciprocal',proc:'factor',type:'choice',instruction:'What is the reciprocal of '+inlineFrac(n2,d2)+' ?',question:'Reciprocal:',answer:exprDisplay(d2)+'/'+exprDisplay(n2),options:shuffleUniq([exprDisplay(d2)+'/'+exprDisplay(n2),exprDisplay(n2)+'/'+exprDisplay(d2),exprDisplay(d2)+'·'+exprDisplay(n2)])});
-
-  // Now factor and cancel as multiply
-  var nF1=factorExpr(parseExpr(n1)),dF1=factorExpr(parseExpr(d1));
-  var nF2=factorExpr(parseExpr(d2)),dF2=factorExpr(parseExpr(n2));
-  var allNum=nF1.concat(nF2),allDen=dF1.concat(dF2);
-  var allNumStr=allNum.map(function(f){return f.str}).join(' · ');
-  var allDenStr=allDen.map(function(f){return f.str}).join(' · ');
-
-  var nUsed=allNum.map(function(){return false}),dUsed=allDen.map(function(){return false});
-  var cancelled=[];
-  for(var i=0;i<allNum.length;i++){
-    for(var j=0;j<allDen.length;j++){
-      if(!nUsed[i]&&!dUsed[j]&&allNum[i].str===allDen[j].str){nUsed[i]=true;dUsed[j]=true;cancelled.push(allNum[i].str);break}
-    }
-  }
-  var rn=allNum.filter(function(f,i){return!nUsed[i]}).map(function(f){return f.str});
-  var rd=allDen.filter(function(f,j){return!dUsed[j]}).map(function(f){return f.str});
-  if(rn.length===0)rn=['1'];if(rd.length===0)rd=['1'];
-  var resultStr=rd.join('·')==='1'?rn.join(' · '):rn.join(' · ')+' / '+rd.join(' · ');
-  S.resultStr=resultStr;S.rn=rn;S.rd=rd;
-
-  stepsData.push({title:'Factor and Cancel',proc:'cancel',type:'info',instruction:'Factor everything and cancel common factors:<div class="step-rule-box" style="margin-top:10px">'+inlineFrac(exprDisplay(allNumStr),exprDisplay(allDenStr))+'</div>'+(cancelled.length?'<div style="margin-top:8px">Cancel: <strong>'+cancelled.map(exprDisplay).join(', ')+'</strong></div>':'No common factors to cancel.')});
-
-  stepsData.push({title:'Final Answer',proc:'answer',type:'info',instruction:'<div style="font-size:1.2rem;margin:12px 0">'+(rd.join('·')==='1'?'<span class="mono" style="color:var(--success)">'+exprDisplay(rn.join(' · '))+'</span>':inlineFrac('<span style="color:var(--success)">'+exprDisplay(rn.join(' · '))+'</span>','<span style="color:var(--success)">'+exprDisplay(rd.join(' · '))+'</span>'))+'</div>'});
-  launchWorkspace();
-}
-
-// =========== 4. RESTRICTIONS ===========
-function startRestrict(){
-  var numStr=document.getElementById('rNum').value.trim(),denStr=document.getElementById('rDen').value.trim();
-  if(!numStr||!denStr){showError('Enter both numerator and denominator.');return}
-  var denP=parseExpr(denStr);
-  var denF=factorExpr(denP);
-  var denFStr=denF.map(function(f){return f.str}).join(' · ');
-  var zeros=findZeros(denP);
-
-  // Also check factored pieces for zeros
-  if(zeros.length===0){
-    for(var fi=0;fi<denF.length;fi++){
-      var fz=findZeros(denF[fi]);
-      zeros=zeros.concat(fz);
-    }
-  }
-
-  var restrictStr=zeros.length?zeros.map(function(z){return'x ≠ '+z.str}).join(', '):'No restrictions (denominator is a constant)';
-
-  Object.assign(S,{numStr:numStr,denStr:denStr,denFStr:denFStr,zeros:zeros,restrictStr:restrictStr});
-  document.getElementById('problemDisplay').innerHTML=inlineFrac(numStr,denStr);
-
-  stepsData.push({title:'Why Find Restrictions?',proc:'identify',type:'info',instruction:'A rational expression is <strong>undefined</strong> when its denominator equals zero. We need to find all x-values that make the denominator = 0.<div class="step-rule-box" style="margin-top:10px">Denominator: <span class="mono" style="color:var(--accent-orange)">'+exprDisplay(denStr)+'</span></div>'});
-
-  if(denFStr!==denStr){
-    stepsData.push({title:'Factor the Denominator',proc:'factor',type:'info',instruction:'<span class="mono">'+exprDisplay(denStr)+'</span> factors as:<div class="step-rule-box" style="margin-top:10px"><span class="mono">'+exprDisplay(denFStr)+'</span></div>'});
-  }
-
-  stepsData.push({title:'Set Denominator = 0',proc:'cancel',type:'info',instruction:'Set each factor equal to zero and solve:'+(zeros.length?'<div style="margin-top:10px">'+zeros.map(function(z,i){return'<div style="margin:6px 0;padding:8px 14px;background:var(--surface3);border-radius:8px;font-size:.88rem"><span class="mono">Factor → 0 → <strong style="color:var(--error)">x = '+z.str+'</strong></span></div>'}).join('')+'</div>':'<div style="margin-top:8px;color:var(--text-dim)">The denominator is a constant and never equals zero.</div>')});
-
-  if(zeros.length>0){
-    stepsData.push({title:'How Many Restrictions?',proc:'cancel',type:'numeric',instruction:'How many restricted values are there?',question:'# restrictions =',answer:zeros.length});
-  }
-
-  stepsData.push({title:'Restrictions',proc:'answer',type:'info',instruction:'<div style="margin:12px 0">'+zeros.map(function(z){return'<span class="restrict-badge" style="font-size:1rem">x ≠ '+z.str+'</span>'}).join(' ')+'</div>'+(zeros.length===0?'<div style="color:var(--success);font-weight:600">No restrictions — defined for all real numbers.</div>':'<div style="font-size:.85rem;color:var(--text-dim)">The expression is undefined at '+(zeros.length===1?'this value':'these values')+'.</div>')});
-  launchWorkspace();
-}
-
-function shuffleUniq(arr){
-  var u=[];arr.forEach(function(a){if(u.indexOf(a)===-1)u.push(a)});
-  while(u.length<3)u.push('x');
-  for(var i=u.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=u[i];u[i]=u[j];u[j]=t}
-  return u;
-}
-
-function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;')}
-
-// ==================== RENDER ====================
-function showStep(idx){
-  if(idx>=stepsData.length){finishProblem();return}
-  var step=stepsData[idx],container=document.getElementById('stepsContainer');
-  var card=document.createElement('div');
-  card.className='step-card';card.id='step-'+idx;
-  if(step.proc){
-    document.querySelectorAll('.proc-step').forEach(function(s){s.classList.remove('active')});
-    document.getElementById('proc-'+step.proc).classList.add('active');
-  }
-  var bodyHTML='';
-  if(step.type==='info'){
-    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><button class="btn-primary btn-sm" onclick="completeStep('+idx+')">Got It →</button>';
-  }else if(step.type==='numeric'){
-    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><div class="answer-row"><span class="answer-label">'+(step.question||'')+' </span><input type="text" class="answer-input" id="ans-'+idx+'" placeholder="?" autocomplete="off" onkeydown="if(event.key===\'Enter\')checkNum('+idx+')"><button class="btn-check" onclick="checkNum('+idx+')">Check</button></div><div class="step-feedback" id="fb-'+idx+'"></div>';
-  }else if(step.type==='choice'){
-    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><div style="font-size:.88rem;color:var(--text);margin-bottom:10px;font-weight:500">'+(step.question||'')+'</div><div class="choice-row" id="choices-'+idx+'">'+step.options.map(function(o){return'<div class="choice-btn" onclick="checkChoice('+idx+',this,\''+escHtml(o)+'\')">'+o+'</div>'}).join('')+'</div><div class="step-feedback" id="fb-'+idx+'"></div>';
-  }
-  card.innerHTML='<div class="step-header"><div class="step-num">'+(idx+1)+'</div><div class="step-title">'+step.title+'</div></div><div class="step-body">'+bodyHTML+'</div>';
-  container.appendChild(card);
-  card.scrollIntoView({behavior:'smooth',block:'nearest'});
-  setTimeout(function(){var inp=card.querySelector('.answer-input');if(inp)inp.focus()},150);
-}
-
-function completeStep(idx){markDone(idx);currentStep=idx+1;showStep(idx+1)}
-function markDone(idx){
-  var card=document.getElementById('step-'+idx);
-  if(card){card.classList.add('completed');card.querySelector('.step-num').classList.add('done')}
-  var step=stepsData[idx];
-  if(step.proc)document.getElementById('proc-'+step.proc).classList.add('done');
-}
-
-function checkNum(idx){
-  var step=stepsData[idx],inp=document.getElementById('ans-'+idx),fb=document.getElementById('fb-'+idx);
-  var val=parseFloat(inp.value.trim());
-  if(isNaN(val)){fb.textContent='Enter a number.';fb.className='step-feedback show incorrect';return}
-  var tol=Math.abs(step.answer)<1?0.015:Math.max(0.015,Math.abs(step.answer)*0.005);
-  if(Math.abs(val-step.answer)<=tol){
-    inp.classList.add('correct');inp.disabled=true;inp.value=fmtNum(step.answer);
-    fb.textContent='Correct! ✓';fb.className='step-feedback show correct';
-    setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700);
+    return `<div class="domain-source"><strong>${escHtml(source.name)}</strong>: ${math(polyText(source.poly)+' ≠ 0')}<br>${explanation}</div>`;
+  }).join('');
+  info('Find the Excluded Values','cancel',sourceWork+'<p>Keep all restrictions from the original problem. Cancelling a factor does not make a previously undefined input valid.</p>');
+  const candidates=new Map(restrictions.map(root=>[root.key,root]));let distractors=0;
+  for(const value of [0n,1n,-1n,2n,-2n,3n,-3n,4n,-4n]){const root=rationalRoot(value,1n);if(!candidates.has(root.key)){candidates.set(root.key,root);if(++distractors===3)break;}}
+  stepsData.push({type:'restrictions',title:'Keep the Original Restrictions',proc:mode==='restrict'?'answer':'cancel',instruction:'Select every excluded real value. If there are none, select “No excluded real values.” Numerator zeros are allowed unless they make a divisor zero.',options:Array.from(candidates.values()).sort((a,b)=>a.text.localeCompare(b.text)),expected:restrictions.map(root=>root.key)});
+  if(mode==='restrict')return;
+  const productNumerator=parts.length===2?factorText(factorExpr(parts[0])):factorText(factorExpr(parts[0]))+' · '+factorText(factorExpr(parts[mode==='divide'?3:2]));
+  const productDenominator=parts.length===2?factorText(factorExpr(parts[1])):factorText(factorExpr(parts[1]))+' · '+factorText(factorExpr(parts[mode==='divide'?2:3]));
+  if(isZero(rawN)){
+    info('Simplify a Zero Numerator','cancel','The numerator is identically zero. Zero divided by any nonzero denominator is zero. The original restrictions still apply; a zero denominator never becomes valid.');
   }else{
-    inp.classList.add('incorrect');setTimeout(function(){inp.classList.remove('incorrect')},600);
-    var tries=parseInt(inp.dataset.tries||'0')+1;inp.dataset.tries=tries;
-    if(tries>=3){fb.innerHTML='The answer is <strong>'+fmtNum(step.answer)+'</strong>';fb.className='step-feedback show hint-text'}
-    else if(tries>=2){fb.textContent='Not quite — try once more!';fb.className='step-feedback show incorrect'}
-    else{fb.textContent='Not quite — give it another try!';fb.className='step-feedback show incorrect'}
-    inp.value='';inp.focus();
+    stepsData.push({type:'poly',title:'Find the Greatest Common Factor',proc:'cancel',instruction:`Find the greatest common polynomial factor, including any numerical GCF. Use a positive leading coefficient. If only 1 is shared, enter 1.<div class="step-rule-box">${inlineFrac(productNumerator,productDenominator)}</div><strong>Cancel factors that multiply entire expressions, never individual terms inside a sum.</strong>`,answer:common});
+    info('Divide Out the Common Factor','cancel',`${samePoly(common,[1n])?'The only common factor is 1.':'Divide both entire polynomials by '+math(polyText(common))+'.'}<div class="step-rule-box">${inlineFrac('('+polyText(rawN)+') ÷ ('+polyText(common)+')','('+polyText(rawD)+') ÷ ('+polyText(common)+')')}</div>Use a positive leading coefficient in the final denominator. Keep the original restrictions.`);
   }
+  pairStep('Write the Simplified Expression','answer','Enter the remaining numerator and denominator with integer coefficients. Either factored or expanded form is accepted. Reduce all common factors, keep the denominator’s leading coefficient positive, and use denominator 1 for a polynomial answer.',numerator,denominator,'final');
 }
-
-function checkChoice(idx,btn,chosen){
-  var step=stepsData[idx];
-  if(chosen===step.answer){
-    btn.classList.add('correct');
-    document.querySelectorAll('#choices-'+idx+' .choice-btn').forEach(function(b){if(!b.classList.contains('correct'))b.classList.add('disabled')});
-    document.getElementById('fb-'+idx).textContent='Correct! ✓';
-    document.getElementById('fb-'+idx).className='step-feedback show correct';
-    setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700);
-  }else{
-    btn.classList.add('incorrect');setTimeout(function(){btn.classList.remove('incorrect')},500);
-    document.getElementById('fb-'+idx).textContent='Not quite — try again!';
-    document.getElementById('fb-'+idx).className='step-feedback show incorrect';
+function startSolving() {
+  if(S)return;if(!mode){showError('Select a problem type first.');return;}
+  const ids=({simplify:['sNum','sDen'],multiply:['mN1','mD1','mN2','mD2'],divide:['dN1','dD1','dN2','dD2'],restrict:['rNum','rDen']})[mode];
+  let parts;
+  try{parts=ids.map(id=>{try{return parseExpr(document.getElementById(id).value);}catch(error){throw new Error(document.getElementById(id).labels[0].textContent+': '+error.message);}});S={mode,finished:false,...solveProblem(mode,parts)};}
+  catch(error){S=null;showError(error.message);return;}
+  workspaceVersion++;currentStep=0;stepsData=[];buildSteps();clearError();
+  document.getElementById('inputSection').style.display='none';document.getElementById('workspace').classList.add('visible');document.getElementById('stepsContainer').replaceChildren();document.getElementById('resultSection').classList.remove('visible');
+  document.getElementById('problemDisplay').innerHTML=inlineFrac(polyText(parts[0]),polyText(parts[1]))+(parts.length===4?' '+(mode==='divide'?'÷':'×')+' '+inlineFrac(polyText(parts[2]),polyText(parts[3])):'');showStep(0);
+}
+function updateProgress() {
+  document.querySelectorAll('.proc-step').forEach(el=>{
+    const phase=el.id.slice(5),members=stepsData.filter(step=>step.proc===phase),done=members.length>0&&members.every(step=>step.accepted),active=!!S&&!S.finished&&!done&&stepsData[currentStep]?.proc===phase;
+    el.classList.toggle('done',done);el.classList.toggle('active',active);if(active)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');
+  });
+}
+function activeStep(idx) { return S&&!S.finished&&idx===currentStep&&!stepsData[idx]?.accepted&&document.getElementById('step-'+idx)?stepsData[idx]:null; }
+function answerInput(idx,key,label) { return `<div class="answer-field"><label for="ans-${idx}-${key}">${escHtml(label)}</label><input type="text" class="answer-input" id="ans-${idx}-${key}" autocomplete="off" aria-describedby="answerFormat fb-${idx}"></div>`; }
+function showStep(idx) {
+  if(!S||S.finished||idx!==currentStep||document.getElementById('step-'+idx))return;if(idx===stepsData.length){finishProblem();return;}const step=stepsData[idx];if(!step)return;
+  const card=document.createElement('section');card.id='step-'+idx;card.className='step-card';card.setAttribute('aria-labelledby','title-'+idx);
+  let body='<div class="step-instruction">'+step.instruction+'</div>';
+  if(step.type==='info')body+=`<button type="button" class="btn-primary btn-sm" onclick="completeStep(${idx})">Got It →</button>`;
+  else{
+    if(step.type==='poly')body+='<div class="answer-row">'+answerInput(idx,'poly','Greatest common factor')+'</div>';
+    if(step.type==='pair')body+='<div class="answer-row">'+answerInput(idx,'n',step.kind==='reciprocal'?'Reciprocal numerator':'Simplified numerator')+answerInput(idx,'d',step.kind==='reciprocal'?'Reciprocal denominator':'Simplified denominator')+'</div>';
+    if(step.type==='restrictions')body+=`<fieldset><legend>Which real values must be excluded?</legend><div class="restriction-options">${step.options.map((root,i)=>`<label class="restriction-option"><input type="checkbox" id="restriction-${idx}-${i}" value="${escHtml(root.key)}"> <span>${escHtml('x = '+root.text)}</span></label>`).join('')}<label class="restriction-option"><input type="checkbox" id="restriction-${idx}-none" value="none"> <span>No excluded real values</span></label></div></fieldset>`;
+    body+=`<button type="button" class="btn-check" onclick="checkStep(${idx})">Check</button><div class="step-feedback" id="fb-${idx}" role="status" aria-live="polite"></div>`;
   }
+  card.innerHTML=`<div class="step-header"><div class="step-num" aria-hidden="true">${idx+1}</div><h2 class="step-title" id="title-${idx}">${escHtml(step.title)}</h2></div><div class="step-body">${body}</div>`;
+  document.getElementById('stepsContainer').appendChild(card);card.querySelectorAll('input[type="text"]').forEach(input=>input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();checkStep(idx);}}));
+  updateProgress();card.scrollIntoView({behavior:'smooth',block:'nearest'});card.querySelector('input,button')?.focus({preventScroll:true});
 }
-
-function finishProblem(){
-  document.querySelectorAll('.proc-step').forEach(function(s){s.classList.remove('active')});
-  var expr='',detail='';
-  if(S.mode==='simplify'){expr=exprDisplay(S.numStr)+' / '+exprDisplay(S.denStr)+' → '+exprDisplay(S.resultStr);detail='Factored and cancelled'+(S.cancelled.length?' ('+S.cancelled.map(exprDisplay).join(', ')+')':'')}
-  else if(S.mode==='multiply'){expr=S.resultStr;detail='Multiplied numerators and denominators, then cancelled'}
-  else if(S.mode==='divide'){expr=S.resultStr;detail='Flipped second fraction, then multiplied and cancelled'}
-  else if(S.mode==='restrict'){expr=S.restrictStr;detail='Set denominator = 0 and solved'}
-  document.getElementById('resultExpr').textContent=expr;
-  document.getElementById('resultDetail').textContent=detail;
-  document.getElementById('resultSection').classList.add('visible');
-  document.getElementById('resultSection').scrollIntoView({behavior:'smooth',block:'nearest'});
+function feedback(idx,message,correct=false) { const el=document.getElementById('fb-'+idx);el.textContent=message;el.className='step-feedback show '+(correct?'correct':'incorrect'); }
+function acceptStep(idx,delay=400) {
+  const step=activeStep(idx);if(!step)return;step.accepted=true;
+  const card=document.getElementById('step-'+idx);card.classList.add('completed');card.querySelector('.step-num').classList.add('done');card.querySelectorAll('input,button').forEach(control=>{control.disabled=true;});updateProgress();
+  const version=workspaceVersion,advance=()=>{if(version!==workspaceVersion||!S||currentStep!==idx)return;currentStep++;showStep(currentStep);};if(delay)setTimeout(advance,delay);else advance();
 }
-
-function resetAll(){
-  document.getElementById('inputSection').style.display='';
-  document.getElementById('workspace').classList.remove('visible');
-  document.getElementById('stepsContainer').innerHTML='';
-  document.getElementById('resultSection').classList.remove('visible');
-  document.querySelectorAll('.proc-step').forEach(function(s){s.classList.remove('active','done')});
-  document.querySelectorAll('.input-section input').forEach(function(i){i.value=''});
+function completeStep(idx) { if(activeStep(idx)?.type==='info')acceptStep(idx,0); }
+function checkStep(idx) {
+  const step=activeStep(idx);if(!step||step.type==='info')return;const card=document.getElementById('step-'+idx);let correct=false,message='';
+  try{
+    if(step.type==='restrictions'){
+      const selected=Array.from(card.querySelectorAll('input:checked')).map(input=>input.value),expected=step.expected.length?step.expected:['none'];
+      correct=selected.length===expected.length&&expected.every(key=>selected.includes(key));
+      message='Keep every zero of an original denominator'+(mode==='divide'?' and every zero of the divisor numerator':'')+'. A cancelled factor still contributes its original restrictions. Do not exclude other numerator zeros.';
+      if(selected.includes('none')&&selected.length>1)message='Choose either excluded values or “No excluded real values,” not both.';
+    }else if(step.type==='poly'){
+      const candidate=parseExpr(document.getElementById('ans-'+idx+'-poly').value,true);correct=samePoly(candidate,step.answer);
+      if(isZero(candidate))message='Zero cannot be cancelled: division by zero is undefined.';
+      else if(candidate[candidate.length-1]<0n)message='Use the greatest common factor with a positive leading coefficient.';
+      else{
+        try{exactDivide(S.rawN,candidate);exactDivide(S.rawD,candidate);message='That is a common factor, but another numerical or polynomial factor remains. Find the greatest common factor of both entire expressions.';}
+        catch{message='That factor does not divide both entire polynomials. Factor first; individual terms in a sum cannot be cancelled.';}
+      }
+    }else{
+      const n=parseExpr(document.getElementById('ans-'+idx+'-n').value,true),d=parseExpr(document.getElementById('ans-'+idx+'-d').value,true);
+      correct=samePoly(n,step.n)&&samePoly(d,step.d);
+      if(isZero(d))message='The denominator cannot be the zero polynomial.';
+      else if(step.kind==='reciprocal')message='Swap only the second fraction’s numerator and denominator. Keep the original expressions intact in this step.';
+      else if(samePoly(polyMultiply(n,step.d),polyMultiply(step.n,d)))message=d[d.length-1]<0n?'These have the same value where defined. Move the minus sign so the denominator has a positive leading coefficient.':'These have the same value where defined, but the fraction is not fully reduced. Cancel all common factors, including numerical factors; retain the original restrictions.';
+      else message='Divide both entire polynomials by the same common factor. Preserve every remaining x, power, coefficient, and sign.';
+    }
+  }catch(error){feedback(idx,error.message);return;}
+  if(correct){card.querySelectorAll('input[type="text"]').forEach(input=>{input.classList.remove('incorrect');input.classList.add('correct');input.removeAttribute('aria-invalid');});feedback(idx,'Correct! ✓',true);acceptStep(idx);return;}
+  step.tries=(step.tries||0)+1;
+  if(step.tries>=3)message+=' Check your work: '+(step.type==='restrictions'?restrictionText(S.restrictions):step.type==='poly'?polyText(step.answer):'numerator '+polyText(step.n)+'; denominator '+polyText(step.d))+'.';
+  card.querySelectorAll('input[type="text"]').forEach(input=>{input.classList.add('incorrect');input.setAttribute('aria-invalid','true');});feedback(idx,message);
 }
+function finishProblem() {
+  if(!S||S.finished||currentStep!==stepsData.length||stepsData.some(step=>!step.accepted))return;S.finished=true;updateProgress();
+  document.getElementById('resultExpr').textContent=mode==='restrict'?restrictionText(S.restrictions):expressionText(S.numerator,S.denominator);
+  document.getElementById('resultDetail').textContent=mode==='restrict'?(S.restrictions.length?'These values make the original denominator zero.':'The original denominator has no real zeros; the expression is defined for all real x.'):restrictionText(S.restrictions)+'. The simplified expression agrees with the original problem on its original domain.';
+  const result=document.getElementById('resultSection');result.classList.add('visible');result.querySelector('button').focus({preventScroll:true});result.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function resetAll() {
+  workspaceVersion++;S=null;mode=null;stepsData=[];currentStep=0;clearError();
+  document.getElementById('inputSection').style.display='';document.getElementById('workspace').classList.remove('visible');document.getElementById('stepsContainer').replaceChildren();document.getElementById('problemDisplay').replaceChildren();document.getElementById('resultSection').classList.remove('visible');document.getElementById('resultExpr').textContent='';document.getElementById('resultDetail').textContent='';
+  document.querySelectorAll('.input-section input').forEach(input=>{input.value='';});document.querySelectorAll('.mode-tab').forEach(tab=>{tab.classList.remove('selected');tab.setAttribute('aria-pressed','false');});document.querySelectorAll('.mode-panel').forEach(panel=>panel.classList.remove('active'));document.getElementById('startRow').style.display='none';updateProgress();document.getElementById('tab-simplify').focus();
+}
+document.querySelectorAll('.mode-panel').forEach(panel=>{const inputs=Array.from(panel.querySelectorAll('input'));inputs.forEach((input,i)=>input.addEventListener('keydown',event=>{if(event.key!=='Enter')return;event.preventDefault();if(i===inputs.length-1)startSolving();else inputs[i+1].focus();}));});
 </script>
 </body>
 </html>
