@@ -321,8 +321,8 @@ test(
     const center =
       section(
         observation,
-        'function initObservationCenter',
-        26000
+        'const renderWorkspace',
+        12000
       );
 
     assert.match(
@@ -390,8 +390,8 @@ test(
     const center =
       section(
         observation,
-        'function initObservationCenter',
-        30000
+        'const buildCenterCaptureCard',
+        8000
       );
 
     assert.match(
@@ -412,8 +412,8 @@ test(
     const center =
       section(
         observation,
-        'function initObservationCenter',
-        30000
+        'const buildCenterCaptureCard',
+        8000
       );
 
     assert.match(
