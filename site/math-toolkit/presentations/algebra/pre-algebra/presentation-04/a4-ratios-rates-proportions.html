@@ -146,6 +146,23 @@
     .step-body{padding-left:0}.mode-tabs{gap:4px}.mode-tab{padding:7px 11px;font-size:.75rem}
     .pd-val{font-size:1.2rem}.proc-step .p-label{font-size:.5rem}
   }
+  [hidden]{display:none!important}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent-blue);outline-offset:3px}
+  button:disabled{cursor:default;transform:none}
+  fieldset{border:0;min-width:0}legend{font-weight:600;margin-bottom:10px}
+  .examples-toggle{width:100%;background:transparent;text-align:left;border-radius:0}
+  .examples-body.open{max-height:none}
+  .workspace-actions{display:flex;justify-content:flex-end;margin-bottom:12px}
+  .btn-secondary{padding:9px 16px;background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+  .workspace>.hint{font-size:.82rem;color:var(--text-muted);margin-bottom:18px}
+  .answer-input{width:200px;max-width:100%}.answer-label{color:var(--text-muted)}
+  .prop-frac{max-width:44%}.prop-frac label{font-size:.75rem;color:var(--text-muted);margin-top:5px}
+  .comparison-goal{margin-top:16px}select{max-width:100%;padding:12px;background:var(--formula-bg);color:var(--text);border:2px solid var(--border);border-radius:8px;font:inherit}
+  .pd-val,.step-rule-box,.result-expression,.result-detail{overflow-wrap:anywhere;max-width:100%}
+  .pd-val{font-size:1.25rem}.result-expression{white-space:pre-wrap}.math-number{display:inline-block}
+  .step-card.completed{opacity:.85}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
@@ -168,153 +185,164 @@
   </div>
   <div class="input-section" id="inputSection">
     <h2>✏️ What Type of Problem?</h2>
-    <p class="hint">Select the type that matches your assignment, then enter the values.</p>
-    <div class="mode-tabs">
-      <div class="mode-tab" onclick="setMode('ratio')" id="tab-ratio">Simplify Ratio</div>
-      <div class="mode-tab" onclick="setMode('equiv')" id="tab-equiv">Equivalent Ratios</div>
-      <div class="mode-tab" onclick="setMode('rate')" id="tab-rate">Unit Rate</div>
-      <div class="mode-tab" onclick="setMode('compare')" id="tab-compare">Compare Rates</div>
-      <div class="mode-tab" onclick="setMode('partwhole')" id="tab-partwhole">Part-to-Whole</div>
-      <div class="mode-tab" onclick="setMode('proportion')" id="tab-proportion">Solve Proportion</div>
+    <p class="hint">Select a type, then enter whole numbers or decimals with up to 12 decimal places, between −1,000,000,000 and 1,000,000,000. Ratio terms for Simplify Ratio and Part-to-Whole must be nonnegative whole numbers.</p>
+    <div class="mode-tabs" role="group" aria-label="Problem type">
+      <button type="button" class="mode-tab" aria-pressed="false" onclick="setMode('ratio')" id="tab-ratio">Simplify Ratio</button>
+      <button type="button" class="mode-tab" aria-pressed="false" onclick="setMode('equiv')" id="tab-equiv">Equivalent Ratios</button>
+      <button type="button" class="mode-tab" aria-pressed="false" onclick="setMode('rate')" id="tab-rate">Unit Rate</button>
+      <button type="button" class="mode-tab" aria-pressed="false" onclick="setMode('compare')" id="tab-compare">Compare Rates</button>
+      <button type="button" class="mode-tab" aria-pressed="false" onclick="setMode('partwhole')" id="tab-partwhole">Part-to-Whole</button>
+      <button type="button" class="mode-tab" aria-pressed="false" onclick="setMode('proportion')" id="tab-proportion">Solve Proportion</button>
     </div>
     <!-- Simplify Ratio -->
     <div class="mode-panel" id="panel-ratio">
-      <p class="hint">Enter the two numbers of your ratio to simplify.</p>
+      <p class="hint">Enter nonnegative whole-number terms. They cannot both be zero. Keep the quantities in the original order.</p>
       <div class="field-row" style="justify-content:center">
-        <div class="field field-narrow"><label>First</label><input type="text" id="ratioA" placeholder="e.g. 12"></div>
+        <div class="field field-narrow"><label for="ratioA">First term</label><input type="text" id="ratioA" placeholder="e.g. 12"></div>
         <span class="colon-sep">:</span>
-        <div class="field field-narrow"><label>Second</label><input type="text" id="ratioB" placeholder="e.g. 8"></div>
+        <div class="field field-narrow"><label for="ratioB">Second term</label><input type="text" id="ratioB" placeholder="e.g. 8"></div>
       </div>
     </div>
     <!-- Equivalent Ratios -->
     <div class="mode-panel" id="panel-equiv">
-      <p class="hint">Enter a ratio and one value of the equivalent ratio. Put <strong>x</strong> for the unknown.</p>
+      <p class="hint">Enter exactly one <strong>x</strong> and three known values. Here a:b means a/b, so the second term of each ratio must be nonzero.</p>
       <div class="field-row" style="justify-content:center">
-        <div class="field field-narrow"><label>First</label><input type="text" id="eqA" placeholder="3"></div>
+        <div class="field field-narrow"><label for="eqA">Left first term</label><input type="text" id="eqA" placeholder="3"></div>
         <span class="colon-sep">:</span>
-        <div class="field field-narrow"><label>Second</label><input type="text" id="eqB" placeholder="4"></div>
+        <div class="field field-narrow"><label for="eqB">Left second term</label><input type="text" id="eqB" placeholder="4"></div>
         <span class="eq-sep">=</span>
-        <div class="field field-narrow"><label>First</label><input type="text" id="eqC" placeholder="x"></div>
+        <div class="field field-narrow"><label for="eqC">Right first term</label><input type="text" id="eqC" placeholder="x"></div>
         <span class="colon-sep">:</span>
-        <div class="field field-narrow"><label>Second</label><input type="text" id="eqD" placeholder="12"></div>
+        <div class="field field-narrow"><label for="eqD">Right second term</label><input type="text" id="eqD" placeholder="12"></div>
       </div>
     </div>
     <!-- Unit Rate -->
     <div class="mode-panel" id="panel-rate">
-      <p class="hint">Enter the total amount and the number of units.</p>
+      <p class="hint">Enter a nonnegative amount, a positive number of units, and both unit labels.</p>
       <div class="field-row" style="justify-content:center">
-        <div class="field field-med"><label>Total Amount</label><input type="text" id="rateAmt" placeholder="e.g. 120"></div>
-        <div class="field field-wide field-text"><label>Amount Label</label><input type="text" id="rateLabelA" placeholder="e.g. miles"></div>
+        <div class="field field-med"><label for="rateAmt">Total amount</label><input type="text" id="rateAmt" placeholder="e.g. 120"></div>
+        <div class="field field-wide field-text"><label for="rateLabelA">Amount label</label><input type="text" id="rateLabelA" placeholder="e.g. miles"></div>
       </div>
       <div class="field-row" style="justify-content:center;margin-top:4px">
-        <div class="field field-med"><label>Number of Units</label><input type="text" id="rateUnits" placeholder="e.g. 3"></div>
-        <div class="field field-wide field-text"><label>Unit Label</label><input type="text" id="rateLabelB" placeholder="e.g. hours"></div>
+        <div class="field field-med"><label for="rateUnits">Number of units</label><input type="text" id="rateUnits" placeholder="e.g. 3"></div>
+        <div class="field field-wide field-text"><label for="rateLabelB">Unit label</label><input type="text" id="rateLabelB" placeholder="e.g. hours"></div>
       </div>
     </div>
     <!-- Compare Rates -->
     <div class="mode-panel" id="panel-compare">
-      <p class="hint">Enter two rates to compare. Which is the better deal / faster / etc.?</p>
+      <p class="hint">Use the same amount units and denominator units for both options. Convert different units before entering them; this organizer does not convert units.</p>
       <div style="background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px">
         <div style="font-size:.75rem;font-weight:600;color:var(--accent-blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Option A</div>
         <div class="field-row" style="margin-bottom:0">
-          <div class="field field-med"><label>Amount</label><input type="text" id="cmpAmtA" placeholder="e.g. 15"></div>
-          <div class="field field-wide field-text"><label>Label</label><input type="text" id="cmpLblA" placeholder="e.g. dollars"></div>
+          <div class="field field-med"><label for="cmpAmtA">A amount</label><input type="text" id="cmpAmtA" placeholder="e.g. 15"></div>
+          <div class="field field-wide field-text"><label for="cmpLblA">A amount label</label><input type="text" id="cmpLblA" placeholder="e.g. dollars"></div>
           <span class="colon-sep" style="font-size:1rem">for</span>
-          <div class="field field-med"><label>Units</label><input type="text" id="cmpUnitA" placeholder="e.g. 3"></div>
-          <div class="field field-wide field-text"><label>Label</label><input type="text" id="cmpULblA" placeholder="e.g. tickets"></div>
+          <div class="field field-med"><label for="cmpUnitA">A number of units</label><input type="text" id="cmpUnitA" placeholder="e.g. 3"></div>
+          <div class="field field-wide field-text"><label for="cmpULblA">A unit label</label><input type="text" id="cmpULblA" placeholder="e.g. tickets"></div>
         </div>
       </div>
       <div style="background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-size:.75rem;font-weight:600;color:var(--accent-orange);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Option B</div>
         <div class="field-row" style="margin-bottom:0">
-          <div class="field field-med"><label>Amount</label><input type="text" id="cmpAmtB" placeholder="e.g. 24"></div>
-          <div class="field field-wide field-text"><label>Label</label><input type="text" id="cmpLblB" placeholder="e.g. dollars"></div>
+          <div class="field field-med"><label for="cmpAmtB">B amount</label><input type="text" id="cmpAmtB" placeholder="e.g. 24"></div>
+          <div class="field field-wide field-text"><label for="cmpLblB">B amount label</label><input type="text" id="cmpLblB" placeholder="e.g. dollars"></div>
           <span class="colon-sep" style="font-size:1rem">for</span>
-          <div class="field field-med"><label>Units</label><input type="text" id="cmpUnitB" placeholder="e.g. 5"></div>
-          <div class="field field-wide field-text"><label>Label</label><input type="text" id="cmpULblB" placeholder="e.g. tickets"></div>
+          <div class="field field-med"><label for="cmpUnitB">B number of units</label><input type="text" id="cmpUnitB" placeholder="e.g. 5"></div>
+          <div class="field field-wide field-text"><label for="cmpULblB">B unit label</label><input type="text" id="cmpULblB" placeholder="e.g. tickets"></div>
         </div>
       </div>
+      <div class="field comparison-goal"><label for="cmpGoal">Comparison goal</label><select id="cmpGoal"><option value="compare">Compare the numbers</option><option value="lower">Lower rate (such as cost per item)</option><option value="higher">Higher rate (such as speed)</option></select></div>
     </div>
     <!-- Part-to-Whole -->
     <div class="mode-panel" id="panel-partwhole">
-      <p class="hint">Enter a ratio and the total to find how much goes to each part.</p>
+      <p class="hint">Enter the part A : part B ratio and their combined total. Use nonnegative whole-number ratio terms, not both zero, and a nonnegative total.</p>
       <div class="field-row" style="justify-content:center">
-        <div class="field field-narrow"><label>Part A</label><input type="text" id="pwA" placeholder="e.g. 3"></div>
+        <div class="field field-narrow"><label for="pwA">Part A ratio term</label><input type="text" id="pwA" placeholder="e.g. 3"></div>
         <span class="colon-sep">:</span>
-        <div class="field field-narrow"><label>Part B</label><input type="text" id="pwB" placeholder="e.g. 5"></div>
+        <div class="field field-narrow"><label for="pwB">Part B ratio term</label><input type="text" id="pwB" placeholder="e.g. 5"></div>
       </div>
       <div class="field-row" style="justify-content:center;margin-top:4px">
-        <div class="field field-med"><label>Total</label><input type="text" id="pwTotal" placeholder="e.g. 40"></div>
+        <div class="field field-med"><label for="pwTotal">Combined total</label><input type="text" id="pwTotal" placeholder="e.g. 40"></div>
       </div>
     </div>
     <!-- Proportion -->
     <div class="mode-panel" id="panel-proportion">
-      <p class="hint">Enter the proportion. Put <strong>x</strong> in the unknown position.</p>
+      <p class="hint">Enter exactly one <strong>x</strong> and three known numbers. Denominators cannot be zero. If x is a denominator, x ≠ 0.</p>
       <div class="field-row" style="justify-content:center">
         <div class="prop-frac">
+          <label for="propA">Left numerator</label>
           <input type="text" id="propA" placeholder="a" style="width:80px;font-family:var(--font-mono);font-size:1.1rem;padding:10px;border-radius:6px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);text-align:center;outline:none">
           <div class="prop-bar"></div>
+          <label for="propB">Left denominator</label>
           <input type="text" id="propB" placeholder="b" style="width:80px;font-family:var(--font-mono);font-size:1.1rem;padding:10px;border-radius:6px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);text-align:center;outline:none">
         </div>
         <span class="eq-sep">=</span>
         <div class="prop-frac">
+          <label for="propC">Right numerator</label>
           <input type="text" id="propC" placeholder="c" style="width:80px;font-family:var(--font-mono);font-size:1.1rem;padding:10px;border-radius:6px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);text-align:center;outline:none">
           <div class="prop-bar"></div>
+          <label for="propD">Right denominator</label>
           <input type="text" id="propD" placeholder="d" style="width:80px;font-family:var(--font-mono);font-size:1.1rem;padding:10px;border-radius:6px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);text-align:center;outline:none">
         </div>
       </div>
     </div>
     <div class="start-row" id="startRow" style="display:none">
-      <button class="btn-primary" onclick="startSolving()">Let's Solve It →</button>
+      <button type="button" class="btn-primary" id="startBtn" onclick="startSolving()">Let's Solve It →</button>
     </div>
-    <div class="error-msg" id="errorMsg"></div>
+    <div class="error-msg" id="errorMsg" role="alert"></div>
     <!-- Examples -->
     <div class="examples-panel">
-      <div class="examples-toggle" onclick="toggleExamples()">
+      <button type="button" class="examples-toggle" id="examplesToggle" aria-expanded="false" aria-controls="examplesBody" onclick="toggleExamples()">
         <span>📋 Try a Practice Problem</span>
-        <span class="toggle-arrow" id="toggleArrow">▼</span>
-      </div>
-      <div class="examples-body" id="examplesBody">
+        <span class="toggle-arrow" id="toggleArrow" aria-hidden="true">▼</span>
+      </button>
+      <div class="examples-body" id="examplesBody" hidden>
         <div class="example-category"><div class="category-label">🟢 Simplify a Ratio</div><div class="examples">
-          <span class="example-chip" onclick="loadRatio(12,8)">12 : 8</span>
-          <span class="example-chip" onclick="loadRatio(15,25)">15 : 25</span>
-          <span class="example-chip" onclick="loadRatio(24,36)">24 : 36</span>
-          <span class="example-chip" onclick="loadRatio(45,60)">45 : 60</span>
+          <button type="button" class="example-chip" onclick="loadRatio(12,8)">12 : 8</button>
+          <button type="button" class="example-chip" onclick="loadRatio(15,25)">15 : 25</button>
+          <button type="button" class="example-chip" onclick="loadRatio(24,36)">24 : 36</button>
+          <button type="button" class="example-chip" onclick="loadRatio(45,60)">45 : 60</button>
         </div></div>
         <div class="example-category"><div class="category-label">🔵 Equivalent Ratios</div><div class="examples">
-          <span class="example-chip" onclick="loadEquiv(3,4,'x',12)">3:4 = x:12</span>
-          <span class="example-chip" onclick="loadEquiv(2,5,8,'x')">2:5 = 8:x</span>
-          <span class="example-chip" onclick="loadEquiv(5,'x',15,6)">5:x = 15:6</span>
-          <span class="example-chip" onclick="loadEquiv('x',7,12,28)">x:7 = 12:28</span>
+          <button type="button" class="example-chip" onclick="loadEquiv(3,4,'x',12)">3:4 = x:12</button>
+          <button type="button" class="example-chip" onclick="loadEquiv(2,5,8,'x')">2:5 = 8:x</button>
+          <button type="button" class="example-chip" onclick="loadEquiv(5,'x',15,6)">5:x = 15:6</button>
+          <button type="button" class="example-chip" onclick="loadEquiv('x',7,12,28)">x:7 = 12:28</button>
         </div></div>
         <div class="example-category"><div class="category-label">🟡 Find a Unit Rate</div><div class="examples">
-          <span class="example-chip" onclick="loadRate(120,'miles',3,'hours')">120 mi / 3 hr</span>
-          <span class="example-chip" onclick="loadRate(24,'dollars',4,'tickets')">$24 / 4 tickets</span>
-          <span class="example-chip" onclick="loadRate(150,'words',3,'minutes')">150 words / 3 min</span>
-          <span class="example-chip" onclick="loadRate(250,'calories',2,'servings')">250 cal / 2 servings</span>
+          <button type="button" class="example-chip" onclick="loadRate(120,'miles',3,'hours')">120 mi / 3 hr</button>
+          <button type="button" class="example-chip" onclick="loadRate(24,'dollars',4,'tickets')">$24 / 4 tickets</button>
+          <button type="button" class="example-chip" onclick="loadRate(150,'words',3,'minutes')">150 words / 3 min</button>
+          <button type="button" class="example-chip" onclick="loadRate(250,'calories',2,'servings')">250 cal / 2 servings</button>
+          <button type="button" class="example-chip" onclick="loadRate(1,'liters',3,'bottles')">1 L / 3 bottles</button>
         </div></div>
         <div class="example-category"><div class="category-label">🟠 Compare Rates</div><div class="examples">
-          <span class="example-chip" onclick="loadCompare(15,'dollars',3,'tickets',24,'dollars',5,'tickets')">$15/3 vs $24/5</span>
-          <span class="example-chip" onclick="loadCompare(200,'miles',4,'hours',280,'miles',5,'hours')">200mi/4hr vs 280mi/5hr</span>
-          <span class="example-chip" onclick="loadCompare(12,'cookies',4,'batches',20,'cookies',6,'batches')">12/4bat vs 20/6bat</span>
+          <button type="button" class="example-chip" onclick="loadCompare(15,'dollars',3,'tickets',24,'dollars',5,'tickets','lower')">$15/3 vs $24/5</button>
+          <button type="button" class="example-chip" onclick="loadCompare(200,'miles',4,'hours',280,'miles',5,'hours','higher')">200mi/4hr vs 280mi/5hr (faster)</button>
+          <button type="button" class="example-chip" onclick="loadCompare(12,'cookies',4,'batches',20,'cookies',6,'batches')">12/4bat vs 20/6bat</button>
         </div></div>
         <div class="example-category"><div class="category-label">🟣 Part-to-Whole</div><div class="examples">
-          <span class="example-chip" onclick="loadPW(3,5,40)">3:5, total 40</span>
-          <span class="example-chip" onclick="loadPW(2,3,50)">2:3, total 50</span>
-          <span class="example-chip" onclick="loadPW(1,4,60)">1:4, total 60</span>
-          <span class="example-chip" onclick="loadPW(5,7,96)">5:7, total 96</span>
+          <button type="button" class="example-chip" onclick="loadPW(3,5,40)">3:5, total 40</button>
+          <button type="button" class="example-chip" onclick="loadPW(2,3,50)">2:3, total 50</button>
+          <button type="button" class="example-chip" onclick="loadPW(1,4,60)">1:4, total 60</button>
+          <button type="button" class="example-chip" onclick="loadPW(5,7,96)">5:7, total 96</button>
         </div></div>
         <div class="example-category"><div class="category-label">🔴 Solve a Proportion</div><div class="examples">
-          <span class="example-chip" onclick="loadProp(3,4,'x',12)">3/4 = x/12</span>
-          <span class="example-chip" onclick="loadProp(5,'x',10,6)">5/x = 10/6</span>
-          <span class="example-chip" onclick="loadProp(2,7,8,'x')">2/7 = 8/x</span>
-          <span class="example-chip" onclick="loadProp('x',9,4,6)">x/9 = 4/6</span>
-          <span class="example-chip" onclick="loadProp(12,'x',8,5)">12/x = 8/5</span>
+          <button type="button" class="example-chip" onclick="loadProp(3,4,'x',12)">3/4 = x/12</button>
+          <button type="button" class="example-chip" onclick="loadProp(5,'x',10,6)">5/x = 10/6</button>
+          <button type="button" class="example-chip" onclick="loadProp(2,7,8,'x')">2/7 = 8/x</button>
+          <button type="button" class="example-chip" onclick="loadProp('x',9,4,6)">x/9 = 4/6</button>
+          <button type="button" class="example-chip" onclick="loadProp(12,'x',8,5)">12/x = 8/5</button>
+          <button type="button" class="example-chip" onclick="loadProp(0,'x',0,5)">0/x = 0/5</button>
+          <button type="button" class="example-chip" onclick="loadProp(2,'x',0,5)">2/x = 0/5</button>
+          <button type="button" class="example-chip" onclick="loadProp(2,5,0,'x')">2/5 = 0/x</button>
         </div></div>
       </div>
     </div>
   </div>
   <div class="workspace" id="workspace">
+    <div class="workspace-actions"><button type="button" class="btn-secondary" onclick="resetAll()">Start Over</button></div>
+    <p class="hint" id="formatHelp">Answers must be exact. Enter a whole number, an exact decimal, or a fraction such as 1/3. Do not round intermediate answers.</p>
     <div class="problem-display" id="problemDisplay"></div>
     <div id="stepsContainer"></div>
     <div class="result-section" id="resultSection">
@@ -327,257 +355,294 @@
   </div>
 </div>
 <script>
-function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a}
-function fmtNum(n){if(n==null)return'?';if(Number.isInteger(n))return n.toString();let s=n.toFixed(4).replace(/\.?0+$/,'');return s}
-function inlineFrac(n,d){return'<span class="ifrac"><span class="in">'+n+'</span><span class="ibar"></span><span class="in">'+d+'</span></span>'}
-
-let mode=null,S={},stepsData=[],currentStep=0;
-
-function setMode(m){
-  mode=m;
-  document.querySelectorAll('.mode-tab').forEach(function(t){t.classList.remove('selected')});
-  document.getElementById('tab-'+m).classList.add('selected');
-  document.querySelectorAll('.mode-panel').forEach(function(p){p.classList.remove('active')});
-  document.getElementById('panel-'+m).classList.add('active');
-  document.getElementById('startRow').style.display='flex';
+// Exact rational arithmetic keeps student answers and every worked step consistent.
+const INPUT_LIMIT = 1000000000n;
+let mode = null, S = null, stepsData = [], currentStep = 0, workspaceVersion = 0;
+function abs(n) { return n < 0n ? -n : n; }
+function gcd(a, b) { a = abs(a); b = abs(b); while (b) { const r = a % b; a = b; b = r; } return a; }
+function rational(n, d = 1n) {
+  if (d === 0n) throw new Error('Division by zero is undefined.');
+  if (d < 0n) { n = -n; d = -d; }
+  const g = gcd(n, d); return { n: n / g, d: d / g };
 }
-function loadRatio(a,b){setMode('ratio');document.getElementById('ratioA').value=a;document.getElementById('ratioB').value=b}
-function loadEquiv(a,b,c,d){setMode('equiv');document.getElementById('eqA').value=a;document.getElementById('eqB').value=b;document.getElementById('eqC').value=c;document.getElementById('eqD').value=d}
-function loadRate(amt,la,units,lb){setMode('rate');document.getElementById('rateAmt').value=amt;document.getElementById('rateLabelA').value=la;document.getElementById('rateUnits').value=units;document.getElementById('rateLabelB').value=lb}
-function loadCompare(a1,l1,u1,ul1,a2,l2,u2,ul2){setMode('compare');document.getElementById('cmpAmtA').value=a1;document.getElementById('cmpLblA').value=l1;document.getElementById('cmpUnitA').value=u1;document.getElementById('cmpULblA').value=ul1;document.getElementById('cmpAmtB').value=a2;document.getElementById('cmpLblB').value=l2;document.getElementById('cmpUnitB').value=u2;document.getElementById('cmpULblB').value=ul2}
-function loadPW(a,b,t){setMode('partwhole');document.getElementById('pwA').value=a;document.getElementById('pwB').value=b;document.getElementById('pwTotal').value=t}
-function loadProp(a,b,c,d){setMode('proportion');document.getElementById('propA').value=a;document.getElementById('propB').value=b;document.getElementById('propC').value=c;document.getElementById('propD').value=d}
-function toggleExamples(){document.getElementById('examplesBody').classList.toggle('open');document.getElementById('toggleArrow').classList.toggle('open')}
-function showError(msg){var el=document.getElementById('errorMsg');el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show')},4000)}
-
-function startSolving(){
-  if(!mode){showError('Please select a problem type first.');return}
-  stepsData=[];currentStep=0;S={mode:mode};
-  var fn={ratio:startRatio,equiv:startEquiv,rate:startRate,compare:startCompare,partwhole:startPartWhole,proportion:startProportion};
-  fn[mode]();
+function multiply(a, b) { return rational(a.n * b.n, a.d * b.d); }
+function divide(a, b) { return rational(a.n * b.d, a.d * b.n); }
+function compare(a, b) { const delta = a.n * b.d - b.n * a.d; return delta < 0n ? -1 : delta > 0n ? 1 : 0; }
+function readNumber(raw, label, problem = false) {
+  const text = raw.trim().replace(/−/g, '-');
+  if (text.length > (problem ? 40 : 120)) throw new Error(label + ': this number is too long.');
+  if (!problem && /^[+-]?\d+\s*\/\s*[+-]?\d+$/.test(text)) {
+    const [n, d] = text.split('/'); return rational(BigInt(n.trim()), BigInt(d.trim()));
+  }
+  if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) {
+    throw new Error(label + ': enter a complete number' + (problem ? ' using digits and an optional decimal point and sign.' : ' or a fraction such as 1/3.'));
+  }
+  const places = (text.split('.')[1] || '').length;
+  if (problem && places > 12) throw new Error(label + ': use no more than 12 decimal places.');
+  const value = rational(BigInt(text.replace('.', '')), 10n ** BigInt(places));
+  if (problem && abs(value.n) > INPUT_LIMIT * value.d) throw new Error(label + ': use a value from -1,000,000,000 to 1,000,000,000.');
+  return value;
 }
-function launchWorkspace(){
-  document.getElementById('inputSection').style.display='none';
+function readField(id, label) { return readNumber(document.getElementById(id).value, label, true); }
+function readWeight(id, label) {
+  const text = document.getElementById(id).value.trim();
+  if (text.length > 40 || !/^\+?\d+$/.test(text)) throw new Error(label + ': enter a nonnegative whole number.');
+  const value = BigInt(text);
+  if (value > INPUT_LIMIT) throw new Error(label + ': use a whole number no larger than 1,000,000,000.');
+  return value;
+}
+function fmtNum(value) {
+  const { n, d } = typeof value === 'bigint' ? rational(value) : value;
+  if (d === 1n) return String(n);
+  let rest = d, twos = 0, fives = 0;
+  while (rest % 2n === 0n) { rest /= 2n; twos++; }
+  while (rest % 5n === 0n) { rest /= 5n; fives++; }
+  const places = Math.max(twos, fives);
+  if (rest !== 1n || places > 12) return `${n}/${d}`;
+  const digits = String(abs(n) * (10n ** BigInt(places) / d)).padStart(places + 1, '0');
+  return (n < 0n ? '-' : '') + digits.slice(0, -places) + '.' + digits.slice(-places);
+}
+function grouped(value) { const text = fmtNum(value); return value.n < 0n || value.d !== 1n ? '(' + text + ')' : text; }
+function esc(value) { return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+function inlineFrac(n, d) { return `<span class="math-number"><span class="sr-only">${esc(n)} over ${esc(d)}</span><span class="ifrac" aria-hidden="true"><span class="in">${esc(n)}</span><span class="ibar"></span><span class="in">${esc(d)}</span></span></span>`; }
+function info(title, proc, instruction) { stepsData.push({ title, proc, instruction, type: 'info' }); }
+function numeric(title, proc, instruction, question, answer, hint) { stepsData.push({ title, proc, instruction, question, answer, hint, type: 'numeric' }); }
+function choice(title, instruction, question, answer, options, extra = {}) { stepsData.push({ title, proc: 'simplify', instruction, question, answer, options, type: 'choice', ...extra }); }
+function clearError() { const el = document.getElementById('errorMsg'); el.textContent = ''; el.classList.remove('show'); }
+function showError(message) { const el = document.getElementById('errorMsg'); el.textContent = message; el.classList.add('show'); }
+function setMode(m) {
+  if (S || !['ratio','equiv','rate','compare','partwhole','proportion'].includes(m)) return;
+  mode = m; clearError();
+  document.querySelectorAll('.mode-tab').forEach(tab => { const selected = tab.id === 'tab-' + m; tab.classList.toggle('selected', selected); tab.setAttribute('aria-pressed', String(selected)); });
+  document.querySelectorAll('.mode-panel').forEach(panel => { panel.classList.toggle('active', panel.id === 'panel-' + m); });
+  document.getElementById('startRow').style.display = 'flex';
+}
+function loadValues(m, ids, values) {
+  if (S) return;
+  setMode(m); ids.forEach((id, i) => { document.getElementById(id).value = String(values[i]); });
+  document.getElementById('startBtn').focus();
+}
+function loadRatio(a,b) { loadValues('ratio',['ratioA','ratioB'],[a,b]); }
+function loadEquiv(a,b,c,d) { loadValues('equiv',['eqA','eqB','eqC','eqD'],[a,b,c,d]); }
+function loadRate(a,la,u,lu) { loadValues('rate',['rateAmt','rateLabelA','rateUnits','rateLabelB'],[a,la,u,lu]); }
+function loadCompare(a,la,u,lu,b,lb,v,lv,goal = 'compare') { loadValues('compare',['cmpAmtA','cmpLblA','cmpUnitA','cmpULblA','cmpAmtB','cmpLblB','cmpUnitB','cmpULblB','cmpGoal'],[a,la,u,lu,b,lb,v,lv,goal]); }
+function loadPW(a,b,total) { loadValues('partwhole',['pwA','pwB','pwTotal'],[a,b,total]); }
+function loadProp(a,b,c,d) { loadValues('proportion',['propA','propB','propC','propD'],[a,b,c,d]); }
+function toggleExamples() {
+  const body = document.getElementById('examplesBody'); body.hidden = !body.hidden;
+  body.classList.toggle('open', !body.hidden); document.getElementById('toggleArrow').classList.toggle('open', !body.hidden);
+  document.getElementById('examplesToggle').setAttribute('aria-expanded', String(!body.hidden));
+}
+function startSolving() {
+  if (S) return;
+  if (!mode) { showError('Please select a problem type first.'); return; }
+  stepsData = []; currentStep = 0;
+  try {
+    S = { mode, finished: false };
+    ({ ratio: startRatio, equiv: startEquiv, rate: startRate, compare: startCompare, partwhole: startPartWhole, proportion: startProportion })[mode]();
+  } catch (error) { S = null; stepsData = []; showError(error.message); return; }
+  workspaceVersion++; clearError();
+  document.getElementById('inputSection').style.display = 'none';
   document.getElementById('workspace').classList.add('visible');
+  document.getElementById('problemDisplay').innerHTML = S.display;
+  document.getElementById('stepsContainer').replaceChildren();
   document.getElementById('resultSection').classList.remove('visible');
-  document.getElementById('stepsContainer').innerHTML='';
-  document.querySelectorAll('.proc-step').forEach(function(s){s.classList.remove('active','done')});
   showStep(0);
 }
-
-// 1. SIMPLIFY RATIO
-function startRatio(){
-  var a=parseInt(document.getElementById('ratioA').value),b=parseInt(document.getElementById('ratioB').value);
-  if(isNaN(a)||isNaN(b)||a<=0||b<=0){showError('Enter two positive whole numbers.');return}
-  var g=gcd(a,b);
-  Object.assign(S,{a:a,b:b,gcf:g,simpA:a/g,simpB:b/g});
-  document.getElementById('problemDisplay').innerHTML='<span class="pd-val">'+a+'</span><span class="pd-op">:</span><span class="pd-val">'+b+'</span>';
-  stepsData.push({title:'Identify the Ratio',proc:'identify',type:'info',instruction:'You have <strong class="mono">'+a+' : '+b+'</strong>. To simplify, find the <strong>GCF</strong> and divide both numbers.'});
-  stepsData.push({title:'Find the GCF',proc:'setup',type:'numeric',instruction:'What is the largest number that divides evenly into both <strong>'+a+'</strong> and <strong>'+b+'</strong>?',question:'GCF of '+a+' and '+b+' =',answer:g});
-  if(g>1){
-    stepsData.push({title:'Divide the First Number',proc:'compute',type:'numeric',instruction:'<span class="mono">'+a+' ÷ '+g+' = ?</span>',question:a+' ÷ '+g+' =',answer:a/g});
-    stepsData.push({title:'Divide the Second Number',proc:'compute',type:'numeric',instruction:'<span class="mono">'+b+' ÷ '+g+' = ?</span>',question:b+' ÷ '+g+' =',answer:b/g});
+function startRatio() {
+  const a = readWeight('ratioA','First term'), b = readWeight('ratioB','Second term');
+  if (a === 0n && b === 0n) throw new Error('A ratio cannot have both terms zero.');
+  const g = gcd(a,b), sa = a/g, sb = b/g;
+  Object.assign(S,{a,b,gcf:g,simpA:sa,simpB:sb,display:`<span class="pd-val">${a} : ${b}</span>`,result:`${a} : ${b} = ${sa} : ${sb}`,detail:`Divide both terms by their GCF, ${g}.`});
+  info('Identify the Ratio','identify',`Keep the order of the two quantities: <strong class="mono">${a} : ${b}</strong>. Simplify by dividing both terms by their greatest common factor (GCF).`);
+  numeric('Find the GCF','setup',`Find the greatest positive whole number that divides both ${a} and ${b}.${a===0n||b===0n?' Every positive whole number divides 0.':''}`,'Greatest common factor',rational(g),'List the factors of the nonzero term or terms and choose the greatest shared factor.');
+  if (g>1n) {
+    numeric('Divide the First Term','compute',`${a} ÷ ${g} = ?`,'First simplified term',rational(sa),'Divide the first original term by the GCF.');
+    numeric('Divide the Second Term','compute',`${b} ÷ ${g} = ?`,'Second simplified term',rational(sb),'Divide the second original term by the same GCF.');
   }
-  stepsData.push({title:'Simplified Ratio',proc:'simplify',type:'info',instruction:g>1?'Dividing both by <strong>'+g+'</strong>: <strong class="mono" style="color:var(--success)">'+a/g+' : '+b/g+'</strong>':'The GCF is 1 — already in simplest form: <strong class="mono" style="color:var(--success)">'+a+' : '+b+'</strong>'});
-  launchWorkspace();
+  info('Simplified Ratio','simplify',`<strong class="mono">${sa} : ${sb}</strong>. ${g===1n?'The GCF is 1, so the original ratio is already in simplest form.':'Both terms were divided by '+g+'.'} The order stays the same.`);
 }
-
-// 2. EQUIVALENT RATIOS
-function startEquiv(){
-  var vals=[document.getElementById('eqA').value.trim().toLowerCase(),document.getElementById('eqB').value.trim().toLowerCase(),document.getElementById('eqC').value.trim().toLowerCase(),document.getElementById('eqD').value.trim().toLowerCase()];
-  var xPos=vals.indexOf('x');
-  if(xPos===-1){showError('One value must be "x".');return}
-  var nums=vals.map(function(v,i){return i===xPos?null:parseFloat(v)});
-  if(nums.some(function(v,i){return i!==xPos&&(isNaN(v)||v===0)})){showError('Enter valid non-zero numbers in the three known spots.');return}
-  var a=nums[0],b=nums[1],c=nums[2],d=nums[3];
-  var answer,divideBy,knownProduct,knownExpr;
-  if(xPos===0){answer=(b*c)/d;knownProduct=b*c;knownExpr=fmtNum(b)+' × '+fmtNum(c);divideBy=d}
-  else if(xPos===1){answer=(a*d)/c;knownProduct=a*d;knownExpr=fmtNum(a)+' × '+fmtNum(d);divideBy=c}
-  else if(xPos===2){answer=(a*d)/b;knownProduct=a*d;knownExpr=fmtNum(a)+' × '+fmtNum(d);divideBy=b}
-  else{answer=(b*c)/a;knownProduct=b*c;knownExpr=fmtNum(b)+' × '+fmtNum(c);divideBy=a}
-  Object.assign(S,{vals:vals,nums:nums,xPos:xPos,answer:answer});
-  var vl=vals.map(function(v,i){return i===xPos?'<span class="pd-unknown">x</span>':fmtNum(nums[i])});
-  document.getElementById('problemDisplay').innerHTML='<span class="pd-val">'+vl[0]+'</span><span class="pd-op">:</span><span class="pd-val">'+vl[1]+'</span><span class="pd-op">=</span><span class="pd-val">'+vl[2]+'</span><span class="pd-op">:</span><span class="pd-val">'+vl[3]+'</span>';
-  stepsData.push({title:'Identify the Equivalent Ratio',proc:'identify',type:'info',instruction:'We need to find <strong class="mono" style="color:var(--accent)">x</strong> so that both ratios are equal. Since a:b = c:d means a×d = b×c, we\'ll <strong>cross-multiply</strong>.'});
-  stepsData.push({title:'Cross-Multiply',proc:'setup',type:'info',instruction:'Multiply diagonally:<div class="step-rule-box" style="margin-top:10px;text-align:center"><span class="mono">'+vl[0]+' × '+vl[3]+'</span> = <span class="mono">'+vl[1]+' × '+vl[2]+'</span></div>'});
-  stepsData.push({title:'Compute the Known Product',proc:'compute',type:'numeric',instruction:'Calculate the side without x: <strong class="mono">'+knownExpr+'</strong>',question:knownExpr+' =',answer:knownProduct});
-  stepsData.push({title:'Divide to Find x',proc:'compute',type:'numeric',instruction:'Divide by <strong>'+fmtNum(divideBy)+'</strong>: <span class="mono">'+fmtNum(knownProduct)+' ÷ '+fmtNum(divideBy)+'</span>',question:fmtNum(knownProduct)+' ÷ '+fmtNum(divideBy)+' =',answer:answer});
-  stepsData.push({title:'Answer',proc:'simplify',type:'info',instruction:'<strong class="mono" style="color:var(--success)">x = '+fmtNum(answer)+'</strong><br><br>Equivalent ratio: <strong class="mono">'+fmtNum(xPos===0?answer:nums[0])+' : '+fmtNum(xPos===1?answer:nums[1])+' = '+fmtNum(xPos===2?answer:nums[2])+' : '+fmtNum(xPos===3?answer:nums[3])+'</strong>'});
-  launchWorkspace();
+// Both equation modes use a/b = c/d, so known denominators and any denominator x must be nonzero.
+function solveEquation(nums, xPos) {
+  const [a,b,c,d] = nums;
+  const factors = xPos===0||xPos===3 ? [b,c] : [a,d];
+  const coefficient = [d,c,b,a][xPos], product = multiply(...factors);
+  if (coefficient.n===0n) return { factors, coefficient, product, kind: product.n===0n?'many':'none', answer:null };
+  const answer = divide(product,coefficient);
+  return { factors, coefficient, product, kind:(xPos===1||xPos===3)&&answer.n===0n?'none':'unique', answer };
 }
-
-// 3. UNIT RATE
-function startRate(){
-  var amt=parseFloat(document.getElementById('rateAmt').value),units=parseFloat(document.getElementById('rateUnits').value);
-  var la=document.getElementById('rateLabelA').value.trim()||'units',lb=document.getElementById('rateLabelB').value.trim()||'units';
-  if(isNaN(amt)||isNaN(units)||units===0){showError('Enter valid numbers. Units cannot be zero.');return}
-  var rate=amt/units;
-  Object.assign(S,{amt:amt,units:units,la:la,lb:lb,rate:rate});
-  document.getElementById('problemDisplay').innerHTML='<span class="pd-val">'+fmtNum(amt)+'</span><span class="pd-op pd-sm">'+la+'</span><span class="pd-op">÷</span><span class="pd-val">'+fmtNum(units)+'</span><span class="pd-op pd-sm">'+lb+'</span>';
-  stepsData.push({title:'Identify the Rate',proc:'identify',type:'info',instruction:'You have <strong class="mono">'+fmtNum(amt)+' '+la+'</strong> for <strong class="mono">'+fmtNum(units)+' '+lb+'</strong>. A <strong>unit rate</strong> means "how much for one."'});
-  stepsData.push({title:'Set Up the Division',proc:'setup',type:'info',instruction:'Divide the total by the number of units:<div class="step-rule-box" style="margin-top:10px"><span class="mono">'+fmtNum(amt)+' '+la+' ÷ '+fmtNum(units)+' '+lb+'</span></div>'});
-  stepsData.push({title:'Divide',proc:'compute',type:'numeric',instruction:'<strong class="mono">'+fmtNum(amt)+' ÷ '+fmtNum(units)+' = ?</strong>',question:fmtNum(amt)+' ÷ '+fmtNum(units)+' =',answer:rate});
-  var singularLb=lb.replace(/s$/,'');
-  stepsData.push({title:'Write the Unit Rate',proc:'simplify',type:'info',instruction:'The unit rate is <strong class="mono" style="color:var(--success)">'+fmtNum(rate)+' '+la+' per '+singularLb+'</strong>'});
-  launchWorkspace();
-}
-
-// 4. COMPARE RATES
-function startCompare(){
-  var a1=parseFloat(document.getElementById('cmpAmtA').value),u1=parseFloat(document.getElementById('cmpUnitA').value);
-  var a2=parseFloat(document.getElementById('cmpAmtB').value),u2=parseFloat(document.getElementById('cmpUnitB').value);
-  var l1=document.getElementById('cmpLblA').value.trim()||'units',ul1=document.getElementById('cmpULblA').value.trim()||'units';
-  var l2=document.getElementById('cmpLblB').value.trim()||'units',ul2=document.getElementById('cmpULblB').value.trim()||'units';
-  if(isNaN(a1)||isNaN(u1)||isNaN(a2)||isNaN(u2)||u1===0||u2===0){showError('Enter valid numbers for both options.');return}
-  var rA=a1/u1,rB=a2/u2;
-  Object.assign(S,{a1:a1,u1:u1,a2:a2,u2:u2,l1:l1,ul1:ul1,l2:l2,ul2:ul2,rA:rA,rB:rB});
-  document.getElementById('problemDisplay').innerHTML='<span style="color:var(--accent-blue)"><span class="pd-val">'+fmtNum(a1)+'</span><span class="pd-op pd-sm">'+l1+' / '+fmtNum(u1)+' '+ul1+'</span></span><span class="pd-op">vs</span><span style="color:var(--accent-orange)"><span class="pd-val">'+fmtNum(a2)+'</span><span class="pd-op pd-sm">'+l2+' / '+fmtNum(u2)+' '+ul2+'</span></span>';
-  stepsData.push({title:'Identify the Two Rates',proc:'identify',type:'info',instruction:'We need to compare:<br><strong style="color:var(--accent-blue)">Option A:</strong> '+fmtNum(a1)+' '+l1+' for '+fmtNum(u1)+' '+ul1+'<br><strong style="color:var(--accent-orange)">Option B:</strong> '+fmtNum(a2)+' '+l2+' for '+fmtNum(u2)+' '+ul2+'<br><br>To compare fairly, find the <strong>unit rate</strong> for each.'});
-  stepsData.push({title:'Find Unit Rate A',proc:'compute',type:'numeric',instruction:'<strong style="color:var(--accent-blue)">Option A:</strong> <span class="mono">'+fmtNum(a1)+' ÷ '+fmtNum(u1)+' = ?</span>',question:fmtNum(a1)+' ÷ '+fmtNum(u1)+' =',answer:rA});
-  stepsData.push({title:'Find Unit Rate B',proc:'compute',type:'numeric',instruction:'<strong style="color:var(--accent-orange)">Option B:</strong> <span class="mono">'+fmtNum(a2)+' ÷ '+fmtNum(u2)+' = ?</span>',question:fmtNum(a2)+' ÷ '+fmtNum(u2)+' =',answer:rB});
-  var winner=rA<rB?'A':rA>rB?'B':'Tie';
-  var opts=winner==='Tie'?['They are equal']:['Option A','Option B'];
-  var answ=winner==='Tie'?'They are equal':'Option '+winner;
-  stepsData.push({title:'Compare the Unit Rates',proc:'simplify',type:'compare-visual',instruction:'Now compare:',rA:rA,rB:rB,l1:l1,ul1:ul1,l2:l2,ul2:ul2,question:'Which has the lower unit rate (better deal)?',answer:answ,options:opts});
-  launchWorkspace();
-}
-
-// 5. PART-TO-WHOLE
-function startPartWhole(){
-  var a=parseInt(document.getElementById('pwA').value),b=parseInt(document.getElementById('pwB').value),total=parseFloat(document.getElementById('pwTotal').value);
-  if(isNaN(a)||isNaN(b)||isNaN(total)||a<=0||b<=0||total<=0){showError('Enter positive numbers.');return}
-  var parts=a+b,valA=(a/parts)*total,valB=(b/parts)*total;
-  Object.assign(S,{a:a,b:b,total:total,parts:parts,valA:valA,valB:valB});
-  document.getElementById('problemDisplay').innerHTML='<span class="pd-val">'+a+'</span><span class="pd-op">:</span><span class="pd-val">'+b+'</span><span class="pd-op pd-sm" style="margin-left:14px">Total =</span><span class="pd-val">'+fmtNum(total)+'</span>';
-  stepsData.push({title:'Identify the Ratio and Total',proc:'identify',type:'info',instruction:'The ratio is <strong class="mono">'+a+' : '+b+'</strong> and the total is <strong class="mono">'+fmtNum(total)+'</strong>. We need to find how much each part gets.'});
-  stepsData.push({title:'Find Total Number of Parts',proc:'setup',type:'numeric',instruction:'Add the ratio parts: <span class="mono">'+a+' + '+b+' = ?</span>',question:a+' + '+b+' =',answer:parts});
-  var perPart=total/parts;
-  stepsData.push({title:'Find the Value of One Part',proc:'compute',type:'numeric',instruction:'Divide the total by the number of parts: <span class="mono">'+fmtNum(total)+' ÷ '+parts+' = ?</span>',question:fmtNum(total)+' ÷ '+parts+' =',answer:perPart});
-  stepsData.push({title:'Find Part A',proc:'compute',type:'numeric',instruction:'Part A gets <strong>'+a+'</strong> parts: <span class="mono">'+a+' × '+fmtNum(perPart)+' = ?</span>',question:'Part A =',answer:valA});
-  stepsData.push({title:'Find Part B',proc:'compute',type:'numeric',instruction:'Part B gets <strong>'+b+'</strong> parts: <span class="mono">'+b+' × '+fmtNum(perPart)+' = ?</span>',question:'Part B =',answer:valB});
-  stepsData.push({title:'Verify',proc:'simplify',type:'info',instruction:'Check: <span class="mono">'+fmtNum(valA)+' + '+fmtNum(valB)+' = '+fmtNum(valA+valB)+'</span> ✓<br><br><strong class="mono" style="color:var(--success)">Part A = '+fmtNum(valA)+', Part B = '+fmtNum(valB)+'</strong>'});
-  launchWorkspace();
-}
-
-// 6. SOLVE PROPORTION
-function startProportion(){
-  var vals=[document.getElementById('propA').value.trim().toLowerCase(),document.getElementById('propB').value.trim().toLowerCase(),document.getElementById('propC').value.trim().toLowerCase(),document.getElementById('propD').value.trim().toLowerCase()];
-  var xPos=vals.indexOf('x');
-  if(xPos===-1){showError('One value must be "x".');return}
-  var nums=vals.map(function(v,i){return i===xPos?null:parseFloat(v)});
-  if(nums.some(function(v,i){return i!==xPos&&(isNaN(v)||v===0)})){showError('Enter valid non-zero numbers.');return}
-  var a=nums[0],b=nums[1],c=nums[2],d=nums[3];
-  var answer,divideBy,knownProduct,knownExpr;
-  if(xPos===0){answer=(b*c)/d;knownProduct=b*c;knownExpr=fmtNum(b)+' × '+fmtNum(c);divideBy=d}
-  else if(xPos===1){answer=(a*d)/c;knownProduct=a*d;knownExpr=fmtNum(a)+' × '+fmtNum(d);divideBy=c}
-  else if(xPos===2){answer=(a*d)/b;knownProduct=a*d;knownExpr=fmtNum(a)+' × '+fmtNum(d);divideBy=b}
-  else{answer=(b*c)/a;knownProduct=b*c;knownExpr=fmtNum(b)+' × '+fmtNum(c);divideBy=a}
-  Object.assign(S,{vals:vals,nums:nums,xPos:xPos,answer:answer});
-  var vl=vals.map(function(v,i){return i===xPos?'<span class="pd-unknown">x</span>':fmtNum(nums[i])});
-  document.getElementById('problemDisplay').innerHTML='<span class="pd-frac"><span class="pd-frac-n">'+vl[0]+'</span><span class="pd-frac-bar"></span><span class="pd-frac-d">'+vl[1]+'</span></span><span class="pd-op">=</span><span class="pd-frac"><span class="pd-frac-n">'+vl[2]+'</span><span class="pd-frac-bar"></span><span class="pd-frac-d">'+vl[3]+'</span></span>';
-  stepsData.push({title:'Identify the Proportion',proc:'identify',type:'info',instruction:'We have '+inlineFrac(vl[0],vl[1])+' = '+inlineFrac(vl[2],vl[3])+'. Use <strong>cross-multiplication</strong> to find <strong class="mono" style="color:var(--accent)">x</strong>.'});
-  stepsData.push({title:'Cross-Multiply',proc:'setup',type:'info',instruction:'Multiply diagonally:<div class="step-rule-box" style="margin-top:10px;text-align:center"><span class="mono">'+vl[0]+' × '+vl[3]+'</span> <span style="color:var(--text-dim)">=</span> <span class="mono">'+vl[1]+' × '+vl[2]+'</span></div>'});
-  stepsData.push({title:'Compute the Known Product',proc:'compute',type:'numeric',instruction:'Calculate the side without x: <strong class="mono">'+knownExpr+'</strong>',question:knownExpr+' =',answer:knownProduct});
-  stepsData.push({title:'Divide to Find x',proc:'compute',type:'numeric',instruction:'<span class="mono">'+fmtNum(knownProduct)+' ÷ '+fmtNum(divideBy)+' = ?</span>',question:fmtNum(knownProduct)+' ÷ '+fmtNum(divideBy)+' =',answer:answer});
-  var final=vals.map(function(v,i){return i===xPos?fmtNum(answer):fmtNum(nums[i])});
-  stepsData.push({title:'Answer',proc:'simplify',type:'info',instruction:'<strong class="mono" style="color:var(--success)">x = '+fmtNum(answer)+'</strong><br><br>Completed proportion: '+inlineFrac(final[0],final[1])+' = '+inlineFrac(final[2],final[3])});
-  launchWorkspace();
-}
-
-// ==================== RENDER ====================
-function showStep(idx){
-  if(idx>=stepsData.length){finishProblem();return}
-  var step=stepsData[idx];
-  var container=document.getElementById('stepsContainer');
-  var card=document.createElement('div');
-  card.className='step-card';card.id='step-'+idx;
-  if(step.proc){
-    document.querySelectorAll('.proc-step').forEach(function(s){s.classList.remove('active')});
-    document.getElementById('proc-'+step.proc).classList.add('active');
-  }
-  var bodyHTML='';
-  if(step.type==='info'){
-    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><button class="btn-primary btn-sm" onclick="completeStep('+idx+')">Got It →</button>';
-  }else if(step.type==='numeric'){
-    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><div class="answer-row"><span class="answer-label">'+(step.question||'')+' </span><input type="text" class="answer-input" id="ans-'+idx+'" placeholder="?" autocomplete="off" onkeydown="if(event.key===\'Enter\')checkNum('+idx+')"><button class="btn-check" onclick="checkNum('+idx+')">Check</button></div><div class="step-feedback" id="fb-'+idx+'"></div>';
-  }else if(step.type==='compare-visual'){
-    var maxR=Math.max(step.rA,step.rB);
-    var pA=maxR>0?(step.rA/maxR)*100:50;
-    var pB=maxR>0?(step.rB/maxR)*100:50;
-    var singA=step.ul1.replace(/s$/,'');
-    var singB=step.ul2.replace(/s$/,'');
-    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><div class="step-rule-box" style="text-align:center"><strong style="color:var(--accent-blue)">A:</strong> <span class="mono">'+fmtNum(step.rA)+' '+step.l1+' per '+singA+'</span><br><strong style="color:var(--accent-orange)">B:</strong> <span class="mono">'+fmtNum(step.rB)+' '+step.l2+' per '+singB+'</span></div><div class="compare-bars"><div class="cbar-row"><span class="cbar-label" style="color:var(--accent-blue)">Option A</span><div class="cbar-track"><div class="cbar-fill a" style="width:'+pA+'%">'+fmtNum(step.rA)+'</div></div></div><div class="cbar-row"><span class="cbar-label" style="color:var(--accent-orange)">Option B</span><div class="cbar-track"><div class="cbar-fill b" style="width:'+pB+'%">'+fmtNum(step.rB)+'</div></div></div></div><div style="font-size:.88rem;color:var(--text);margin-bottom:10px;font-weight:500">'+step.question+'</div><div class="choice-row" id="choices-'+idx+'">'+step.options.map(function(o){return'<div class="choice-btn" onclick="checkChoice('+idx+',this,\''+o+'\')">'+o+'</div>'}).join('')+'</div><div class="step-feedback" id="fb-'+idx+'"></div>';
-  }
-  card.innerHTML='<div class="step-header"><div class="step-num">'+(idx+1)+'</div><div class="step-title">'+step.title+'</div></div><div class="step-body">'+bodyHTML+'</div>';
-  container.appendChild(card);
-  card.scrollIntoView({behavior:'smooth',block:'nearest'});
-  setTimeout(function(){var inp=card.querySelector('.answer-input');if(inp)inp.focus()},150);
-}
-
-function completeStep(idx){markDone(idx);currentStep=idx+1;showStep(idx+1)}
-function markDone(idx){
-  var card=document.getElementById('step-'+idx);
-  if(card){card.classList.add('completed');card.querySelector('.step-num').classList.add('done')}
-  var step=stepsData[idx];
-  if(step.proc)document.getElementById('proc-'+step.proc).classList.add('done');
-}
-
-function checkNum(idx){
-  var step=stepsData[idx],inp=document.getElementById('ans-'+idx),fb=document.getElementById('fb-'+idx);
-  var val=parseFloat(inp.value.trim());
-  if(isNaN(val)){fb.textContent='Enter a number.';fb.className='step-feedback show incorrect';return}
-  if(Math.abs(val-step.answer)<0.01){
-    inp.classList.add('correct');inp.disabled=true;inp.value=fmtNum(step.answer);
-    fb.textContent='Correct! ✓';fb.className='step-feedback show correct';
-    setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700);
-  }else{
-    inp.classList.add('incorrect');setTimeout(function(){inp.classList.remove('incorrect')},600);
-    var tries=parseInt(inp.dataset.tries||'0')+1;inp.dataset.tries=tries;
-    if(tries>=3){fb.innerHTML='The answer is <strong>'+fmtNum(step.answer)+'</strong>';fb.className='step-feedback show hint-text'}
-    else if(tries>=2){fb.textContent='Not quite — try once more!';fb.className='step-feedback show incorrect'}
-    else{fb.textContent='Not quite — give it another try!';fb.className='step-feedback show incorrect'}
-    inp.value='';inp.focus();
+function startEquiv() { startEquation('eq'); }
+function startProportion() { startEquation('prop'); }
+function startEquation(prefix) {
+  const raw = ['A','B','C','D'].map(s=>document.getElementById(prefix+s).value.trim());
+  if (raw.filter(v=>v.toLowerCase()==='x').length!==1) throw new Error('Enter exactly one x and three known numbers.');
+  const xPos=raw.findIndex(v=>v.toLowerCase()==='x');
+  const nums=raw.map((v,i)=>i===xPos?null:readNumber(v,'Position '+(i+1),true));
+  if ([1,3].some(i=>nums[i]?.n===0n)) throw new Error(prefix==='eq'?'The second term of each ratio must be nonzero here, because a:b is treated as a/b.':'A known denominator cannot be zero.');
+  const solution=solveEquation(nums,xPos), { factors, coefficient, product, kind, answer }=solution;
+  const vl=nums.map(v=>v===null?'x':fmtNum(v)), denominatorUnknown=xPos===1||xPos===3;
+  const expression=values=>prefix==='eq'?`${values[0]} : ${values[1]} = ${values[2]} : ${values[3]}`:`(${values[0]}) / (${values[1]}) = (${values[2]}) / (${values[3]})`;
+  const display=prefix==='eq'?`<span class="pd-val">${expression(vl)}</span>`:inlineFrac(vl[0],vl[1])+' = '+inlineFrac(vl[2],vl[3]);
+  Object.assign(S,{nums,vals:vl,xPos,...solution,display});
+  info(prefix==='eq'?'Identify the Equivalent Ratios':'Identify the Proportion','identify',`${prefix==='eq'?'Here, a : b means a/b. Ratios must keep corresponding quantities in the same order.':'A proportion states that two fractions have the same value.'} <strong>Denominators cannot be zero.</strong>${denominatorUnknown?' Since x is in a denominator, x ≠ 0.':''}`);
+  info('Cross-Multiply','setup',`With nonzero denominators, a/b = c/d gives a × d = b × c.<div class="step-rule-box mono">${[0,3].map(i=>nums[i]===null?'x':grouped(nums[i])).join(' × ')} = ${[1,2].map(i=>nums[i]===null?'x':grouped(nums[i])).join(' × ')}</div>`);
+  numeric('Compute the Known Product','compute',`Multiply the side without x: <span class="mono">${factors.map(grouped).join(' × ')}</span>.`,'Known product',product,'Multiply the two known diagonal terms, including their signs.');
+  if (coefficient.n===0n) {
+    const diagnosis=kind==='many'?'Any nonzero x':'No solution';
+    choice('Interpret the Equation',`The equation becomes <span class="mono">0 × x = ${fmtNum(product)}</span>. Multiplying by zero always gives zero. ${denominatorUnknown?'Remember x ≠ 0.':''}`,'Which conclusion follows?',diagnosis,['No solution','Any nonzero x','x = 0']);
+    S.result=diagnosis; S.detail=kind==='many'?'Both original numerators are zero. Every nonzero x makes both ratios zero; x = 0 is undefined.':`0 × x cannot equal ${fmtNum(product)}, so no value works.`;
+  } else {
+    numeric('Divide to Find x','compute',`The equation is <span class="mono">${grouped(coefficient)} × x = ${fmtNum(product)}</span>. Divide both sides by ${grouped(coefficient)}. Use an exact fraction if the decimal repeats.`,'Candidate value of x',answer,'Divide the known product by the coefficient of x.');
+    if (kind==='none') {
+      choice('Check the Denominator',`Cross-multiplication gives x = 0, but x is an original denominator. Division by zero is undefined.`,'Does this candidate solve the original proportion?','No solution',['x = 0 is valid','No solution']);
+      S.result='No solution'; S.detail='The only cross-product candidate is x = 0, which makes an original denominator zero.';
+    } else {
+      const completed=nums.map((v,i)=>i===xPos?answer:v), left=divide(completed[0],completed[1]),right=divide(completed[2],completed[3]);
+      info('Verify in the Original Proportion','simplify',`Substitute <strong>x = ${fmtNum(answer)}</strong> into the original expression.<div class="step-rule-box mono">${expression(completed.map(fmtNum))}</div>Left side = ${fmtNum(left)}; right side = ${fmtNum(right)}. Both denominators are nonzero, and both sides are equal.`);
+      S.result='x = '+fmtNum(answer); S.detail=expression(completed.map(fmtNum));
+    }
   }
 }
-
-function checkChoice(idx,btn,chosen){
-  var step=stepsData[idx];
-  if(chosen===step.answer){
-    btn.classList.add('correct');
-    document.querySelectorAll('#choices-'+idx+' .choice-btn').forEach(function(b){if(!b.classList.contains('correct'))b.classList.add('disabled')});
-    document.getElementById('fb-'+idx).textContent='Correct! ✓';
-    document.getElementById('fb-'+idx).className='step-feedback show correct';
-    setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700);
-  }else{
-    btn.classList.add('incorrect');setTimeout(function(){btn.classList.remove('incorrect')},500);
-    document.getElementById('fb-'+idx).textContent='Not quite — compare the numbers and try again!';
-    document.getElementById('fb-'+idx).className='step-feedback show incorrect';
+// Aliases name the same unit only. Different units require conversion before entry.
+const UNIT_ALIASES = [
+  ['dollar','dollars','$','usd'],['cent','cents','¢'],['hour','hours','hr','hrs'],
+  ['minute','minutes','min','mins'],['second','seconds','sec','secs'],['mile','miles','mi'],
+  ['kilometer','kilometers','kilometre','kilometres','km'],['meter','meters','metre','metres','m'],
+  ['centimeter','centimeters','centimetre','centimetres','cm'],['foot','feet','ft'],['inch','inches','in'],
+  ['pound','pounds','lb','lbs'],['kilogram','kilograms','kg'],['gram','grams','g'],
+  ['liter','liters','litre','litres','l'],['milliliter','milliliters','millilitre','millilitres','ml'],
+  ['ticket','tickets'],['cookie','cookies'],['batch','batches'],['word','words'],['calorie','calories'],
+  ['serving','servings'],['item','items'],['page','pages'],['book','books']
+];
+function unitKey(label) { const key=label.trim().toLowerCase().replace(/\s+/g,' '); return UNIT_ALIASES.find(group=>group.includes(key))?.[0] || key; }
+function readLabel(id, name) {
+  const text=document.getElementById(id).value.trim().replace(/\s+/g,' ');
+  if (!text || text.length>40) throw new Error(name+': enter a unit label of 1 to 40 characters.');
+  return text;
+}
+function rateValues(amountId, unitsId, label) {
+  const amount=readField(amountId,label+' amount'), units=readField(unitsId,label+' number of units');
+  if (amount.n<0n || units.n<=0n) throw new Error(label+': use a nonnegative amount and a positive number of units.');
+  return {amount,units,rate:divide(amount,units)};
+}
+function startRate() {
+  const {amount:amt,units,rate}=rateValues('rateAmt','rateUnits','Rate');
+  const la=readLabel('rateLabelA','Amount label'),lb=readLabel('rateLabelB','Unit label');
+  const phrase=`${fmtNum(rate)} ${la} per 1 ${unitKey(lb)}`;
+  Object.assign(S,{amt,units,rate,la,lb,display:`<span class="pd-val">${fmtNum(amt)} ${esc(la)} / ${fmtNum(units)} ${esc(lb)}</span>`,result:phrase,detail:`${fmtNum(amt)} ÷ ${fmtNum(units)} = ${fmtNum(rate)}. Both unit labels stay attached to the rate.`});
+  info('Identify the Rate','identify',`You have ${fmtNum(amt)} ${esc(la)} for ${fmtNum(units)} ${esc(lb)}. A unit rate tells how much there is <strong>for one</strong> denominator unit.`);
+  info('Set Up the Division','setup',`Divide both quantities by ${fmtNum(units)} so the denominator becomes 1.<div class="step-rule-box mono">(${fmtNum(amt)} ÷ ${fmtNum(units)}) ${esc(la)} per (${fmtNum(units)} ÷ ${fmtNum(units)}) ${esc(lb)}</div>`);
+  numeric('Divide','compute',`${fmtNum(amt)} ÷ ${fmtNum(units)} = ? Keep the value exact. If the decimal repeats, enter a fraction such as 1/3.`,'Unit rate',rate,'Divide the amount by the number of units. You can enter that division as an integer fraction.');
+  info('Write the Unit Rate','simplify',`<strong class="mono">${esc(phrase)}</strong>. This is an exact value.`);
+}
+function startCompare() {
+  const a=rateValues('cmpAmtA','cmpUnitA','Option A'),b=rateValues('cmpAmtB','cmpUnitB','Option B');
+  const l1=readLabel('cmpLblA','Option A amount label'),ul1=readLabel('cmpULblA','Option A unit label');
+  const l2=readLabel('cmpLblB','Option B amount label'),ul2=readLabel('cmpULblB','Option B unit label');
+  if (unitKey(l1)!==unitKey(l2)||unitKey(ul1)!==unitKey(ul2)) throw new Error('Convert both rates to the same amount units and the same denominator units, then enter matching labels. For example, change minutes to hours before comparing miles per hour. This organizer does not convert units.');
+  const goal=document.getElementById('cmpGoal').value;
+  if (!['compare','lower','higher'].includes(goal)) throw new Error('Choose a comparison goal.');
+  const order=compare(a.rate,b.rate),direction=goal==='higher'?'higher':'lower';
+  const winner=order===0?'They are equal':(direction==='lower'?order<0:order>0)?'Option A':'Option B';
+  const common=`${l1} per 1 ${unitKey(ul1)}`;
+  const explanation=order===0?'Both unit rates are exactly equal.':goal==='compare'?`${order<0?'Option A':'Option B'} has the lower unit rate; ${order>0?'Option A':'Option B'} has the higher unit rate. Whether lower or higher is useful depends on the question.`:`${winner} has the ${direction} unit rate, matching your selected goal. Lower cost per item and higher speed answer different questions.`;
+  Object.assign(S,{a,b,rA:a.rate,rB:b.rate,l1,ul1,l2,ul2,goal,winner,order,display:`<span class="pd-val">A: ${fmtNum(a.amount)} ${esc(l1)} / ${fmtNum(a.units)} ${esc(ul1)}<br>B: ${fmtNum(b.amount)} ${esc(l2)} / ${fmtNum(b.units)} ${esc(ul2)}</span>`,result:`A: ${fmtNum(a.rate)} ${common}; B: ${fmtNum(b.rate)} ${common}`,detail:explanation});
+  info('Identify the Two Rates','identify',`Compare the amount <strong>per one denominator unit</strong> for each option. ${goal==='compare'?'We will identify the lower rate without assuming that lower means better.':'Your goal is the <strong>'+direction+'</strong> rate.'}`);
+  info('Check the Units','setup',`Both rates use <strong>${esc(common)}</strong>. The numerator units and denominator units must match before comparing. This tool recognizes common names for the same unit, such as hr and hours; it does not convert different units.`);
+  numeric('Find Unit Rate A','compute',`Option A: ${fmtNum(a.amount)} ÷ ${fmtNum(a.units)} = ?`,'Unit rate A',a.rate,'Divide Option A’s amount by its number of units. Use an exact fraction if needed.');
+  numeric('Find Unit Rate B','compute',`Option B: ${fmtNum(b.amount)} ÷ ${fmtNum(b.units)} = ?`,'Unit rate B',b.rate,'Divide Option B’s amount by its number of units. Use an exact fraction if needed.');
+  choice('Compare the Unit Rates','Compare the exact values below. The bars are a visual aid; very close values may look the same.',`Which option has the ${direction} unit rate?`,winner,['Option A','Option B','They are equal'],{rA:a.rate,rB:b.rate,common});
+}
+function startPartWhole() {
+  const a=readWeight('pwA','Part A ratio term'),b=readWeight('pwB','Part B ratio term'),total=readField('pwTotal','Total');
+  if (a+b===0n || total.n<0n) throw new Error('Use a nonnegative total and a ratio whose terms are not both zero.');
+  const parts=a+b,perPart=divide(total,rational(parts)),valA=multiply(rational(a),perPart),valB=multiply(rational(b),perPart);
+  const objectNote=valA.d!==1n||valB.d!==1n?' These are fractional shares. If the problem counts whole objects that cannot be split, this total cannot be shared exactly in the given ratio.':'';
+  Object.assign(S,{a,b,total,parts,perPart,valA,valB,display:`<span class="pd-val">${a} : ${b}; total = ${fmtNum(total)}</span>`,result:`Part A = ${fmtNum(valA)}, Part B = ${fmtNum(valB)}`,detail:`${fmtNum(valA)} + ${fmtNum(valB)} = ${fmtNum(total)}.${objectNote}`});
+  info('Identify the Ratio and Total','identify',`The ratio <strong>${a} : ${b}</strong> is part A to part B. The total ${fmtNum(total)} includes <strong>both</strong> parts. We divide the total into equal ratio units.`);
+  numeric('Find the Total Ratio Units','setup',`Add the ratio terms: ${a} + ${b} = ?`,'Total ratio units',rational(parts),'Add both terms; the denominator is their sum, not the second term alone.');
+  numeric('Find the Value of One Ratio Unit','compute',`${fmtNum(total)} ÷ ${parts} = ? Use an exact fraction when needed.`,'Value of one ratio unit',perPart,'Divide the total by the sum of the ratio terms.');
+  numeric('Find Part A','compute',`Part A gets ${a} ratio units: ${a} × ${grouped(perPart)} = ?`,'Part A',valA,'Multiply the exact value of one ratio unit by the first ratio term.');
+  numeric('Find Part B','compute',`Part B gets ${b} ratio units: ${b} × ${grouped(perPart)} = ?`,'Part B',valB,'Multiply the exact value of one ratio unit by the second ratio term.');
+  info('Verify the Total','simplify',`<span class="mono">${fmtNum(valA)} + ${fmtNum(valB)} = ${fmtNum(total)}</span>. The two exact shares add to the original total.${objectNote}`);
+}
+function updateProgress() {
+  document.querySelectorAll('.proc-step').forEach(el=>{
+    const phase=el.id.slice(5),members=stepsData.filter(step=>step.proc===phase);
+    const done=members.length>0&&members.every(step=>step.accepted);
+    const active=!!S&&!S.finished&&!done&&stepsData[currentStep]?.proc===phase;
+    el.classList.toggle('done',done);el.classList.toggle('active',active);
+    if(active)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');
+  });
+}
+function activeStep(idx) { return S&&!S.finished&&idx===currentStep&&!stepsData[idx]?.accepted&&document.getElementById('step-'+idx)?stepsData[idx]:null; }
+function showStep(idx) {
+  if(!S||S.finished||idx!==currentStep||document.getElementById('step-'+idx))return;
+  if(idx===stepsData.length){finishProblem();return;}
+  const step=stepsData[idx];if(!step)return;
+  const card=document.createElement('section');card.className='step-card';card.id='step-'+idx;card.setAttribute('aria-labelledby','title-'+idx);
+  let body=`<div class="step-instruction">${step.instruction}</div>`;
+  if(step.type==='info')body+=`<button type="button" class="btn-primary btn-sm" onclick="completeStep(${idx})">Got It →</button>`;
+  else if(step.type==='numeric')body+=`<div class="answer-row"><label class="answer-label" for="ans-${idx}">${esc(step.question)}</label><input type="text" class="answer-input" id="ans-${idx}" autocomplete="off" aria-describedby="formatHelp fb-${idx}"><button type="button" class="btn-check" onclick="checkNum(${idx})">Check</button></div><div class="step-feedback" id="fb-${idx}" role="status" aria-live="polite"></div>`;
+  else {
+    if(step.rA){
+      const maximum=compare(step.rA,step.rB)>=0?step.rA:step.rB;
+      const width=value=>maximum.n===0n?0:Number(value.n*maximum.d*10000n/(value.d*maximum.n))/100;
+      body+=`<div class="step-rule-box">A: <strong>${fmtNum(step.rA)} ${esc(step.common)}</strong><br>B: <strong>${fmtNum(step.rB)} ${esc(step.common)}</strong></div><div class="compare-bars" aria-hidden="true"><div class="cbar-row"><span class="cbar-label">Option A</span><div class="cbar-track"><div class="cbar-fill a" style="width:${width(step.rA)}%"></div></div></div><div class="cbar-row"><span class="cbar-label">Option B</span><div class="cbar-track"><div class="cbar-fill b" style="width:${width(step.rB)}%"></div></div></div></div>`;
+    }
+    body+=`<fieldset><legend>${esc(step.question)}</legend><div class="choice-row" id="choices-${idx}">${step.options.map((option,i)=>`<button type="button" class="choice-btn" data-choice="${i}">${esc(option)}</button>`).join('')}</div></fieldset><div class="step-feedback" id="fb-${idx}" role="status" aria-live="polite"></div>`;
   }
+  card.innerHTML=`<div class="step-header"><div class="step-num" aria-hidden="true">${idx+1}</div><h2 class="step-title" id="title-${idx}">${esc(step.title)}</h2></div><div class="step-body">${body}</div>`;
+  document.getElementById('stepsContainer').appendChild(card);
+  card.querySelector('input')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();checkNum(idx);}});
+  card.querySelectorAll('[data-choice]').forEach(button=>button.addEventListener('click',()=>checkChoice(idx,button,step.options[Number(button.dataset.choice)])));
+  updateProgress();card.scrollIntoView({behavior:'smooth',block:'nearest'});card.querySelector('input,button')?.focus({preventScroll:true});
 }
-
-function finishProblem(){
-  document.querySelectorAll('.proc-step').forEach(function(s){s.classList.remove('active')});
-  var expr='',detail='';
-  if(S.mode==='ratio'){expr=S.a+' : '+S.b+' = '+S.simpA+' : '+S.simpB;detail=S.gcf>1?'Simplified by GCF of '+S.gcf:'Already simplest form'}
-  else if(S.mode==='equiv'){var v=S.vals.map(function(val,i){return i===S.xPos?fmtNum(S.answer):val});expr=v[0]+' : '+v[1]+' = '+v[2]+' : '+v[3]+'  →  x = '+fmtNum(S.answer);detail='Solved using cross-multiplication'}
-  else if(S.mode==='rate'){expr=fmtNum(S.amt)+' '+S.la+' ÷ '+fmtNum(S.units)+' '+S.lb+' = '+fmtNum(S.rate)+' per '+S.lb.replace(/s$/,'');detail='Divided total by units'}
-  else if(S.mode==='compare'){var w=S.rA<S.rB?'A':S.rA>S.rB?'B':'Tie';expr='A: '+fmtNum(S.rA)+'/unit  vs  B: '+fmtNum(S.rB)+'/unit';detail=w==='Tie'?'Both rates are equal':'Option '+w+' has the better (lower) unit rate'}
-  else if(S.mode==='partwhole'){expr=S.a+' : '+S.b+' of '+fmtNum(S.total)+'  →  Part A = '+fmtNum(S.valA)+', Part B = '+fmtNum(S.valB);detail=S.parts+' total parts, '+fmtNum(S.total/S.parts)+' per part'}
-  else if(S.mode==='proportion'){var v2=S.vals.map(function(val,i){return i===S.xPos?fmtNum(S.answer):val});expr=v2[0]+'/'+v2[1]+' = '+v2[2]+'/'+v2[3]+'  →  x = '+fmtNum(S.answer);detail='Solved using cross-multiplication'}
-  document.getElementById('resultExpr').textContent=expr;
-  document.getElementById('resultDetail').textContent=detail;
-  document.getElementById('resultSection').classList.add('visible');
-  document.getElementById('resultSection').scrollIntoView({behavior:'smooth',block:'nearest'});
+function feedback(idx,message,correct=false) { const el=document.getElementById('fb-'+idx);el.textContent=message;el.className='step-feedback show '+(correct?'correct':'incorrect'); }
+function acceptStep(idx,delay=400) {
+  const step=activeStep(idx);if(!step)return;step.accepted=true;
+  const card=document.getElementById('step-'+idx);card.classList.add('completed');card.querySelector('.step-num').classList.add('done');
+  card.querySelectorAll('input,button').forEach(control=>{control.disabled=true;});updateProgress();
+  const version=workspaceVersion;
+  const advance=()=>{if(version!==workspaceVersion||!S||currentStep!==idx)return;currentStep++;showStep(currentStep);};
+  if(delay)setTimeout(advance,delay);else advance();
 }
-
-function resetAll(){
-  document.getElementById('inputSection').style.display='';
-  document.getElementById('workspace').classList.remove('visible');
-  document.getElementById('stepsContainer').innerHTML='';
-  document.getElementById('resultSection').classList.remove('visible');
-  document.querySelectorAll('.proc-step').forEach(function(s){s.classList.remove('active','done')});
-  document.querySelectorAll('.input-section input').forEach(function(i){i.value=''});
+function completeStep(idx) { if(activeStep(idx)?.type==='info')acceptStep(idx,0); }
+function checkNum(idx) {
+  const step=activeStep(idx);if(step?.type!=='numeric')return;
+  const input=document.getElementById('ans-'+idx);let value;
+  try{value=readNumber(input.value,'Answer');}catch(error){input.setAttribute('aria-invalid','true');feedback(idx,error.message);return;}
+  if(compare(value,step.answer)===0){input.classList.remove('incorrect');input.classList.add('correct');input.removeAttribute('aria-invalid');feedback(idx,'Correct! ✓',true);acceptStep(idx);return;}
+  input.classList.add('incorrect');input.setAttribute('aria-invalid','true');step.tries=(step.tries||0)+1;
+  feedback(idx,'Not quite. '+step.hint+' Answers must be exact; rounded decimals may change the value.'+(step.tries>=3?' Check your work: '+fmtNum(step.answer)+'.':''));input.focus();
 }
+function checkChoice(idx,button,chosen) {
+  const step=activeStep(idx);if(step?.type!=='choice'||!step.options.includes(chosen))return;
+  if(chosen===step.answer){button.classList.add('correct');feedback(idx,'Correct! ✓',true);acceptStep(idx);}
+  else{button.classList.add('incorrect');feedback(idx,step.rA?'Compare the exact rates and check whether the question asks for the lower or higher rate.':'Use the equation and the original denominator restriction. A denominator cannot be zero.');}
+}
+function finishProblem() {
+  if(!S||S.finished||currentStep!==stepsData.length||stepsData.some(step=>!step.accepted))return;
+  S.finished=true;updateProgress();document.getElementById('resultExpr').textContent=S.result;document.getElementById('resultDetail').textContent=S.detail;
+  const result=document.getElementById('resultSection');result.classList.add('visible');result.querySelector('button').focus({preventScroll:true});result.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function resetAll() {
+  workspaceVersion++;S=null;stepsData=[];currentStep=0;mode=null;
+  document.getElementById('inputSection').style.display='';document.getElementById('workspace').classList.remove('visible');
+  document.getElementById('stepsContainer').replaceChildren();document.getElementById('problemDisplay').replaceChildren();
+  document.getElementById('resultSection').classList.remove('visible');document.getElementById('resultExpr').textContent='';document.getElementById('resultDetail').textContent='';
+  document.querySelectorAll('.input-section input').forEach(input=>{input.value='';});document.getElementById('cmpGoal').value='compare';
+  document.querySelectorAll('.mode-tab').forEach(tab=>{tab.classList.remove('selected');tab.setAttribute('aria-pressed','false');});
+  document.querySelectorAll('.mode-panel').forEach(panel=>panel.classList.remove('active'));document.getElementById('startRow').style.display='none';
+  clearError();updateProgress();document.getElementById('tab-ratio').focus();
+}
+document.querySelectorAll('.mode-panel').forEach(panel=>{
+  const controls=Array.from(panel.querySelectorAll('input,select'));
+  controls.forEach((control,i)=>control.addEventListener('keydown',event=>{
+    if(event.key!=='Enter'||control.tagName==='SELECT')return;event.preventDefault();
+    if(i===controls.length-1)startSolving();else controls[i+1].focus();
+  }));
+});
 </script>
 </body>
 </html>
