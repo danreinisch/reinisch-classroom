@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Classroom Chess · Reinisch Classroom</title>
+  <link rel="stylesheet" href="./chess.css?v=20260906-chess-1">
+  <script type="module" src="./app.js?v=20260906-chess-2"></script>
+</head>
+<body>
+  <div class="chess-app">
+    <header class="app-header">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">♞</span><div><p class="eyebrow">Reinisch Classroom</p><h1>Classroom Chess</h1></div></div>
+      <div class="header-actions"><a id="backLink" href="/student/?tab=activities">← Activities</a><button id="settingsBtn" class="quiet" type="button">Board &amp; pieces</button></div>
+    </header>
+    <nav class="view-nav" aria-label="Chess activities">
+      <button type="button" data-view="play" aria-current="page">Play</button>
+      <button type="button" data-view="learn">Learn</button>
+      <button type="button" data-view="challenges">Challenges</button>
+      <button type="button" data-view="saves">My games <span class="count">3 slots</span></button>
+    </nav>
+    <p id="storageStatus" class="storage-status" role="status">Opening chess…</p>
+    <div id="sessionNotice" class="notice error" role="alert" hidden>Your student session changed. <a href="/student/?tab=activities">Return to Activities</a> and reopen chess to keep saved games separate.</div>
+    <main id="mainContent">
+      <section id="workspace" class="workspace" aria-label="Chess game">
+        <div class="board-card">
+          <div class="board-heading"><span id="boardCaption">A little thinking. A great next move.</span><button id="flipBtn" class="quiet small" type="button">Flip board</button></div>
+          <div id="board" class="board" role="group" aria-label="Chess board" aria-describedby="boardHelp"></div>
+          <p id="positionStatus" class="position-status" role="status" aria-live="polite"></p>
+          <p id="boardHelp" class="board-help">Select a piece, then a square. Keyboard: arrow keys to move; Enter or Space to select.</p>
+        </div>
+        <aside class="side-card">
+          <div id="playPanel">
+            <p class="eyebrow" id="modeLabel">Play the computer</p>
+            <h2 id="gameTitle">Your next move.</h2>
+            <p id="gameDetails" class="muted"></p>
+            <button id="newGameBtn" class="primary wide" type="button">New game</button>
+            <div class="button-row"><button id="hintBtn" type="button">Give me a hint</button><button id="undoBtn" type="button">Undo turn</button></div>
+            <button id="retryComputerBtn" class="wide" type="button" hidden>Retry computer move</button>
+            <p id="playFeedback" class="feedback" role="status" aria-live="polite">Try to control the center, develop your pieces, and keep your king safe.</p>
+            <div class="move-heading"><h3>Moves</h3><span id="moveCount" class="muted">New game</span></div>
+            <ol id="moveList" class="move-list" aria-label="Move history"></ol>
+            <details class="rules-note"><summary>Quick rules &amp; controls</summary><p>Checkmate ends the game; the king is never captured. Castling, en passant, and all four promotion choices are supported.</p><p>These are casual, untimed games. Three repetitions of a position or 50 moves by each side without a pawn move or capture automatically end in a draw. Tutorial and challenge positions are separate from your saved games.</p><p>Learning plays random legal moves. Friendly looks a little ahead. Challenge looks further, with a short thinking limit. These levels do not have chess ratings.</p></details>
+          </div>
+          <div id="exercisePanel" hidden>
+            <button id="allExercisesBtn" class="text-button" type="button">← All lessons</button>
+            <p class="eyebrow" id="exerciseTag"></p><h2 id="exerciseTitle"></h2>
+            <p id="exercisePrompt" class="exercise-prompt"></p>
+            <div class="button-row"><button id="exerciseHintBtn" type="button">Show a hint</button><button id="resetExerciseBtn" type="button">Try again</button></div>
+            <p id="exerciseFeedback" class="feedback" role="status" aria-live="polite">Take your time. You can ask for a hint.</p>
+            <div id="exerciseSuccess" class="success-box" hidden><p class="eyebrow">Nice move!</p><p id="exerciseExplanation"></p><button id="nextExerciseBtn" class="primary wide" type="button">Next lesson →</button></div>
+          </div>
+        </aside>
+      </section>
+      <section id="catalog" hidden aria-labelledby="catalogTitle"><div class="section-heading"><div><p class="eyebrow" id="catalogEyebrow"></p><h2 id="catalogTitle"></h2><p id="catalogDescription" class="muted"></p></div><p id="catalogProgress" class="progress-pill"></p></div><div id="exerciseCards" class="card-grid"></div></section>
+      <section id="saves" hidden aria-labelledby="savesTitle"><div class="section-heading"><div><p class="eyebrow">Pick up where you left off</p><h2 id="savesTitle">My games</h2><p class="muted">Three slots, saved for your student login in this browser on this device. Clearing browser data removes these saves.</p></div></div><div id="saveCards" class="card-grid save-grid"></div><div class="transfer-card"><div><h3>Moving to another device?</h3><p class="muted">Copy a game code here, then paste it into chess on the other device.</p></div><div class="button-row"><button id="copyGameBtn" type="button">Copy current game</button><button id="importGameBtn" type="button">Paste a game code</button></div></div></section>
+    </main>
+    <footer>Learn at your pace. Play a friend. Find your next move. <span>Chess rules: chess.js · BSD-2-Clause</span></footer>
+  </div>
+
+  <dialog id="newGameDialog" aria-labelledby="newGameTitle">
+    <form id="newGameForm">
+      <div class="dialog-heading"><h2 id="newGameTitle">Set up your game</h2><button type="button" data-close="newGameDialog" class="icon-close" aria-label="Close game setup">×</button></div>
+      <label for="modeSelect">Who is playing?</label><select id="modeSelect"><option value="computer">Play the computer</option><option value="local">Two players · same device</option></select>
+      <div id="computerOptions" class="form-grid"><div><label for="levelSelect">Computer level</label><select id="levelSelect"><option value="starter">Learning</option><option value="friendly" selected>Friendly</option><option value="challenge">Challenge</option></select></div><div><label for="sideSelect">I play</label><select id="sideSelect"><option value="w">White · first move</option><option value="b">Black · second move</option></select></div></div>
+      <div id="slotField"><label for="slotSelect">Save in</label><select id="slotSelect"></select></div>
+      <p id="replaceWarning" class="notice" hidden></p>
+      <p id="newGameError" class="error-text" role="alert"></p>
+      <button id="startGameBtn" class="primary wide" type="submit">Start game</button>
+    </form>
+  </dialog>
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="dialog-heading"><h2 id="settingsTitle">Make it your board</h2><button type="button" data-close="settingsDialog" class="icon-close" aria-label="Close board settings">×</button></div>
+    <label for="themeSelect">Board colors</label><select id="themeSelect"><option value="forest">Forest</option><option value="classic">Classic walnut</option><option value="ocean">Ocean</option><option value="contrast">High contrast</option></select>
+    <label for="piecesSelect">Piece style</label><select id="piecesSelect"><option value="classic">Classic pieces</option><option value="modern">Modern pieces</option><option value="labeled">Pieces with names</option><option value="letters">Letter pieces</option></select>
+    <label class="check-label"><input type="checkbox" id="legalToggle" checked> Show legal moves when I select a piece</label>
+    <label class="check-label"><input type="checkbox" id="rotateToggle"> Turn the board after each move in two-player games</label>
+    <p class="muted">Flip board also works whenever you need it. Settings are saved with your student login on this device.</p>
+    <button type="button" data-close="settingsDialog" class="primary wide">Done</button>
+  </dialog>
+  <dialog id="promotionDialog" aria-labelledby="promotionTitle"><h2 id="promotionTitle">Choose your new piece</h2><p>Your pawn reached the farthest row.</p><div class="promotion-options"><button type="button" data-promote="q">Queen</button><button type="button" data-promote="r">Rook</button><button type="button" data-promote="b">Bishop</button><button type="button" data-promote="n">Knight</button></div><button type="button" data-close="promotionDialog" class="quiet wide">Cancel move</button></dialog>
+  <dialog id="transferDialog" aria-labelledby="transferTitle"><div class="dialog-heading"><h2 id="transferTitle">Game code</h2><button type="button" data-close="transferDialog" class="icon-close" aria-label="Close game code">×</button></div><p id="transferHelp" class="muted"></p><label for="gameCode">Game code</label><textarea id="gameCode" rows="7" spellcheck="false" maxlength="90000"></textarea><p id="transferError" class="error-text" role="status"></p><button id="transferAction" class="primary wide" type="button">Copy code</button></dialog>
+  <dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">Delete saved game?</h2><p id="confirmText"></p><div class="button-row"><button type="button" data-close="confirmDialog">Keep game</button><button id="confirmAction" class="danger" type="button">Delete game</button></div></dialog>
+  <noscript><p>Chess needs JavaScript. Enable it and reload the page.</p></noscript>
+</body>
+</html>
