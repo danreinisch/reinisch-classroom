@@ -262,6 +262,56 @@ test(
   }
 );
 
+test(
+  'student rail exposes compact due-state cues from the existing due-state helper',
+  () => {
+    assert.match(
+      center,
+      /getStudentRailStatus/
+    );
+
+    assert.match(
+      center,
+      /getGoalDueState/
+    );
+
+    assert.match(
+      center,
+      /obs-center-student-rail-status/
+    );
+
+    assert.match(
+      center,
+      /Urgent/
+    );
+
+    assert.match(
+      center,
+      /Due/
+    );
+  }
+);
+
+test(
+  'Student mode suppresses the duplicate inner student heading while Class Period can retain it',
+  () => {
+    assert.match(
+      center,
+      /showStudentName\s*=\s*true/
+    );
+
+    assert.match(
+      center,
+      /obs-center-student-heading/
+    );
+
+    assert.match(
+      center,
+      /renderStudentSection\([\s\S]*?selectedStudentCode[\s\S]*?false/
+    );
+  }
+);
+
 console.log(
   `\n${passed + failed} tests: ${passed} passed, ${failed} failed`
 );
