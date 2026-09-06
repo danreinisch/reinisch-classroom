@@ -102,7 +102,7 @@ test('malformed and unsupported expressions are rejected in full before any work
   for (const expr of ['2(3+4)', '(2)(3)', '1 2+3', '1.2.3+4', '.', '()',
     '3+', '*3+2', '3**2', '(2+3', '2+3)', '2x+3', '1e309+1', 'sqrt(9)',
     '4=4', '<script>alert(1)</script>', '', '9^0.5', '2^(1/2)', '2^101',
-    '0^0', '0^-1', '1/0', '1/(3-3)', '1000000001+1', '0.0000000000001+1',
+    '0^0', '0^-1', '1/0', '1/(3-3)', '1000000001+1', '-1000000001+1', '0.0000000000001+1',
     '('.repeat(21) + '2+3' + ')'.repeat(21), '1+'.repeat(130) + '1']) {
     assert.throws(() => f.calculate(expr), undefined, expr);
     f.begin(expr);
@@ -178,6 +178,25 @@ test('reset, repeated submission, and stale timers cannot duplicate or skip step
   f.answer(0, '6'); f.answer(1, '9');
   assert.equal(f.result(), '10-4+3 = 9');
   assert.equal(f.document.querySelectorAll('.step-card').length, 2);
+});
+
+test('progress badges wait for the final use of a rule and show equal-priority pairs', t => {
+  const f = fixture(t);
+  f.begin('(2^2)+3^2*2');
+  f.answer(0, '4');
+  assert.equal(f.document.getElementById('pemdas-P').classList.contains('done'), true);
+  assert.equal(f.document.getElementById('pemdas-E').classList.contains('done'), false);
+  assert.equal(f.document.getElementById('pemdas-E').classList.contains('active'), true);
+  f.answer(1, '9');
+  assert.equal(f.document.getElementById('pemdas-E').classList.contains('done'), true);
+  assert.equal(f.document.getElementById('pemdas-M').classList.contains('active'), true);
+  assert.equal(f.document.getElementById('pemdas-D').classList.contains('active'), true);
+  f.answer(2, '18');
+  assert.equal(f.document.getElementById('pemdas-M').classList.contains('done'), true);
+  assert.equal(f.document.getElementById('pemdas-A').classList.contains('active'), true);
+  assert.equal(f.document.getElementById('pemdas-S').classList.contains('active'), true);
+  f.answer(3, '22');
+  assert.equal(f.result(), '(2^2)+3^2*2 = 22');
 });
 
 test('operator precedence agrees with independently calculated small-integer cases', t => {

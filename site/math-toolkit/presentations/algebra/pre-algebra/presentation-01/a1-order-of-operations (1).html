@@ -977,6 +977,10 @@ function updatePEMDAS(step) {
   const active = new Set([step.rule, step.subRule]);
   if (active.has('M') || active.has('D')) { active.add('M'); active.add('D'); }
   if (active.has('A') || active.has('S')) { active.add('A'); active.add('S'); }
+  const remaining = new Set(state.steps.slice(state.currentStep).flatMap(s => [s.rule, s.subRule]));
+  state.completedRules.forEach(rule => {
+    if (!remaining.has(rule) && !active.has(rule)) document.getElementById('pemdas-' + rule)?.classList.add('done');
+  });
   active.forEach(rule => document.getElementById('pemdas-' + rule)?.classList.add('active'));
 }
 function checkAnswer(idx) {
