@@ -1,8 +1,8 @@
-import { bank, checkEdit } from "./sentence-workshop-content.js?v=20260906-sw7";
-import * as endings from "./sentence-workshop-endings.js?v=20260906-sw7";
-import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw7";
-import * as commas from "./sentence-workshop-commas.js?v=20260906-sw7";
-import * as openings from "./sentence-workshop-openings.js?v=20260906-sw7";
+import { bank, checkEdit } from "./sentence-workshop-content.js?v=20260906-sw8";
+import * as endings from "./sentence-workshop-endings.js?v=20260906-sw8";
+import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw8";
+import * as commas from "./sentence-workshop-commas.js?v=20260906-sw8";
+import * as openings from "./sentence-workshop-openings.js?v=20260906-sw8";
 
 function lessonFor(session) {
   if (session.lessonId === "openings")

@@ -87,6 +87,7 @@ test("opening hints and models support correction and preserve the draft through
   await openOpenings(page);
   await checkCommas(page, [1]);
   await page.locator('[data-sw-action="next"]').click();
+  await setCommas(page, [1]);
   await page.locator('[data-sw-action="check"]').click();
   await expect(page.locator("#sw-feedback")).toContainText("splits “When the bell rings”");
   await setCommas(page, [4, 5]);
@@ -1228,3 +1229,87 @@ test("comma mistake recovery, navigation, and resumed edits remain usable on mob
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+for (const route of [donor, mirror]) {
+  test(`fresh tasks start independently and revisits keep only their own edits: ${route}`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(route);
+    await page.locator("#openSentenceWorkshopBtn").click();
+    for (const lesson of ["openings", "commas", "boundaries", "endings", "repairs"]) {
+      await page.locator(`[data-sw-action="lesson-${lesson}"]`).click();
+      await page.locator('[data-sw-action="start"]').click();
+      const comma = ["openings", "commas"].includes(lesson);
+      const firstControl = comma
+        ? '[data-sw-comma="1"]'
+        : lesson === "boundaries"
+          ? '[data-sw-gap="1"]'
+          : lesson === "endings"
+            ? '[data-sw-ending="!"]'
+            : '[data-sw-repair-choice="who"]';
+      const secondControl = comma
+        ? '[data-sw-comma="4"]'
+        : lesson === "boundaries"
+          ? '[data-sw-gap="2"]'
+          : lesson === "endings"
+            ? '[data-sw-ending="?"]'
+            : '[data-sw-repair-choice="verb"]';
+      const preview = lesson === "endings" ? ".sw-ending-message" : ".sw-preview p";
+      await page.locator(firstControl).click();
+      const firstText = await page.locator(preview).textContent();
+      await page.locator('[data-sw-action="next"]').click();
+      // Exact new-task defaults: this also catches the supplied comma that looked carried over.
+      if (lesson === "repairs")
+        expect(await page.locator('[data-sw-repair-choice][aria-pressed="true"]').count()).toBe(0);
+      else expect(await page.locator(firstControl).getAttribute("aria-pressed")).toBe("false");
+      if (comma) expect(await page.locator('[data-sw-comma][aria-pressed="true"]').count()).toBe(0);
+      await expect(page.locator("#sw-feedback")).toBeEmpty();
+      await expect(page.locator('[data-sw-action="retry"]')).toBeDisabled();
+      await page.locator(secondControl).click();
+      const secondText = await page.locator(preview).textContent();
+      await page.locator('[data-sw-action="previous"]').click();
+      await expect(page.locator(preview)).toHaveText(firstText);
+      await expect(page.locator(firstControl)).toHaveAttribute("aria-pressed", "true");
+      await page.locator('[data-sw-action="next"]').click();
+      await expect(page.locator(preview)).toHaveText(secondText);
+      if (lesson === "openings") {
+        await page.locator('[data-sw-action="next"]').click();
+        await expect(page.locator("[data-sw-item]")).toHaveAttribute(
+          "data-sw-item",
+          "openings-practice-3"
+        );
+        expect(await page.locator('[data-sw-comma][aria-pressed="true"]').count()).toBe(0);
+        await expect(page.locator(".sw-preview p")).toHaveText(
+          "Put away your materials when the bell rings."
+        );
+        await page
+          .locator("#sentenceWorkshop")
+          .screenshot({ path: testInfo.outputPath("fresh-sentence.png") });
+      }
+      if (lesson === "commas") {
+        await page.locator('[data-sw-action="next"]').click();
+        await expect(page.locator("[data-sw-item]")).toHaveAttribute(
+          "data-sw-item",
+          "commas-practice-3"
+        );
+        await expect(page.locator("#sw-start-note")).toHaveText(
+          "This draft includes commas to review. Add, remove, or keep them."
+        );
+        expect(
+          await page
+            .locator('[data-sw-comma][aria-pressed="true"]')
+            .evaluateAll((buttons) => buttons.map((b) => Number(b.dataset.swComma)))
+        ).toEqual([3]);
+        await page.locator('[data-sw-action="read-task"]').click();
+        expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain(
+          "This draft includes commas to review"
+        );
+        await page
+          .locator("#sentenceWorkshop")
+          .screenshot({ path: testInfo.outputPath("supplied-punctuation.png") });
+      }
+      await page.locator('[data-sw-action="finish"]').click();
+      await expect(page.locator(".sw-card")).toContainText("You attempted 0 tasks");
+    }
+  });
+}

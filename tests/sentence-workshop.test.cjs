@@ -2,11 +2,11 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw7");
-const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw7");
-const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260906-sw7");
-const openings = import("../site/assets/js/sentence-workshop-openings.js?v=20260906-sw7");
-const commas = import("../site/assets/js/sentence-workshop-commas.js?v=20260906-sw7");
+const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw8");
+const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw8");
+const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260906-sw8");
+const openings = import("../site/assets/js/sentence-workshop-openings.js?v=20260906-sw8");
+const commas = import("../site/assets/js/sentence-workshop-commas.js?v=20260906-sw8");
 
 test("opening commas match an independent editorial key for every selectable combination", async () => {
   const c = await openings;
@@ -46,6 +46,10 @@ test("opening commas match an independent editorial key for every selectable com
     [[], 3],
   ];
   assert.equal(c.models.length, 4);
+  assert.deepEqual(
+    c.bank.practice.slice(0, 4).map((item) => c.initialEdit(item).commas),
+    [[], [], [], []]
+  );
   assert.equal(c.allItems.length, 32);
   assert.equal(new Set(c.allItems.map((i) => i.id)).size, 32);
   assert.equal(new Set(c.allItems.map((i) => i.words.join(" "))).size, 32);
@@ -849,8 +853,8 @@ test("both launch copies match and lesson assets use one version", () => {
     "utf8"
   );
   assert.equal(donor, mirror);
-  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw7/);
-  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw7/);
+  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw8/);
+  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw8/);
   for (const filename of [
     "sentence-workshop.js",
     "sentence-workshop-engine.js",
@@ -863,12 +867,12 @@ test("both launch copies match and lesson assets use one version", () => {
     const js = fs.readFileSync(path.join(root, "site/assets/js", filename), "utf8");
     assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(|XMLHttpRequest|sendBeacon/);
     for (const imported of js.matchAll(/from "\.\/sentence-workshop[^"?]*\.js\?v=([^"\s]+)"/g)) {
-      assert.equal(imported[1], "20260906-sw7");
+      assert.equal(imported[1], "20260906-sw8");
     }
   }
 });
 
-const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw7");
+const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw8");
 
 test("sentence endings follow the reviewed purpose key and accept both allowed tones", async () => {
   const c = await endings;

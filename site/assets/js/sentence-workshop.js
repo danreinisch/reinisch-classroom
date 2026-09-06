@@ -3,7 +3,7 @@ import {
   initialEdit,
   solution,
   editedText,
-} from "./sentence-workshop-content.js?v=20260906-sw7";
+} from "./sentence-workshop-content.js?v=20260906-sw8";
 import {
   createSession,
   start,
@@ -17,11 +17,11 @@ import {
   finish,
   recordFor,
   summary,
-} from "./sentence-workshop-engine.js?v=20260906-sw7";
-import * as endings from "./sentence-workshop-endings.js?v=20260906-sw7";
-import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw7";
-import * as commas from "./sentence-workshop-commas.js?v=20260906-sw7";
-import * as openings from "./sentence-workshop-openings.js?v=20260906-sw7";
+} from "./sentence-workshop-engine.js?v=20260906-sw8";
+import * as endings from "./sentence-workshop-endings.js?v=20260906-sw8";
+import * as repairs from "./sentence-workshop-repairs.js?v=20260906-sw8";
+import * as commas from "./sentence-workshop-commas.js?v=20260906-sw8";
+import * as openings from "./sentence-workshop-openings.js?v=20260906-sw8";
 
 const escape = (value) =>
   String(value).replace(
@@ -295,6 +295,9 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
     const item = session.item;
     const record = recordFor(session);
     const locked = !canEdit(session);
+    const startingNote = item.initial.length
+      ? "This draft includes commas to review. Add, remove, or keep them."
+      : "This message starts without commas. Add them only where needed.";
     const hintText =
       record.help === 1
         ? isOpenings()
@@ -316,8 +319,8 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
       <h2 id="sw-heading" tabindex="-1">${isOpenings() ? "Make the opening and main message clear." : "Make the list easy to read."}</h2><p class="sw-context">${escape(item.context)}</p>
       <p id="sw-directions">${escape(c.directions)}</p>
       <div class="sw-actions">${button("read-task", "Read directions & draft")}${button("read-edit", "Read my message")}${button("read-marks", "Read comma positions")}</div>
-      <div class="sw-repair-draft"><span class="sw-muted">Starting draft</span><p>${escape(c.editedText(item, c.initialEdit(item)))}</p></div>
-      <div class="sw-editor" role="group" aria-label="${isOpenings() ? "Sentence opening comma editor" : "List comma editor"}" aria-describedby="sw-directions">${pieces}</div>
+      <div class="sw-repair-draft"><span class="sw-muted">Starting draft${item.initial.length ? " · punctuation provided" : ""}</span><p>${escape(c.editedText(item, c.initialEdit(item)))}</p><p id="sw-start-note" class="sw-muted">${startingNote}</p></div>
+      <div class="sw-editor" role="group" aria-label="${isOpenings() ? "Sentence opening comma editor" : "List comma editor"}" aria-describedby="sw-directions sw-start-note">${pieces}</div>
       <div class="sw-preview"><span class="sw-muted">Your message</span><p>${escape(c.editedText(item, draft))}</p></div>
       ${hintText ? `<aside class="sw-hint"><strong>Here is a clue</strong><p>${escape(hintText)}</p>${record.help >= 2 && item.optional !== null ? `<p class="sw-muted">${isOpenings() ? "The outlined space is optional: either comma choice works here." : "The outlined spaces include both needed commas and the optional final comma."}</p>` : ""}${button("read-hint", "Read clue")}</aside>` : ""}
       <div id="sw-feedback" class="sw-feedback ${record.resolved && !record.demonstrated ? "sw-success" : ""}" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${escape(feedback)}</div>
@@ -469,7 +472,7 @@ export function mountSentenceWorkshop(root, { onMenu, onClear, stopSpeech }) {
         const texts = {
           "read-models": root.querySelector(".sw-card")?.textContent || "",
           "read-task": item
-            ? `${item.context} ${c.directions} Starting draft: ${c.editedText(item, c.initialEdit(item))}`
+            ? `${item.context} ${c.directions} ${root.querySelector("#sw-start-note")?.textContent || ""} Starting draft: ${c.editedText(item, c.initialEdit(item))}`
             : "",
           "read-edit": item ? c.editedText(item, draft) : "",
           "read-marks": item ? c.editedText(item, draft, true) : "",

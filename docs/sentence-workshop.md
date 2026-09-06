@@ -62,7 +62,7 @@ For the authored clear lists of three or more items, both versions—with and wi
 
 Three completed guided tasks open fresh checks. Applied work requires fresh first-try success without hints in each of three targets: separating single-word items, keeping multiword items together, and recognizing two-item lists. Repeated success in two targets cannot replace the third. The summary names coverage and support from this visit; the rule is a provisional routing threshold, not a mastery standard. Shorter tasks match the target needing help, at most two detours are offered, and the finite exit and unchanged-submission rules remain in effect. Read-aloud and the comma-position reader do not count as instructional help.
 
-All five lessons preserve their individual draft and summary during a visit and clear together. Both entry pages share the `20260906-sw7` assets; the menu retains one regular-sized workshop card and the separate 140-question score.
+All five lessons preserve their individual draft and summary during a visit and clear together. Both entry pages share the `20260906-sw8` assets; the menu retains one regular-sized workshop card and the separate 140-question score.
 
 Content references: [Purdue OWL list-comma rules](https://owl.purdue.edu/owl/general_writing/punctuation/commas/extended_rules_for_commas.html) and [Chicago Manual of Style on when the serial comma is necessary](https://www.chicagomanualofstyle.org/qanda/data/faq/topics/Commas/faq0077.html). These ground punctuation choices; they do not validate the lesson's routing rules or learning effectiveness.
 
@@ -78,6 +78,14 @@ Four completed guided tasks open fresh checks. Applied work requires a fresh fir
 
 Content references: [Purdue OWL on introductory clauses and phrases](https://owl.purdue.edu/owl/general_writing/punctuation/commas/commas_after_introductions.html), [Purdue sentence punctuation patterns](https://owl.purdue.edu/owl/general_writing/punctuation/sentence_punctuation_patterns.html), [Chicago on short introductory phrases](https://cmosshoptalk.com/2016/02/23/chicago-style-workout-2-commas-with-introductory-words-and-phrases/), and [Australian Government Style Manual on introductory response words](https://www.stylemanual.gov.au/grammar-punctuation-and-conventions/punctuation/commas). All task sentences are original. These references support the punctuation choices, not the learning effectiveness or routing thresholds.
 
+## Starting drafts and new tasks
+
+Teacher review identified apparent carryover: the first response task needs a comma at gap 1, and the next task had an authored incorrect comma at the same gap. Its starting draft therefore looked like the student's previous selection survived navigation. The following final-clause task repeated the same ambiguity at gap 4. These were supplied punctuation, not shared answer state.
+
+The opening lesson's first four guided tasks now start with empty comma spaces. Later punctuation-repair drafts retain their reviewed initial commas and explicitly say **Starting draft · punctuation provided** and **This draft includes commas to review. Add, remove, or keep them.** Unpunctuated starting drafts say so too. The note is read with the directions and is attached to the comma editor's accessible description. This explanation applies to both comma lessons.
+
+New tasks use their own starting drafts; revisiting a task restores only that task's edits. The regression test reproduces the reported gap-1 ambiguity before the correction, then checks fresh defaults and backward/forward isolation across all five lessons on both entry routes, including the blank opening/final-clause sequence and later provided punctuation. Skipped drafts still do not become attempts.
+
 ## Retry and task navigation
 
 Teacher review found that the two-attempt limit and worked-example state could leave students unable to edit the same task again or revisit earlier work. All five lessons now share a visible task-navigation row:
@@ -90,6 +98,8 @@ Teacher review found that the two-attempt limit and worked-example state could l
 Task position describes the examples opened in this visit. Navigation retains shorter-task return paths and the two automatic detour limit. A corrected answer after a worked example counts as an edit completed with support; viewing the example alone does not count as a completed edit. Repeating an already recorded task cannot add a second item or replace its original first try. All task history remains in visit memory and clears with the existing clear/reload/departure behavior.
 
 ## Verification
+
+- Starting-draft clarification: 34 workshop and 16 original Skill Builder checks passed. All 39 Chromium tests passed with no failures, skips, or flaky results. The new two-route regression verifies new-task defaults and saved-draft isolation across all five lessons, blank initial guided comma tasks, explicit supplied-punctuation instructions and narration, and zero attempts from skipped work. Fresh-sentence and supplied-punctuation screenshots were reviewed. Targeted lint, inline syntax, matching entry pages, and original DATA checks passed.
 
 - Sentence openings: all 34 workshop unit checks and 16 original Skill Builder checks passed. All 37 Chromium tests passed with no failures, skips, or flaky results. New coverage checks all selectable comma combinations for 32 tasks against independent literal answers, both optional styles, four-target fresh coverage, matching shorter tasks, preserved first submissions, bounded recovery, retry after misses/models, draft and feedback restoration, all-five-lesson clear/reload/history on both entry routes, narrow-screen keyboard and speech fallback, and the actual Viewer sandbox. Desktop, mobile, and optional-comma support screenshots were reviewed. Targeted ESLint, inline syntax, matching entry pages, and unchanged original DATA checks passed. The branch starts from main `310aa42a`, preserving the concurrent student voice-typing update.
 

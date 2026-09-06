@@ -62,16 +62,14 @@ export const bank = {
       "clause",
       "When the bell rings",
       "put away your materials",
-      "Edit this classroom direction. Keep the whole time clause together.",
-      [1]
+      "Edit this classroom direction. Keep the whole time clause together."
     ),
     item(
       "practice-3",
       "final",
       "Put away your materials",
       "when the bell rings",
-      "The same direction now starts with the action. The ending tells exactly when to act.",
-      [4]
+      "The same direction now starts with the action. The ending tells exactly when to act."
     ),
     item(
       "practice-4",
