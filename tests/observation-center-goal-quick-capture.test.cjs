@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const childProcess = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -17,6 +18,11 @@ const quickCapturePath = path.join(
 const observationPagePath = path.join(
   root,
   'site/teacher/observations/index.html'
+);
+
+const domContractPath = path.join(
+  root,
+  'tests/observation-center-goal-quick-capture-dom.test.cjs'
 );
 
 const runtime = fs.readFileSync(runtimePath, 'utf8');
@@ -174,4 +180,15 @@ test(
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed`);
 
-if (failed > 0) process.exitCode = 1;
+if (failed > 0) {
+  process.exitCode = 1;
+} else {
+  childProcess.execFileSync(
+    process.execPath,
+    [domContractPath],
+    {
+      cwd: root,
+      stdio: 'inherit',
+    }
+  );
+}
