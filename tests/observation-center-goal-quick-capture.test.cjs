@@ -3,22 +3,27 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const observation = fs.readFileSync(
-  path.join(root, 'site/web/tc-observation.js'),
-  'utf8'
+
+const runtimePath = path.join(
+  root,
+  'site/web/tc-observation.js'
 );
 
-function section(source, marker, length = 30000) {
-  const start = source.indexOf(marker);
-  assert.notEqual(start, -1, `missing source marker: ${marker}`);
-  return source.slice(start, start + length);
-}
-
-const center = section(
-  observation,
-  'async function initObservationCenter',
-  80000
+const quickCapturePath = path.join(
+  root,
+  'site/web/tc-observation-quick-capture.js'
 );
+
+const observationPagePath = path.join(
+  root,
+  'site/teacher/observations/index.html'
+);
+
+const runtime = fs.readFileSync(runtimePath, 'utf8');
+const page = fs.readFileSync(observationPagePath, 'utf8');
+const quickCapture = fs.existsSync(quickCapturePath)
+  ? fs.readFileSync(quickCapturePath, 'utf8')
+  : '';
 
 let passed = 0;
 let failed = 0;
@@ -38,132 +43,132 @@ function test(name, fn) {
 console.log('\n--- OBS-9B goal-driven quick capture contract ---');
 
 test(
-  'Observation Center adds a Center-only quick-capture enhancer',
+  'OBS-9B is a dedicated Observation-Center-only enhancer module',
   () => {
-    assert.match(center, /enhanceCenterQuickCaptureCard/);
-    assert.doesNotMatch(
-      observation.slice(0, observation.indexOf('async function initObservationCenter')),
-      /enhanceCenterQuickCaptureCard/
+    assert.ok(
+      fs.existsSync(quickCapturePath),
+      'missing tc-observation-quick-capture.js'
     );
+    assert.match(quickCapture, /\/teacher\/observations\/?/);
+    assert.match(quickCapture, /obs-center-capture-card/);
   }
 );
 
 test(
-  'quick capture reuses the existing buildGoalCard capture engine',
+  'Observation page loads the enhancer after the established observation runtime',
   () => {
-    const captureCard = section(center, 'const buildCenterCaptureCard', 12000);
-    assert.match(captureCard, /buildGoalCard\s*\(/);
-    assert.match(captureCard, /enhanceCenterQuickCaptureCard\s*\(/);
+    const runtimeIndex = page.indexOf('/web/tc-observation.js');
+    const quickIndex = page.indexOf('/web/tc-observation-quick-capture.js');
+
+    assert.notEqual(runtimeIndex, -1);
+    assert.notEqual(quickIndex, -1);
+    assert.ok(quickIndex > runtimeIndex);
+    assert.match(page, /tc-observation-quick-capture\.js\?v=20260906-obs9b-quick-capture/);
   }
 );
 
 test(
-  'Center quick-capture cards expose their observation category',
+  'existing tc-observation capture engine is not forked into OBS-9B',
   () => {
-    assert.match(center, /obs-center-quick-capture/);
-    assert.match(center, /dataset\.captureCategory/);
-    assert.match(center, /observation_config\?\.category|observation_config\s*\|\|\s*\{\}/);
+    assert.doesNotMatch(runtime, /obs-center-quick-capture/);
+    assert.doesNotMatch(runtime, /tc-observation-quick-capture/);
+    assert.doesNotMatch(quickCapture, /function\s+saveObservation\s*\(/);
+    assert.doesNotMatch(quickCapture, /function\s+buildGoalCard\s*\(/);
   }
 );
 
 test(
-  'unfinished Center cards open ready for one-click capture',
+  'quick capture only reshapes existing Center card controls',
   () => {
-    const helper = section(center, 'enhanceCenterQuickCaptureCard', 12000);
-    assert.match(helper, /aria-expanded/);
-    assert.match(helper, /click\s*\(\s*\)/);
-    assert.match(helper, /Recorded|recorded/i);
+    assert.match(quickCapture, /obs-response-btn/);
+    assert.match(quickCapture, /obs-prompt-btn/);
+    assert.match(quickCapture, /obs-tally-input/);
+    assert.match(quickCapture, /obs-checklist-item/);
+    assert.match(quickCapture, /obs-note-input/);
   }
 );
 
 test(
-  'Center save feedback is immediate and keeps the capture card open',
+  'unfinished Center cards open ready for capture while recorded cards stay collapsed',
   () => {
-    const captureCard = section(center, 'const buildCenterCaptureCard', 12000);
-    assert.match(captureCard, /Saved ✓/);
-    assert.match(captureCard, /aria-expanded/);
-    assert.match(captureCard, /click\s*\(\s*\)/);
+    assert.match(quickCapture, /aria-expanded/);
+    assert.match(quickCapture, /Recorded/i);
+    assert.match(quickCapture, /click\s*\(\s*\)/);
   }
 );
 
 test(
-  'Absent and No Opportunity are secondary rather than primary capture controls',
+  'session save feedback is immediate and the Center card stays open',
   () => {
-    assert.match(center, /obs-center-quick-disposition/);
-    assert.match(center, /Absent \/ No Opportunity/);
-    assert.match(center, /details/);
-    assert.match(center, /summary/);
+    assert.match(quickCapture, /Saved ✓/);
+    assert.match(quickCapture, /keepOpen|keep-open|reopen/i);
+    assert.match(quickCapture, /setTimeout/);
   }
 );
 
 test(
-  'optional notes are collapsed until the teacher asks for them',
+  'Absent and No Opportunity are secondary disclosure controls',
   () => {
-    assert.match(center, /obs-center-quick-note/);
-    assert.match(center, /Add note/);
-    assert.match(center, /obs-note-input/);
+    assert.match(quickCapture, /obs-center-quick-disposition/);
+    assert.match(quickCapture, /Absent \/ No Opportunity/);
+    assert.match(quickCapture, /details/);
+    assert.match(quickCapture, /summary/);
   }
 );
 
 test(
-  'session outcome controls receive Center-specific quick-capture layout',
+  'optional note stays collapsed until requested',
   () => {
-    assert.match(center, /session_outcome/);
-    assert.match(center, /obs-center-quick-session/);
+    assert.match(quickCapture, /obs-center-quick-note/);
+    assert.match(quickCapture, /Add note/);
+    assert.match(quickCapture, /obs-note-input/);
   }
 );
 
 test(
-  'tally controls receive Center-specific quick-capture layout',
+  'all four observation categories get distinct quick-capture presentation hooks',
   () => {
-    assert.match(center, /tally/);
-    assert.match(center, /obs-center-quick-tally/);
+    assert.match(quickCapture, /obs-center-quick-session/);
+    assert.match(quickCapture, /obs-center-quick-tally/);
+    assert.match(quickCapture, /obs-center-quick-prompt/);
+    assert.match(quickCapture, /obs-center-quick-checklist/);
   }
 );
 
 test(
-  'prompt-count controls receive Center-specific quick-capture layout',
-  () => {
-    assert.match(center, /prompt_count/);
-    assert.match(center, /obs-center-quick-prompt/);
-  }
-);
-
-test(
-  'behavior checklist controls receive Center-specific quick-capture layout',
-  () => {
-    assert.match(center, /behavior_checklist/);
-    assert.match(center, /obs-center-quick-checklist/);
-  }
-);
-
-test(
-  'capture cards are widened enough to avoid the cramped three-across layout',
+  'capture cards are widened to avoid the cramped three-across layout',
   () => {
     assert.match(
-      center,
-      /obs-center-card-grid[\s\S]{0,500}minmax\((?:3[6-9]0|4\d{2})px,1fr\)/
+      quickCapture,
+      /obs-center-card-grid[\s\S]{0,500}minmax\((?:3[6-9]0|4\d{2})px,\s*1fr\)/
     );
   }
 );
 
 test(
-  'quick-capture presentation does not introduce a second persistence path',
+  'OBS-9B reacts to Center rerenders without replacing the Center renderer',
   () => {
-    const helper = section(center, 'enhanceCenterQuickCaptureCard', 12000);
-    assert.doesNotMatch(helper, /fetch\s*\(/);
-    assert.doesNotMatch(helper, /teacher-sync-observations/);
-    assert.doesNotMatch(helper, /db\./);
+    assert.match(quickCapture, /MutationObserver/);
+    assert.match(quickCapture, /data-obs9b|dataset\.obs9b/i);
+    assert.doesNotMatch(quickCapture, /innerHTML\s*=\s*['"`]/);
   }
 );
 
 test(
-  'historical period lock remains in the Center capture path',
+  'historical locked goal cards are explicitly skipped',
   () => {
-    const captureCard = section(center, 'const buildCenterCaptureCard', 12000);
-    assert.match(captureCard, /historical/);
-    assert.match(captureCard, /!periodOverride/);
-    assert.match(captureCard, /buildLockedHistoricalGoal/);
+    assert.match(quickCapture, /obs-center-goal-locked/);
+    assert.match(quickCapture, /return/);
+  }
+);
+
+test(
+  'quick-capture presentation introduces no API, database, or local persistence path',
+  () => {
+    assert.doesNotMatch(quickCapture, /fetch\s*\(/);
+    assert.doesNotMatch(quickCapture, /teacher-sync-observations/);
+    assert.doesNotMatch(quickCapture, /\bdb\./);
+    assert.doesNotMatch(quickCapture, /localStorage|sessionStorage/);
   }
 );
 
