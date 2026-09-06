@@ -71,6 +71,10 @@
   // Cleanup function returned by initHtmlAssignmentBridge(); called in closeAssignmentViewer().
   let htmlBridgeCleanup = null;
 
+  // Optional accessibility controller for the currently open assignment only.
+  let assignmentDictation = null;
+  let assignmentViewerOpening = false;
+
   // Keyboard handler for Escape-to-close the assignment panel; stored so it can be removed.
   let assignmentPanelEscapeHandler = null;
 
@@ -3373,6 +3377,7 @@
    * Reads text aloud using browser's built-in speech synthesis
    */
   function speakText(text) {
+    assignmentDictation?.cancel();
     // Check if speech synthesis is supported
     if (!('speechSynthesis' in window)) {
       console.warn(LOG_PREFIX, 'Speech synthesis not supported in this browser');
@@ -3485,6 +3490,18 @@
    * Open the assignment viewer as a right-slide panel
    */
   async function openAssignmentViewer(instance) {
+    // Both card-handler paths can receive the same click. Keep response IDs
+    // unique so writing, dictation, and submission share one assignment panel.
+    if (assignmentViewerOpening || document.getElementById('assignmentPanel')) return;
+    assignmentViewerOpening = true;
+    try {
+      await populateAssignmentViewer(instance);
+    } finally {
+      assignmentViewerOpening = false;
+    }
+  }
+
+  async function populateAssignmentViewer(instance) {
     console.log(LOG_PREFIX, 'Opening assignment viewer for:', instance.id);
     
     assignmentViewerState.currentAssignment = instance;
@@ -3596,6 +3613,26 @@
     // Append panel to backdrop, then backdrop to body
     backdrop.appendChild(panel);
     document.body.appendChild(backdrop);
+
+    // Dictated text uses the same input handlers as typing, including embedded
+    // same-origin HTML. Loading failure leaves the normal assignment usable.
+    assignmentDictation?.destroy();
+    assignmentDictation = null;
+    try {
+      assignmentDictation = window.RCAssignmentDictation?.create(panel, {
+        canEdit: () => !assignmentViewerState.isReadOnly,
+        beforeStart: () => {
+          readAloudState.speaking = false;
+          readAloudState.utterances = [];
+          readAloudState.currentIndex = 0;
+          const readButton = panel.querySelector('#btnReadAloud');
+          if (readButton) readButton.textContent = '🔊 Read Aloud';
+          panel.querySelectorAll('.reading').forEach(el => el.classList.remove('reading'));
+        }
+      }) || null;
+    } catch (err) {
+      console.warn(LOG_PREFIX, 'Dictation unavailable; typing remains available.');
+    }
     
     // Add backdrop click handler (but not on panel clicks)
     backdrop.addEventListener('click', function(e) {
@@ -3829,6 +3866,7 @@
    * Render the current day's content
    */
   function renderCurrentDay(panel, instance) {
+    assignmentDictation?.cancel();
     const assignment = instance.assignment || {};
     const meta = assignment.meta || {};
     const days = meta.days || [];
@@ -5260,6 +5298,9 @@
     }
 
     mainTextarea.value = response;
+    // A builder transfer is an edit, including when its words were dictated.
+    // Notify the same autosave handler used by normal typing.
+    mainTextarea.dispatchEvent(new Event('input', { bubbles: true }));
     
     // Show success message briefly
     const transferBtn = document.getElementById('builderTransferBtn');
@@ -5362,6 +5403,8 @@
    * Close the assignment viewer
    */
   function closeAssignmentViewer() {
+    assignmentDictation?.destroy();
+    assignmentDictation = null;
     // Remove the HTML assignment postMessage bridge if one is active
     if (htmlBridgeCleanup) {
       htmlBridgeCleanup();
@@ -12060,6 +12103,7 @@
   };
 
   function toggleReadAloud(panel) {
+    assignmentDictation?.cancel();
     const btn = document.getElementById('btnReadAloud');
     if (!btn) return;
 
