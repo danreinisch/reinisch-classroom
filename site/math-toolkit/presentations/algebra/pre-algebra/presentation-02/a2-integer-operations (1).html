@@ -215,7 +215,7 @@
     gap: 4px;
     padding-top: 20px;
   }
-  .op-selector label {
+  .op-selector #operationLabel {
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--text-muted);
@@ -298,7 +298,7 @@
     overflow: hidden;
     transition: max-height 0.4s ease;
   }
-  .examples-body.open { max-height: 700px; }
+  .examples-body.open { max-height: none; }
   .example-category {
     padding: 4px 18px 14px;
     border-top: 1px solid var(--border);
@@ -602,6 +602,21 @@
     display: flex; gap: 10px; justify-content: center; margin-top: 20px;
   }
 
+  [hidden] { display: none !important; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 3px; }
+  button:disabled { cursor: default; }
+  .examples-toggle { width: 100%; border-radius: 0; background: transparent; text-align: left; }
+  .expr-val.zero { color: var(--text); }
+  .expr-display, .answer-row, .actions { flex-wrap: wrap; }
+  .expr-val, .expr-result, .result-expression, .choice-btn { max-width: 100%; overflow-wrap: anywhere; }
+  .answer-input { width: min(100%, 280px); }
+  .answer-label, .answer-help, .number-line-caption { display: block; color: var(--text-muted); font-size: 0.82rem; margin: 8px 0; }
+  .sign-check { border: 0; min-width: 0; margin-bottom: 10px; }
+  .sign-check legend { font-size: 0.88rem; font-weight: 500; margin-bottom: 8px; }
+  .workspace-actions { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+  .step-card.completed { opacity: 1; }
+  .choice-btn:disabled:not(.correct) { opacity: 0.45; }
+
   /* === RESPONSIVE === */
   @media (max-width: 600px) {
     .container { padding: 16px; }
@@ -657,78 +672,83 @@
   <!-- Input Section -->
   <div class="input-section" id="inputSection">
     <h2>✏️ Enter Your Problem</h2>
-    <p class="hint">Type in two integers from your assignment and pick the operation.</p>
+    <p class="hint" id="integerHint">Integers include negative numbers, zero, and positive numbers. Use digits with an optional sign, without decimals or commas. This organizer supports inputs from −1,000,000,000 to 1,000,000,000.</p>
 
     <div class="int-input-grid">
       <div class="int-field">
-        <label>First Integer</label>
-        <input type="text" id="inputA" placeholder="e.g. −5" autocomplete="off" spellcheck="false">
+        <label for="inputA">First Integer</label>
+        <input type="text" id="inputA" maxlength="40" aria-describedby="integerHint" placeholder="e.g. −5" autocomplete="off" spellcheck="false">
       </div>
       <div class="op-selector">
-        <label>Operation</label>
-        <div class="op-buttons">
-          <div class="op-btn" data-op="+" onclick="selectOp(this)">+</div>
-          <div class="op-btn" data-op="-" onclick="selectOp(this)">−</div>
-          <div class="op-btn" data-op="*" onclick="selectOp(this)">×</div>
-          <div class="op-btn" data-op="/" onclick="selectOp(this)">÷</div>
+        <span id="operationLabel">Operation</span>
+        <div class="op-buttons" role="group" aria-labelledby="operationLabel">
+          <button type="button" class="op-btn" data-op="+" aria-label="Add" aria-pressed="false" onclick="selectOp(this)">+</button>
+          <button type="button" class="op-btn" data-op="-" aria-label="Subtract" aria-pressed="false" onclick="selectOp(this)">−</button>
+          <button type="button" class="op-btn" data-op="*" aria-label="Multiply" aria-pressed="false" onclick="selectOp(this)">×</button>
+          <button type="button" class="op-btn" data-op="/" aria-label="Divide" aria-pressed="false" onclick="selectOp(this)">÷</button>
         </div>
       </div>
       <div class="int-field">
-        <label>Second Integer</label>
-        <input type="text" id="inputB" placeholder="e.g. 3" autocomplete="off" spellcheck="false">
+        <label for="inputB">Second Integer</label>
+        <input type="text" id="inputB" maxlength="40" aria-describedby="integerHint" placeholder="e.g. 3" autocomplete="off" spellcheck="false">
       </div>
     </div>
 
     <div class="start-row">
       <button class="btn-primary" id="startBtn" onclick="startSolving()">Let's Solve It →</button>
     </div>
-    <div class="error-msg" id="errorMsg"></div>
+    <div class="error-msg" id="errorMsg" role="alert" aria-atomic="true"></div>
 
     <!-- Examples Panel -->
     <div class="examples-panel">
-      <div class="examples-toggle" onclick="toggleExamples()">
+      <button type="button" class="examples-toggle" id="examplesToggle" aria-expanded="false" aria-controls="examplesBody" onclick="toggleExamples()">
         <span>📋 Try a Practice Problem</span>
-        <span class="toggle-arrow" id="toggleArrow">▼</span>
-      </div>
-      <div class="examples-body" id="examplesBody">
+        <span class="toggle-arrow" id="toggleArrow" aria-hidden="true">▼</span>
+      </button>
+      <div class="examples-body" id="examplesBody" hidden>
         <div class="example-category">
           <div class="category-label">🟢 Adding Integers</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadEx(-3,'+',5)">−3 + 5</span>
-            <span class="example-chip" onclick="loadEx(7,'+',4)">7 + 4</span>
-            <span class="example-chip" onclick="loadEx(-6,'+',-2)">−6 + (−2)</span>
-            <span class="example-chip" onclick="loadEx(-8,'+',8)">−8 + 8</span>
-            <span class="example-chip" onclick="loadEx(12,'+',-5)">12 + (−5)</span>
+            <button type="button" class="example-chip" onclick="loadEx(-3,'+',5)">−3 + 5</button>
+            <button type="button" class="example-chip" onclick="loadEx(7,'+',4)">7 + 4</button>
+            <button type="button" class="example-chip" onclick="loadEx(-6,'+',-2)">−6 + (−2)</button>
+            <button type="button" class="example-chip" onclick="loadEx(-8,'+',8)">−8 + 8</button>
+            <button type="button" class="example-chip" onclick="loadEx(12,'+',-5)">12 + (−5)</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,'+',-6)">0 + (−6)</button>
           </div>
         </div>
         <div class="example-category">
           <div class="category-label">🟡 Subtracting Integers</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadEx(5,'-',9)">5 − 9</span>
-            <span class="example-chip" onclick="loadEx(-4,'-',3)">−4 − 3</span>
-            <span class="example-chip" onclick="loadEx(-6,'-',-2)">−6 − (−2)</span>
-            <span class="example-chip" onclick="loadEx(10,'-',-7)">10 − (−7)</span>
-            <span class="example-chip" onclick="loadEx(-1,'-',-1)">−1 − (−1)</span>
+            <button type="button" class="example-chip" onclick="loadEx(5,'-',9)">5 − 9</button>
+            <button type="button" class="example-chip" onclick="loadEx(-4,'-',3)">−4 − 3</button>
+            <button type="button" class="example-chip" onclick="loadEx(-6,'-',-2)">−6 − (−2)</button>
+            <button type="button" class="example-chip" onclick="loadEx(10,'-',-7)">10 − (−7)</button>
+            <button type="button" class="example-chip" onclick="loadEx(-1,'-',-1)">−1 − (−1)</button>
+            <button type="button" class="example-chip" onclick="loadEx(7,'-',0)">7 − 0</button>
           </div>
         </div>
         <div class="example-category">
           <div class="category-label">🟠 Multiplying Integers</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadEx(-3,'*',7)">−3 × 7</span>
-            <span class="example-chip" onclick="loadEx(4,'*',-6)">4 × (−6)</span>
-            <span class="example-chip" onclick="loadEx(-5,'*',-8)">−5 × (−8)</span>
-            <span class="example-chip" onclick="loadEx(9,'*',3)">9 × 3</span>
-            <span class="example-chip" onclick="loadEx(-12,'*',0)">−12 × 0</span>
+            <button type="button" class="example-chip" onclick="loadEx(-3,'*',7)">−3 × 7</button>
+            <button type="button" class="example-chip" onclick="loadEx(4,'*',-6)">4 × (−6)</button>
+            <button type="button" class="example-chip" onclick="loadEx(-5,'*',-8)">−5 × (−8)</button>
+            <button type="button" class="example-chip" onclick="loadEx(9,'*',3)">9 × 3</button>
+            <button type="button" class="example-chip" onclick="loadEx(-12,'*',0)">−12 × 0</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,'*',5)">0 × 5</button>
           </div>
         </div>
         <div class="example-category">
           <div class="category-label">🔴 Dividing Integers</div>
           <div class="examples">
-            <span class="example-chip" onclick="loadEx(-24,'/',6)">−24 ÷ 6</span>
-            <span class="example-chip" onclick="loadEx(36,'/',-4)">36 ÷ (−4)</span>
-            <span class="example-chip" onclick="loadEx(-45,'/',-9)">−45 ÷ (−9)</span>
-            <span class="example-chip" onclick="loadEx(0,'/',5)">0 ÷ 5</span>
-            <span class="example-chip" onclick="loadEx(-72,'/',-8)">−72 ÷ (−8)</span>
+            <button type="button" class="example-chip" onclick="loadEx(-24,'/',6)">−24 ÷ 6</button>
+            <button type="button" class="example-chip" onclick="loadEx(36,'/',-4)">36 ÷ (−4)</button>
+            <button type="button" class="example-chip" onclick="loadEx(-45,'/',-9)">−45 ÷ (−9)</button>
+            <button type="button" class="example-chip" onclick="loadEx(0,'/',5)">0 ÷ 5</button>
+            <button type="button" class="example-chip" onclick="loadEx(-72,'/',-8)">−72 ÷ (−8)</button>
+            <button type="button" class="example-chip" onclick="loadEx(1,'/',3)">1 ÷ 3</button>
+            <button type="button" class="example-chip" onclick="loadEx(-7,'/',2)">−7 ÷ 2</button>
           </div>
         </div>
       </div>
@@ -737,10 +757,12 @@
 
   <!-- Workspace -->
   <div class="workspace" id="workspace">
+    <div class="workspace-actions"><button type="button" class="btn-secondary" onclick="resetAll()">Start Over</button></div>
     <div class="expr-display" id="exprDisplay"></div>
     <div class="number-line-wrap" id="numberLineWrap" style="display:none">
       <div class="number-line-label">Number Line</div>
-      <svg class="number-line-svg" id="numberLineSvg" viewBox="0 0 600 80"></svg>
+      <svg class="number-line-svg" id="numberLineSvg" viewBox="0 0 600 112" role="img" aria-labelledby="numberLineTitle numberLineDescription"></svg>
+      <p class="number-line-caption" id="numberLineCaption"></p>
     </div>
     <div id="stepsContainer"></div>
     <div class="result-section" id="resultSection">
@@ -756,790 +778,437 @@
 </div>
 
 <script>
-// ==================== STATE ====================
-
+// Integer inputs and exact fractions keep every displayed equality exact.
+const INTEGER_LIMIT = 1000000000n;
 let selectedOp = null;
-let state = {};
+let state = null;
+let workspaceVersion = 0;
 
-function selectOp(el) {
-  document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedOp = el.dataset.op;
+function abs(n) { return n < 0n ? -n : n; }
+
+function fraction(n, d = 1n) {
+  if (d === 0n) throw new Error('Division by zero is undefined. Use a nonzero divisor.');
+  if (d < 0n) { n = -n; d = -d; }
+  let a = abs(n), b = d;
+  while (b) { const remainder = a % b; a = b; b = remainder; }
+  return { n: n / a, d: d / a };
 }
 
-function loadEx(a, op, b) {
-  document.getElementById('inputA').value = a;
-  document.getElementById('inputB').value = b;
-  selectedOp = op;
-  document.querySelectorAll('.op-btn').forEach(btn => {
-    btn.classList.toggle('selected', btn.dataset.op === op);
+function parseInteger(raw) {
+  const text = raw.trim().replace(/−/g, '-');
+  if (text.length > 40 || !/^[+-]?\d+$/.test(text)) {
+    throw new Error('Enter an integer such as -5, 0, or 12. Use digits with an optional sign, without decimals, fractions, or extra text.');
+  }
+  const value = BigInt(text);
+  if (abs(value) > INTEGER_LIMIT) {
+    throw new Error('Use integers from -1,000,000,000 to 1,000,000,000 in this organizer.');
+  }
+  return value;
+}
+
+function readAnswer(raw) {
+  const text = raw.trim().replace(/−/g, '-');
+  if (text.length > 100) throw new Error('That answer is too long.');
+  const parts = text.split('/').map(part => part.trim());
+  if (parts.length === 2 && parts.every(part => /^[+-]?\d+$/.test(part))) {
+    return fraction(BigInt(parts[0]), BigInt(parts[1]));
+  }
+  if (parts.length !== 1 || !/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(text)) {
+    throw new Error('Enter a complete number or an exact fraction, such as -3, 0.5, or 1/3.');
+  }
+  const places = (text.split('.')[1] || '').length;
+  return fraction(BigInt(text.replace('.', '')), 10n ** BigInt(places));
+}
+
+function fmtNum(value) {
+  if (typeof value === 'bigint') return value.toString();
+  if (value.d === 1n) return value.n.toString();
+  let d = value.d, twos = 0, fives = 0;
+  while (d % 2n === 0n) { d /= 2n; twos++; }
+  while (d % 5n === 0n) { d /= 5n; fives++; }
+  const places = Math.max(twos, fives);
+  // Longer or repeating decimals are shown as reduced fractions, never rounded.
+  if (d !== 1n || places > 12) return value.n + '/' + value.d;
+  const scaled = value.n * (10n ** BigInt(places) / value.d);
+  const digits = abs(scaled).toString().padStart(places + 1, '0');
+  return (scaled < 0n ? '-' : '') + digits.slice(0, -places) + '.' + digits.slice(-places);
+}
+
+function calculate(a, op, b) {
+  if (op === '+') return fraction(a + b);
+  if (op === '-') return fraction(a - b);
+  if (op === '*') return fraction(a * b);
+  if (op === '/') return fraction(a, b);
+  throw new Error('Please select an operation (+, −, ×, ÷).');
+}
+
+function signLabel(n) { return n > 0n ? 'Positive' : n < 0n ? 'Negative' : 'Zero'; }
+function signClass(n) { return signLabel(n).toLowerCase(); }
+function displayOp(op) { return ({ '+': '+', '-': '−', '*': '×', '/': '÷' })[op]; }
+function grouped(n) { return n < 0n ? '(' + fmtNum(n) + ')' : fmtNum(n); }
+function expression(a, op, b) { return `${fmtNum(a)} ${displayOp(op)} ${grouped(b)}`; }
+
+function selectOp(el) {
+  if (state) return;
+  selectedOp = el.dataset.op;
+  document.querySelectorAll('.op-btn').forEach(button => {
+    const selected = button.dataset.op === selectedOp;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
   });
 }
 
+function loadEx(a, op, b) {
+  if (state) return;
+  document.getElementById('inputA').value = a;
+  document.getElementById('inputB').value = b;
+  selectOp(Array.from(document.querySelectorAll('.op-btn')).find(button => button.dataset.op === op));
+  clearError();
+  document.getElementById('startBtn').focus();
+}
+
 function toggleExamples() {
-  document.getElementById('examplesBody').classList.toggle('open');
-  document.getElementById('toggleArrow').classList.toggle('open');
+  const body = document.getElementById('examplesBody');
+  body.hidden = !body.hidden;
+  body.classList.toggle('open', !body.hidden);
+  document.getElementById('toggleArrow').classList.toggle('open', !body.hidden);
+  document.getElementById('examplesToggle').setAttribute('aria-expanded', String(!body.hidden));
 }
 
-function showError(msg) {
+function clearError() {
   const el = document.getElementById('errorMsg');
-  el.textContent = msg;
+  el.textContent = '';
+  el.classList.remove('show');
+}
+
+function showError(message) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = message;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 4000);
 }
-
-function fmtNum(n) {
-  if (Number.isInteger(n)) return n.toString();
-  let s = n.toFixed(4).replace(/\.?0+$/, '');
-  return s;
-}
-
-function signLabel(n) {
-  if (n > 0) return 'positive';
-  if (n < 0) return 'negative';
-  return 'zero';
-}
-
-function signClass(n) {
-  return n >= 0 ? 'positive' : 'negative';
-}
-
-function displayOp(op) {
-  if (op === '*') return '×';
-  if (op === '/') return '÷';
-  if (op === '-') return '−';
-  return op;
-}
-
-// ==================== START SOLVING ====================
 
 function startSolving() {
-  const rawA = document.getElementById('inputA').value.trim().replace(/−/g, '-');
-  const rawB = document.getElementById('inputB').value.trim().replace(/−/g, '-');
-
-  if (!rawA || !rawB) { showError('Please enter both integers.'); return; }
-  if (!selectedOp) { showError('Please select an operation (+, −, ×, ÷).'); return; }
-
-  const a = parseFloat(rawA);
-  const b = parseFloat(rawB);
-
-  if (isNaN(a) || isNaN(b)) { showError('Please enter valid numbers.'); return; }
-  if (!Number.isInteger(a) || !Number.isInteger(b)) { showError('Please enter whole numbers (integers) only.'); return; }
-  if (selectedOp === '/' && b === 0) { showError('Cannot divide by zero!'); return; }
-
-  // Compute answer
-  let answer;
-  switch (selectedOp) {
-    case '+': answer = a + b; break;
-    case '-': answer = a - b; break;
-    case '*': answer = a * b; break;
-    case '/': answer = a / b; break;
-  }
-
-  state = {
-    a, b, op: selectedOp, answer,
-    currentStep: 0,
-    stepsData: [],
-    rulesUsed: [],
-  };
-
-  // Generate steps based on operation
+  if (state) return;
+  let a, b, answer;
+  try {
+    a = parseInteger(document.getElementById('inputA').value);
+    b = parseInteger(document.getElementById('inputB').value);
+    answer = calculate(a, selectedOp, b);
+  } catch (error) { showError(error.message); return; }
+  clearError();
+  workspaceVersion++;
+  state = { a, b, op: selectedOp, answer, currentStep: 0, stepsData: [], finished: false };
   if (selectedOp === '+') buildAddSteps();
-  else if (selectedOp === '-') buildSubSteps();
-  else if (selectedOp === '*') buildMulSteps();
-  else if (selectedOp === '/') buildDivSteps();
-
-  // Show workspace
+  if (selectedOp === '-') buildSubSteps();
+  if (selectedOp === '*' || selectedOp === '/') buildProductSteps();
   document.getElementById('inputSection').style.display = 'none';
   document.getElementById('workspace').classList.add('visible');
   document.getElementById('resultSection').classList.remove('visible');
-  document.getElementById('stepsContainer').innerHTML = '';
-
-  // Reset banner
-  document.querySelectorAll('.rule-cell').forEach(c => c.classList.remove('active', 'done'));
-
-  // Activate the relevant banner cell
+  document.getElementById('stepsContainer').replaceChildren();
+  document.querySelectorAll('.rule-cell').forEach(cell => cell.classList.remove('active', 'done'));
   const ruleMap = { '+': 'add', '-': 'sub', '*': 'mul', '/': 'div' };
-  document.getElementById(`rule-${ruleMap[selectedOp]}`).classList.add('active');
-
-  // Build expression display
-  updateExprDisplay();
-
-  // Draw number line for add/sub
-  if (selectedOp === '+' || selectedOp === '-') {
-    drawNumberLine();
-    document.getElementById('numberLineWrap').style.display = '';
-  } else {
-    document.getElementById('numberLineWrap').style.display = 'none';
-  }
-
-  // Show first step
+  document.getElementById('rule-' + ruleMap[selectedOp]).classList.add('active');
+  updateExprDisplay(false);
+  const numberLine = selectedOp === '+' || selectedOp === '-';
+  document.getElementById('numberLineWrap').style.display = numberLine ? '' : 'none';
+  if (numberLine) drawNumberLine(false);
   showStep(0);
 }
 
 function updateExprDisplay(showAnswer) {
   const { a, b, op, answer } = state;
-  let html = '';
-  html += `<span class="expr-val ${signClass(a)}">${fmtNum(a)}</span>`;
-  html += `<span class="expr-op">${displayOp(op)}</span>`;
-  // Wrap negative b in parentheses for clarity
-  if (b < 0) {
-    html += `<span class="expr-val ${signClass(b)}">(${fmtNum(b)})</span>`;
-  } else {
-    html += `<span class="expr-val ${signClass(b)}">${fmtNum(b)}</span>`;
+  document.getElementById('exprDisplay').innerHTML =
+    `<span class="expr-val ${signClass(a)}">${fmtNum(a)}</span>` +
+    `<span class="expr-op">${displayOp(op)}</span>` +
+    `<span class="expr-val ${signClass(b)}">${grouped(b)}</span>` +
+    (showAnswer ? `<span class="expr-eq">=</span><span class="expr-result">${fmtNum(answer)}</span>` : '');
+}
+
+// Keep the number of ticks bounded even for large integers. Only SVG positions
+// use Number; labels and student calculations retain their exact integer values.
+function drawNumberLine(showAnswer) {
+  const { a, b, op, answer } = state;
+  const start = Number(a), end = Number(answer.n), move = op === '+' ? b : -b;
+  const low = Math.min(start, end, 0), high = Math.max(start, end, 0);
+  const padding = Math.max(2, (high - low) * 0.12);
+  const targetTicks = Math.max(Math.abs(low), Math.abs(high)) > 999 ? 5 : 10;
+  const roughStep = Math.max(1, (high - low + 2 * padding) / targetTicks);
+  const power = 10 ** Math.floor(Math.log10(roughStep));
+  const tickStep = [1, 2, 5, 10].find(factor => factor * power >= roughStep) * power;
+  const min = Math.floor((low - padding) / tickStep) * tickStep;
+  const max = Math.ceil((high + padding) / tickStep) * tickStep;
+  const toX = n => 44 + (n - min) * 512 / (max - min);
+  const movement = move === 0n ? 'Stay at the starting point; there is no movement.'
+    : `Move ${abs(move)} unit${abs(move) === 1n ? '' : 's'} ${move > 0n ? 'right' : 'left'}.`;
+  const description = `Start at ${a}. ` + (op === '-' ? `Subtracting ${b} means adding ${grouped(-b)}. ` : '') +
+    movement + (showAnswer ? ` Land at ${fmtNum(answer)}.` : '');
+  document.getElementById('numberLineCaption').textContent = description;
+  let svg = '<title id="numberLineTitle">Addition and subtraction number line</title>' +
+    `<desc id="numberLineDescription">${description}</desc>` +
+    '<defs><marker id="moveArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#14b8a6"/></marker></defs>' +
+    '<line x1="44" y1="70" x2="556" y2="70" stroke="#8a9bbf" stroke-width="2"/>';
+  const tickCount = Math.round((max - min) / tickStep);
+  for (let i = 0; i <= tickCount; i++) {
+    const value = min + i * tickStep, x = toX(value);
+    svg += `<line x1="${x}" y1="64" x2="${x}" y2="76" stroke="#8a9bbf"/>` +
+      `<text class="number-line-tick" x="${x}" y="96" text-anchor="middle" fill="#8a9bbf" font-size="10">${value}</text>`;
   }
+  const xA = toX(start), xEnd = toX(end);
+  svg += `<circle cx="${xA}" cy="70" r="6" fill="#38bdf8"/>` +
+    `<text x="${xA}" y="54" text-anchor="middle" fill="#38bdf8" font-size="11">Start: ${a}</text>`;
   if (showAnswer) {
-    html += `<span class="expr-eq">=</span>`;
-    html += `<span class="expr-result">${fmtNum(answer)}</span>`;
+    if (move !== 0n) svg += `<path class="number-line-movement" d="M ${xA} 70 Q ${(xA + xEnd) / 2} 4 ${xEnd} 70" fill="none" stroke="#14b8a6" stroke-width="2" marker-end="url(#moveArrow)"/>`;
+    svg += `<circle cx="${xEnd}" cy="70" r="4" fill="#22c55e"/>` +
+      `<text x="${xEnd}" y="18" text-anchor="middle" fill="#22c55e" font-size="11">Result: ${fmtNum(answer)}</text>`;
   }
-  document.getElementById('exprDisplay').innerHTML = html;
+  const element = document.getElementById('numberLineSvg');
+  element.innerHTML = svg;
+  element.setAttribute('viewBox', '0 0 600 112');
 }
 
-// ==================== NUMBER LINE ====================
-
-function drawNumberLine() {
-  const { a, b, op, answer } = state;
-  const svg = document.getElementById('numberLineSvg');
-
-  // Determine range
-  const points = [a, b, answer, 0];
-  let min = Math.min(...points) - 3;
-  let max = Math.max(...points) + 3;
-  if (max - min < 10) {
-    const mid = (min + max) / 2;
-    min = Math.floor(mid - 5);
-    max = Math.ceil(mid + 5);
-  }
-
-  const W = 600, H = 80;
-  const pad = 40;
-  const lineY = 50;
-  const scale = (W - pad * 2) / (max - min);
-  const toX = n => pad + (n - min) * scale;
-
-  let svgContent = '';
-
-  // Main line
-  svgContent += `<line x1="${pad}" y1="${lineY}" x2="${W - pad}" y2="${lineY}" stroke="#2a3a58" stroke-width="2"/>`;
-
-  // Tick marks and labels
-  for (let i = Math.ceil(min); i <= Math.floor(max); i++) {
-    const x = toX(i);
-    const isZero = i === 0;
-    svgContent += `<line x1="${x}" y1="${lineY - 6}" x2="${x}" y2="${lineY + 6}" stroke="${isZero ? '#8a9bbf' : '#2a3a58'}" stroke-width="${isZero ? 2 : 1}"/>`;
-    svgContent += `<text x="${x}" y="${lineY + 20}" text-anchor="middle" fill="${isZero ? '#e2e8f0' : '#5a6a8a'}" font-family="JetBrains Mono, monospace" font-size="10" font-weight="${isZero ? 700 : 400}">${i}</text>`;
-  }
-
-  // Point A
-  const xA = toX(a);
-  svgContent += `<circle cx="${xA}" cy="${lineY}" r="7" fill="#38bdf8" opacity="0.9"/>`;
-  svgContent += `<text x="${xA}" y="${lineY - 14}" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">${a}</text>`;
-
-  svg.innerHTML = svgContent;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-  // Save for later animation
-  state.nlData = { min, max, W, H, pad, lineY, scale, toX, xA };
+function addSignStep(a, b, title = 'Identify the Signs', instruction = '') {
+  state.stepsData.push({ title, type: 'sign-id',
+    instruction: instruction + ' Positive numbers are greater than zero; negative numbers are less than zero. Zero is neither positive nor negative.',
+    checks: [a, b].map(value => ({ value, label: `${value} is:`, answer: signLabel(value), options: ['Positive', 'Negative', 'Zero'] })),
+    checked: new Set(),
+  });
 }
 
-function animateNumberLineResult() {
-  if (!state.nlData) return;
-  const { toX, lineY } = state.nlData;
-  const svg = document.getElementById('numberLineSvg');
-  const { a, b, op, answer } = state;
-
-  // Draw arc showing movement
-  const xStart = toX(a);
-  const xEnd = toX(answer);
-  const arcHeight = 24;
-  const mid = (xStart + xEnd) / 2;
-
-  // Arrow arc
-  svg.innerHTML += `<path d="M ${xStart} ${lineY} Q ${mid} ${lineY - arcHeight} ${xEnd} ${lineY}" fill="none" stroke="#14b8a6" stroke-width="2" stroke-dasharray="5,3" opacity="0.7"/>`;
-
-  // Result dot
-  svg.innerHTML += `<circle cx="${xEnd}" cy="${lineY}" r="7" fill="#22c55e" opacity="0.9"/>`;
-  svg.innerHTML += `<text x="${xEnd}" y="${lineY - 14}" text-anchor="middle" fill="#22c55e" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">${fmtNum(answer)}</text>`;
+function addNumeric(title, instruction, answer) {
+  state.stepsData.push({ title, instruction, type: 'numeric', answer: typeof answer === 'bigint' ? fraction(answer) : answer });
 }
 
-// ==================== STEP BUILDERS ====================
+function addFinalChoice(instruction) {
+  const magnitude = fraction(abs(state.answer.n), state.answer.d);
+  state.stepsData.push({ title: 'Combine Sign and Value', instruction, type: 'choice', question: 'What is the final answer?',
+    answer: fmtNum(state.answer), options: [fmtNum(magnitude), fmtNum(fraction(-magnitude.n, magnitude.d)), '0'] });
+}
 
 function buildAddSteps() {
-  const { a, b } = state;
-  const sameSign = (a >= 0 && b >= 0) || (a < 0 && b < 0);
+  addSignStep(state.a, state.b);
+  buildAdditionValues(state.a, state.b);
+}
 
-  // Step 1: Identify the signs
-  state.stepsData.push({
-    title: 'Identify the Signs',
-    instruction: `Look at each number. Is <strong>${fmtNum(a)}</strong> positive or negative? Is <strong>${fmtNum(b)}</strong> positive or negative?`,
-    type: 'sign-id',
-    checks: [
-      { label: `${fmtNum(a)} is:`, answer: a >= 0 ? 'Positive' : 'Negative', options: ['Positive', 'Negative'] },
-      { label: `${fmtNum(b)} is:`, answer: b >= 0 ? 'Positive' : 'Negative', options: ['Positive', 'Negative'] },
-    ]
-  });
-
-  // Step 2: Determine the rule
-  if (a === 0 || b === 0) {
-    state.stepsData.push({
-      title: 'Apply the Zero Property',
-      instruction: 'Any number plus zero equals that number.',
-      type: 'rule-display',
-      rule: `Adding zero: <span class="mono">${fmtNum(a)} + ${fmtNum(b)} = ${fmtNum(state.answer)}</span>`,
-    });
-  } else if (sameSign) {
-    // Same signs → add absolute values, keep the sign
-    const absA = Math.abs(a), absB = Math.abs(b);
-    const sum = absA + absB;
-    const signWord = a >= 0 ? 'positive' : 'negative';
-
-    state.stepsData.push({
-      title: 'Same Signs → Add the Absolute Values',
-      instruction: `Both numbers are <strong>${signWord}</strong>. When signs are the same, <span class="rule-highlight">add</span> the absolute values and keep the sign.`,
-      type: 'rule-display',
-      rule: `|${fmtNum(a)}| = <span class="mono">${absA}</span> &nbsp;&nbsp; |${fmtNum(b)}| = <span class="mono">${absB}</span>`,
-    });
-
-    state.stepsData.push({
-      title: 'Add the Absolute Values',
-      instruction: `What is <strong>${absA} + ${absB}</strong>?`,
-      type: 'numeric',
-      answer: sum,
-      display: `${absA} + ${absB} = ?`,
-    });
-
-    state.stepsData.push({
-      title: 'Apply the Sign',
-      instruction: `Both original numbers were ${signWord}, so the answer is <strong>${signWord}</strong>.`,
-      type: 'choice',
-      question: `What is the final answer?`,
-      answer: fmtNum(state.answer),
-      options: [fmtNum(state.answer), fmtNum(-state.answer)],
-    });
+function buildAdditionValues(a, b) {
+  if (a === 0n || b === 0n) {
+    state.ruleSummary = 'Adding zero keeps the other number unchanged.';
+    addNumeric('Apply the Zero Property', `Adding zero keeps the other number unchanged. What is <strong>${expression(a, '+', b)}</strong>?`, state.answer);
+    return;
+  }
+  const absA = abs(a), absB = abs(b);
+  const sameSign = (a > 0n) === (b > 0n);
+  if (!sameSign && absA === absB) {
+    state.ruleSummary = 'Opposite numbers cancel to zero. Zero is neither positive nor negative.';
+    addNumeric('Opposites Cancel to Zero', `These numbers have <strong>equal absolute values</strong> and opposite signs: |${a}| = |${b}| = ${absA}. Their sum is zero, which is neither positive nor negative. What is <strong>${expression(a, '+', b)}</strong>?`, 0n);
+    return;
+  }
+  if (sameSign) {
+    const sign = signLabel(a).toLowerCase();
+    state.ruleSummary = `Same signs: add the absolute values and keep the ${sign} sign.`;
+    state.stepsData.push({ title: 'Same Signs → Add the Absolute Values', type: 'rule-display',
+      instruction: `Both numbers are ${sign}. Add their absolute values, then keep that sign. An absolute value is a number’s distance from zero.`,
+      rule: `<span class="mono">|${a}| = ${absA}; |${b}| = ${absB}</span>` });
+    addNumeric('Add the Absolute Values', `What is <strong>${absA} + ${absB}</strong>?`, absA + absB);
+    addFinalChoice(`The sum of the absolute values is ${absA + absB}. Both original numbers were ${sign}, so use that sign.`);
   } else {
-    // Different signs → subtract absolute values, keep sign of larger
-    const absA = Math.abs(a), absB = Math.abs(b);
-    const larger = absA >= absB ? a : b;
-    const diff = Math.abs(absA - absB);
-    const signWord = larger >= 0 ? 'positive' : 'negative';
-
-    state.stepsData.push({
-      title: 'Different Signs → Subtract the Absolute Values',
-      instruction: `The numbers have <strong>different signs</strong>. When signs are different, <span class="rule-highlight">subtract</span> the smaller absolute value from the larger, and keep the sign of the number with the larger absolute value.`,
-      type: 'rule-display',
-      rule: `|${fmtNum(a)}| = <span class="mono">${absA}</span> &nbsp;&nbsp; |${fmtNum(b)}| = <span class="mono">${absB}</span><br>Larger absolute value: <span class="mono">${Math.max(absA, absB)}</span> (from <span class="mono">${fmtNum(larger)}</span>, which is ${signWord})`,
-    });
-
-    state.stepsData.push({
-      title: 'Subtract the Absolute Values',
-      instruction: `What is <strong>${Math.max(absA, absB)} − ${Math.min(absA, absB)}</strong>?`,
-      type: 'numeric',
-      answer: diff,
-      display: `${Math.max(absA, absB)} − ${Math.min(absA, absB)} = ?`,
-    });
-
-    state.stepsData.push({
-      title: 'Apply the Sign',
-      instruction: `The number with the larger absolute value was <strong>${fmtNum(larger)}</strong> (${signWord}), so the answer is <strong>${signWord}</strong>.`,
-      type: 'choice',
-      question: `What is the final answer?`,
-      answer: fmtNum(state.answer),
-      options: state.answer === 0 ? ['0'] : [fmtNum(state.answer), fmtNum(-state.answer)],
-    });
+    const larger = absA > absB ? a : b, large = abs(larger), small = absA < absB ? absA : absB;
+    const sign = signLabel(larger).toLowerCase();
+    state.ruleSummary = `Different signs: subtract absolute values and keep the sign of ${larger}, the number farther from zero.`;
+    state.stepsData.push({ title: 'Different Signs → Subtract the Absolute Values', type: 'rule-display',
+      instruction: 'Subtract the smaller absolute value from the larger. Keep the sign of the number with the larger absolute value (farther from zero).',
+      rule: `<span class="mono">|${a}| = ${absA}; |${b}| = ${absB}</span><br>${larger} has the larger absolute value, ${large}, and is ${sign}.` });
+    addNumeric('Subtract the Absolute Values', `What is <strong>${large} − ${small}</strong>?`, large - small);
+    addFinalChoice(`The difference of the absolute values is ${large - small}. The number farther from zero was ${larger}, so the result is ${sign}.`);
   }
 }
 
 function buildSubSteps() {
   const { a, b } = state;
-
-  // Step 1: Rewrite subtraction as adding the opposite
-  const oppB = -b;
-  state.stepsData.push({
-    title: 'Rewrite as Addition',
-    instruction: `<strong>Subtracting</strong> a number is the same as <strong>adding its opposite</strong>. What is the opposite of <strong>${fmtNum(b)}</strong>?`,
-    type: 'rule-display',
-    rule: `<span class="mono">${fmtNum(a)} − ${b < 0 ? '(' + fmtNum(b) + ')' : fmtNum(b)}</span> &nbsp;→&nbsp; <span class="mono">${fmtNum(a)} + <span class="rule-highlight">(?)</span></span>`,
-  });
-
-  state.stepsData.push({
-    title: 'Find the Opposite',
-    instruction: `The opposite of <strong>${fmtNum(b)}</strong> is:`,
-    type: 'numeric',
-    answer: oppB,
-    display: `opposite of ${fmtNum(b)} = ?`,
-  });
-
-  // Now it becomes an addition problem: a + oppB
-  const sameSign = (a >= 0 && oppB >= 0) || (a < 0 && oppB < 0);
-
-  state.stepsData.push({
-    title: 'Rewritten Problem',
-    instruction: `Now we solve: <strong>${fmtNum(a)} + ${oppB < 0 ? '(' + fmtNum(oppB) + ')' : fmtNum(oppB)}</strong>`,
-    type: 'sign-id',
-    checks: [
-      { label: `${fmtNum(a)} is:`, answer: a >= 0 ? 'Positive' : 'Negative', options: ['Positive', 'Negative'] },
-      { label: `${fmtNum(oppB)} is:`, answer: oppB >= 0 ? 'Positive' : 'Negative', options: ['Positive', 'Negative'] },
-    ]
-  });
-
-  if (a === 0 || oppB === 0) {
-    state.stepsData.push({
-      title: 'Apply the Zero Property',
-      type: 'rule-display',
-      instruction: 'Any number plus zero equals that number.',
-      rule: `<span class="mono">${fmtNum(a)} + ${fmtNum(oppB)} = ${fmtNum(state.answer)}</span>`,
-    });
-  } else if (sameSign) {
-    const absA = Math.abs(a), absOB = Math.abs(oppB);
-    const signWord = a >= 0 ? 'positive' : 'negative';
-    state.stepsData.push({
-      title: 'Same Signs → Add Absolute Values',
-      instruction: `Both are ${signWord}. Add the absolute values and keep the sign.`,
-      type: 'numeric',
-      answer: absA + absOB,
-      display: `${absA} + ${absOB} = ?`,
-    });
-
-    state.stepsData.push({
-      title: 'Apply the Sign',
-      instruction: `Both were ${signWord}, so the result is ${signWord}.`,
-      type: 'choice',
-      question: `Final answer:`,
-      answer: fmtNum(state.answer),
-      options: state.answer === 0 ? ['0'] : [fmtNum(state.answer), fmtNum(-state.answer)],
-    });
-  } else {
-    const absA = Math.abs(a), absOB = Math.abs(oppB);
-    const larger = absA >= absOB ? a : oppB;
-    const signWord = larger >= 0 ? 'positive' : 'negative';
-
-    state.stepsData.push({
-      title: 'Different Signs → Subtract Absolute Values',
-      instruction: `Different signs: subtract smaller from larger absolute value. Larger absolute value is <strong>${Math.max(absA, absOB)}</strong> (from <strong>${fmtNum(larger)}</strong>, ${signWord}).`,
-      type: 'numeric',
-      answer: Math.abs(absA - absOB),
-      display: `${Math.max(absA, absOB)} − ${Math.min(absA, absOB)} = ?`,
-    });
-
-    state.stepsData.push({
-      title: 'Apply the Sign',
-      instruction: `The larger absolute value came from a ${signWord} number.`,
-      type: 'choice',
-      question: `Final answer:`,
-      answer: fmtNum(state.answer),
-      options: state.answer === 0 ? ['0'] : [fmtNum(state.answer), fmtNum(-state.answer)],
-    });
-  }
+  state.stepsData.push({ title: 'Rewrite as Addition', type: 'rule-display',
+    instruction: 'Subtracting a number means adding its opposite. Keep the first number, change subtraction to addition, and take the opposite of the second number.',
+    rule: `<span class="mono">${expression(a, '-', b)} → ${a} + (opposite of ${b})</span>` });
+  addNumeric('Find the Opposite', `What is the opposite of <strong>${b}</strong>?` + (b === 0n ? ' The opposite of zero is zero.' : ''), -b);
+  addSignStep(a, -b, 'Rewritten Problem', `Now solve <strong>${expression(a, '+', -b)}</strong>.`);
+  buildAdditionValues(a, -b);
 }
 
-function buildMulSteps() {
-  const { a, b } = state;
-  const absA = Math.abs(a), absB = Math.abs(b);
-  const product = absA * absB;
-  const sameSign = (a >= 0 && b >= 0) || (a < 0 && b < 0);
-
-  // Step 1: Identify signs
-  state.stepsData.push({
-    title: 'Identify the Signs',
-    instruction: `What sign is each number?`,
-    type: 'sign-id',
-    checks: [
-      { label: `${fmtNum(a)} is:`, answer: a >= 0 ? 'Positive' : 'Negative', options: ['Positive', 'Negative'] },
-      { label: `${fmtNum(b)} is:`, answer: b >= 0 ? 'Positive' : 'Negative', options: ['Positive', 'Negative'] },
-    ]
-  });
-
-  // Step 2: Determine the sign rule
-  if (a === 0 || b === 0) {
-    state.stepsData.push({
-      title: 'Zero Property of Multiplication',
-      instruction: 'Any number times zero equals zero.',
-      type: 'rule-display',
-      rule: `<span class="mono">${fmtNum(a)} × ${fmtNum(b)} = 0</span>`,
-    });
-  } else {
-    state.stepsData.push({
-      title: 'Determine the Sign of the Answer',
-      instruction: sameSign
-        ? `The signs are the <strong>same</strong> → the answer is <span class="rule-highlight">positive</span>.`
-        : `The signs are <strong>different</strong> → the answer is <span class="rule-highlight">negative</span>.`,
-      type: 'choice',
-      question: `Same signs or different signs?`,
-      answer: sameSign ? 'Same → Positive' : 'Different → Negative',
-      options: ['Same → Positive', 'Different → Negative'],
-    });
-
-    // Step 3: Multiply absolute values
-    state.stepsData.push({
-      title: 'Multiply the Absolute Values',
-      instruction: `What is <strong>${absA} × ${absB}</strong>?`,
-      type: 'numeric',
-      answer: product,
-      display: `${absA} × ${absB} = ?`,
-    });
-
-    // Step 4: Combine
-    state.stepsData.push({
-      title: 'Combine Sign and Value',
-      instruction: `The product of the absolute values is <strong>${product}</strong>, and the sign is <strong>${sameSign ? 'positive' : 'negative'}</strong>.`,
-      type: 'choice',
-      question: `Final answer:`,
-      answer: fmtNum(state.answer),
-      options: state.answer === 0 ? ['0'] : [fmtNum(state.answer), fmtNum(-state.answer)],
-    });
+function buildProductSteps() {
+  const { a, b, op } = state, divide = op === '/';
+  addSignStep(a, b);
+  if (a === 0n || b === 0n) {
+    state.ruleSummary = divide ? 'Zero divided by a nonzero number is zero.' : 'Any integer multiplied by zero is zero.';
+    addNumeric(divide ? 'Zero Divided by a Nonzero Number' : 'Zero Property of Multiplication',
+      `${state.ruleSummary} Zero is neither positive nor negative. What is <strong>${expression(a, op, b)}</strong>?`, 0n);
+    return;
   }
+  const sameSign = (a > 0n) === (b > 0n), sign = sameSign ? 'positive' : 'negative';
+  state.ruleSummary = `${sameSign ? 'Same' : 'Different'} signs give a ${sign} ${divide ? 'quotient' : 'product'}.`;
+  state.stepsData.push({ title: 'Determine the Sign of the Answer', type: 'choice',
+    instruction: 'For two nonzero numbers, the same signs give a positive result; different signs give a negative result.',
+    question: 'Which sign rule fits these numbers?', answer: sameSign ? 'Same → Positive' : 'Different → Negative',
+    options: ['Same → Positive', 'Different → Negative'] });
+  const magnitude = calculate(abs(a), op, abs(b));
+  addNumeric(divide ? 'Divide the Absolute Values' : 'Multiply the Absolute Values',
+    `Ignore the signs for this step. What is <strong>${expression(abs(a), op, abs(b))}</strong>?` +
+      (divide ? ' Dividing two integers can give a fraction. Use an exact fraction or terminating decimal; do not round.' : ''), magnitude);
+  addFinalChoice(`The ${divide ? 'quotient' : 'product'} of the absolute values is ${fmtNum(magnitude)}, and the result must be ${sign}.`);
 }
 
-function buildDivSteps() {
-  const { a, b } = state;
-  const absA = Math.abs(a), absB = Math.abs(b);
-  const quotient = absA / absB;
-  const sameSign = (a >= 0 && b >= 0) || (a < 0 && b < 0);
-
-  // Step 1: Identify signs
-  state.stepsData.push({
-    title: 'Identify the Signs',
-    instruction: `What sign is each number?`,
-    type: 'sign-id',
-    checks: [
-      { label: `${fmtNum(a)} is:`, answer: a >= 0 ? 'Positive' : 'Negative', options: ['Positive', 'Negative'] },
-      { label: `${fmtNum(b)} is:`, answer: b >= 0 ? 'Positive' : 'Negative', options: ['Positive', 'Negative'] },
-    ]
-  });
-
-  if (a === 0) {
-    state.stepsData.push({
-      title: 'Zero Divided by Anything',
-      instruction: 'Zero divided by any non-zero number equals zero.',
-      type: 'rule-display',
-      rule: `<span class="mono">0 ÷ ${fmtNum(b)} = 0</span>`,
-    });
-  } else {
-    // Step 2: Sign rule
-    state.stepsData.push({
-      title: 'Determine the Sign of the Answer',
-      instruction: sameSign
-        ? `The signs are the <strong>same</strong> → the answer is <span class="rule-highlight">positive</span>.`
-        : `The signs are <strong>different</strong> → the answer is <span class="rule-highlight">negative</span>.`,
-      type: 'choice',
-      question: `Same signs or different signs?`,
-      answer: sameSign ? 'Same → Positive' : 'Different → Negative',
-      options: ['Same → Positive', 'Different → Negative'],
-    });
-
-    // Step 3: Divide absolute values
-    state.stepsData.push({
-      title: 'Divide the Absolute Values',
-      instruction: `What is <strong>${absA} ÷ ${absB}</strong>?`,
-      type: 'numeric',
-      answer: quotient,
-      display: `${absA} ÷ ${absB} = ?`,
-    });
-
-    // Step 4: Combine
-    state.stepsData.push({
-      title: 'Combine Sign and Value',
-      instruction: `The quotient is <strong>${fmtNum(quotient)}</strong>, and the sign is <strong>${sameSign ? 'positive' : 'negative'}</strong>.`,
-      type: 'choice',
-      question: `Final answer:`,
-      answer: fmtNum(state.answer),
-      options: state.answer === 0 ? ['0'] : [fmtNum(state.answer), fmtNum(-state.answer)],
-    });
-  }
+// Only the current, unanswered step accepts input. Reset invalidates pending
+// transitions so an old answer cannot advance a new problem.
+function activeStep(idx, type) {
+  if (!state || state.finished || state.currentStep !== idx) return null;
+  const step = state.stepsData[idx];
+  return step && !step.accepted && step.type === type ? step : null;
 }
-
-// ==================== RENDER STEPS ====================
 
 function showStep(idx) {
-  if (idx >= state.stepsData.length) {
-    finishProblem();
-    return;
-  }
-
-  const step = state.stepsData[idx];
-  const container = document.getElementById('stepsContainer');
-  const card = document.createElement('div');
-  card.className = 'step-card';
-  card.id = `step-${idx}`;
-
-  let bodyHTML = '';
-
+  if (!state || state.finished || idx !== state.currentStep) return;
+  if (idx === state.stepsData.length) { finishProblem(); return; }
+  if (document.getElementById('step-' + idx)) return;
+  const step = state.stepsData[idx], card = document.createElement('div');
+  card.className = 'step-card'; card.id = 'step-' + idx;
+  let controls = '';
   if (step.type === 'rule-display') {
-    // Just show the rule, auto-advance
-    bodyHTML = `
-      <div class="step-instruction">${step.instruction}</div>
-      <div class="step-rule-box">${step.rule}</div>
-      <button class="btn-primary" style="font-size:0.85rem;padding:10px 24px;" onclick="completeStep(${idx})">Got It →</button>
-    `;
+    controls = `<div class="step-rule-box">${step.rule}</div><button type="button" class="btn-primary" onclick="completeStep(${idx})">Got It →</button>`;
   } else if (step.type === 'sign-id') {
-    // Multiple sign identification choices
-    let checksHTML = '';
-    step.checks.forEach((check, ci) => {
-      checksHTML += `
-        <div style="margin-bottom:12px;">
-          <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:6px;font-weight:500;">${check.label}</div>
-          <div class="choice-row" id="signcheck-${idx}-${ci}">
-            ${check.options.map(opt =>
-              `<div class="choice-btn" onclick="checkSignChoice(${idx},${ci},this,'${opt}')">${opt}</div>`
-            ).join('')}
-          </div>
-        </div>
-      `;
-    });
-    bodyHTML = `
-      <div class="step-instruction">${step.instruction}</div>
-      ${checksHTML}
-      <div class="step-feedback" id="feedback-${idx}"></div>
-    `;
+    controls = step.checks.map((check, ci) => `<fieldset class="sign-check"><legend>${check.label}</legend><div class="choice-row" id="signcheck-${idx}-${ci}">` +
+      check.options.map(opt => `<button type="button" class="choice-btn" onclick="checkSignChoice(${idx},${ci},this,'${opt}')">${opt}</button>`).join('') + '</div></fieldset>').join('');
   } else if (step.type === 'choice') {
-    // Single choice
-    bodyHTML = `
-      <div class="step-instruction">${step.instruction}</div>
-      <div style="font-size:0.88rem;color:var(--text);margin-bottom:10px;font-weight:500;">${step.question}</div>
-      <div class="choice-row" id="choices-${idx}">
-        ${step.options.map(opt =>
-          `<div class="choice-btn" onclick="checkChoice(${idx},this,'${opt}')">${opt}</div>`
-        ).join('')}
-      </div>
-      <div class="step-feedback" id="feedback-${idx}"></div>
-    `;
+    controls = `<fieldset class="sign-check"><legend>${step.question}</legend><div class="choice-row" id="choices-${idx}">` +
+      step.options.map(opt => `<button type="button" class="choice-btn" onclick="checkChoice(${idx},this,'${opt}')">${opt}</button>`).join('') + '</div></fieldset>';
   } else if (step.type === 'numeric') {
-    bodyHTML = `
-      <div class="step-instruction">${step.instruction}</div>
-      <div class="answer-row">
-        <span style="font-family:var(--font-mono);color:var(--text-dim);font-size:0.9rem;">= </span>
-        <input type="text" class="answer-input" id="answer-${idx}" placeholder="?" autocomplete="off"
-               onkeydown="if(event.key==='Enter')checkNumeric(${idx})">
-        <button class="btn-check" onclick="checkNumeric(${idx})">Check</button>
-      </div>
-      <div class="step-feedback" id="feedback-${idx}"></div>
-    `;
+    controls = `<label class="answer-label" for="answer-${idx}">Step ${idx + 1} answer</label>` +
+      `<div class="answer-row"><input type="text" class="answer-input" id="answer-${idx}" placeholder="?" autocomplete="off" spellcheck="false" maxlength="100" aria-describedby="answer-help-${idx} feedback-${idx}" onkeydown="if(event.key==='Enter')checkNumeric(${idx})">` +
+      `<button type="button" class="btn-check" onclick="checkNumeric(${idx})">Check</button></div>` +
+      `<p class="answer-help" id="answer-help-${idx}">Enter an exact number or fraction, such as -3, 0.5, or 1/3.</p>`;
   }
-
-  card.innerHTML = `
-    <div class="step-header">
-      <div class="step-num">${idx + 1}</div>
-      <div class="step-title">${step.title}</div>
-    </div>
-    <div class="step-body">${bodyHTML}</div>
-  `;
-
-  container.appendChild(card);
+  card.innerHTML = `<div class="step-header"><div class="step-num">${idx + 1}</div><h2 class="step-title">${step.title}</h2></div>` +
+    `<div class="step-body"><div class="step-instruction">${step.instruction}</div>${controls}<div class="step-feedback" id="feedback-${idx}" role="status" aria-live="polite" aria-atomic="true"></div></div>`;
+  document.getElementById('stepsContainer').appendChild(card);
+  card.querySelector('input, button').focus({ preventScroll: true });
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-  // Focus input if numeric
-  if (step.type === 'numeric') {
-    setTimeout(() => {
-      const inp = document.getElementById(`answer-${idx}`);
-      if (inp) inp.focus();
-    }, 150);
-  }
 }
 
-// ==================== CHECK ANSWERS ====================
+function feedback(idx, message, correct = false) {
+  const el = document.getElementById('feedback-' + idx);
+  el.textContent = message;
+  el.className = 'step-feedback show ' + (correct ? 'correct' : 'incorrect');
+}
+
+function acceptStep(idx, delay = 500) {
+  const step = state.stepsData[idx];
+  if (step.accepted || state.currentStep !== idx) return;
+  step.accepted = true;
+  const card = document.getElementById('step-' + idx);
+  card.classList.add('completed');
+  card.querySelector('.step-num').classList.add('done');
+  card.querySelectorAll('input, button').forEach(control => { control.disabled = true; });
+  const version = workspaceVersion;
+  const advance = () => {
+    if (version !== workspaceVersion || !state || state.currentStep !== idx) return;
+    state.currentStep++;
+    showStep(state.currentStep);
+  };
+  if (delay) setTimeout(advance, delay); else advance();
+}
 
 function completeStep(idx) {
-  markStepDone(idx);
-  state.currentStep = idx + 1;
-  showStep(idx + 1);
+  if (activeStep(idx, 'rule-display')) acceptStep(idx, 0);
 }
 
-// Track sign-id completion
-const signCheckState = {};
-
-function checkSignChoice(stepIdx, checkIdx, btn, chosen) {
-  const step = state.stepsData[stepIdx];
-  const check = step.checks[checkIdx];
-  const correct = chosen === check.answer;
-
-  if (correct) {
-    btn.classList.add('correct');
-    // Disable other buttons in this row
-    const row = document.getElementById(`signcheck-${stepIdx}-${checkIdx}`);
-    row.querySelectorAll('.choice-btn').forEach(b => {
-      if (!b.classList.contains('correct')) b.classList.add('disabled');
-    });
-
-    // Track completion
-    if (!signCheckState[stepIdx]) signCheckState[stepIdx] = new Set();
-    signCheckState[stepIdx].add(checkIdx);
-
-    // If all checks done, auto-advance
-    if (signCheckState[stepIdx].size === step.checks.length) {
-      const fb = document.getElementById(`feedback-${stepIdx}`);
-      fb.textContent = 'Great job identifying the signs! ✓';
-      fb.className = 'step-feedback show correct';
-      setTimeout(() => {
-        markStepDone(stepIdx);
-        state.currentStep = stepIdx + 1;
-        showStep(stepIdx + 1);
-      }, 700);
-    }
-  } else {
-    btn.classList.add('incorrect');
-    setTimeout(() => btn.classList.remove('incorrect'), 500);
-    const fb = document.getElementById(`feedback-${stepIdx}`);
-    fb.textContent = 'Look at the number again — is it above or below zero?';
-    fb.className = 'step-feedback show hint-text';
-  }
-}
-
-function checkChoice(stepIdx, btn, chosen) {
-  const step = state.stepsData[stepIdx];
-  const correct = chosen === step.answer;
-
-  if (correct) {
-    btn.classList.add('correct');
-    const row = document.getElementById(`choices-${stepIdx}`);
-    row.querySelectorAll('.choice-btn').forEach(b => {
-      if (!b.classList.contains('correct')) b.classList.add('disabled');
-    });
-    const fb = document.getElementById(`feedback-${stepIdx}`);
-    fb.textContent = 'Correct! ✓';
-    fb.className = 'step-feedback show correct';
-    setTimeout(() => {
-      markStepDone(stepIdx);
-      state.currentStep = stepIdx + 1;
-      showStep(stepIdx + 1);
-    }, 700);
-  } else {
-    btn.classList.add('incorrect');
-    setTimeout(() => btn.classList.remove('incorrect'), 500);
-    const fb = document.getElementById(`feedback-${stepIdx}`);
-    fb.textContent = 'Not quite — think about the sign rules and try again!';
-    fb.className = 'step-feedback show incorrect';
-  }
-}
-
-function checkNumeric(stepIdx) {
-  const step = state.stepsData[stepIdx];
-  const inp = document.getElementById(`answer-${stepIdx}`);
-  const fb = document.getElementById(`feedback-${stepIdx}`);
-  const raw = inp.value.trim().replace(/−/g, '-');
-  const val = parseFloat(raw);
-
-  if (isNaN(val) || raw === '') {
-    fb.textContent = 'Please enter a number.';
-    fb.className = 'step-feedback show incorrect';
+function checkSignChoice(idx, ci, button, chosen) {
+  const step = activeStep(idx, 'sign-id');
+  if (!step || step.checked.has(ci) || button.disabled) return;
+  const check = step.checks[ci];
+  if (chosen !== check.answer) {
+    button.classList.add('incorrect');
+    feedback(idx, check.value === 0n ? 'Zero is neither positive nor negative. Choose Zero.'
+      : `Compare ${check.value} with zero: greater than zero is positive; less than zero is negative.`);
     return;
   }
-
-  const correct = Math.abs(val - step.answer) < 0.01;
-
-  if (correct) {
-    inp.classList.add('correct');
-    inp.value = fmtNum(step.answer);
-    inp.disabled = true;
-    fb.textContent = 'Correct! ✓';
-    fb.className = 'step-feedback show correct';
-    setTimeout(() => {
-      markStepDone(stepIdx);
-      state.currentStep = stepIdx + 1;
-      showStep(stepIdx + 1);
-    }, 700);
-  } else {
-    inp.classList.add('incorrect');
-    setTimeout(() => inp.classList.remove('incorrect'), 600);
-    const tries = parseInt(inp.dataset.tries || '0') + 1;
-    inp.dataset.tries = tries;
-
-    if (tries >= 3) {
-      fb.innerHTML = `The answer is <strong>${fmtNum(step.answer)}</strong>`;
-      fb.className = 'step-feedback show hint-text';
-    } else if (tries >= 2) {
-      fb.textContent = `Not quite. Try once more!`;
-      fb.className = 'step-feedback show incorrect';
-    } else {
-      fb.textContent = 'Not quite — give it another try!';
-      fb.className = 'step-feedback show incorrect';
-    }
-    inp.value = '';
-    inp.focus();
-  }
+  const row = document.getElementById(`signcheck-${idx}-${ci}`);
+  row.querySelectorAll('button').forEach(control => { control.disabled = true; control.classList.remove('incorrect'); });
+  button.classList.add('correct');
+  step.checked.add(ci);
+  feedback(idx, `${check.value} is ${check.answer.toLowerCase()}. ✓`, true);
+  if (step.checked.size === step.checks.length) acceptStep(idx);
+  else document.querySelector(`#step-${idx} button:not(:disabled)`).focus();
 }
 
-function markStepDone(idx) {
-  const card = document.getElementById(`step-${idx}`);
-  if (card) {
-    card.classList.add('completed');
-    card.querySelector('.step-num').classList.add('done');
+function checkChoice(idx, button, chosen) {
+  const step = activeStep(idx, 'choice');
+  if (!step || button.disabled) return;
+  if (chosen !== step.answer) {
+    button.classList.add('incorrect');
+    feedback(idx, 'Not quite. Check the sign rule in this step and try again.');
+    return;
   }
+  document.querySelectorAll(`#step-${idx} .incorrect`).forEach(el => el.classList.remove('incorrect'));
+  button.classList.add('correct');
+  feedback(idx, 'Correct! ✓', true);
+  acceptStep(idx);
 }
 
-// ==================== FINISH ====================
+function checkNumeric(idx) {
+  const step = activeStep(idx, 'numeric');
+  if (!step) return;
+  const input = document.getElementById('answer-' + idx);
+  let value;
+  try { value = readAnswer(input.value); }
+  catch (error) { input.setAttribute('aria-invalid', 'true'); feedback(idx, error.message); return; }
+  if (value.n !== step.answer.n || value.d !== step.answer.d) {
+    input.classList.add('incorrect'); input.setAttribute('aria-invalid', 'true');
+    step.tries = (step.tries || 0) + 1;
+    feedback(idx, step.tries >= 3 ? `The exact answer is ${fmtNum(step.answer)}. Enter it to continue.`
+      : 'Not quite. Check the operation and sign. Use an exact fraction if the decimal repeats; do not round.');
+    input.focus();
+    return;
+  }
+  input.classList.remove('incorrect'); input.classList.add('correct'); input.removeAttribute('aria-invalid');
+  input.value = fmtNum(step.answer);
+  feedback(idx, 'Correct! ✓', true);
+  acceptStep(idx);
+}
 
 function finishProblem() {
-  const { a, b, op, answer } = state;
-
-  // Update expression display with answer
+  if (!state || state.finished || state.currentStep !== state.stepsData.length) return;
+  state.finished = true;
   updateExprDisplay(true);
-
-  // Animate number line
-  if (op === '+' || op === '-') {
-    animateNumberLineResult();
-  }
-
-  // Mark banner as done
-  document.querySelectorAll('.rule-cell').forEach(c => c.classList.remove('active'));
-  const ruleMap = { '+': 'add', '-': 'sub', '*': 'mul', '/': 'div' };
-  document.getElementById(`rule-${ruleMap[op]}`).classList.add('done');
-
-  // If subtraction, also mark add
-  if (op === '-') document.getElementById('rule-add').classList.add('done');
-
-  // Result
-  const bDisplay = b < 0 ? `(${fmtNum(b)})` : fmtNum(b);
-  document.getElementById('resultExpr').textContent = `${fmtNum(a)} ${displayOp(op)} ${bDisplay} = ${fmtNum(answer)}`;
-
-  // Rule summary
-  let summaryHTML = '';
-  const ruleNames = {
-    '+': 'Addition', '-': 'Subtraction (→ Add Opposite)',
-    '*': 'Multiplication', '/': 'Division'
-  };
-  summaryHTML += `<span class="rule-tag" style="color:var(--accent)">${ruleNames[op]}</span> `;
-
-  const sameSign = (a >= 0) === ((op === '-' ? -b : b) >= 0);
-  if (op === '+' || op === '-') {
-    if (a === 0 || b === 0 || (op === '-' && -b === 0)) {
-      summaryHTML += `<span class="rule-tag" style="color:var(--accent-purple)">Zero Property</span>`;
-    } else if (sameSign) {
-      summaryHTML += `<span class="rule-tag" style="color:var(--accent-blue)">Same Signs → Add</span>`;
-    } else {
-      summaryHTML += `<span class="rule-tag" style="color:var(--accent-orange)">Different Signs → Subtract</span>`;
-    }
-  } else {
-    if (a === 0 || b === 0) {
-      summaryHTML += `<span class="rule-tag" style="color:var(--accent-purple)">Zero Property</span>`;
-    } else {
-      const sameMD = (a >= 0 && b >= 0) || (a < 0 && b < 0);
-      summaryHTML += sameMD
-        ? `<span class="rule-tag" style="color:var(--accent-blue)">Same Signs → Positive</span>`
-        : `<span class="rule-tag" style="color:var(--accent-orange)">Different Signs → Negative</span>`;
-    }
-  }
-
-  document.getElementById('resultRuleSummary').innerHTML = summaryHTML;
-  document.getElementById('resultSection').classList.add('visible');
-  document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (state.op === '+' || state.op === '-') drawNumberLine(true);
+  document.querySelectorAll('.rule-cell.active').forEach(cell => { cell.classList.remove('active'); cell.classList.add('done'); });
+  if (state.op === '-') document.getElementById('rule-add').classList.add('done');
+  document.getElementById('resultExpr').textContent = `${expression(state.a, state.op, state.b)} = ${fmtNum(state.answer)}`;
+  document.getElementById('resultRuleSummary').textContent = (state.op === '-' ? 'Rewrite subtraction as addition of the opposite. ' : '') + state.ruleSummary;
+  const result = document.getElementById('resultSection');
+  result.classList.add('visible');
+  result.querySelector('button').focus({ preventScroll: true });
+  result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function resetAll() {
+  workspaceVersion++;
+  state = null; selectedOp = null;
   document.getElementById('inputSection').style.display = '';
   document.getElementById('workspace').classList.remove('visible');
   document.getElementById('inputA').value = '';
   document.getElementById('inputB').value = '';
-  selectedOp = null;
-  document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('selected'));
-  document.getElementById('stepsContainer').innerHTML = '';
+  document.querySelectorAll('.op-btn').forEach(button => { button.classList.remove('selected'); button.setAttribute('aria-pressed', 'false'); });
+  document.getElementById('stepsContainer').replaceChildren();
   document.getElementById('resultSection').classList.remove('visible');
-  document.querySelectorAll('.rule-cell').forEach(c => c.classList.remove('active', 'done'));
+  document.getElementById('resultExpr').textContent = '';
+  document.getElementById('resultRuleSummary').textContent = '';
+  document.getElementById('exprDisplay').replaceChildren();
+  document.getElementById('numberLineSvg').replaceChildren();
+  document.getElementById('numberLineCaption').textContent = '';
+  document.getElementById('numberLineWrap').style.display = 'none';
+  document.querySelectorAll('.rule-cell').forEach(cell => cell.classList.remove('active', 'done'));
+  clearError();
   document.getElementById('inputA').focus();
 }
 
-// Allow Enter on inputs
-document.getElementById('inputA').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inputB').focus(); });
-document.getElementById('inputB').addEventListener('keydown', e => { if (e.key === 'Enter') startSolving(); });
+document.getElementById('inputA').addEventListener('keydown', event => { if (event.key === 'Enter') document.getElementById('inputB').focus(); });
+document.getElementById('inputB').addEventListener('keydown', event => { if (event.key === 'Enter') startSolving(); });
 </script>
 </body>
 </html>
