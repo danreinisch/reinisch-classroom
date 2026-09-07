@@ -150,7 +150,11 @@
   }
 
   function eventKey(contract, period, slot = 1) {
-    const scope = period ? `period:${period}` : 'day';
+    const safePeriod = String(period || '')
+      .trim()
+      .replace(/[^A-Za-z0-9 _.:|\/-]/g, '_')
+      .slice(0, 120);
+    const scope = safePeriod ? `period:${safePeriod}` : 'day';
     if (contract.high_frequency === true || Number(contract.events_per_period) > 1) {
       return `${scope}:slot:${slot}`;
     }
@@ -180,7 +184,7 @@
       ? { kind: 'disposition', disposition: payload.disposition, class_period: payload.class_period || null }
       : { kind: 'event', data: payload.data || {}, class_period: payload.class_period || null });
     setIndicator(card, 'Saved locally — syncing…', true);
-    rerender();
+    rerender({ localDraft: null });
 
     try {
       const result = await sendEntry(queued);
@@ -189,7 +193,7 @@
         ? { kind: 'disposition', ...result }
         : { kind: 'event', ...result });
       setIndicator(card, 'Auto-saved ✓');
-      rerender();
+      rerender({ localDraft: null });
     } catch (error) {
       console.warn('[obs-nq2] Contract save queued:', goal.code, error.message);
       setIndicator(card, 'Saved locally — will sync when connected', true);
@@ -392,9 +396,10 @@
   }
 
   function renderComponentComposite(context) {
-    const { root, card, goal, contract, date, period, key, state, rerender } = context;
+    const { root, card, goal, contract, date, period, key, state, rerender, draft } = context;
     const current = state.get(key);
-    const working = { ...(current?.kind === 'event' ? current.data?.components : {}) };
+    const savedComponents = current?.kind === 'event' ? current.data?.components : null;
+    const working = { ...(draft?.components || savedComponents || {}) };
     const required = (contract.components || []).filter(component => component.required !== false);
 
     const top = document.createElement('div');
@@ -407,22 +412,16 @@
 
     const { details: note, input: noteInput } = noteDisclosure();
 
-    const submitIfComplete = () => {
-      if (!required.every(component => ['met', 'not_met'].includes(working[component.key]))) return;
-      save(card, goal, contract, {
-        action: 'save', student_code: goal.student_code, goal_code: goal.code,
-        date, event_key: key, class_period: period || null,
-        data: { components: { ...working } }, note: noteInput.value.trim(),
-      }, state, rerender);
-    };
+    const isComplete = () => required.every(component => ['met', 'not_met'].includes(working[component.key]));
+    const persist = () => save(card, goal, contract, {
+      action: 'save', student_code: goal.student_code, goal_code: goal.code,
+      date, event_key: key, class_period: period || null,
+      data: { components: { ...working } }, note: noteInput.value.trim(),
+    }, state, rerender);
 
     allMet.addEventListener('click', () => {
       for (const component of required) working[component.key] = 'met';
-      save(card, goal, contract, {
-        action: 'save', student_code: goal.student_code, goal_code: goal.code,
-        date, event_key: key, class_period: period || null,
-        data: { components: { ...working } }, note: noteInput.value.trim(),
-      }, state, rerender);
+      persist();
     });
 
     for (const component of contract.components || []) {
@@ -437,8 +436,8 @@
         if (working[component.key] === result) control.classList.add('active', result === 'met' ? 'is-met' : 'is-not-met');
         control.addEventListener('click', () => {
           working[component.key] = result;
-          submitIfComplete();
-          rerender({ localDraft: { components: { ...working } } });
+          if (isComplete()) persist();
+          else rerender({ localDraft: { components: { ...working } } });
         });
         controls.appendChild(control);
       }
@@ -452,11 +451,11 @@
   }
 
   function renderCount(context) {
-    const { root, card, goal, contract, date, period, key, state, rerender } = context;
+    const { root, card, goal, contract, date, period, key, state, rerender, draft } = context;
     const current = state.get(key);
-    const prior = current?.kind === 'event' ? current.data || {} : {};
+    const saved = current?.kind === 'event' ? current.data || {} : {};
     const { details: note, input: noteInput } = noteDisclosure();
-    const working = { ...prior };
+    const working = { ...(draft || saved) };
 
     const prompt = document.createElement('div');
     prompt.className = 'obs-contract-prompt';
@@ -464,13 +463,16 @@
     root.append(prompt, statusPill(current));
 
     const saveWhenReady = () => {
-      const missing = (contract.fields || []).filter(field => field.kind !== 'optional_text').some(field => working[field.key] === undefined || working[field.key] === null || working[field.key] === '');
-      if (missing) return;
+      const missing = (contract.fields || [])
+        .filter(field => field.kind !== 'optional_text')
+        .some(field => working[field.key] === undefined || working[field.key] === null || working[field.key] === '');
+      if (missing) return false;
       save(card, goal, contract, {
         action: 'save', student_code: goal.student_code, goal_code: goal.code,
-        date, event_key: key, class_period: period || null, data: working,
+        date, event_key: key, class_period: period || null, data: { ...working },
         note: noteInput.value.trim(),
       }, state, rerender);
+      return true;
     };
 
     if ((contract.fields || []).some(field => field.key === 'completed')) {
@@ -485,8 +487,7 @@
         if (working.completed === value) control.classList.add('active');
         control.addEventListener('click', () => {
           working.completed = value;
-          saveWhenReady();
-          rerender({ localDraft: { ...working } });
+          if (!saveWhenReady()) rerender({ localDraft: { ...working } });
         });
         row.appendChild(control);
       }
@@ -501,16 +502,34 @@
       const row = document.createElement('div');
       row.className = 'obs-contract-prompt-grid';
       for (const value of [0, 1, 2, 3, 4]) {
-        const control = button(value === 4 ? '4+' : String(value), 'obs-contract-mini');
+        const control = button(String(value), 'obs-contract-mini');
         if (Number(working.prompt_count) === value) control.classList.add('active');
         control.addEventListener('click', () => {
           working.prompt_count = value;
-          saveWhenReady();
-          rerender({ localDraft: { ...working } });
+          if (!saveWhenReady()) rerender({ localDraft: { ...working } });
         });
         row.appendChild(control);
       }
       root.appendChild(row);
+
+      const higher = document.createElement('label');
+      higher.className = 'obs-contract-more-prompts';
+      const higherLabel = document.createElement('span');
+      higherLabel.textContent = '5+ prompts';
+      const higherInput = document.createElement('input');
+      higherInput.type = 'number';
+      higherInput.min = '5';
+      higherInput.step = '1';
+      higherInput.placeholder = 'Exact count';
+      if (Number(working.prompt_count) >= 5) higherInput.value = String(working.prompt_count);
+      higherInput.addEventListener('change', () => {
+        const value = Number(higherInput.value);
+        if (!Number.isInteger(value) || value < 5) return;
+        working.prompt_count = value;
+        if (!saveWhenReady()) rerender({ localDraft: { ...working } });
+      });
+      higher.append(higherLabel, higherInput);
+      root.appendChild(higher);
     }
 
     const rubric = (contract.fields || []).find(field => field.key === 'rubric_score');
@@ -640,10 +659,10 @@
   }
 
   function renderNumericComposite(context) {
-    const { root, card, goal, contract, date, period, key, state, rerender } = context;
+    const { root, card, goal, contract, date, period, key, state, rerender, draft } = context;
     const current = state.get(key);
-    const prior = current?.kind === 'event' ? current.data || {} : {};
-    const working = { ...prior };
+    const saved = current?.kind === 'event' ? current.data || {} : {};
+    const working = { ...(draft || saved) };
     const { details: note, input: noteInput } = noteDisclosure();
 
     const prompt = document.createElement('div');
@@ -664,7 +683,10 @@
       input.value = working.start_latency_minutes ?? '';
       input.addEventListener('change', () => {
         const value = Number(input.value);
-        if (Number.isFinite(value)) working.start_latency_minutes = value;
+        if (Number.isFinite(value)) {
+          working.start_latency_minutes = value;
+          rerender({ localDraft: { ...working } });
+        }
       });
       label.append(caption, input);
       root.appendChild(label);
@@ -678,7 +700,7 @@
       const row = document.createElement('div');
       row.className = 'obs-contract-prompt-grid';
       for (const value of [0, 1, 2, 3, 4]) {
-        const control = button(value === 4 ? '4+' : String(value), 'obs-contract-mini');
+        const control = button(String(value), 'obs-contract-mini');
         if (Number(working.prompt_count) === value) control.classList.add('active');
         control.addEventListener('click', () => {
           working.prompt_count = value;
@@ -687,7 +709,7 @@
           if (Number.isFinite(Number(working.start_latency_minutes))) {
             save(card, goal, contract, {
               action: 'save', student_code: goal.student_code, goal_code: goal.code,
-              date, event_key: key, class_period: period || null, data: working,
+              date, event_key: key, class_period: period || null, data: { ...working },
               note: noteInput.value.trim(),
             }, state, rerender);
           } else {
@@ -697,6 +719,33 @@
         row.appendChild(control);
       }
       root.appendChild(row);
+
+      const higher = document.createElement('label');
+      higher.className = 'obs-contract-more-prompts';
+      const higherLabel = document.createElement('span');
+      higherLabel.textContent = '5+ prompts';
+      const higherInput = document.createElement('input');
+      higherInput.type = 'number';
+      higherInput.min = '5';
+      higherInput.step = '1';
+      higherInput.placeholder = 'Exact count';
+      if (Number(working.prompt_count) >= 5) higherInput.value = String(working.prompt_count);
+      higherInput.addEventListener('change', () => {
+        const value = Number(higherInput.value);
+        if (!Number.isInteger(value) || value < 5) return;
+        working.prompt_count = value;
+        if (Number.isFinite(Number(working.start_latency_minutes))) {
+          save(card, goal, contract, {
+            action: 'save', student_code: goal.student_code, goal_code: goal.code,
+            date, event_key: key, class_period: period || null, data: { ...working },
+            note: noteInput.value.trim(),
+          }, state, rerender);
+        } else {
+          rerender({ localDraft: { ...working } });
+        }
+      });
+      higher.append(higherLabel, higherInput);
+      root.appendChild(higher);
     }
 
     const disposition = dispositionControls({ card, goal, contract, period, date, key, state, noteInput, rerender });
@@ -730,9 +779,10 @@
       #observationCenterApp .obs-contract-prompt-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
       #observationCenterApp .obs-contract-field-label{font-size:11px;font-weight:800;color:rgba(240,255,250,.62);text-transform:uppercase;letter-spacing:.04em}
       #observationCenterApp .obs-contract-number-field{display:grid;grid-template-columns:minmax(0,1fr) 90px auto;gap:8px;align-items:center;font-size:12px}
-      #observationCenterApp .obs-contract-number-field input,#observationCenterApp .obs-contract-number-grid input,#observationCenterApp .obs-contract-text-field input{width:100%;box-sizing:border-box;padding:8px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(0,0,0,.22);color:inherit}
+      #observationCenterApp .obs-contract-number-field input,#observationCenterApp .obs-contract-number-grid input,#observationCenterApp .obs-contract-text-field input,#observationCenterApp .obs-contract-more-prompts input{width:100%;box-sizing:border-box;padding:8px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(0,0,0,.22);color:inherit}
       #observationCenterApp .obs-contract-number-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-      #observationCenterApp .obs-contract-number-grid label,#observationCenterApp .obs-contract-text-field{display:grid;gap:5px;font-size:11px;font-weight:700;color:rgba(240,255,250,.68)}
+      #observationCenterApp .obs-contract-number-grid label,#observationCenterApp .obs-contract-text-field,#observationCenterApp .obs-contract-more-prompts{display:grid;gap:5px;font-size:11px;font-weight:700;color:rgba(240,255,250,.68)}
+      #observationCenterApp .obs-contract-more-prompts{grid-template-columns:auto minmax(80px,120px);align-items:center;justify-content:end}
       #observationCenterApp .obs-contract-note,#observationCenterApp .obs-contract-disposition{border:1px solid rgba(255,255,255,.075);border-radius:9px;background:rgba(255,255,255,.018)}
       #observationCenterApp .obs-contract-note>summary,#observationCenterApp .obs-contract-disposition>summary{cursor:pointer;padding:7px 9px;font-size:11px;font-weight:750;color:rgba(240,255,250,.58);list-style-position:inside}
       #observationCenterApp .obs-contract-note .obs-note-input{width:calc(100% - 18px);margin:0 9px 9px}
@@ -788,7 +838,9 @@
     let draft = null;
 
     const rerender = (options = {}) => {
-      if (options.localDraft) draft = options.localDraft;
+      if (Object.prototype.hasOwnProperty.call(options, 'localDraft')) {
+        draft = options.localDraft;
+      }
       root.innerHTML = '';
       const key = eventKey(contract, period, 1);
       const context = { root, card, goal, contract, date, period, key, state, rerender, draft };
