@@ -6,7 +6,7 @@ test.describe('Student Portal polish layer', () => {
     await page.waitForFunction(() => Boolean(window.RCStudentPortalPolish));
   });
 
-  test('loads only on the student route and compacts the dashboard summary', async ({ page }) => {
+  test('loads on the student route and compacts the dashboard summary', async ({ page }) => {
     const summary = page.locator('.st-summary-cards');
     await expect(summary).toHaveCount(1);
 
@@ -73,7 +73,14 @@ test.describe('Student Portal polish layer', () => {
 
     await expect(page.locator('.stp-grade-snapshot')).toHaveCount(1);
     await expect(page.locator('.stp-history-shell')).toHaveCount(1);
-    await expect(page.locator('.stp-quarter-tab[data-quarter="Q1"]')).toHaveAttribute('aria-pressed', 'true');
+
+    const currentQuarter = await page.evaluate(async () => {
+      const api = await import('/web/quarter-utils.js');
+      return api.getCurrentQuarter();
+    });
+    await expect(page.locator(`.stp-quarter-tab[data-quarter="${currentQuarter}"]`)).toHaveAttribute('aria-pressed', 'true');
+
+    await page.locator('.stp-quarter-tab[data-quarter="Q1"]').click();
     await expect(page.locator('.stp-history-count')).toHaveText('Showing 1–12 of 15 assignments');
     await expect(page.locator('.stp-history-rows .st-grade-row:visible')).toHaveCount(12);
 
