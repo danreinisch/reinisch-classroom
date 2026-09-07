@@ -70,7 +70,7 @@ jobs:
         run: npm ci
       
       - name: Run unit tests
-        run: npm run test:unit && node tests/scored-parent-goal-evidence.test.cjs && node tests/student-goal-evidence-events.test.cjs && node tests/observation-evidence-contract.test.cjs
+        run: npm run test:unit && node tests/scored-parent-goal-evidence.test.cjs && node tests/student-goal-evidence-events.test.cjs && node tests/observation-evidence-contract.test.cjs && node tests/observation-contract-event.test.cjs && node tests/teacher-contract-observation.test.cjs
       - name: Run RC-MEDIA-01 large-media regression
         run: node tests/rc-media-01-large-classroom-media.test.cjs
 
@@ -106,7 +106,7 @@ jobs:
         run: npx playwright install chromium
       
       - name: Run smoke tests
-        run: npm run test:smoke && npm run test:goal-review:ui && npx playwright test tests/student-portal-polish.spec.js tests/student-goal-choice-objects.spec.js
+        run: npm run test:smoke && npm run test:goal-review:ui && npx playwright test tests/student-portal-polish.spec.js tests/student-goal-choice-objects.spec.js tests/observation-center-contract-fast-capture-ui.spec.js
       
       - name: Upload test results
         if: failure()
