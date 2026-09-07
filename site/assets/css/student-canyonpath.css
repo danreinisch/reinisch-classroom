@@ -1,0 +1,784 @@
+/*
+ * Student Portal CanyonPath — Phase 2A shell/dashboard pilot
+ * Presentation-only. Existing authentication, assignment, grade, goal, and
+ * evidence behavior remains owned by the established Student Portal runtime.
+ */
+
+body.rc-student-canyonpath {
+  --stcp-panel: rgba(7, 47, 41, 0.78);
+  --stcp-panel-strong: rgba(5, 38, 33, 0.92);
+  --stcp-panel-soft: rgba(123, 201, 176, 0.07);
+  --stcp-line: rgba(177, 232, 214, 0.18);
+  --stcp-line-strong: rgba(189, 244, 228, 0.34);
+  --stcp-ink: #f2fbf7;
+  --stcp-muted: #a7c5bb;
+  --stcp-faint: #73998d;
+  --stcp-mint: #bdf4e4;
+  --stcp-mint-strong: #7de3c6;
+  --stcp-cream: #efdca0;
+  --stcp-shadow: 0 18px 54px rgba(0, 14, 12, 0.30);
+  --stcp-shadow-sm: 0 10px 28px rgba(0, 14, 12, 0.22);
+  color: var(--stcp-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Platform shell
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .tc-app {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(3, 23, 20, 0.04), rgba(3, 23, 20, 0.84) 680px),
+    url('/assets/bg/rc-canyonpath-landscape-detail.svg') center top / max(1600px, 100vw) auto no-repeat,
+    #031714;
+}
+
+body.rc-student-canyonpath .tc-topbar {
+  min-height: 60px;
+  border-bottom: 1px solid var(--stcp-line);
+  background: rgba(3, 24, 21, 0.90);
+  color: var(--stcp-ink);
+  backdrop-filter: blur(18px) saturate(112%);
+  -webkit-backdrop-filter: blur(18px) saturate(112%);
+  box-shadow: 0 8px 26px rgba(0, 12, 10, 0.12);
+}
+
+body.rc-student-canyonpath .tc-topbar .tc-btn {
+  border-color: var(--stcp-line);
+  background: rgba(125, 227, 198, 0.055);
+  color: var(--stcp-mint);
+}
+
+body.rc-student-canyonpath .tc-topbar .tc-btn:hover {
+  border-color: var(--stcp-line-strong);
+  background: rgba(125, 227, 198, 0.10);
+}
+
+body.rc-student-canyonpath .tc-title {
+  color: var(--stcp-ink);
+  font-weight: 760;
+  letter-spacing: -0.01em;
+}
+
+body.rc-student-canyonpath .tc-shell {
+  background: transparent;
+}
+
+body.rc-student-canyonpath .tc-sidebar {
+  border-right: 1px solid var(--stcp-line);
+  background:
+    linear-gradient(180deg, rgba(3, 27, 24, 0.97), rgba(3, 21, 19, 0.98)),
+    url('/assets/bg/rc-canyonpath-landscape-detail.svg') 42% bottom / 760px auto no-repeat;
+  box-shadow: 12px 0 30px rgba(0, 13, 11, 0.16);
+}
+
+body.rc-student-canyonpath .tc-sidebar .tc-nav a {
+  min-height: 48px;
+  margin: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--stcp-muted);
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+body.rc-student-canyonpath .tc-sidebar .tc-nav a:hover {
+  transform: translateX(2px);
+  border-color: var(--stcp-line);
+  background: rgba(125, 227, 198, 0.065);
+  color: var(--stcp-ink);
+}
+
+body.rc-student-canyonpath .tc-sidebar .tc-nav a.active {
+  border-color: rgba(125, 227, 198, 0.34);
+  background:
+    linear-gradient(90deg, rgba(66, 191, 149, 0.16), rgba(125, 227, 198, 0.055));
+  color: var(--stcp-mint);
+  box-shadow: inset 3px 0 0 var(--stcp-mint-strong), 0 8px 22px rgba(0, 17, 14, 0.15);
+}
+
+body.rc-student-canyonpath .tc-sidebar .tc-icon {
+  color: var(--stcp-mint-strong);
+}
+
+body.rc-student-canyonpath .tc-main {
+  min-width: 0;
+  background: transparent;
+}
+
+body.rc-student-canyonpath #studentDashboardView {
+  position: relative;
+}
+
+body.rc-student-canyonpath #tabDashboard .st-dashboard-content {
+  width: min(1360px, calc(100vw - 42px));
+  max-width: 1360px;
+  margin-inline: auto;
+  padding: clamp(16px, 2.4vw, 28px);
+}
+
+/* --------------------------------------------------------------------------
+   Scenic student hero
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .stcp-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(310px, 0.75fr);
+  gap: clamp(22px, 3.5vw, 52px);
+  align-items: center;
+  min-height: 285px;
+  margin-bottom: 18px;
+  padding: clamp(24px, 3.8vw, 48px);
+  border: 1px solid var(--stcp-line);
+  border-radius: 24px;
+  background:
+    linear-gradient(90deg, rgba(5, 35, 31, 0.96) 0%, rgba(5, 35, 31, 0.72) 52%, rgba(5, 35, 31, 0.34) 100%),
+    url('/assets/bg/rc-canyonpath-landscape-detail.svg') center 34% / cover no-repeat;
+  box-shadow: 0 28px 78px rgba(0, 13, 11, 0.34);
+}
+
+body.rc-student-canyonpath .stcp-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 26%),
+    linear-gradient(0deg, rgba(2, 22, 19, 0.30), transparent 46%);
+}
+
+body.rc-student-canyonpath .stcp-hero__copy,
+body.rc-student-canyonpath .stcp-hero__aside {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header {
+  margin: 0;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header::before {
+  content: 'STUDENT PORTAL';
+  display: block;
+  margin-bottom: 8px;
+  color: var(--stcp-mint-strong);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.19em;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header h1 {
+  max-width: 760px;
+  margin: 0;
+  color: var(--stcp-ink);
+  font-size: clamp(2.2rem, 5vw, 4.35rem);
+  font-weight: 870;
+  letter-spacing: -0.052em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header p {
+  max-width: 58ch;
+  margin-top: 14px;
+  color: #d0e5dd;
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  line-height: 1.55;
+  opacity: 1;
+}
+
+body.rc-student-canyonpath .stcp-hero__motto {
+  position: absolute;
+  right: 30px;
+  bottom: 20px;
+  color: var(--stcp-mint-strong);
+  font-size: 0.70rem;
+  font-weight: 730;
+  letter-spacing: 0.22em;
+  line-height: 1.55;
+  text-align: right;
+  text-transform: uppercase;
+  opacity: 0.88;
+}
+
+/* Compact four-metric glass summary inside hero. */
+body.rc-student-canyonpath .stcp-hero .st-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--stcp-line-strong);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(134, 213, 188, 0.07), rgba(4, 32, 28, 0.08)),
+    rgba(5, 39, 34, 0.82);
+  box-shadow: var(--stcp-shadow);
+  backdrop-filter: blur(18px) saturate(112%);
+  -webkit-backdrop-filter: blur(18px) saturate(112%);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-card,
+body.rc-student-canyonpath .stcp-hero .st-summary-card.overdue {
+  min-height: 108px;
+  padding: 16px 17px;
+  border: 0;
+  border-right: 1px solid var(--stcp-line);
+  border-bottom: 1px solid var(--stcp-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--stcp-ink);
+  text-align: left;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-card:nth-child(2n) {
+  border-right: 0;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-card:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-card:hover,
+body.rc-student-canyonpath .stcp-hero .st-summary-card.overdue:hover {
+  transform: none;
+  background: rgba(125, 227, 198, 0.055);
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin: 0 0 9px;
+  border: 1px solid var(--stcp-line);
+  border-radius: 10px;
+  background: rgba(125, 227, 198, 0.06);
+  color: var(--stcp-mint-strong);
+  opacity: 1;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-card.overdue .st-summary-icon {
+  color: #f0a69c;
+  border-color: rgba(239, 130, 117, 0.28);
+  background: rgba(239, 130, 117, 0.07);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-value {
+  margin: 0 0 3px;
+  color: var(--stcp-ink);
+  font-size: 1.85rem;
+  line-height: 1;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-label {
+  color: var(--stcp-muted);
+  font-size: 0.78rem;
+  opacity: 1;
+}
+
+body.rc-student-canyonpath .stcp-hero #dashStreakBanner {
+  margin-top: 12px;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-streak-banner {
+  min-height: 42px;
+  margin: 0;
+  padding: 9px 12px;
+  border-color: var(--stcp-line);
+  background: rgba(4, 31, 27, 0.52);
+  color: var(--stcp-muted);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-streak-banner-fire {
+  display: none;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-streak-banner-title {
+  color: var(--stcp-mint-strong);
+}
+
+/* Existing due-soon and badge surfaces remain data-owned; only their presentation changes. */
+body.rc-student-canyonpath #dueSoonBanner:not(:empty),
+body.rc-student-canyonpath #badgesContainer:not(:empty) {
+  width: min(1360px, 100%);
+}
+
+body.rc-student-canyonpath .st-due-soon-banner,
+body.rc-student-canyonpath .st-badges {
+  margin-bottom: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   Quick activities — static navigation only, no data behavior
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .stcp-quick {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid var(--stcp-line);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(124, 199, 175, 0.07), rgba(4, 32, 28, 0.03)),
+    var(--stcp-panel);
+  box-shadow: var(--stcp-shadow-sm);
+  backdrop-filter: blur(16px) saturate(112%);
+  -webkit-backdrop-filter: blur(16px) saturate(112%);
+}
+
+body.rc-student-canyonpath .stcp-quick__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+body.rc-student-canyonpath .stcp-quick__eyebrow,
+body.rc-student-canyonpath .st-section[data-stcp-eyebrow]::before {
+  display: block;
+  color: var(--stcp-mint-strong);
+  font-size: 0.70rem;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+body.rc-student-canyonpath .stcp-quick__eyebrow {
+  margin-bottom: 5px;
+}
+
+body.rc-student-canyonpath .stcp-quick h2 {
+  margin: 0;
+  color: var(--stcp-ink);
+  font-size: 1.25rem;
+  letter-spacing: -0.025em;
+}
+
+body.rc-student-canyonpath .stcp-quick__note {
+  color: var(--stcp-faint);
+  font-size: 0.78rem;
+}
+
+body.rc-student-canyonpath .stcp-quick__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body.rc-student-canyonpath .stcp-quick__link {
+  min-width: 0;
+  min-height: 80px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 28px;
+  gap: 11px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--stcp-line);
+  border-radius: 14px;
+  background: rgba(45, 94, 81, 0.26);
+  color: var(--stcp-ink);
+  text-decoration: none;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+body.rc-student-canyonpath .stcp-quick__link:hover {
+  transform: translateY(-2px);
+  border-color: var(--stcp-line-strong);
+  background: rgba(66, 121, 105, 0.34);
+  box-shadow: 0 10px 24px rgba(0, 15, 13, 0.18);
+}
+
+body.rc-student-canyonpath .stcp-quick__icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--stcp-line-strong);
+  border-radius: 12px;
+  color: var(--stcp-mint);
+  background: rgba(125, 227, 198, 0.065);
+}
+
+body.rc-student-canyonpath .stcp-quick__icon svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body.rc-student-canyonpath .stcp-quick__copy strong {
+  display: block;
+  overflow: hidden;
+  color: var(--stcp-ink);
+  font-size: 0.91rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.rc-student-canyonpath .stcp-quick__copy span {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--stcp-muted);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.rc-student-canyonpath .stcp-quick__chevron {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--stcp-line);
+  border-radius: 50%;
+  color: var(--stcp-mint);
+  background: rgba(125, 227, 198, 0.045);
+}
+
+/* --------------------------------------------------------------------------
+   Dashboard content panels
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .stcp-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 14px;
+  align-items: start;
+}
+
+body.rc-student-canyonpath #tabDashboard .st-section {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--stcp-line);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(126, 201, 177, 0.065), rgba(5, 33, 29, 0.02)),
+    var(--stcp-panel);
+  box-shadow: var(--stcp-shadow-sm);
+  backdrop-filter: blur(16px) saturate(112%);
+  -webkit-backdrop-filter: blur(16px) saturate(112%);
+}
+
+body.rc-student-canyonpath #tabDashboard .st-section[data-stcp-eyebrow]::before {
+  content: attr(data-stcp-eyebrow);
+  margin-bottom: 6px;
+}
+
+body.rc-student-canyonpath #tabDashboard .st-section > h2,
+body.rc-student-canyonpath #tabDashboard .stp-section-head > h2 {
+  margin: 0;
+  color: var(--stcp-ink);
+  font-size: 1.22rem;
+  font-weight: 790;
+  letter-spacing: -0.026em;
+}
+
+body.rc-student-canyonpath #tabDashboard .st-section > h2 > svg,
+body.rc-student-canyonpath #tabDashboard .stp-section-head h2 > svg {
+  width: 19px;
+  height: 19px;
+  color: var(--stcp-mint-strong);
+}
+
+body.rc-student-canyonpath .stcp-panel--assignments {
+  grid-row: span 2;
+}
+
+body.rc-student-canyonpath .stcp-panel--goals,
+body.rc-student-canyonpath .stcp-panel--progress {
+  min-height: 220px;
+}
+
+body.rc-student-canyonpath .stp-section-link {
+  color: var(--stcp-mint);
+}
+
+body.rc-student-canyonpath .stp-section-link:hover {
+  background: rgba(125, 227, 198, 0.07);
+}
+
+body.rc-student-canyonpath #dashRecentAssignments {
+  margin-top: 12px;
+  border-color: var(--stcp-line);
+  border-radius: 14px;
+  background: rgba(3, 29, 25, 0.34);
+}
+
+body.rc-student-canyonpath #dashRecentAssignments .st-assignment-card,
+body.rc-student-canyonpath #dashRecentAssignments .assignment-card {
+  padding: 13px 14px;
+  border-bottom-color: var(--stcp-line);
+  background: transparent;
+  color: var(--stcp-ink);
+}
+
+body.rc-student-canyonpath #dashRecentAssignments .st-assignment-card:hover,
+body.rc-student-canyonpath #dashRecentAssignments .assignment-card:hover {
+  background: rgba(125, 227, 198, 0.055);
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot,
+body.rc-student-canyonpath #dashPerfChart {
+  margin-top: 12px;
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .st-goal-card {
+  margin-bottom: 9px;
+  padding: 13px 14px;
+  border: 1px solid var(--stcp-line);
+  border-radius: 13px;
+  background: rgba(57, 109, 94, 0.22);
+  box-shadow: none;
+  transform: none;
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .st-goal-card:hover {
+  transform: none;
+  border-color: var(--stcp-line-strong);
+  background: rgba(73, 129, 112, 0.28);
+  box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   Footer brand strip
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .stcp-footer {
+  position: relative;
+  overflow: hidden;
+  min-height: 108px;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 28px;
+  border: 1px solid var(--stcp-line);
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, rgba(4, 31, 27, 0.94), rgba(4, 31, 27, 0.56)),
+    url('/assets/bg/rc-canyonpath-landscape-detail.svg') center 82% / cover no-repeat;
+  box-shadow: var(--stcp-shadow-sm);
+}
+
+body.rc-student-canyonpath .stcp-footer__lead strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--stcp-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.55rem;
+  font-weight: 500;
+}
+
+body.rc-student-canyonpath .stcp-footer__lead span,
+body.rc-student-canyonpath .stcp-footer__brand {
+  color: var(--stcp-mint-strong);
+  font-size: 0.68rem;
+  font-weight: 740;
+  letter-spacing: 0.19em;
+  line-height: 1.55;
+  text-transform: uppercase;
+}
+
+body.rc-student-canyonpath .stcp-footer__brand {
+  padding-left: 24px;
+  border-left: 1px solid var(--stcp-line-strong);
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   Student profile icon — no emoji UI
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .st-profile-card {
+  border-color: var(--stcp-line);
+  background: rgba(125, 227, 198, 0.045);
+}
+
+body.rc-student-canyonpath .st-profile-avatar {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 8px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--stcp-line-strong);
+  border-radius: 50%;
+  background: rgba(125, 227, 198, 0.065);
+  color: var(--stcp-mint);
+  font-size: 0;
+}
+
+body.rc-student-canyonpath .st-profile-avatar svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --------------------------------------------------------------------------
+   Focus, motion, responsive
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath :where(
+  .tc-btn,
+  .tc-nav a,
+  .stcp-quick__link,
+  .stp-section-link,
+  button,
+  a,
+  input,
+  select
+):focus-visible {
+  outline: 3px solid var(--stcp-mint);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px rgba(189, 244, 228, 0.22);
+}
+
+@media (max-width: 1100px) {
+  body.rc-student-canyonpath .stcp-hero {
+    grid-template-columns: 1fr;
+  }
+
+  body.rc-student-canyonpath .stcp-hero__aside {
+    max-width: 660px;
+  }
+
+  body.rc-student-canyonpath .stcp-hero__motto {
+    display: none;
+  }
+
+  body.rc-student-canyonpath .stcp-quick__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.rc-student-canyonpath .stcp-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.rc-student-canyonpath .stcp-panel--assignments {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  body.rc-student-canyonpath #tabDashboard .st-dashboard-content {
+    width: 100%;
+    padding: 12px;
+  }
+
+  body.rc-student-canyonpath .stcp-hero {
+    min-height: 0;
+    padding: 22px 18px;
+    border-radius: 18px;
+  }
+
+  body.rc-student-canyonpath .stcp-hero .st-welcome-header h1 {
+    font-size: clamp(2rem, 11vw, 3.2rem);
+  }
+
+  body.rc-student-canyonpath .stcp-hero .st-summary-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  body.rc-student-canyonpath .stcp-hero .st-summary-card {
+    min-height: 96px;
+    padding: 13px;
+  }
+
+  body.rc-student-canyonpath .stcp-quick__grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.rc-student-canyonpath .stcp-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  body.rc-student-canyonpath .stcp-footer__brand {
+    padding: 14px 0 0;
+    border-top: 1px solid var(--stcp-line);
+    border-left: 0;
+    text-align: left;
+  }
+}
+
+/* Keep the established light theme functional. The CanyonPath pilot is the
+   emerald/dark experience; light mode keeps its existing low-risk palette. */
+html[data-theme='light'] body.rc-student-canyonpath .tc-app,
+html[data-theme='light'] body.rc-student-canyonpath .tc-main {
+  background: var(--bg, #f8f9fa);
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .tc-topbar,
+html[data-theme='light'] body.rc-student-canyonpath .tc-sidebar {
+  background: var(--surface, #fff);
+  color: var(--ink, #1a1a2e);
+  border-color: var(--border, rgba(0, 0, 0, 0.12));
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-hero,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-quick,
+html[data-theme='light'] body.rc-student-canyonpath #tabDashboard .st-section,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-footer {
+  background: var(--surface, #fff);
+  color: var(--ink, #1a1a2e);
+  border-color: var(--border, rgba(0, 0, 0, 0.12));
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-hero .st-welcome-header h1,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-quick h2,
+html[data-theme='light'] body.rc-student-canyonpath #tabDashboard .st-section > h2,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-footer__lead strong {
+  color: var(--ink, #1a1a2e);
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-hero .st-welcome-header p,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-quick__note,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-quick__copy span {
+  color: var(--muted, #6b7280);
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-hero .st-summary-cards,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-quick__link {
+  background: #f8fafc;
+  color: var(--ink, #1a1a2e);
+  border-color: var(--border, rgba(0, 0, 0, 0.12));
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-hero .st-summary-value,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-quick__copy strong {
+  color: var(--ink, #1a1a2e);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.rc-student-canyonpath *,
+  body.rc-student-canyonpath *::before,
+  body.rc-student-canyonpath *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

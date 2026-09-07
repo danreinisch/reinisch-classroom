@@ -70,7 +70,7 @@ jobs:
         run: npm ci
       
       - name: Run unit tests
-        run: npm run test:unit && node tests/scored-parent-goal-evidence.test.cjs && node tests/student-goal-evidence-events.test.cjs
+        run: npm run test:unit && node tests/scored-parent-goal-evidence.test.cjs && node tests/student-goal-evidence-events.test.cjs && node tests/student-canyonpath-shell.test.cjs
       - name: Run RC-MEDIA-01 large-media regression
         run: node tests/rc-media-01-large-classroom-media.test.cjs
 
