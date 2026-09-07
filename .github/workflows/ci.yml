@@ -106,7 +106,7 @@ jobs:
         run: npx playwright install chromium
       
       - name: Run smoke tests
-        run: npm run test:smoke
+        run: npm run test:smoke && npm run test:goal-review:ui
       
       - name: Upload test results
         if: failure()

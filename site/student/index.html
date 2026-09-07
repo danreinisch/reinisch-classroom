@@ -5310,6 +5310,8 @@
       }
       .st-perf-chart-svg {
         display: block;
+        width: min(100%, 680px);
+        max-height: 240px;
         max-width: 100%;
       }
       .st-perf-chart-reference {
@@ -6623,7 +6625,7 @@
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
                       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                     </svg>
-                    Performance Trend
+                    Recent assignment scores
                   </h2>
                   <div id="dashPerfChart"></div>
                 </section>
@@ -6845,7 +6847,9 @@
     <script src="/assets/vendor/jszip/jszip.min.js"></script>
     <script src="/assets/vendor/epubjs/epub.min.js"></script>
     <link rel="stylesheet" href="/assets/css/assignment-dictation.css?v=20260906-dictation1">
+    <link rel="stylesheet" href="/assets/css/student-goal-progress.css?v=20260907-goal-review1">
+    <script defer src="/web/student-goal-progress-view.js?v=20260907-goal-review1"></script>
     <script defer src="/web/assignment-dictation.js?v=20260906-dictation1"></script>
-    <script defer src="/web/student-portal-init.js?v=20260906-dictation-three-details"></script>
+    <script defer src="/web/student-portal-init.js?v=20260907-goal-review1"></script>
   </body>
 </html>
