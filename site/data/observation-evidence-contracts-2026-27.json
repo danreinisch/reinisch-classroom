@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "school_year": "2026-27",
+  "reviewed_on": "2026-09-07",
+  "purpose": "Defines one legitimate evidence event for reviewed non-question IEP goals. Does not change IEP wording, mastery math, or reporting cadence.",
+  "contracts": {
+    "S025.CG3": {
+      "event_type": "opportunity",
+      "capture_source": "observation_center",
+      "label": "Self-advocacy opportunity",
+      "fields": [
+        { "key": "result", "kind": "enum", "values": ["met", "not_met"] }
+      ],
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true
+    },
+    "S051.CG5": {
+      "event_type": "opportunity",
+      "capture_source": "observation_center",
+      "label": "Situational judgment experience",
+      "fields": [
+        { "key": "result", "kind": "enum", "values": ["met", "not_met"] }
+      ],
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true
+    },
+    "S055.CG2": {
+      "event_type": "work_sample",
+      "capture_source": "teacher_review",
+      "label": "Paragraph writing sample",
+      "criteria": ["topic_sentence", "supporting_details", "conclusion"],
+      "fields": [
+        { "key": "result", "kind": "enum", "values": ["met", "not_met"] }
+      ],
+      "revision_policy": "attempt_until_finalized"
+    },
+    "S056.CG4": {
+      "event_type": "opportunity",
+      "capture_source": "observation_center",
+      "label": "Process-before-responding opportunity",
+      "fields": [
+        { "key": "result", "kind": "enum", "values": ["met", "not_met"] }
+      ],
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true
+    },
+    "S058.CG1": {
+      "event_type": "composite",
+      "capture_source": "observation_center",
+      "label": "Conflict-response performance",
+      "components": [
+        { "key": "identify_conflict", "label": "Identifies the conflict", "kind": "met_not_met", "required": true },
+        { "key": "appropriate_regulated_response", "label": "Gives an appropriate response using a taught regulation strategy", "kind": "met_not_met", "required": true },
+        { "key": "inappropriate_response_to_avoid", "label": "Names an inappropriate response to avoid", "kind": "met_not_met", "required": true }
+      ],
+      "success_rule": { "operator": "all_required_met" },
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true
+    },
+    "S059.CG5": {
+      "event_type": "opportunity",
+      "capture_source": "observation_center",
+      "label": "Appropriate break-request opportunity",
+      "fields": [
+        { "key": "result", "kind": "enum", "values": ["met", "not_met"] }
+      ],
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true
+    },
+    "S059.CG6": {
+      "event_type": "performance_trial",
+      "capture_source": "observation_center",
+      "label": "Daily schedule-following performance",
+      "fields": [
+        { "key": "successful_steps", "kind": "integer", "min": 0 },
+        { "key": "total_steps", "kind": "integer", "min": 1 },
+        { "key": "support_level", "kind": "optional_text" }
+      ],
+      "success_rule": { "operator": "ratio_at_least", "numerator": "successful_steps", "denominator": "total_steps", "value": 0.8 },
+      "dispositions": ["absent"],
+      "note_optional": true
+    },
+    "S060.CG1": {
+      "event_type": "composite",
+      "capture_source": "observation_center",
+      "label": "Combined reading-performance trial",
+      "components": [
+        { "key": "independent_reading", "label": "Reads the grade-level passage independently", "kind": "met_not_met", "required": true },
+        { "key": "comprehension_participation", "label": "Participates in comprehension questions", "kind": "met_not_met", "required": true },
+        { "key": "regulation_strategy", "label": "Stays calm and uses a strategy to manage frustration", "kind": "met_not_met", "required": true }
+      ],
+      "success_rule": { "operator": "all_required_met" },
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true,
+      "criterion_note": "Preserve the official stored criterion/mastery; do not rewrite the source wording."
+    },
+    "S060.CG2": {
+      "event_type": "count",
+      "capture_source": "observation_center",
+      "label": "Task completion and prompt count",
+      "fields": [
+        { "key": "completed", "kind": "boolean" },
+        { "key": "prompt_count", "kind": "integer", "min": 0 }
+      ],
+      "success_rule": { "operator": "all", "rules": [
+        { "field": "completed", "operator": "eq", "value": true },
+        { "field": "prompt_count", "operator": "lte", "value": 2 }
+      ] },
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true
+    },
+    "S061.CG1": {
+      "event_type": "composite",
+      "capture_source": "observation_center",
+      "label": "Task-start latency and prompt count",
+      "fields": [
+        { "key": "start_latency_minutes", "kind": "number", "min": 0 },
+        { "key": "prompt_count", "kind": "integer", "min": 0 }
+      ],
+      "success_rule": { "operator": "all", "rules": [
+        { "field": "start_latency_minutes", "operator": "lte", "value": 5 },
+        { "field": "prompt_count", "operator": "lte", "value": 2 }
+      ] },
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true
+    },
+    "S061.CG2": {
+      "event_type": "opportunity",
+      "capture_source": "observation_center",
+      "label": "Staff-redirection opportunity",
+      "fields": [
+        { "key": "result", "kind": "enum", "values": ["met", "not_met"] }
+      ],
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true
+    },
+    "S061.CG3": {
+      "event_type": "performance_trial",
+      "capture_source": "observation_center",
+      "label": "Defined conversation-monitoring period",
+      "collection_window": "class_period",
+      "fields": [
+        { "key": "inappropriate_topic_or_comment_occurred", "kind": "boolean" }
+      ],
+      "success_rule": { "field": "inappropriate_topic_or_comment_occurred", "operator": "eq", "value": false },
+      "dispositions": ["absent"],
+      "note_optional": true
+    },
+    "S061.CG4": {
+      "event_type": "count",
+      "capture_source": "observation_center",
+      "label": "Social-group rubric performance",
+      "fields": [
+        { "key": "rubric_score", "kind": "number", "min": 0 }
+      ],
+      "note_optional": true,
+      "criterion_note": "Use the existing IEP rubric/criterion; do not invent a generic threshold."
+    },
+    "S062.CG3": {
+      "event_type": "performance_trial",
+      "capture_source": "observation_center",
+      "label": "Oral-reading punctuation and phrasing trial",
+      "fields": [
+        { "key": "result", "kind": "enum", "values": ["met", "not_met"] }
+      ],
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true
+    },
+    "S063.CG3": {
+      "event_type": "work_sample",
+      "capture_source": "teacher_review",
+      "label": "Five-sentence paragraph writing sample",
+      "criteria": ["topic_sentence", "supporting_detail_1", "supporting_detail_2", "supporting_detail_3", "conclusion"],
+      "fields": [
+        { "key": "result", "kind": "enum", "values": ["met", "not_met"] }
+      ],
+      "revision_policy": "attempt_until_finalized"
+    },
+    "S069.CG1": {
+      "event_type": "benchmark",
+      "capture_source": "benchmark",
+      "label": "MAP Reading RIT benchmark",
+      "fields": [
+        { "key": "rit_score", "kind": "number" }
+      ],
+      "metric": "MAP Reading RIT",
+      "parent_direct_capture": true,
+      "objective_evidence_allowed": true,
+      "cadence": "benchmark_only"
+    },
+    "S070.CG1": {
+      "event_type": "objective_driven",
+      "capture_source": "objective_evidence",
+      "label": "Social/emotional objective evidence",
+      "parent_direct_capture": false,
+      "authoritative_sources": ["attendance_records", "observation_center"],
+      "note": "Capture measurable child objectives rather than inventing one generic parent score."
+    },
+    "S070.CG4": {
+      "event_type": "objective_driven",
+      "capture_source": "objective_evidence",
+      "label": "Executive-functioning objective evidence",
+      "parent_direct_capture": false,
+      "authoritative_sources": ["attendance_records", "assignment_records", "observation_center", "weekly_binder_check"],
+      "note": "Use authoritative records where they exist and observation only for the remaining objective components."
+    },
+    "S071.CG1": {
+      "event_type": "opportunity",
+      "capture_source": "observation_center",
+      "label": "Comprehension-check interaction",
+      "fields": [
+        { "key": "result", "kind": "enum", "values": ["met", "not_met"] }
+      ],
+      "dispositions": ["absent", "no_opportunity"],
+      "events_per_period": 2,
+      "high_frequency": true,
+      "note_optional": true
+    },
+    "S071.CG2": {
+      "event_type": "opportunity",
+      "capture_source": "observation_center",
+      "label": "Clarification-request opportunity",
+      "fields": [
+        { "key": "result", "kind": "enum", "values": ["met", "not_met"] }
+      ],
+      "dispositions": ["absent", "no_opportunity"],
+      "note_optional": true
+    }
+  }
+}
