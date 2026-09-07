@@ -140,6 +140,7 @@
     try {
       const qApi = await quarterApi();
       if (!document.documentElement.contains(root)) return;
+      if (!sourceRows.every((row) => root.contains(row))) return;
       if (root.dataset.stpHistoryReady === 'true') return;
 
       const currentQuarter = qApi?.getCurrentQuarter?.() || 'Q1';
@@ -260,7 +261,7 @@
         quarterTabs.appendChild(button);
       }
 
-      function apply() {
+      const apply = () => {
         const term = search.value.trim().toLowerCase();
         const selectedClass = classSelect.value;
 
@@ -305,7 +306,7 @@
           const end = Math.min(start + HISTORY_PAGE_SIZE, filtered.length);
           count.textContent = `Showing ${start + 1}–${end} of ${filtered.length} assignments`;
         }
-      }
+      };
 
       quarterTabs.addEventListener('click', (event) => {
         const button = event.target.closest('.stp-quarter-tab');
