@@ -43,6 +43,10 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
     addStudentStylesheetOnce('/assets/css/student-canyonpath-fixes.css?v=20260907-2a3', 'data-student-canyonpath-fixes');
     addStudentStylesheetOnce('/assets/css/student-canyonpath-cinematic.css?v=20260907-2a4', 'data-student-canyonpath-cinematic');
     addStudentStylesheetOnce('/assets/css/student-canyonpath-premium.css?v=20260907-2a5', 'data-student-canyonpath-premium');
+    // Final Phase 2A visual contract. This intentionally loads after every
+    // exploratory layer so the approved Dashboard / Goals / Login references
+    // are the single effective presentation standard.
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-final.css?v=20260907-2a6', 'data-student-canyonpath-final');
   };
 
   // Append after the page's inline styles so the scoped polish layers are the
