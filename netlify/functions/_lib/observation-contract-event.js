@@ -127,9 +127,19 @@ function compareRule(data, rule) {
   const expected = rule.value;
 
   switch (rule.operator) {
-    case 'eq': return value === expected;
-    case 'lte': return finite(value) !== null && finite(value) <= Number(expected);
-    case 'gte': return finite(value) !== null && finite(value) >= Number(expected);
+    case 'eq': {
+      if (value === expected) return true;
+      if (value === null || value === undefined || expected === null || expected === undefined) return false;
+      return String(value) === String(expected);
+    }
+    case 'lte': {
+      const numeric = finite(value);
+      return numeric === null ? null : numeric <= Number(expected);
+    }
+    case 'gte': {
+      const numeric = finite(value);
+      return numeric === null ? null : numeric >= Number(expected);
+    }
     default: return null;
   }
 }
@@ -162,12 +172,15 @@ function evaluateSuccess(contract, data) {
   }
 
   if (rule.operator === 'all') {
-    const results = (rule.rules || []).map(item => compareRule(data, item));
-    return results.length && results.every(result => result === true)
-      ? true
-      : results.some(result => result === false)
-        ? false
-        : null;
+    const rules = Array.isArray(rule.rules) ? rule.rules : [];
+    if (!rules.length) return null;
+
+    for (const item of rules) {
+      const result = compareRule(data, item);
+      if (result === false) return false;
+      if (result !== true) return null;
+    }
+    return true;
   }
 
   if (rule.operator === 'ratio_at_least') {
