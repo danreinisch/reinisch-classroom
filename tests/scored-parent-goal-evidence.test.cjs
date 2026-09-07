@@ -3,30 +3,47 @@
 const assert = require('node:assert/strict');
 const {
   buildScoredParentGoalEvidence,
+  hasLegacyBlockingConstructedItem,
 } = require('../netlify/functions/_lib/scored-parent-goal-evidence');
 
+const mixedItems = [
+  {
+    id: 101,
+    points: 1,
+    goal_codes: ['S001.CG1'],
+    meta: { text: 'Question one', correct: 'B', choices: ['A', 'B'] },
+  },
+  {
+    id: 102,
+    points: 1,
+    goal_codes: ['S001.CG1'],
+    meta: { text: 'Question two', correct: 'C', choices: ['A', 'B', 'C'] },
+  },
+  {
+    id: 103,
+    points: 5,
+    goal_codes: ['S001.CG2'],
+    answer_type: 'constructed',
+    meta: { text: 'Written response' },
+  },
+];
+
+assert.equal(
+  hasLegacyBlockingConstructedItem(mixedItems),
+  true,
+  'teacher-reviewed constructed work must activate the mixed-assignment repair path'
+);
+assert.equal(
+  hasLegacyBlockingConstructedItem([
+    { id: 1, answer_type: 'mcq', meta: { correct: 'A' } },
+    { id: 2, answer_type: 'constructed', meta: { correct: '1.00' } },
+  ]),
+  false,
+  'fully auto-scoreable assignments must remain on the existing legacy path'
+);
+
 const built = buildScoredParentGoalEvidence({
-  items: [
-    {
-      id: 101,
-      points: 1,
-      goal_codes: ['S001.CG1'],
-      meta: { text: 'Question one', correct: 'B', choices: ['A', 'B'] },
-    },
-    {
-      id: 102,
-      points: 1,
-      goal_codes: ['S001.CG1'],
-      meta: { text: 'Question two', correct: 'C', choices: ['A', 'B', 'C'] },
-    },
-    {
-      id: 103,
-      points: 5,
-      goal_codes: ['S001.CG2'],
-      answer_type: 'constructed',
-      meta: { text: 'Written response' },
-    },
-  ],
+  items: mixedItems,
   submissionAnswers: [
     {
       assignment_item_id: 101,
