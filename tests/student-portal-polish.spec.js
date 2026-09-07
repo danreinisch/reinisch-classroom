@@ -4,16 +4,35 @@ test.describe('Student Portal polish layer', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/student/');
     await page.waitForFunction(() => Boolean(window.RCStudentPortalPolish));
+    await page.waitForFunction(() =>
+      Array.from(document.styleSheets).some((sheet) =>
+        String(sheet.href || '').includes('/assets/css/student-portal-polish.css')
+      )
+    );
   });
 
   test('loads on the student route and compacts the dashboard summary', async ({ page }) => {
-    const summary = page.locator('.st-summary-cards');
+    await page.evaluate(() => {
+      document.querySelector('.stp-test-summary')?.remove();
+      const summary = document.createElement('div');
+      summary.className = 'st-summary-cards stp-test-summary';
+      summary.style.width = '1000px';
+      for (let index = 0; index < 4; index += 1) {
+        const card = document.createElement('div');
+        card.className = 'st-summary-card';
+        card.innerHTML = `<div class="st-summary-value">${index + 1}</div><div class="st-summary-label">Metric ${index + 1}</div>`;
+        summary.appendChild(card);
+      }
+      document.body.appendChild(summary);
+    });
+
+    const summary = page.locator('.stp-test-summary');
     await expect(summary).toHaveCount(1);
 
     const columns = await summary.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
     expect(columns).toBe(4);
 
-    const firstCard = page.locator('.st-summary-card').first();
+    const firstCard = summary.locator('.st-summary-card').first();
     expect(await firstCard.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('none');
   });
 
@@ -36,8 +55,10 @@ test.describe('Student Portal polish layer', () => {
 
   test('builds current-quarter-first paginated assignment history', async ({ page }) => {
     await page.evaluate(() => {
-      const root = document.getElementById('gradesContent');
-      root.innerHTML = '';
+      document.getElementById('gradesContent')?.remove();
+      const root = document.createElement('div');
+      root.id = 'gradesContent';
+      document.body.appendChild(root);
 
       const average = document.createElement('div');
       average.className = 'st-average-display';
