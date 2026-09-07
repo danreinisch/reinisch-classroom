@@ -109,7 +109,6 @@ test.describe('OBS-NQ2 reviewed-contract fast capture', () => {
     writes = [];
     await page.setViewportSize({ width: 1440, height: 900 });
     await installRoutes(page, writes);
-    await page.clock.install({ time: new Date('2026-09-14T09:00:00-05:00') });
     await page.goto('/teacher/observations/');
     await expect(page.getByRole('heading', { name: 'Observation Center' })).toBeVisible();
   });
@@ -150,7 +149,7 @@ test.describe('OBS-NQ2 reviewed-contract fast capture', () => {
     expect(writes[0].data.components).toEqual({
       independent_reading: 'met',
       comprehension_participation: 'met',
-      regulation_strategy_use: 'met',
+      regulation_strategy: 'met',
     });
 
     const task = goalCard(page, 'S060.CG2');
