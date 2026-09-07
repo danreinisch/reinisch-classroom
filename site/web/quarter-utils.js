@@ -126,7 +126,7 @@ export function getCurrentQuarter() {
 }
 
 /**
- * Return the { start, end } Date objects for a given quarter in the current school year.
+ * Return the { start, end } Date objects for a given quarter and school year (current year by default).
  *
  * Month placement:
  *   months Aug–Dec (index ≥ 7) → schoolYear
@@ -135,9 +135,7 @@ export function getCurrentQuarter() {
  * @param {"Q1"|"Q2"|"Q3"|"Q4"} quarter
  * @returns {{ start: Date, end: Date }|null}
  */
-export function getQuarterDateRange(quarter) {
-  const now = new Date();
-  const schoolYear = getSchoolYear(now);
+export function getQuarterDateRange(quarter, schoolYear = getSchoolYear(new Date())) {
 
   /**
    * Attempt to parse a { start, end } range object using "Mon DD" format.

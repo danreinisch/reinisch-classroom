@@ -233,6 +233,12 @@ function getLatestParentPercentage(
 
 function projectEvidence(row) {
   return {
+    ...(row?.work_ref ? { work_ref: row.work_ref } : {}),
+    ...(row?.assignment_title !== undefined ? {
+      assignment_title: row.assignment_title,
+      question_ref: row.question_ref ?? null,
+      teacher_feedback: row.answer_review_available === true ? row.teacher_feedback ?? null : null,
+    } : {}),
     date:
       dateOnly(row?.date),
     source:
@@ -1015,13 +1021,13 @@ async function readObjectiveProgress({
 
   evidenceParams.set(
     'order',
-    'date.desc,created_at.desc'
+    'date.desc,created_at.desc,id.desc'
   );
 
   const evidenceUrl =
     `${supabaseUrl}` +
     '/rest/v1/objective_data_points?' +
-    evidenceParams.toString();
+    evidenceParams.toString() + '&limit=500';
 
   const evidenceResult =
     await readJson(
@@ -1061,6 +1067,17 @@ async function readObjectiveProgress({
     )
       ? evidenceResult.data
       : [];
+
+  // Continue beyond PostgREST's row limit. Keep all pages or fail the rollup.
+  for (let offset = evidenceRowsRaw.length; evidenceRowsRaw.length && offset % 500 === 0; offset += 500) {
+    const pageUrl = new URL(evidenceUrl);
+    pageUrl.searchParams.set('limit', '500');
+    pageUrl.searchParams.set('offset', String(offset));
+    const page = await readJson(fetchImpl, pageUrl.toString(), { method: 'GET', headers });
+    if (!page.ok || !Array.isArray(page.data)) return { available: false, reason: 'query_failed', parents: [] };
+    evidenceRowsRaw.push(...page.data);
+    if (page.data.length < 500) break;
+  }
 
   /*
    * Optional caller-owned raw evidence transform.

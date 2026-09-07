@@ -1452,7 +1452,8 @@
         `/.netlify/functions/student-goal-explanations?code=${encodeURIComponent(studentCode)}` +
         `&quarter=${encodeURIComponent(quarter)}` +
         `&start=${encodeURIComponent(start)}` +
-        `&end=${encodeURIComponent(end)}`;
+        `&end=${encodeURIComponent(end)}` +
+        (window.RCStudentGoalProgress ? '&view=summary' : '');
 
       const response =
         await fetch(
@@ -2770,12 +2771,80 @@
   /**
    * Render one official parent goal with server-owned quarter explanation.
    */
+  function goalReviewQuarters() {
+    if (!quarterUtils) return [];
+    const schoolYear = quarterUtils.getSchoolYear(new Date());
+    const result = [];
+    for (const year of [schoolYear, schoolYear - 1]) {
+      for (const quarter of ['Q1', 'Q2', 'Q3', 'Q4']) {
+        const range = quarterUtils.getQuarterDateRange(quarter, year);
+        if (range) result.push({ quarter, start: formatQuarterDateForApi(range.start), end: formatQuarterDateForApi(range.end), label: `${year}–${String(year + 1).slice(-2)} · ${quarter}` });
+      }
+    }
+    return result;
+  }
+
+  function goalReviewOptions(goal, available = true) {
+    const quarters = goalReviewQuarters();
+    const current = quarterUtils?.getCurrentQuarter();
+    return { available, format: (value, type) => formatProgressValue(value, /^(percent|percentage|accuracy|%)$/i.test(type || 'Percent') ? 'Percent' : type), conflict: goal.criterion_conflict === true, target: goal.criterion_conflict === true ? null : [goal.target, goal.mastery].map(value => /^-?\d+(\.\d+)?%?$/.test(String(value ?? '').trim()) ? parseFloat(value) : null).find(value => value !== null), quarterLabel: quarters.find(q => q.quarter === current)?.label || 'This quarter' };
+  }
+
+  function mountGoalReviews(containers, activeGoals, studentCode) {
+    if (!window.RCStudentGoalProgress || !quarterUtils) return;
+    const quarters = goalReviewQuarters();
+    const currentIndex = Math.max(0, quarters.findIndex(q => q.quarter === quarterUtils.getCurrentQuarter()));
+    // Shared by dashboard and Goals, bounded to eight recently opened goal/quarters.
+    // Cache only during this authenticated render; failures can always be retried.
+    const cache = new Map();
+    async function loadDetail(goalCode, range) {
+      const key = `${studentCode}|${goalCode}|${range.start}|${range.end}`;
+      if (cache.has(key)) return cache.get(key);
+      const request = (async () => {
+        const params = new URLSearchParams({ code: studentCode, goal_code: goalCode, quarter: range.quarter, start: range.start, end: range.end, view: 'timeline' });
+        const response = await fetch(`/.netlify/functions/student-goal-explanations?${params}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('Goal review unavailable');
+        const data = await response.json();
+        if (!data.ok || !data.available) throw new Error('Goal review unavailable');
+        const goal = data.goals.find(row => row.goal_code === goalCode);
+        if (!goal) throw new Error('Goal review unavailable');
+        return goal;
+      })();
+      cache.set(key, request);
+      if (cache.size > 8) cache.delete(cache.keys().next().value);
+      try { return await request; } catch (error) { cache.delete(key); throw error; }
+    }
+    const workCache = new Map();
+    async function loadWork(goalCode, range, workRef) {
+      const key = `${goalCode}|${range.start}|${range.end}|${workRef}`;
+      if (workCache.has(key)) return workCache.get(key);
+      const request = (async () => {
+        const params = new URLSearchParams({ code: studentCode, goal_code: goalCode, quarter: range.quarter, start: range.start, end: range.end, view: 'work', work_ref: workRef });
+        const response = await fetch(`/.netlify/functions/student-goal-explanations?${params}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('Question review unavailable');
+        const data = await response.json();
+        if (!data.ok || !data.available || !data.work) throw new Error('Question review unavailable');
+        return data.work;
+      })();
+      workCache.set(key, request);
+      if (workCache.size > 12) workCache.delete(workCache.keys().next().value);
+      try { return await request; } catch (error) { workCache.delete(key); throw error; }
+    }
+    for (const container of containers.filter(Boolean)) {
+      window.RCStudentGoalProgress.mount(container, { goals: activeGoals, quarters, currentIndex, options: goalReviewOptions, loadDetail, loadWork });
+    }
+  }
+
   function renderGoalCard(
     goal,
     explanationMap,
     explanationState,
     containerSuffix = '',
   ) {
+    if (window.RCStudentGoalProgress && quarterUtils) {
+      return window.RCStudentGoalProgress.renderCard(goal, explanationMap?.get(String(goal.code)) || null, goalReviewOptions(goal, explanationState?.available === true));
+    }
+
     const isDashboardSnapshot =
       containerSuffix === 'dash';
 
@@ -11003,15 +11072,9 @@
     const maxV = 100;
     const rangeV = maxV - minV;
 
-    const dates = sorted.map(s => new Date(s.submitted_at).getTime());
-    const minD = Math.min(...dates);
-    const maxD = Math.max(...dates);
-    const rangeD = maxD - minD || 1;
-
-    const toX = d => PAD.left + ((new Date(d).getTime() - minD) / rangeD) * chartW;
     const toY = v => PAD.top + chartH - ((v - minV) / rangeV) * chartH;
 
-    const points = sorted.map(s => ({ x: toX(s.submitted_at), y: toY(s.score_total), s }));
+    const points = sorted.map((s, i) => ({ x: PAD.left + i / (sorted.length - 1) * chartW, y: toY(s.score_total), s }));
     const polyline = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
     // X-axis date labels
@@ -11040,12 +11103,9 @@
     const latestLabelX = Math.min(latestPt.x + 6, W - PAD.right - 4);
 
     // SPED-friendly status banner based on latest score vs passing threshold
-    const statusBannerHtml = buildStatusBannerHtml(latestScore, PASSING_THRESHOLD, null, 'Percent');
+    const statusBannerHtml = '<p class="st-perf-chart-caption">Recent assignment grades. Open My Goals to explore progress toward each goal.</p>';
 
-    // Trend arrow from last few submissions (treat as progress entries with .value)
-    const gradedAsEntries = sorted.map(s => ({ value: s.score_total }));
-    const trend = computeTrendArrow(gradedAsEntries);
-    const statsRowHtml = buildStatsRowHtml(latestScore, null, PASSING_THRESHOLD, trend, 'Percent');
+    const statsRowHtml = `<p>Latest assignment score: <strong>${latestScore}%</strong></p>`;
 
     // Accessible data table
     const tableRows = sorted.map(s => {
@@ -11088,7 +11148,7 @@
         </span>
         <span class="st-perf-chart-legend-item">
           <svg width="20" height="3" aria-hidden="true"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="var(--green,#4ade80)" stroke-width="1.5" stroke-dasharray="4 3" stroke-opacity="0.8"/></svg>
-          Passing goal (${PASSING_THRESHOLD}%)
+          Grade reference (${PASSING_THRESHOLD}%)
         </span>
       </div>
       ${srTable}`;
@@ -11362,6 +11422,7 @@
       // Attach event listeners to "Show more" buttons in both Goals tab and Dashboard snapshot
       if (activeGoals.length > 0) {
         attachShowMoreListeners();
+        mountGoalReviews([goalsContainer, dashGoalsSnapshot], activeGoals, studentCode);
       }
       
     } catch (err) {

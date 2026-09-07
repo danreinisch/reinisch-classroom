@@ -64,6 +64,10 @@ const {
   SESSION_SECRET,
 } = process.env;
 
+const { createHmac } = require('node:crypto');
+const { readAllPages, chunks } = require('./_lib/goal-evidence-pages');
+const { enrichGoalWork } = require('./_lib/student-goal-work-labels');
+
 const DATE_PATTERN =
   /^\d{4}-\d{2}-\d{2}$/;
 
@@ -456,10 +460,19 @@ exports.handler =
         '&or=(status.is.null,status.not.in.(closed,archived,Closed,Archived))' +
         '&order=code';
 
-      const goalRows =
-        await readJson(
-          goalsUrl
-        );
+      const timelineView = params.view === 'timeline';
+      const workView = params.view === 'work';
+      const summaryOnly = params.view === 'summary' || timelineView;
+      const detailView = params.view === 'detail';
+      const workRef = String(params.work_ref || '');
+      const reference = (...parts) => createHmac('sha256', SESSION_SECRET).update(JSON.stringify([studentId, ...parts])).digest('hex');
+      const requestedGoal = String(params.goal_code || '').trim();
+      const goalRows = (await readAllPages(goalsUrl, readJson))
+        .filter(goal => !requestedGoal || goal.code === requestedGoal);
+      const goalFilter = requestedGoal ? `&goal_id=in.(${goalRows.map(goal => encodeURIComponent(goal.id)).join(',')})` : '';
+      if (requestedGoal && !goalRows.length) {
+        return jsonResponse(event, 404, { ok: false, error: 'Goal unavailable' }, { 'Cache-Control': 'no-store' }, requestId);
+      }
 
       /*
        * The pure explanation helper uses goal.objectives to decide
@@ -521,7 +534,7 @@ exports.handler =
         `?student_id=eq.${encodeURIComponent(studentId)}` +
         `&date=gte.${range.start}` +
         `&date=lte.${range.end}` +
-        '&order=date.desc,created_at.desc';
+        '&order=date.desc,created_at.desc,id.desc' + goalFilter;
 
       /*
        * Question-level parent evidence uses the identical quarter window.
@@ -534,20 +547,16 @@ exports.handler =
         `?student_id=eq.${encodeURIComponent(studentId)}` +
         `&date=gte.${range.start}` +
         `&date=lte.${range.end}` +
-        '&order=date.desc,created_at.desc';
+        '&order=date.desc,created_at.desc,id.desc' + goalFilter;
 
-      const [
-        parentProgressRows,
-        parentDataPointRows,
-      ] =
-        await Promise.all([
-          readJson(
-            progressUrl
-          ),
-          readJson(
-            dataPointsUrl
-          ),
-        ]);
+      const parentProgressRows = await readAllPages(progressUrl, readJson);
+      if (timelineView || workView) {
+        for (const row of parentProgressRows) {
+          if (row.assignment_instance_id) row.work_ref = reference('parent', row.goal_id, row.assignment_instance_id);
+        }
+      }
+      const requestedCheckpoint = workView ? parentProgressRows.find(row => row.work_ref === workRef) : null;
+      let parentDataPointRows = summaryOnly || (workView && !requestedCheckpoint) ? [] : await readAllPages(dataPointsUrl + (workView ? `&assignment_instance_id=eq.${encodeURIComponent(requestedCheckpoint.assignment_instance_id)}` : ''), readJson);
 
       /*
        * Assignment-instance state controls two things:
@@ -561,9 +570,7 @@ exports.handler =
       const instanceCache =
         new Map();
 
-      async function ensureInstances(
-        rows,
-      ) {
+      const ensureInstances = async (rows) => {
         const requested =
           uniqueInstanceIds(rows)
             .filter(
@@ -578,58 +585,33 @@ exports.handler =
           return instanceCache;
         }
 
-        const instanceUrl =
-          `${SUPABASE_URL}/rest/v1/assignment_instances` +
-          '?select=id,status,settings' +
-          '&id=in.(' +
-          requested
-            .map(
-              encodeURIComponent
-            )
-            .join(',') +
-          ')';
-
-        const fetched =
-          await readJson(
-            instanceUrl
-          );
-
-        const fetchedMap =
-          instanceMapFrom(
-            fetched
-          );
-
-        for (
-          const id of requested
-        ) {
-          if (
-            !fetchedMap.has(id)
-          ) {
-            throw new Error(
-              'Assignment-instance marker lookup returned an incomplete result'
-            );
+        for (const batch of chunks(requested)) {
+          const instanceUrl = `${SUPABASE_URL}/rest/v1/assignment_instances` +
+            '?select=id,status,settings,assignment_id' +
+            `&student_id=eq.${encodeURIComponent(studentId)}` +
+            '&id=in.(' + batch.map(encodeURIComponent).join(',') + ')' + '&order=id';
+          const fetchedMap = instanceMapFrom(await readAllPages(instanceUrl, readJson));
+          for (const id of batch) {
+            if (!fetchedMap.has(id)) throw new Error('Assignment-instance marker lookup returned an incomplete result');
+            instanceCache.set(id, fetchedMap.get(id));
           }
         }
 
-        for (
-          const [
-            id,
-            instance,
-          ] of fetchedMap
-        ) {
-          instanceCache.set(
-            id,
-            instance
-          );
-        }
-
         return instanceCache;
-      }
+      };
 
       await ensureInstances([
         ...parentProgressRows,
         ...parentDataPointRows,
       ]);
+
+      if (detailView || (workView && requestedCheckpoint)) {
+        parentDataPointRows = await enrichGoalWork({ rows: parentDataPointRows, instances: instanceCache, read: readJson, root: `${SUPABASE_URL}/rest/v1/` });
+        // Titles also identify assignment checks which have no question evidence.
+        await enrichGoalWork({ rows: workView ? [requestedCheckpoint] : parentProgressRows, instances: instanceCache, read: readJson, root: `${SUPABASE_URL}/rest/v1/` });
+      }
+
+      if (timelineView) await enrichGoalWork({ rows: parentProgressRows, instances: instanceCache, read: readJson, root: `${SUPABASE_URL}/rest/v1/`, labelsOnly: true });
 
       const parentInstructional =
         parentProgressRows.filter(
@@ -667,8 +649,18 @@ exports.handler =
                 rows
               );
 
+              if (timelineView || workView) {
+                rows = rows.map(row => ({ ...row, work_ref: reference('objective', row.objective_id, row.id) }));
+              }
+              let labelled = rows;
+              if (detailView || workView || timelineView) {
+                const selected = workView ? rows.filter(row => row.work_ref === workRef) : rows;
+                const enriched = await enrichGoalWork({ rows: selected, instances: instanceCache, read: readJson, root: `${SUPABASE_URL}/rest/v1/`, labelsOnly: timelineView });
+                const byId = new Map(enriched.map(row => [row.id, row]));
+                labelled = rows.map(row => byId.get(row.id) || row);
+              }
               return transformObjectiveEvidence(
-                rows,
+                labelled,
                 instanceCache
               );
             },
@@ -695,11 +687,26 @@ exports.handler =
           objectiveProgress,
         });
 
+      if (workView) {
+        const parent = bundle.goals.flatMap(goal => goal.calculation?.inputs || []).find(row => row.work_ref === workRef);
+        const objective = bundle.goals.flatMap(goal => goal.objectives || []).flatMap(row => row.evidence || []).find(row => row.work_ref === workRef);
+        const work = parent || (objective ? { ...objective, evidence: [objective] } : null);
+        return jsonResponse(event, work ? 200 : 404, { ok: !!work, available: !!work, work }, { 'Cache-Control': 'no-store' }, requestId);
+      }
+      if (summaryOnly) {
+        for (const goal of bundle.goals) {
+          for (const objective of goal.objectives || []) {
+            objective.evidence = timelineView ? objective.evidence.map(row => ({ date: row.date, source: row.source, objective_earned: row.objective_earned, objective_max: row.objective_max, assignment_title: row.assignment_title || null, work_ref: row.work_ref })) : [];
+          }
+        }
+      }
+
       return jsonResponse(
         event,
         200,
         {
           ok: true,
+          detail_available: !summaryOnly,
           ...bundle,
         },
         {
