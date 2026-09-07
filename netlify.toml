@@ -40,6 +40,19 @@
     # Kept alongside enforced policy to catch edge cases during transition
     Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; frame-src 'self' https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.io https://*.netlify.app https://api.dictionaryapi.dev; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; report-uri /.netlify/functions/csp-report"
 
+# Assignment dictation uses the Student Portal's own microphone, only after a
+# student chooses Dictate and grants browser permission. Other routes retain
+# the global deny policy; no microphone permission is delegated to other origins.
+[[headers]]
+  for = "/student/"
+  [headers.values]
+    Permissions-Policy = "geolocation=(), microphone=(self), camera=()"
+
+[[headers]]
+  for = "/student/index.html"
+  [headers.values]
+    Permissions-Policy = "geolocation=(), microphone=(self), camera=()"
+
 # Cache-Control: no-store for HTML files to prevent caching of pages
 [[headers]]
   for = "/*.html"
