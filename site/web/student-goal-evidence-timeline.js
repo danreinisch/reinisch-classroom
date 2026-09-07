@@ -102,6 +102,76 @@
     return '•';
   }
 
+  function statusBucket(event) {
+    const status = String(event?.status || '');
+    if (/review this/i.test(status)) return 'review';
+    if (/correct|demonstrated/i.test(status)) return 'demonstrated';
+    return 'other';
+  }
+
+  function normalizeChoice(value) {
+    return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  function answerParts(value) {
+    if (Array.isArray(value)) return value.flatMap(answerParts);
+    if (value === null || value === undefined || value === '') return [];
+    return [String(value).trim()];
+  }
+
+  function choiceText(value, label) {
+    const raw = String(value ?? '').trim();
+    const prefix = new RegExp(`^\\s*${label}\\s*[\\).:]\\s*`, 'i');
+    const stripped = raw.replace(prefix, '').trim();
+    return stripped || raw || 'Choice not recorded';
+  }
+
+  function answerMatchesChoice(answer, rawChoice, label) {
+    const choice = String(rawChoice ?? '').trim();
+    const display = choiceText(choice, label);
+    return answerParts(answer).some((part) => {
+      const raw = part.trim();
+      const bareLetter = raw.match(/^([A-Z])\s*[\).:]?$/i);
+      if (bareLetter && bareLetter[1].toUpperCase() === label) return true;
+      const prefixed = raw.match(/^([A-Z])\s*[\).:]\s+/i);
+      if (prefixed && prefixed[1].toUpperCase() === label) return true;
+      const normalized = normalizeChoice(raw);
+      return normalized === normalizeChoice(choice) || normalized === normalizeChoice(display);
+    });
+  }
+
+  function choiceListHtml(event) {
+    const choices = Array.isArray(event?.choices) ? event.choices : [];
+    if (!choices.length) return '';
+    const canReview = event.answer_review_available === true;
+
+    return `<div class="et-choices" aria-label="Answer choices">
+      <span class="et-choice-heading">Answer choices</span>
+      <ol class="et-choice-list">
+        ${choices.map((choice, index) => {
+          const label = String.fromCharCode(65 + index);
+          const selected = answerMatchesChoice(event.student_answer, choice, label);
+          const correct = canReview && answerMatchesChoice(event.correct_answer, choice, label);
+          const classes = [
+            'et-choice',
+            selected ? 'et-choice--selected' : '',
+            correct ? 'et-choice--correct' : '',
+            selected && canReview && !correct ? 'et-choice--wrong' : '',
+          ].filter(Boolean).join(' ');
+          const markers = [
+            selected ? '<span class="et-choice-tag et-choice-tag--selected">Your answer</span>' : '',
+            correct ? '<span class="et-choice-tag et-choice-tag--correct">Correct answer</span>' : '',
+          ].filter(Boolean).join('');
+          return `<li class="${classes}">
+            <span class="et-choice-letter" aria-hidden="true">${esc(label)}</span>
+            <span class="et-choice-text">${esc(choiceText(choice, label))}</span>
+            ${markers ? `<span class="et-choice-markers">${markers}</span>` : ''}
+          </li>`;
+        }).join('')}
+      </ol>
+    </div>`;
+  }
+
   function detailHtml(event) {
     if (!event) {
       return '<section class="et-detail et-detail--empty"><p>No evidence events are available for this view.</p></section>';
@@ -115,6 +185,20 @@
     const skill = event.objective_number != null
       ? `Skill ${event.objective_number}${event.objective_text ? ` — ${event.objective_text}` : ''}`
       : null;
+    const hasChoices = Array.isArray(event.choices) && event.choices.length > 0;
+    const summaryTiles = [];
+
+    if (!hasChoices) {
+      summaryTiles.push(`<div><dt>Your answer</dt><dd>${esc(answerText(event.student_answer))}</dd></div>`);
+      if (event.answer_review_available && event.correct_answer != null) {
+        summaryTiles.push(`<div><dt>Correct answer</dt><dd>${esc(answerText(event.correct_answer))}</dd></div>`);
+      }
+    }
+    if (objectiveScore) {
+      summaryTiles.push(`<div><dt>Goal skill score</dt><dd>${esc(objectiveScore)}</dd></div>`);
+    } else if (score !== null) {
+      summaryTiles.push(`<div><dt>Evidence score</dt><dd>${esc(score)}%</dd></div>`);
+    }
 
     return `<section class="et-detail" tabindex="-1" aria-label="Selected goal evidence">
       <div class="et-detail__head">
@@ -129,12 +213,9 @@
       ${event.component_label ? `<p class="et-meta">Measured component: ${esc(event.component_label)}</p>` : ''}
       ${event.question_text
         ? `<div class="et-question"><p class="et-prompt">${esc(event.question_text)}</p>
-            <dl class="et-answer-grid">
-              <div><dt>Your answer</dt><dd>${esc(answerText(event.student_answer))}</dd></div>
-              ${event.answer_review_available && event.correct_answer != null ? `<div><dt>Correct answer</dt><dd>${esc(answerText(event.correct_answer))}</dd></div>` : ''}
-              ${objectiveScore ? `<div><dt>Goal skill score</dt><dd>${esc(objectiveScore)}</dd></div>` : score !== null ? `<div><dt>Evidence score</dt><dd>${esc(score)}%</dd></div>` : ''}
-            </dl>
-            ${event.source === 'assignment' && !event.answer_review_available ? '<p class="et-note">Your teacher has not released answer review for this assignment yet.</p>' : ''}
+            ${choiceListHtml(event)}
+            ${summaryTiles.length ? `<dl class="et-answer-grid">${summaryTiles.join('')}</dl>` : ''}
+            ${event.source === 'assignment' && !event.answer_review_available ? '<p class="et-note">Your teacher has not released answer review for this assignment yet. You can see the response you selected, but the correct answer and score stay hidden until review is released.</p>' : ''}
           </div>`
         : `<div class="et-performance">
             <p>This was a recorded performance check rather than a question-level response.</p>
@@ -145,12 +226,37 @@
   }
 
   function pageSize(card) {
-    return card.clientWidth < 600 ? 5 : 8;
+    return card.clientWidth < 600 ? 3 : 5;
+  }
+
+  function skillEvents(state) {
+    const all = state.data.events || [];
+    if (state.skill === 'all') return all;
+    return all.filter((event) => String(event.objective_number ?? '') === state.skill);
   }
 
   function filteredEvents(state) {
-    if (state.skill === 'all') return state.data.events || [];
-    return (state.data.events || []).filter((event) => String(event.objective_number ?? '') === state.skill);
+    const events = skillEvents(state);
+    if (state.status === 'review') return events.filter((event) => statusBucket(event) === 'review');
+    if (state.status === 'demonstrated') return events.filter((event) => statusBucket(event) === 'demonstrated');
+    return events;
+  }
+
+  function pageWindow(state, events = filteredEvents(state)) {
+    const size = pageSize(state.card);
+    const pageCount = Math.max(1, Math.ceil(events.length / size));
+    const pageIndex = Math.max(0, Math.min(Number.isFinite(state.page) ? state.page : 0, pageCount - 1));
+    const end = Math.max(0, events.length - pageIndex * size);
+    const start = Math.max(0, end - size);
+    return { size, pageCount, pageIndex, start, end, page: events.slice(start, end) };
+  }
+
+  function selectPage(state, pageIndex) {
+    const events = filteredEvents(state);
+    state.page = pageIndex;
+    const windowed = pageWindow(state, events);
+    state.page = windowed.pageIndex;
+    state.selectedKey = windowed.page.at(-1)?.key || null;
   }
 
   function updateStats(card, count) {
@@ -171,52 +277,64 @@
     if (!trend || !selectedRoot || !state.data) return;
 
     const allEvents = state.data.events || [];
+    const scopedEvents = skillEvents(state);
     const events = filteredEvents(state);
-    const size = pageSize(card);
-    const pageCount = Math.max(1, Math.ceil(events.length / size));
+    const reviewCount = scopedEvents.filter((event) => statusBucket(event) === 'review').length;
+    const demonstratedCount = scopedEvents.filter((event) => statusBucket(event) === 'demonstrated').length;
 
     if (!events.some((event) => event.key === state.selectedKey)) {
+      state.page = 0;
       state.selectedKey = events.at(-1)?.key || null;
     }
-    const selectedIndex = Math.max(0, events.findIndex((event) => event.key === state.selectedKey));
-    if (!Number.isFinite(state.page) || state.page < 0 || state.page >= pageCount) {
-      state.page = Math.floor(selectedIndex / size);
-    }
-    if (events.length && (selectedIndex < state.page * size || selectedIndex >= (state.page + 1) * size)) {
-      state.page = Math.floor(selectedIndex / size);
-    }
 
-    const start = state.page * size;
-    const page = events.slice(start, start + size);
+    let windowed = pageWindow(state, events);
+    state.page = windowed.pageIndex;
+    if (windowed.page.length && !windowed.page.some((event) => event.key === state.selectedKey)) {
+      state.selectedKey = windowed.page.at(-1)?.key || null;
+    }
     const selected = events.find((event) => event.key === state.selectedKey) || null;
     const skills = state.data.skills || [];
     const allSkills = skills.length > 0;
     const calculation = state.calculationHtml || '';
+    const filtered = state.status !== 'all' || state.skill !== 'all';
+    const countText = filtered
+      ? `${events.length} shown · ${allEvents.length} total`
+      : `${allEvents.length} ${allEvents.length === 1 ? 'event' : 'events'} · ${reviewCount} need review`;
 
     trend.innerHTML = `<section class="et-shell" data-et-key="${esc(state.rangeKey)}">
       <div class="et-heading">
         <div><h4>Evidence Timeline</h4><p>Each dot is one piece of evidence collected for this goal. Select a dot to review the work.</p></div>
-        <span class="et-count">${events.length} ${events.length === 1 ? 'event' : 'events'}</span>
+        <span class="et-count">${esc(countText)}</span>
       </div>
-      ${allSkills ? `<label class="et-skill-filter">Evidence view
-        <select data-et-skill>
-          <option value="all" ${state.skill === 'all' ? 'selected' : ''}>All Evidence</option>
-          ${skills.map((skill) => `<option value="${esc(skill.objective_number)}" ${String(skill.objective_number) === state.skill ? 'selected' : ''}>Skill ${esc(skill.objective_number)}</option>`).join('')}
-        </select>
-      </label>` : ''}
+      <div class="et-filters">
+        ${allSkills ? `<label class="et-skill-filter">Goal skill
+          <select data-et-skill>
+            <option value="all" ${state.skill === 'all' ? 'selected' : ''}>All Evidence</option>
+            ${skills.map((skill) => `<option value="${esc(skill.objective_number)}" ${String(skill.objective_number) === state.skill ? 'selected' : ''}>Skill ${esc(skill.objective_number)}</option>`).join('')}
+          </select>
+        </label>` : ''}
+        <div class="et-status-filter" role="group" aria-label="Filter evidence by result">
+          <span class="et-filter-label">Result</span>
+          <div class="et-status-buttons">
+            <button type="button" data-et-status="all" aria-pressed="${state.status === 'all'}">All <span>${scopedEvents.length}</span></button>
+            <button type="button" data-et-status="review" aria-pressed="${state.status === 'review'}">Needs Review <span>${reviewCount}</span></button>
+            <button type="button" data-et-status="demonstrated" aria-pressed="${state.status === 'demonstrated'}">Demonstrated <span>${demonstratedCount}</span></button>
+          </div>
+        </div>
+      </div>
       ${allSkills && state.skill === 'all' ? '<p class="et-note">All Evidence combines different goal skills. The dots are intentionally not connected as a trend line.</p>' : ''}
-      ${page.length
-        ? `<div class="et-rail" role="group" aria-label="Evidence events on this page">
-            ${page.map((event, index) => `<button type="button" class="et-dot ${resultClass(event.status)}" data-et-key-value="${esc(event.key)}" aria-pressed="${event.key === state.selectedKey ? 'true' : 'false'}" aria-label="Evidence ${start + index + 1}, ${esc(localDate(event.date))}, ${esc(event.status || 'Recorded check')}${event.objective_number != null ? `, skill ${esc(event.objective_number)}` : ''}">
+      ${windowed.page.length
+        ? `<div class="et-rail" role="group" aria-label="Evidence events in this window">
+            ${windowed.page.map((event, index) => `<button type="button" class="et-dot ${resultClass(event.status)}" data-et-key-value="${esc(event.key)}" aria-pressed="${event.key === state.selectedKey ? 'true' : 'false'}" aria-label="Evidence ${windowed.start + index + 1}, ${esc(localDate(event.date))}, ${esc(event.status || 'Recorded check')}${event.objective_number != null ? `, skill ${esc(event.objective_number)}` : ''}">
               <span aria-hidden="true">${resultGlyph(event.status)}</span>
             </button>`).join('')}
           </div>
-          <div class="et-page-meta"><span>${esc(localDate(page[0].date))}</span><span>${page.length > 1 ? esc(localDate(page.at(-1).date)) : ''}</span></div>`
-        : '<div class="et-empty">No evidence events are available for this goal in the selected quarter.</div>'}
-      <nav class="et-pager" aria-label="Evidence timeline pages">
-        <button type="button" data-et-action="older" ${state.page <= 0 ? 'disabled' : ''}>Older evidence</button>
-        <span>${events.length ? `${start + 1}–${start + page.length} of ${events.length}` : 'No evidence'}</span>
-        <button type="button" data-et-action="newer" ${state.page >= pageCount - 1 ? 'disabled' : ''}>Newer evidence</button>
+          <div class="et-page-meta"><span>${esc(localDate(windowed.page[0].date))}</span><span>${windowed.page.length > 1 ? esc(localDate(windowed.page.at(-1).date)) : ''}</span></div>`
+        : `<div class="et-empty">${state.status === 'review' ? 'No evidence in this view currently needs review.' : state.status === 'demonstrated' ? 'No demonstrated evidence is available in this view yet.' : 'No evidence events are available for this goal in the selected quarter.'}</div>`}
+      <nav class="et-pager" aria-label="Evidence timeline windows">
+        <button type="button" data-et-action="older" ${state.page >= windowed.pageCount - 1 ? 'disabled' : ''}>Older evidence</button>
+        <span>${events.length ? `${windowed.start + 1}–${windowed.end} of ${events.length}` : 'No evidence'}</span>
+        <button type="button" data-et-action="newer" ${state.page <= 0 ? 'disabled' : ''}>Newer evidence</button>
       </nav>
       ${calculation}
     </section>`;
@@ -248,6 +366,7 @@
       card,
       cache: new Map(),
       skill: 'all',
+      status: 'all',
       page: 0,
       selectedKey: null,
       calculationHtml: '',
@@ -286,8 +405,8 @@
       if (request !== state.request || !card.isConnected) return;
       state.data = data;
       state.skill = 'all';
-      state.selectedKey = data.events?.at(-1)?.key || null;
-      state.page = Math.max(0, Math.ceil((data.events?.length || 1) / pageSize(card)) - 1);
+      state.status = 'all';
+      selectPage(state, 0);
       render(state);
     } catch (_) {
       if (request !== state.request || !card.isConnected) return;
@@ -311,6 +430,12 @@
         render(state, { focusDetail: true });
         return;
       }
+      if (button.dataset.etStatus && state) {
+        state.status = button.dataset.etStatus;
+        selectPage(state, 0);
+        render(state);
+        return;
+      }
       const action = button.dataset.etAction;
       if (!action) return;
       if (action === 'retry') {
@@ -320,8 +445,9 @@
         return;
       }
       if (!state) return;
-      if (action === 'older' && state.page > 0) state.page -= 1;
-      if (action === 'newer') state.page += 1;
+      const windowed = pageWindow(state);
+      if (action === 'older' && state.page < windowed.pageCount - 1) selectPage(state, state.page + 1);
+      if (action === 'newer' && state.page > 0) selectPage(state, state.page - 1);
       render(state);
     });
 
@@ -330,9 +456,7 @@
       const state = states.get(card);
       if (!state) return;
       state.skill = event.target.value || 'all';
-      const events = filteredEvents(state);
-      state.selectedKey = events.at(-1)?.key || null;
-      state.page = Math.max(0, Math.ceil((events.length || 1) / pageSize(card)) - 1);
+      selectPage(state, 0);
       render(state);
     });
 
