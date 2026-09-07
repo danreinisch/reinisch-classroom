@@ -212,7 +212,7 @@ exports.handler = async (event) => {
       const instance = safeInstance(row);
       const canReview = row.source !== 'assignment' || released(instance);
       const item = itemMap.get(String(row.item_id));
-      const score = finite(row.score) ?? (row.is_correct === true ? 100 : row.is_correct === false ? 0 : null);
+      const rawScore = finite(row.score) ?? (row.is_correct === true ? 100 : row.is_correct === false ? 0 : null);
       const eventRow = {
         key: refFor('parent', row.id),
         kind: 'question',
@@ -228,7 +228,7 @@ exports.handler = async (event) => {
         answer_review_available: canReview,
         correct_answer: canReview ? (row.correct_answer ?? item?.meta?.correct ?? null) : null,
         is_correct: canReview && typeof row.is_correct === 'boolean' ? row.is_correct : null,
-        score,
+        score: canReview ? rawScore : null,
         objective_number: null,
         objective_text: null,
         component_label: null,
@@ -244,7 +244,7 @@ exports.handler = async (event) => {
       const objective = objectiveMap.get(String(row.objective_id));
       const earned = finite(row.objective_earned);
       const max = finite(row.objective_max);
-      const score = earned !== null && max !== null && max > 0 ? Math.round((earned / max) * 1000) / 10 : null;
+      const rawScore = earned !== null && max !== null && max > 0 ? Math.round((earned / max) * 1000) / 10 : null;
       const eventRow = {
         key: refFor('objective', row.id),
         kind: 'objective',
@@ -260,9 +260,9 @@ exports.handler = async (event) => {
         answer_review_available: canReview,
         correct_answer: canReview ? (row.correct_answer ?? item?.meta?.correct ?? null) : null,
         is_correct: canReview && typeof row.is_correct === 'boolean' ? row.is_correct : null,
-        score,
-        objective_earned: earned,
-        objective_max: max,
+        score: canReview ? rawScore : null,
+        objective_earned: canReview ? earned : null,
+        objective_max: canReview ? max : null,
         objective_number: objective?.objective_number ?? null,
         objective_text: objective?.objective_text ?? null,
         component_label: row.component_label || null,
