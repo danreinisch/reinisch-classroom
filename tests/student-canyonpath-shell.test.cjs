@@ -23,7 +23,7 @@ test('Student Portal Phase 2A CanyonPath layer stays presentation-only and scope
   assert.match(referenceCss, /body\.rc-student-canyonpath/);
   assert.match(refineCss + fixesCss, /rc-canyonpath-landscape-rich\.svg/);
   assert.match(cinematicCss, /rc-canyonpath-cinematic\.svg/);
-  assert.match(refineCss + cinematicCss + premiumCss + finalCss, /prefers-reduced-motion/);
+  assert.match(refineCss + cinematicCss + premiumCss + finalCss + referenceCss, /prefers-reduced-motion/);
   assert.match(refineCss + fixesCss + cinematicCss + premiumCss + finalCss + referenceCss, /html\[data-theme='light'\]/);
   assert.doesNotMatch(allPresentationCss, /supabase|fetch\(|localStorage|sessionStorage/);
 
@@ -76,6 +76,19 @@ test('Phase 2A final standard aligns one scrolling panorama to main content rath
   assert.match(finalCss, /\.stcp-page-hero[\s\S]*background:\s*transparent/);
 });
 
+test('Phase 2A visual gate aligns content to the remaining canvas and keeps the scene present while scrolling', () => {
+  assert.match(referenceCss, /--stcpl-main-left:\s*var\(--tc-side-w/);
+  assert.match(referenceCss, /html\.tc-collapsed body\.rc-student-canyonpath[\s\S]*--stcpl-main-left:\s*var\(--tc-rail-w/);
+  assert.match(referenceCss, /\.st-dashboard-content[\s\S]*width:\s*min\(100%,\s*1380px\)/);
+  assert.match(referenceCss, /\.tc-main::before[\s\S]*position:\s*fixed/);
+  assert.match(referenceCss, /\.tc-main::before[\s\S]*inset:\s*var\(--tc-topbar-h,[\s\S]*var\(--stcpl-main-left\)/);
+  assert.match(referenceCss, /\.tc-main::before[\s\S]*canyonpath-premium-2/);
+  assert.match(referenceCss, /\.tc-main::before[\s\S]*canyonpath-premium-3/);
+  assert.match(referenceCss, /\.tc-main::before[\s\S]*canyonpath-premium-4/);
+  assert.match(referenceCss, /\.stcp-hero[\s\S]*min-height:\s*278px/);
+  assert.doesNotMatch(referenceCss, /backdrop-filter:\s*blur\((1[0-9]|[2-9][0-9])px\)/);
+});
+
 test('Phase 2A final standard removes rainy-window page blur and keeps restrained card glass only', () => {
   assert.match(finalCss, /\.tc-main,[\s\S]*backdrop-filter:\s*none/);
   assert.match(finalCss, /\.stcp-hero \.st-summary-cards[\s\S]*blur\(4px\)/);
@@ -106,6 +119,7 @@ test('Phase 2A light mode keeps an accessible dark focus accent', () => {
   assert.match(fixesCss, /--stcp-mint: #0b6f5c/);
   assert.match(fixesCss, /outline-color: #0b6f5c/);
   assert.match(finalCss, /html\[data-theme='light'\] body\.rc-student-canyonpath \.tc-main/);
+  assert.match(referenceCss, /html\[data-theme='light'\] body\.rc-student-canyonpath \.tc-main::before/);
 });
 
 test('Student route loads CanyonPath foundation and approved-reference layers last', () => {
