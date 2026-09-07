@@ -3,37 +3,55 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 const css = fs.readFileSync('site/assets/css/student-canyonpath.css', 'utf8');
+const refineCss = fs.readFileSync('site/assets/css/student-canyonpath-refine.css', 'utf8');
 const js = fs.readFileSync('site/web/student-canyonpath.js', 'utf8');
+const refineJs = fs.readFileSync('site/web/student-canyonpath-refine.js', 'utf8');
 const sidebar = fs.readFileSync('site/web/sidebar-init.js', 'utf8');
 
 test('Student Portal Phase 2A CanyonPath layer stays presentation-only and scoped', () => {
   assert.match(css, /body\.rc-student-canyonpath/);
-  assert.match(css, /rc-canyonpath-landscape-detail\.svg/);
-  assert.match(css, /prefers-reduced-motion/);
-  assert.match(css, /html\[data-theme='light'\]/);
-  assert.doesNotMatch(css, /supabase|fetch\(|localStorage|sessionStorage/);
+  assert.match(refineCss, /body\.rc-student-canyonpath/);
+  assert.match(refineCss, /rc-canyonpath-landscape-rich\.svg/);
+  assert.match(refineCss, /prefers-reduced-motion/);
+  assert.match(refineCss, /html\[data-theme='light'\]/);
+  assert.doesNotMatch(css + refineCss, /supabase|fetch\(|localStorage|sessionStorage/);
 
   assert.match(js, /rc-student-canyonpath/);
   assert.match(js, /stcp-hero/);
   assert.match(js, /stcp-quick/);
   assert.match(js, /stcp-dashboard-grid/);
   assert.match(js, /stcp-footer/);
-  assert.doesNotMatch(js, /supabase|\.insert\(|\.update\(|\.delete\(|fetch\(/);
+  assert.match(refineJs, /stcp-page-hero/);
+  assert.match(refineJs, /stcp-goals-more/);
+  assert.doesNotMatch(js + refineJs, /supabase|\.insert\(|\.update\(|\.delete\(|fetch\(/);
 });
 
-test('Phase 2A quick navigation uses SVG icons instead of emoji UI art', () => {
+test('Phase 2A navigation and activity surfaces use SVG icons instead of emoji UI art', () => {
   assert.match(js, /<svg viewBox=/);
-  assert.doesNotMatch(js, /[🔎📚♞🎯🏆🔥🎮📝]/u);
+  assert.match(refineJs, /<svg viewBox=/);
+  assert.doesNotMatch(js + refineJs, /[🔎📚♞🎯🏆🔥🎮📝]/u);
   assert.match(js, /Skill Builder/);
   assert.match(js, /Word Search/);
   assert.match(js, /Classroom Chess/);
   assert.match(js, /Four in a Row/);
+  assert.match(refineJs, /Language Arts Skill Builder/);
 });
 
-test('Student route loads CanyonPath foundation and Phase 2A assets after existing polish', () => {
+test('Phase 2A refinement addresses collapsed rail alignment and dashboard density', () => {
+  assert.match(refineCss, /html\.tc-collapsed body\.rc-student-canyonpath \.tc-sidebar \.tc-nav a/);
+  assert.match(refineCss, /width: 44px/);
+  assert.match(refineCss, /grid-template-areas:/);
+  assert.match(refineCss, /#dashGoalsSnapshot \.sgp-card details/);
+  assert.match(refineJs, /visibleLimit = 2/);
+  assert.match(refineJs, /View all \$\{cards\.length\} goals/);
+});
+
+test('Student route loads CanyonPath foundation, 2A shell, and refinement assets after existing polish', () => {
   assert.match(sidebar, /student-portal-polish\.css\?v=20260907-polish1/);
   assert.match(sidebar, /rc-canyonpath\.css\?v=20260907-cp1/);
   assert.match(sidebar, /rc-canyonpath-detail\.css\?v=20260907-cp1/);
   assert.match(sidebar, /student-canyonpath\.css\?v=20260907-2a1/);
+  assert.match(sidebar, /student-canyonpath-refine\.css\?v=20260907-2a2/);
   assert.match(sidebar, /student-canyonpath\.js\?v=20260907-2a1/);
+  assert.match(sidebar, /student-canyonpath-refine\.js\?v=20260907-2a2/);
 });
