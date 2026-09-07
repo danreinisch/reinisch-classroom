@@ -188,7 +188,7 @@ function dispositionRowsForKey(rows, eventKey) {
   return rows.filter(row => parseContractDispositionNotes(row?.notes)?.event_key === eventKey);
 }
 
-async function saveNumericEvent({ identity, studentCode, goalCode, date, eventKey, rawData, classPeriod, noteText, authResult }) {
+async function saveNumericEvent({ identity, goalCode, date, eventKey, rawData, classPeriod, noteText, authResult }) {
   const normalized = normalizeContractData(identity.contract, rawData);
   if (!normalized.ok) throw new Error(normalized.error);
 
@@ -350,13 +350,15 @@ exports.handler = async event => {
   try {
     let source = event.queryStringParameters || {};
     if (event.httpMethod === 'POST') {
-      const sizeError = validateBodySize(event, 32 * 1024);
-      if (sizeError) return sizeError;
+      const sizeCheck = validateBodySize(event.body || '', 32);
+      if (!sizeCheck.valid) {
+        return jsonResponse(event, 413, { ok: false, error: sizeCheck.error || 'Request body too large' }, { 'Cache-Control': 'no-store' }, requestId);
+      }
       const parsed = safeJsonParse(event.body || '');
       if (!parsed.ok) {
         return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, { 'Cache-Control': 'no-store' }, requestId);
       }
-      source = parsed.value || {};
+      source = parsed.data || {};
     }
 
     const studentCode = normalizeStudentCode(source.student_code);
@@ -386,7 +388,6 @@ exports.handler = async event => {
     if (action === 'save') {
       result = await saveNumericEvent({
         identity,
-        studentCode,
         goalCode,
         date,
         eventKey,
