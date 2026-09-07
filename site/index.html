@@ -10,523 +10,98 @@
     <link rel="stylesheet" href="/web/teacher-shell.css" />
     <link rel="stylesheet" href="/assets/css/class-clock.css" />
     <link rel="stylesheet" href="/assets/css/class-mode.css" />
+    <link rel="stylesheet" href="/assets/css/home-canyonpath.css?v=20260907-home1" />
     <script src="/web/public-nav.js"></script>
     <script src="/web/sidebar-init.js"></script>
     <script src="/web/supabase-config.js"></script>
     <script defer src="/web/home-dashboard.js"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
     <script defer src="/web/class-mode.js"></script>
-    <style>
-      /* Prevent tc-main from overflowing its flex bounds (ticker nowrap fix) */
-      .tc-main { min-width: 0; }
-
-      /* Page-level body background (defensive override matching rc-theme.css) */
-      body {
-        background:
-          radial-gradient(1200px 800px at 20% -10%, rgba(34, 197, 94, 0.22), transparent 50%),
-          radial-gradient(1000px 600px at 50% 30%, rgba(34, 197, 94, 0.10), transparent 60%),
-          radial-gradient(1200px 800px at 120% 20%, rgba(6, 182, 212, 0.12), transparent 50%),
-          linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
-      }
-
-      /* Hero */
-      .home-hero { margin-bottom: 8px; padding-top: 0.5rem; }
-      .home-hero-title {
-        font-size: 2.25rem;
-        font-weight: 850;
-        letter-spacing: -0.02em;
-        margin: 0;
-        color: var(--rc-ink);
-        line-height: 1.1;
-      }
-      .home-hero-tagline {
-        font-size: 1.05rem;
-        color: var(--rc-ink-dim);
-        margin: 8px 0 0;
-        max-width: 52ch;
-      }
-      .home-accent-line {
-        width: 80px;
-        height: 3px;
-        background: linear-gradient(90deg, rgba(148, 163, 184, 0.5), rgba(148, 163, 184, 0.1));
-        border-radius: 2px;
-        margin-top: 20px;
-      }
-
-      /* Ticker bar */
-      .ticker-bar {
-        margin: 20px 0;
-        padding: 14px 0;
-        background: rgba(0, 0, 0, 0.35);
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        overflow: hidden;
-        position: relative;
-      }
-      .ticker-track {
-        display: flex;
-        white-space: nowrap;
-        animation: ticker-scroll 45s linear infinite;
-        will-change: transform;
-      }
-      .ticker-track:hover {
-        animation-play-state: paused;
-      }
-      .ticker-content {
-        display: inline-block;
-        padding: 0 2rem;
-        flex-shrink: 0;
-        font-size: 1rem;
-        font-family: 'Courier New', 'Consolas', monospace;
-        color: rgba(255, 255, 255, 0.75);
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-      }
-      @keyframes ticker-scroll {
-        0%   { transform: translate3d(0, 0, 0); }
-        100% { transform: translate3d(var(--ticker-offset, -50%), 0, 0); }
-      }
-
-      /* This Week's Focus */
-      .home-focus {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 16px;
-        margin-top: 32px;
-        align-items: stretch; /* equal-height columns */
-      }
-      .home-focus-card {
-        padding: 20px;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-      }
-      .home-focus-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        background: rgba(255, 255, 255, 0.05);
-      }
-      .focus-label {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: rgba(156, 163, 175, 0.9);
-        font-weight: 700;
-        margin-bottom: 10px;
-      }
-      .focus-unit {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: var(--rc-ink);
-        margin-bottom: 4px;
-      }
-      .focus-current {
-        font-size: 0.95rem;
-        color: var(--rc-ink-dim);
-        line-height: 1.4;
-      }
-      .focus-divider {
-        height: 1px;
-        background: rgba(255, 255, 255, 0.08);
-        margin: 12px 0;
-      }
-      .focus-next-label {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--rc-muted);
-        font-weight: 600;
-        margin-bottom: 4px;
-      }
-      .focus-next {
-        font-size: 0.9rem;
-        color: var(--rc-ink-dim);
-      }
-      .focus-link {
-        display: inline-block;
-        margin-top: 12px;
-        font-size: 0.85rem;
-        color: rgba(147, 197, 253, 0.85);
-        text-decoration: none;
-        font-weight: 600;
-      }
-      .focus-link:hover {
-        text-decoration: underline;
-      }
-
-      /* Student Quick Login */
-      .home-student-cta {
-        grid-column: 1 / -1; /* span full width of the 3-col grid */
-        display: block;
-        margin-top: 0;
-        padding: 14px 20px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-left: 3px solid rgba(59, 130, 246, 0.5);
-        color: var(--rc-ink);
-        text-decoration: none;
-        font-size: 0.95rem;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        text-align: center;
-      }
-      .home-student-cta:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-left-color: rgba(59, 130, 246, 0.8);
-        transform: translateY(-1px);
-      }
-
-      /* Daily Quote */
-      .home-quote-section {
-        margin-top: 32px;
-        padding: 18px 20px;
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-left: 3px solid rgba(148, 163, 184, 0.3);
-      }
-      .home-quote-label {
-        font-size: 0.65rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: rgba(156, 163, 175, 0.9);
-        font-weight: 700;
-        margin-bottom: 10px;
-      }
-      .home-quote-body {
-        font-size: 1rem;
-        font-style: italic;
-        color: var(--rc-ink);
-        line-height: 1.55;
-      }
-      .home-quote-body .quote-author {
-        display: block;
-        margin-top: 8px;
-        font-size: 0.8rem;
-        font-style: normal;
-        color: var(--rc-muted);
-        font-weight: 500;
-      }
-
-      .focus-unit-hidden { display: none; }
-      .home-stats {
-        margin-top: 32px;
-        padding: 10px 0;
-        font-size: 0.75rem;
-        color: var(--rc-muted);
-        text-align: center;
-        letter-spacing: 0.01em;
-      }
-
-      /* Footer 2-column row (quote + stats) */
-      .home-footer-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        margin-top: 32px;
-        align-items: start;
-        /* Glass panel treatment */
-        padding: 20px;
-        border-radius: 16px;
-        background: rgba(0, 0, 0, 0.18);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-      }
-      .home-footer-row .home-quote-section {
-        margin-top: 0;
-        background: none;
-        border: none;
-        border-left: 3px solid rgba(148, 163, 184, 0.3);
-        border-radius: 0;
-        padding: 0 0 0 16px;
-      }
-      .home-footer-row .home-stats { margin-top: 0; padding-top: 0; text-align: left; }
-
-      /* Standards Focus card */
-      .hd-standards-card {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .hd-standards-card .focus-label {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .hd-standards-count {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        font-size: 13px;
-      }
-
-      .hd-standards-count-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-weight: 600;
-      }
-
-      .hd-standards-count-item.tier-critical {
-        background: rgba(239, 68, 68, 0.15);
-        color: #fca5a5;
-      }
-
-      .hd-standards-count-item.tier-needs-support {
-        background: rgba(234, 179, 8, 0.15);
-        color: #fde68a;
-      }
-
-      .hd-standards-list {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        margin-top: 2px;
-      }
-
-      .hd-standards-list-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 13px;
-      }
-
-      .hd-standards-list-item .hd-std-code {
-        font-weight: 600;
-      }
-
-      .hd-standards-list-item .hd-std-pct {
-        color: var(--rc-ink-dim);
-      }
-
-      .hd-standards-link {
-        margin-top: 6px;
-        font-size: 12px;
-        color: rgba(134, 239, 172, 0.85);
-        text-decoration: none;
-        display: inline-block;
-      }
-
-      .hd-standards-link:hover {
-        text-decoration: underline;
-      }
-
-      /* Mobile */
-      @media (max-width: 767px) {
-        .home-hero-title { font-size: 1.75rem; }
-        .home-focus { grid-template-columns: 1fr; }
-        .home-footer-row { grid-template-columns: 1fr; padding: 14px; }
-        .ticker-content { font-size: 0.8rem; }
-      }
-
-      /* Tablet / Chromebook portrait (768px–1023px) */
-      @media (min-width: 768px) and (max-width: 1023px) {
-        .home-focus { grid-template-columns: 1fr 1fr; }
-        .home-focus-countdowns { grid-column: 1 / -1; }
-        .home-student-cta { grid-column: 1 / -1; }
-      }
-
-      /* Large classroom displays (1920px+) */
-      @media (min-width: 1920px) {
-        html { font-size: 20px; }
-        .home-hero-title { font-size: 3.5rem; }
-        .home-hero-tagline { font-size: 1.4rem; }
-        .ticker-content { font-size: 1.3rem; }
-        .home-focus { gap: 24px; }
-        .home-focus-card { padding: 28px; }
-        .focus-unit { font-size: 1.4rem; }
-        .focus-current { font-size: 1.15rem; }
-        .focus-next { font-size: 1.1rem; }
-        .focus-link { padding: 8px 0; font-size: 1.1rem; }
-        .countdown-card { font-size: 1.1rem; padding: 14px 18px; }
-        .home-student-cta { min-height: 56px; font-size: 1.2rem; padding: 18px 24px; }
-        .home-quote-body { font-size: 1.2rem; }
-        .home-stats { font-size: 0.95rem; }
-        .home-footer-row { gap: 24px; }
-      }
-
-      /* 4K / Ultra-wide classroom displays (3000px+) */
-      @media (min-width: 3000px) {
-        html { font-size: 28px; }
-        .home-hero-title { font-size: 5rem; }
-        .home-hero-tagline { font-size: 1.8rem; }
-        .ticker-content { font-size: 1.6rem; }
-        .home-focus-card { padding: 36px; }
-        .focus-link { padding: 12px 0; font-size: 1.3rem; }
-        .countdown-card { font-size: 1.3rem; padding: 18px 24px; }
-        .home-student-cta { min-height: 72px; font-size: 1.5rem; padding: 24px 32px; }
-        .home-quote-body { font-size: 1.5rem; }
-        .home-footer-row { gap: 32px; }
-      }
-
-      /* Calendar Countdowns - Taller cards with icons */
-      .home-countdowns {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        flex: 1;
-      }
-      .home-focus-countdowns {
-        display: flex;
-        flex-direction: column;
-        /* Enhanced glass panel for the Upcoming column */
-        background: rgba(0, 0, 0, 0.28);
-        border: 1px solid rgba(255, 255, 255, 0.10);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      }
-      .home-focus-countdowns .focus-label {
-        padding-bottom: 10px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        margin-bottom: 14px;
-      }
-      .countdown-card {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 16px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.10);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        transition: all 0.2s ease;
-      }
-      .countdown-card:hover {
-        background: rgba(255, 255, 255, 0.10);
-        border-color: rgba(148, 163, 184, 0.3);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-        transform: translateY(-1px);
-      }
-      .countdown-card-icon {
-        flex-shrink: 0;
-        color: rgba(148, 163, 184, 0.6);
-        transition: color 0.2s ease, filter 0.2s ease;
-      }
-      .countdown-card:hover .countdown-card-icon {
-        color: rgba(147, 197, 253, 0.9);
-        filter: drop-shadow(0 0 4px rgba(147, 197, 253, 0.4));
-      }
-      .countdown-card-body { flex: 1; }
-      .countdown-card-label {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: var(--rc-ink);
-        line-height: 1.3;
-      }
-      .countdown-card-days {
-        font-size: 0.8rem;
-        color: rgba(147, 197, 253, 0.85);
-        font-weight: 700;
-        margin-top: 2px;
-      }
-    </style>
   </head>
-  <body>
+  <body class="rc-home-canyonpath">
+    <a class="home-skip-link" href="#home-main">Skip to main content</a>
     <div class="tc-app" data-page-title="Reinisch Classroom">
       <header class="tc-topbar">
-        <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
-        <a class="tc-btn" href="/" aria-label="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></a>
+        <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        <a class="tc-btn" href="/" aria-label="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></a>
         <div class="tc-title">Reinisch Classroom</div>
       </header>
-
       <div class="tc-shell">
         <aside class="tc-sidebar" aria-label="Navigation">
           <nav class="tc-nav">
-            <a href="/" data-href="/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span><span class="tc-label">Home</span></a>
-            <a href="/language-arts/" data-href="/language-arts/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span><span class="tc-label">Language Arts</span></a>
-            <a href="/life-skills/" data-href="/life-skills/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg></span><span class="tc-label">Transitional Skills</span></a>
-            <a href="/math-toolkit/" data-href="/math-toolkit/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></svg></span><span class="tc-label">Math Toolkit</span></a>
-            <a href="/teacher/" data-href="/teacher/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg></span><span class="tc-label">Teacher</span></a>
-            <a href="/substitute/" data-href="/substitute/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg></span><span class="tc-label">Substitute</span></a>
-            <a href="/student/" data-href="/student/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg></span><span class="tc-label">Student</span></a>
+            <a href="/" data-href="/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></span><span class="tc-label">Home</span></a>
+            <a href="/language-arts/" data-href="/language-arts/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span class="tc-label">Language Arts</span></a>
+            <a href="/life-skills/" data-href="/life-skills/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6M10 22h4"/></svg></span><span class="tc-label">Transitional Skills</span></a>
+            <a href="/math-toolkit/" data-href="/math-toolkit/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M16 14v4M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01"/></svg></span><span class="tc-label">Math Toolkit</span></a>
+            <a href="/teacher/" data-href="/teacher/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><span class="tc-label">Teacher</span></a>
+            <a href="/substitute/" data-href="/substitute/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span><span class="tc-label">Substitute</span></a>
+            <a href="/student/" data-href="/student/"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5zM6 12v5c3 3 9 3 12 0v-5"/></svg></span><span class="tc-label">Student</span></a>
           </nav>
         </aside>
-
-        <main class="tc-main">
-
-          <!-- 1. Hero Section -->
-          <section class="home-hero">
-            <h1 class="home-hero-title"><span id="home-greeting">Welcome to</span> Reinisch Classroom</h1>
-            <p class="home-hero-tagline">Empowering Every Learner Through Accessible Education</p>
-            <div class="home-accent-line"></div>
-          </section>
-
-          <!-- 2. Scrolling Ticker -->
-          <div class="ticker-bar">
-            <div class="ticker-track">
-              <span class="ticker-content">Loading updates…</span>
-              <span class="ticker-content" aria-hidden="true">Loading updates…</span>
-            </div>
+        <main class="tc-main" id="home-main" tabindex="-1">
+          <!-- One locally hosted, resolution-independent landscape. No page blur. -->
+          <div class="home-landscape" aria-hidden="true">
+            <img src="/assets/bg/home-arizona.svg?v=20260907-home1" alt="" width="2400" height="1350" fetchpriority="high" decoding="async" />
           </div>
-
-          <!-- 3. 3-Column Dashboard Grid -->
-          <section class="home-focus" id="home-focus-section" style="display:none">
-            <div class="home-focus-card" id="focus-la">
-              <div class="focus-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> LANGUAGE ARTS</div>
-              <div class="focus-unit">Loading…</div>
-              <div class="focus-current"></div>
-              <div class="focus-divider"></div>
-              <div class="focus-next-label">Up Next:</div>
-              <div class="focus-next"></div>
-              <a class="focus-link" href="/language-arts/lost-in-kragdon-ah/">→ Open Unit</a>
-            </div>
-            <div class="home-focus-card" id="focus-life">
-              <div class="focus-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg> TRANSITIONAL SKILLS</div>
-              <div class="focus-current">Loading…</div>
-              <div class="focus-divider"></div>
-              <div class="focus-next-label">Up Next:</div>
-              <div class="focus-next"></div>
-              <a class="focus-link" href="/life-skills/">→ Open Transitional Skills</a>
-            </div>
-            <div class="home-focus-card home-focus-countdowns">
-              <div class="focus-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> UPCOMING</div>
-              <div id="home-countdowns" class="home-countdowns"></div>
-            </div>
-
-            <!-- Standards Focus card (populated by home-dashboard.js when teacher session active) -->
-            <div class="home-focus-card hd-standards-card" id="focus-standards" style="display:none" aria-live="polite"></div>
-
-            <!-- Student Quick Login (inside grid, full-width row) -->
-            <a class="home-student-cta" href="/student/">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>Students — Log in to your portal →
-            </a>
-          </section>
-
-          <!-- 5. Footer row: Daily Quote + Stats -->
-          <div class="home-footer-row">
-            <section class="home-quote-section">
-              <div class="home-quote-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> DAILY INSPIRATION</div>
-              <div id="daily-quote" class="home-quote-body">Loading…</div>
+          <div class="home-frame">
+            <section class="home-hero" aria-labelledby="home-title">
+              <p class="home-eyebrow" id="home-greeting">Welcome to</p>
+              <h1 class="home-hero-title" id="home-title">Reinisch<br />Classroom</h1>
+              <p class="home-hero-tagline">Empowering Every Learner Through Accessible Education</p>
+              <div class="home-hero-actions">
+                <a class="home-student-cta" href="/student/"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5zM6 12v5c3 3 9 3 12 0v-5"/></svg><span>Student Portal</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+                <a class="home-teacher-cta" href="/teacher/"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>Teacher Center</span></a>
+              </div>
+              <p class="home-hero-note">Small steps. Big possibilities.</p>
             </section>
-
-            <!-- Stats -->
-            <div class="home-stats" id="home-stats">Loading stats…</div>
+            <section class="home-pathways" aria-labelledby="home-pathways-title">
+              <div class="home-section-heading">
+                <h2 id="home-pathways-title">Explore your classroom</h2>
+                <p>Lessons, tools, and everyday skills.</p>
+              </div>
+              <div class="home-pathway-grid">
+              <a class="home-pathway" href="/language-arts/">
+                <span class="home-pathway-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+                <span class="home-pathway-copy"><strong>Language Arts</strong><span>Read. Think. Discover.</span></span>
+                <span class="home-pathway-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span>
+              </a>
+              <a class="home-pathway" href="/life-skills/">
+                <span class="home-pathway-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6M10 22h4"/></svg></span>
+                <span class="home-pathway-copy"><strong>Transitional Skills</strong><span>Build skills for everyday life.</span></span>
+                <span class="home-pathway-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span>
+              </a>
+              <a class="home-pathway" href="/math-toolkit/">
+                <span class="home-pathway-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M16 14v4M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01"/></svg></span>
+                <span class="home-pathway-copy"><strong>Math Toolkit</strong><span>Practice at your own pace.</span></span>
+                <span class="home-pathway-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span>
+              </a>
+              </div>
+            </section>
+            <!-- Existing countdowns and teacher-only standards hooks are preserved.
+                 Weekly class updates and the scrolling ticker no longer have a
+                 homepage surface. Their stored configuration is not modified. -->
+            <section class="home-focus" id="home-focus-section" style="display:none" aria-label="Upcoming dates and standards">
+              <div class="home-focus-card home-focus-countdowns">
+                <div class="focus-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> UPCOMING</div>
+                <div id="home-countdowns" class="home-countdowns"></div>
+              </div>
+              <div class="home-focus-card hd-standards-card" id="focus-standards" style="display:none" aria-live="polite"></div>
+            </section>
+            <div class="home-footer-row">
+              <section class="home-quote-section" aria-label="Daily inspiration">
+                <div class="home-quote-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> DAILY INSPIRATION</div>
+                <div id="daily-quote" class="home-quote-body">Loading…</div>
+              </section>
+              <div class="home-stats" id="home-stats">Loading stats…</div>
+            </div>
+            <footer class="home-signoff">YOUR CLASSROOM. YOUR PATH FORWARD.</footer>
           </div>
-
         </main>
       </div>
     </div>
-
     <!-- Legacy viewer compatibility redirect -->
     <script src="/assets/js/viewer-compat.js"></script>
-
     <!-- Public Shell JS -->
     <script defer src="/web/public-shell.js"></script>
   </body>
 </html>
-

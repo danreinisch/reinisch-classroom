@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1350" viewBox="0 0 2400 1350" preserveAspectRatio="xMidYMid slice" role="img" aria-labelledby="scene-title scene-desc">
+  <title id="scene-title">Arizona red-rock trail</title>
+  <desc id="scene-desc">An original layered desert illustration with sunlit sandstone mesas, finely lined rock faces, distant violet ridges, saguaros, sage, and a small fawn pug beside the trail. Native vector artwork; no enlarged photographs or blur.</desc>
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#1b5258"/><stop offset=".46" stop-color="#71918c"/><stop offset=".78" stop-color="#d2bc91"/><stop offset="1" stop-color="#dbad78"/></linearGradient>
+    <radialGradient id="dawn" cx="80%" cy="23%" r="53%"><stop stop-color="#fff0c5" stop-opacity=".46"/><stop offset=".46" stop-color="#eec990" stop-opacity=".10"/><stop offset="1" stop-color="#d9b987" stop-opacity="0"/></radialGradient>
+    <linearGradient id="distant" x2="0" y2="1"><stop stop-color="#767d84"/><stop offset="1" stop-color="#4c6967"/></linearGradient>
+    <linearGradient id="far-rock" x2="0" y2="1"><stop stop-color="#b5826b"/><stop offset=".5" stop-color="#956c5c"/><stop offset="1" stop-color="#48564a"/></linearGradient>
+    <linearGradient id="sandstone" x1=".2" y1="0" x2=".8" y2="1"><stop stop-color="#e2aa70"/><stop offset=".25" stop-color="#c78751"/><stop offset=".62" stop-color="#a35938"/><stop offset="1" stop-color="#663e30"/></linearGradient>
+    <linearGradient id="sun-face" x2=".2" y2="1"><stop stop-color="#ecc28a"/><stop offset=".28" stop-color="#d69a5f"/><stop offset=".64" stop-color="#bd7549"/><stop offset="1" stop-color="#925239"/></linearGradient>
+    <linearGradient id="rock-shadow" x2=".2" y2="1"><stop stop-color="#995838"/><stop offset=".7" stop-color="#794830"/><stop offset="1" stop-color="#4b4232"/></linearGradient>
+    <linearGradient id="land" x2=".1" y2="1"><stop stop-color="#6d7352"/><stop offset=".35" stop-color="#4b6044"/><stop offset=".75" stop-color="#244435"/><stop offset="1" stop-color="#102e26"/></linearGradient>
+    <linearGradient id="trail" x2=".2" y2="1"><stop stop-color="#c29c67"/><stop offset=".5" stop-color="#a38551"/><stop offset="1" stop-color="#36513a"/></linearGradient>
+    <linearGradient id="cactus" x2="1" y2=".2"><stop stop-color="#183e30"/><stop offset=".48" stop-color="#527153"/><stop offset=".67" stop-color="#6f8360"/><stop offset="1" stop-color="#274634"/></linearGradient>
+    <linearGradient id="pug-coat" x2=".7" y2="1"><stop stop-color="#e6c993"/><stop offset=".54" stop-color="#c5a575"/><stop offset="1" stop-color="#8f7854"/></linearGradient>
+    <pattern id="strata" width="210" height="108" patternUnits="userSpaceOnUse">
+      <path d="M-20 7 30 10 62 6 96 11 150 7 212 10M-10 24 51 21 90 25 141 23 214 20M-14 43 24 40 81 44 143 40 217 45M-6 61 53 62 112 58 160 63 217 59M-15 78 42 80 98 76 152 81 217 78M-12 98 37 94 89 99 134 96 218 102" fill="none" stroke="#f2c693" stroke-opacity=".34" stroke-width="2"/>
+      <path d="M0 14 54 16 90 13 128 17 210 14M0 48 62 51 117 47 164 50 210 47M0 85 48 86 102 82 167 86 210 84" fill="none" stroke="#683e2c" stroke-opacity=".42" stroke-width="3"/>
+      <path d="m39 27 19 2m67 6 22-1m-66 28 15 2m-67 34 21-1m107-31 23 2" fill="none" stroke="#f6d3a3" stroke-opacity=".28" stroke-width="1.5"/>
+    </pattern>
+    <path id="main-mesa" d="M1205 940 1228 796 1270 768 1298 671 1318 650 1338 524 1363 510 1375 365 1402 355 1412 312 1446 302 1456 262 1490 257 1498 234 1540 238 1560 248 1608 245 1625 264 1644 268 1644 310 1673 321 1688 395 1728 420 1758 500 1787 518 1802 630 1831 651 1852 731 1899 782 1950 916Z"/>
+    <path id="right-mesa" d="M1740 934 1782 800 1820 775 1846 612 1873 597 1885 488 1910 468 1925 393 1953 381 1965 344 2016 342 2032 358 2070 360 2081 395 2110 406 2128 490 2162 510 2180 660 2230 740 2260 761 2300 921Z"/>
+    <clipPath id="main-clip"><use href="#main-mesa"/></clipPath>
+    <clipPath id="right-clip"><use href="#right-mesa"/></clipPath>
+    <symbol id="saguaro" viewBox="0 0 130 270">
+      <path d="M61 268V119H40c-19 0-28-11-28-30V51c0-17 19-17 19 0v34c0 8 4 12 11 12h19V17c0-23 28-23 28 0v129h9c9 0 13-5 13-13v-29c0-17 18-17 18 0v34c0 22-12 33-31 33h-9v97Z" fill="url(#cactus)"/>
+      <path d="M69 263V15m10 248V13M21 48v43q0 16 19 17h21m57-3v31q0 24-28 25" fill="none" stroke="#9aab72" stroke-width="2" stroke-opacity=".38"/>
+      <path d="M88 219h7m-40-54h7m-5 61h6m24-36h6M28 68h8m49-16h8" stroke="#cec18c" stroke-width="1.6" stroke-opacity=".52"/>
+    </symbol>
+    <symbol id="agave" viewBox="0 0 140 100">
+      <path d="M70 96 14 27 47 42 30 4 65 39 75 0 85 41 117 9 105 50 139 34 96 77 129 78 78 99Z" fill="#40614a"/>
+      <path d="m70 94 5-84m-5 84L36 17m34 77-48-58m48 58 42-70m-42 70 58-50" stroke="#a0aa76" stroke-width="2" fill="none" stroke-opacity=".65"/>
+    </symbol>
+    <symbol id="sage" viewBox="0 0 100 55">
+      <path d="M4 51c-12-20 7-34 20-26-7-23 18-33 29-14 5-22 30-11 28 6 25-7 27 21 9 34Z" fill="#435f42"/>
+      <path d="m25 47 4-18m20 20 4-31m17 32 6-22m-30 9L35 25m16 7 10-12" stroke="#8f9c69" stroke-width="2" fill="none" stroke-opacity=".6"/>
+    </symbol>
+  </defs>
+  <rect width="2400" height="1350" fill="url(#sky)"/>
+  <rect width="2400" height="1350" fill="url(#dawn)"/>
+  <circle cx="1970" cy="166" r="33" fill="#f8e3b2" opacity=".93"/>
+  <!-- Clear, far ridgelines; atmosphere comes from color, never blurred scenery. -->
+  <path d="M0 540 67 521 92 496 137 501 169 467 221 463 238 420 272 417 303 463 356 474 398 490 420 479 440 506 519 473 554 442 581 445 605 400 634 396 665 451 700 460 741 490 793 475 817 444 841 453 887 413 919 421 949 474 1000 468 1031 435 1060 436 1108 397 1145 403 1168 431 1200 420 1238 453 1283 461 1315 445 1360 468 1410 483 1455 452 1510 459 1570 424 1630 441 1684 413 1710 429 1740 401 1785 407 1815 435 1850 436 1898 460 1950 414 1980 417 2010 448 2050 435 2090 464 2114 423 2150 428 2185 391 2220 395 2240 420 2270 408 2325 440 2370 419 2400 430V1350H0Z" fill="url(#distant)"/>
+  <path d="M0 698 90 644 137 621 185 553 216 557 230 501 285 508 313 554 360 570 382 625 437 650 478 615 531 606 562 513 585 503 600 456 647 458 664 480 696 485 716 547 748 560 767 617 824 646 872 621 918 640 953 601 981 507 1001 496 1018 421 1044 414 1056 393 1108 397 1123 429 1164 435 1174 492 1206 513 1233 591 1267 610 1300 702 1381 740 1445 707 1474 650 1530 669 1565 745 1660 757 1715 737 1769 752 1820 699 1860 662 1900 699 1970 676 2000 606 2035 598 2070 565 2120 576 2165 640 2200 656 2270 620 2320 633 2364 588 2400 602V1350H0Z" fill="url(#far-rock)"/>
+  <g fill="none" stroke="#d7a380" stroke-opacity=".27" stroke-width="3">
+    <path d="m1007 455 59-4 64 7 32 3m-169 61 67-5 74 8 51 9m-263 83 87-13 84 9 51-2 53 24M543 557l57-13 58 9 53 6m-180 42 67-9 63 10 70 3"/>
+  </g>
+  <!-- Sandstone towers and their distinct sun-facing facets. -->
+  <use href="#main-mesa" fill="url(#sandstone)"/>
+  <g clip-path="url(#main-clip)">
+    <path d="M1498 234 1468 397 1476 506 1448 606 1451 749 1410 940H1220V240Z" fill="url(#rock-shadow)"/>
+    <path d="m1540 238 20 10 48-3 17 19 19 4v42l29 11 15 74 40 25 30 80 29 18 15 112 29 21 21 80 47 51 51 134-420 40 56-195-18-125 30-138-14-123Z" fill="url(#sun-face)"/>
+    <path d="m1608 245-12 104 23 85-15 105 37 112-2 99 42 168 45 20-29-223 17-90-40-127-10-127Z" fill="#8b4e32" opacity=".69"/>
+    <path d="m1432 305-9 139-27 86 8 111-37 118 11 149-42 32 22-221-11-94 24-105 7-123Z" fill="#683e2e" opacity=".58"/>
+    <path d="m1499 285-6 158 14 72-11 112 29 153-35 143" fill="none" stroke="#e9b681" stroke-opacity=".64" stroke-width="7"/>
+    <path d="m1640 359 19 97-7 93 30 69 8 84 25 45m-317-163-7 81-20 52 5 102m166-421 16 96-11 76 17 72-8 91 24 92" fill="none" stroke="#703d28" stroke-opacity=".68" stroke-width="5"/>
+    <path d="M1270 468q215-20 475 4m-464 102q256-26 476 11m-504 58q311-19 565 30m-593 42q220-21 399 8t241 15m-666 46q288-19 663 23" fill="none" stroke="#efba81" stroke-opacity=".55" stroke-width="9"/>
+    <rect x="1190" y="230" width="790" height="740" fill="url(#strata)"/>
+    <path d="m1455 282 26-7 44 5 53-3 46 7m-232 84 37-10 58-3m31-103 23-2 11 5" fill="none" stroke="#ffe0a7" stroke-opacity=".73" stroke-width="4"/>
+    <path d="m1518 376 9 48-5 56m-105 41-5 48 8 34m164-129 7 38-4 24m-121 124-7 51 11 57m176-107 10 22-2 57m-108 63 9 59m-168-41-8 26" fill="none" stroke="#5e392b" stroke-opacity=".6" stroke-width="3"/>
+  </g>
+  <use href="#right-mesa" fill="url(#sandstone)"/>
+  <g clip-path="url(#right-clip)">
+    <path d="m1965 344-17 121 9 129-28 127 2 117-53 132h-173V326Z" fill="url(#rock-shadow)"/>
+    <path d="m2016 342 16 16 38 2 11 35 29 11 18 84 34 20 18 150 50 80 30 21 40 160-256 33 18-192-35-104 17-131-25-81Z" fill="url(#sun-face)"/>
+    <path d="m2042 372 9 117 34 90-7 98 37 109 9 139-63 25-10-153-33-127 9-125-24-74Z" fill="#995834"/>
+    <path d="m1900 511 12 74-21 69 6 69-30 66m120-293 17 51-9 83 22 72-4 123m99-242 17 98-2 47 26 60" stroke="#73402b" stroke-width="5" fill="none" opacity=".69"/>
+    <path d="M1860 547q193-22 309 5m-328 63q175-15 348 14m-376 72q205-12 407 21m-462 42q203-12 493 39" stroke="#f2bc83" stroke-width="9" fill="none" opacity=".5"/>
+    <rect x="1740" y="340" width="585" height="630" fill="url(#strata)"/>
+    <path d="m1968 361 32-5 31 8 37 3m-160 123 26-8 32 5" stroke="#fbd8a0" stroke-width="4" fill="none" opacity=".68"/>
+  </g>
+  <!-- Talus fans soften the foot of each cliff without blurring its edges. -->
+  <path d="m1290 714 38 28 22-16 25 39 21-9 27 58 25-10 34 43 30-20 47 44 34-14 56 37 24-8 88 42 35-15 37 27 29-19 29 26 72-16 38 40 29-22 46 14 49-7 23 24 54-14 21 20 37-15 43 14 35-10 41 24 35-17 37 8 33-19 81 90H1190Z" fill="#6c5738"/>
+  <path d="M0 764c190-118 374-81 569-22s306 70 493 15 354-1 518 50 387-13 820-11v554H0Z" fill="url(#land)"/>
+  <path d="M0 905c241-161 468-93 678-52s341 93 504 47 386-51 564 38 416-21 654-55v467H0Z" fill="#294d39" opacity=".55"/>
+  <path d="M1636 780c-101 63-271 95-280 151-11 67 252 76 260 161 8 88-144 167-130 258h208c-32-91 113-177 54-280-52-91-290-85-317-142-18-39 141-94 234-144Z" fill="url(#trail)"/>
+  <path d="M1613 802c-113 61-248 96-226 129 36 55 259 76 287 143" fill="none" stroke="#ddbe82" stroke-width="3" opacity=".48"/>
+  <path d="m1410 935 26 10m24 7 27 10m84 26 20 8m-176-86 20-10m117-51 24-10m-2 173 15 7m83 13 15 8" stroke="#e0c491" stroke-width="3" stroke-linecap="round" opacity=".54"/>
+  <!-- Foreground rock shelf, desert vegetation, and fine plant ribs. -->
+  <path d="M1700 924 1743 862 1802 844 1830 811 1897 816 1934 835 1973 825 2018 852 2070 854 2116 906 2209 927 2232 963Z" fill="#725b3d"/>
+  <path d="m1765 870 67-46 64 2 46 18 34-7 39 24 52 1 44 34-132-23-83 5-63-3Z" fill="#b0915c"/>
+  <path d="m1803 885 46-8 91 8 64 4m-92-40 16 7 57 2m-119 58 69 1 104 11" fill="none" stroke="#d3b681" stroke-width="2" opacity=".44"/>
+  <use href="#saguaro" x="2160" y="584" width="132" height="276"/>
+  <use href="#saguaro" x="1108" y="715" width="53" height="110"/>
+  <use href="#saguaro" x="720" y="658" width="75" height="156"/>
+  <use href="#saguaro" x="2350" y="742" width="85" height="180"/>
+  <g opacity=".76"><use href="#sage" x="1315" y="812" width="73" height="40"/><use href="#sage" x="1650" y="833" width="67" height="37"/><use href="#sage" x="2020" y="779" width="88" height="48"/><use href="#sage" x="887" y="820" width="93" height="51"/><use href="#sage" x="1510" y="791" width="44" height="25"/><use href="#sage" x="2350" y="842" width="103" height="57"/></g>
+  <use href="#agave" x="1732" y="865" width="107" height="78"/>
+  <use href="#agave" x="2305" y="922" width="180" height="131"/>
+  <use href="#agave" x="973" y="927" width="127" height="93"/>
+  <use href="#sage" x="1200" y="982" width="132" height="74"/>
+  <use href="#sage" x="2046" y="1048" width="177" height="99"/>
+  <use href="#sage" x="480" y="1025" width="159" height="89"/>
+  <g fill="none" stroke="#9eaa74" stroke-width="2" opacity=".55"><path d="m1944 934 6-29m-6 29-12-22m12 22 15-17m221 66-7-34m7 34 14-30m-14 30-17-16m-919 32-9-26m9 26 9-32m-9 32 20-19"/></g>
+  <!-- A small, non-interactive trail companion: fawn coat, black mask, curled tail. -->
+  <g id="trail-pug" transform="translate(1864 752) scale(.84)">
+    <ellipse cx="51" cy="132" rx="63" ry="12" fill="#263b2c" opacity=".62"/>
+    <path d="M80 83c32-30 46-1 28 9-11 6-22-9-12-13" fill="none" stroke="#ceb080" stroke-width="11" stroke-linecap="round"/>
+    <ellipse cx="61" cy="91" rx="38" ry="40" fill="url(#pug-coat)"/>
+    <ellipse cx="88" cy="112" rx="21" ry="17" fill="#ad8d61"/>
+    <path d="M26 89q-6 27-4 38 10 10 23 2l3-40m18 1-3 37q9 8 23 1l-7-35" fill="url(#pug-coat)" stroke="#9c8158" stroke-width="2"/>
+    <path d="m25 124 17 1m25-1 15 1" stroke="#755d40" stroke-width="2"/>
+    <path d="M15 52c-3-24 6-41 33-43 31-3 45 18 41 43l-5 16c-11 27-59 25-68 0Z" fill="#d4b786"/>
+    <path d="M17 23C-1 18-10 39 4 57l14-17m58-17c18-6 31 13 20 34L79 41" fill="#302d23"/>
+    <path d="M13 53c2-15 12-20 23-13l13 7 14-7c15-6 24 3 25 16-1 19-15 30-37 28-23 2-39-12-38-31Z" fill="#38352a"/>
+    <ellipse cx="30" cy="48" rx="7" ry="8" fill="#151d17"/><ellipse cx="71" cy="48" rx="7" ry="8" fill="#151d17"/>
+    <circle cx="32" cy="46" r="2" fill="#f7ead1"/><circle cx="73" cy="46" r="2" fill="#f7ead1"/>
+    <ellipse cx="51" cy="67" rx="19" ry="13" fill="#575141"/>
+    <path d="M42 58q9-6 18 0-1 10-9 10-8-1-9-10" fill="#192219"/>
+    <path d="M51 68v5m0 0q-7 7-14 1m14-1q7 6 13 0" fill="none" stroke="#202a20" stroke-width="2" stroke-linecap="round"/>
+    <path d="M28 29q8-7 15-2m13 0q8-6 16 2M39 19q12-6 22 0" fill="none" stroke="#947d59" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="m24 83 50 1" stroke="#316853" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="49" cy="89" r="4" fill="#dabc76"/>
+  </g>
+  <path d="M0 1128c200-68 382-49 537-2 161 51 307-36 421-9 127 30 242 59 350 70l82 163H0Zm1788 62c147-100 360-104 612-51v211h-630Z" fill="#153b2d"/>
+  <use href="#agave" x="350" y="1083" width="192" height="138"/>
+  <use href="#sage" x="2224" y="1127" width="233" height="129"/>
+</svg>

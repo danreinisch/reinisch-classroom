@@ -1,0 +1,407 @@
+/* Homepage-only CanyonPath presentation. Student Portal is the visual reference;
+   no Student Portal runtime, auth, or data code is loaded by this stylesheet. */
+body.rc-home-canyonpath {
+  --home-bg: #031714;
+  --home-panel: rgba(5, 48, 40, 0.95);
+  --home-inner: #0a3a31;
+  --home-ink: #f4fbf8;
+  --home-muted: #bdd6cd;
+  --home-accent: #8be6c8;
+  --home-border: rgba(158, 226, 206, 0.27);
+  --home-focus: #b6f3de;
+  --home-shadow: 0 14px 36px rgba(0, 12, 10, 0.22);
+  --rc-ink: var(--home-ink);
+  --rc-ink-dim: var(--home-muted);
+  --rc-muted: var(--home-muted);
+  --tc-text: var(--home-ink);
+  --tc-muted: var(--home-muted);
+  color: var(--home-ink);
+  background: var(--home-bg);
+}
+body.rc-home-canyonpath *,
+body.rc-home-canyonpath *::before,
+body.rc-home-canyonpath *::after { box-sizing: border-box; }
+body.rc-home-canyonpath .tc-app { background: var(--home-bg); }
+body.rc-home-canyonpath .tc-topbar {
+  background: #05251f;
+  border-bottom-color: var(--home-border);
+  color: var(--home-ink);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body.rc-home-canyonpath .tc-sidebar {
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #062b24, #031c18);
+  border-right-color: var(--home-border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body.rc-home-canyonpath .tc-nav a {
+  min-height: 46px;
+  border: 1px solid transparent;
+  color: var(--home-muted);
+  opacity: 1;
+  transform: none;
+}
+body.rc-home-canyonpath .tc-nav a:hover {
+  color: var(--home-ink);
+  border-color: var(--home-border);
+  background: rgba(87, 175, 145, 0.12);
+  transform: none;
+}
+body.rc-home-canyonpath .tc-nav a[aria-current='page'] {
+  color: var(--home-ink);
+  border-color: rgba(139, 230, 200, 0.48);
+  background: rgba(38, 126, 99, 0.25);
+  box-shadow: inset 3px 0 var(--home-accent);
+}
+body.rc-home-canyonpath .tc-icon { color: var(--home-accent); }
+html.tc-collapsed body.rc-home-canyonpath .tc-nav a {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  justify-content: center;
+  box-shadow: none;
+}
+body.rc-home-canyonpath .tc-main {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--home-bg);
+  box-shadow: none;
+}
+body.rc-home-canyonpath .home-landscape {
+  position: absolute;
+  inset: 0 0 auto;
+  height: clamp(680px, 58vw, 940px);
+  overflow: hidden;
+  z-index: -1;
+  pointer-events: none;
+}
+body.rc-home-canyonpath .home-landscape img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 64% 42%;
+  filter: none;
+}
+body.rc-home-canyonpath .home-landscape::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(3, 23, 20, 0.91), rgba(3, 23, 20, 0.70) 31%, rgba(3, 23, 20, 0.10) 67%, rgba(3, 23, 20, 0.02)),
+    linear-gradient(180deg, rgba(3, 23, 20, 0.04) 32%, rgba(3, 23, 20, 0.35) 66%, var(--home-bg) 99%);
+}
+body.rc-home-canyonpath .home-frame {
+  width: min(100%, 1440px);
+  margin-inline: auto;
+  padding: 0 clamp(20px, 3.2vw, 52px) 22px;
+}
+body.rc-home-canyonpath .home-hero {
+  min-height: 500px;
+  padding: clamp(46px, 5vw, 76px) 0 38px;
+}
+body.rc-home-canyonpath .home-hero .home-eyebrow {
+  margin: 0 0 14px;
+  color: var(--home-accent);
+  font-size: 0.79rem;
+  font-weight: 750;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+body.rc-home-canyonpath .home-hero .home-hero-title {
+  margin: 0;
+  font-size: clamp(3.1rem, 5.5vw, 5.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  font-weight: 850;
+  color: var(--home-ink);
+  text-shadow: 0 3px 20px rgba(0, 12, 10, 0.24);
+}
+body.rc-home-canyonpath .home-hero .home-hero-tagline {
+  max-width: 35ch;
+  margin: 22px 0 0;
+  color: #e0eee7;
+  font-size: clamp(1rem, 1.35vw, 1.16rem);
+  line-height: 1.6;
+}
+body.rc-home-canyonpath .home-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 25px;
+}
+body.rc-home-canyonpath .home-student-cta,
+body.rc-home-canyonpath .home-teacher-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 13px 18px;
+  border: 1px solid var(--home-border);
+  border-radius: 11px;
+  background: var(--home-panel);
+  color: var(--home-ink);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-shadow: var(--home-shadow);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+body.rc-home-canyonpath .home-student-cta {
+  background: #0b6852;
+  border-color: #72c8ac;
+  color: #ffffff;
+}
+body.rc-home-canyonpath .home-student-cta:hover { background: #08513f; }
+body.rc-home-canyonpath .home-teacher-cta:hover {
+  background: var(--home-inner);
+  border-color: var(--home-accent);
+}
+body.rc-home-canyonpath .home-hero .home-hero-note {
+  margin-top: 20px;
+  color: #d1e6db;
+  font-size: 0.82rem;
+  letter-spacing: 0.025em;
+}
+body.rc-home-canyonpath .home-section-heading {
+  display: block;
+  margin-bottom: 14px;
+}
+body.rc-home-canyonpath .home-section-heading h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 1.8vw, 1.6rem);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+body.rc-home-canyonpath .home-section-heading p {
+  margin-top: 6px;
+  color: var(--home-muted);
+  font-size: 0.84rem;
+}
+body.rc-home-canyonpath .home-pathway-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+body.rc-home-canyonpath .home-pathway,
+body.rc-home-canyonpath .home-focus-card,
+body.rc-home-canyonpath .home-footer-row {
+  border: 1px solid var(--home-border);
+  border-radius: 16px;
+  background: var(--home-panel);
+  box-shadow: var(--home-shadow), inset 0 1px rgba(246, 255, 251, 0.045);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+body.rc-home-canyonpath .home-pathway {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  min-height: 116px;
+  padding: 20px;
+  color: var(--home-ink);
+  text-decoration: none;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+body.rc-home-canyonpath .home-pathway:hover {
+  background: var(--home-inner);
+  border-color: var(--home-accent);
+}
+body.rc-home-canyonpath .home-pathway-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--home-border);
+  border-radius: 12px;
+  background: rgba(75, 153, 123, 0.10);
+  color: var(--home-accent);
+}
+body.rc-home-canyonpath .home-pathway-copy { min-width: 0; }
+body.rc-home-canyonpath .home-pathway-copy strong {
+  display: block;
+  font-size: 1.02rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+body.rc-home-canyonpath .home-pathway-copy > span {
+  display: block;
+  margin-top: 6px;
+  color: var(--home-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+body.rc-home-canyonpath .home-pathway-arrow {
+  margin-left: auto;
+  color: var(--home-accent);
+  flex-shrink: 0;
+}
+body.rc-home-canyonpath .home-focus {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+/* Do not leave an empty panel when there are no dates or teacher standards. */
+body.rc-home-canyonpath .home-focus:not(:has(.countdown-card, .hd-standards-count)),
+body.rc-home-canyonpath .home-focus-countdowns:has(.home-countdowns:empty) { display: none; }
+body.rc-home-canyonpath .home-focus-card { padding: 20px; }
+body.rc-home-canyonpath .focus-label,
+body.rc-home-canyonpath .home-quote-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--home-accent);
+  font-size: 0.71rem;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+}
+body.rc-home-canyonpath .home-countdowns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 10px;
+}
+body.rc-home-canyonpath .countdown-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 14px;
+  border: 1px solid var(--home-border);
+  border-radius: 11px;
+  background: var(--home-inner);
+}
+body.rc-home-canyonpath .countdown-card-icon { color: var(--home-accent); flex-shrink: 0; }
+body.rc-home-canyonpath .countdown-card-body { min-width: 0; }
+body.rc-home-canyonpath .countdown-card-label { font-size: 0.89rem; font-weight: 650; line-height: 1.4; }
+body.rc-home-canyonpath .countdown-card-days { margin-top: 3px; color: var(--home-accent); font-size: 0.8rem; font-weight: 650; }
+body.rc-home-canyonpath .hd-standards-card { flex-direction: column; gap: 10px; }
+body.rc-home-canyonpath .hd-standards-count { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.81rem; }
+body.rc-home-canyonpath .hd-standards-count-item { display: inline-flex; padding: 4px 8px; border-radius: 6px; font-weight: 650; }
+body.rc-home-canyonpath .tier-critical { background: #57292a; color: #ffd1d1; }
+body.rc-home-canyonpath .tier-needs-support { background: #4e401d; color: #ffedaa; }
+body.rc-home-canyonpath .hd-standards-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+body.rc-home-canyonpath .hd-standards-list-item { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.83rem; }
+body.rc-home-canyonpath .hd-std-code { font-weight: 650; }
+body.rc-home-canyonpath .hd-std-pct { color: var(--home-muted); }
+body.rc-home-canyonpath .hd-standards-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; color: var(--home-accent); font-size: 0.85rem; }
+body.rc-home-canyonpath .home-footer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  gap: 26px;
+  align-items: center;
+  margin-top: 22px;
+  padding: 24px;
+}
+body.rc-home-canyonpath .home-quote-body {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.09rem;
+  line-height: 1.65;
+  color: var(--home-ink);
+}
+body.rc-home-canyonpath .quote-author {
+  display: block;
+  margin-top: 8px;
+  color: var(--home-muted);
+  font: 500 0.8rem/1.5 system-ui, sans-serif;
+}
+body.rc-home-canyonpath .home-stats {
+  padding-left: 24px;
+  border-left: 1px solid var(--home-border);
+  color: var(--home-muted);
+  font-size: 0.8rem;
+  line-height: 1.9;
+}
+body.rc-home-canyonpath .home-signoff {
+  padding-top: 26px;
+  text-align: center;
+  color: var(--home-muted);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+}
+body.rc-home-canyonpath :where(a, button, summary, input, select):focus-visible {
+  outline: 3px solid var(--home-focus);
+  outline-offset: 4px;
+}
+body.rc-home-canyonpath .home-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 12px;
+  z-index: 200;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--home-inner);
+  color: var(--home-ink);
+  transform: translateY(-180%);
+}
+body.rc-home-canyonpath .home-skip-link:focus { transform: translateY(0); }
+@media (max-width: 1180px) {
+  body.rc-home-canyonpath .home-pathway { padding: 16px; gap: 10px; }
+  body.rc-home-canyonpath .home-pathway-arrow { display: none; }
+}
+@media (max-width: 900px) {
+  body.rc-home-canyonpath .home-pathway-grid { grid-template-columns: 1fr; }
+  body.rc-home-canyonpath .home-pathway { min-height: 90px; }
+  body.rc-home-canyonpath .home-pathway-arrow { display: inline; }
+}
+@media (max-width: 600px) {
+  body.rc-home-canyonpath .home-hero { min-height: 470px; padding-top: 40px; }
+  body.rc-home-canyonpath .home-hero .home-hero-title { font-size: clamp(2.65rem, 11.5vw, 3.8rem); }
+  body.rc-home-canyonpath .home-landscape img { object-position: 72% 42%; }
+  body.rc-home-canyonpath .home-landscape::after {
+    background: linear-gradient(90deg, rgba(3, 23, 20, 0.88), rgba(3, 23, 20, 0.48)), linear-gradient(180deg, transparent 35%, var(--home-bg) 97%);
+  }
+  body.rc-home-canyonpath .home-student-cta,
+  body.rc-home-canyonpath .home-teacher-cta { width: 100%; }
+  body.rc-home-canyonpath .home-footer-row { grid-template-columns: 1fr; gap: 18px; padding: 20px; }
+  body.rc-home-canyonpath .home-stats { padding: 16px 0 0; border-left: 0; border-top: 1px solid var(--home-border); }
+}
+@media (min-width: 1920px) {
+  body.rc-home-canyonpath .home-frame { max-width: 1680px; }
+  body.rc-home-canyonpath .home-hero { min-height: 580px; }
+  body.rc-home-canyonpath .home-pathway { min-height: 130px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.rc-home-canyonpath *,
+  body.rc-home-canyonpath *::before,
+  body.rc-home-canyonpath *::after { transition: none; animation: none; scroll-behavior: auto; }
+}
+/* Light mode follows the Portal's readable, non-scenic light alternative. */
+html[data-theme='light'] body.rc-home-canyonpath {
+  --home-bg: #f5f8f6;
+  --home-panel: rgba(255, 255, 255, 0.98);
+  --home-inner: #edf5f0;
+  --home-ink: #172f27;
+  --home-muted: #3f6458;
+  --home-accent: #0b6f5c;
+  --home-focus: #0b6f5c;
+  --home-border: rgba(11, 89, 75, 0.25);
+  --home-shadow: 0 10px 28px rgba(27, 68, 59, 0.08);
+}
+html[data-theme='light'] body.rc-home-canyonpath .tc-topbar,
+html[data-theme='light'] body.rc-home-canyonpath .tc-sidebar { background: #f0f6f2; }
+html[data-theme='light'] body.rc-home-canyonpath .home-landscape { display: none; }
+html[data-theme='light'] body.rc-home-canyonpath .home-hero-title { text-shadow: none; }
+html[data-theme='light'] body.rc-home-canyonpath .home-hero .home-hero-tagline,
+html[data-theme='light'] body.rc-home-canyonpath .home-hero .home-hero-note { color: var(--home-muted); }
+/* Runtime severity labels are inline-colored; retain a dark reading surface
+   for the teacher-only card rather than overriding or recalculating its data. */
+html[data-theme='light'] body.rc-home-canyonpath .hd-standards-card {
+  --home-ink: #f4fbf8;
+  --home-muted: #bdd6cd;
+  --home-accent: #8be6c8;
+  --home-focus: #b6f3de;
+  background: #053028;
+  color: var(--home-ink);
+}

@@ -1,0 +1,109 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const html = fs.readFileSync('site/index.html', 'utf8');
+const css = fs.readFileSync('site/assets/css/home-canyonpath.css', 'utf8');
+const scene = fs.readFileSync('site/assets/bg/home-arizona.svg', 'utf8');
+const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+function declarations(selector) {
+  const blocks = [...withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+  const found = blocks.find((match) => match[1].trim() === selector);
+  assert.ok(found, `Missing selector: ${selector}`);
+  return Object.fromEntries(found[2].split(';').filter((item) => item.trim()).map((item) => {
+    const split = item.indexOf(':');
+    return [item.slice(0, split).trim(), item.slice(split + 1).trim()];
+  }));
+}
+function hex(value) { return [1, 3, 5].map((i) => parseInt(value.slice(i, i + 2), 16)); }
+function luminance(rgb) {
+  const linear = rgb.map((c) => c / 255 <= 0.04045 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4);
+  return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+}
+function contrast(a, b) {
+  const x = luminance(a), y = luminance(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+test('Homepage removes ticker and class-update surfaces, not the retained data hooks', () => {
+  assert.doesNotMatch(html, /class="[^"]*ticker-(?:bar|track|content)/);
+  assert.doesNotMatch(html, /id="focus-(?:la|life)"/);
+  for (const id of ['tcSidebarToggle', 'home-greeting', 'home-focus-section', 'focus-standards', 'home-countdowns', 'daily-quote', 'home-stats']) {
+    assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, id);
+  }
+});
+
+test('Homepage keeps the exact existing runtime scripts without importing Portal behavior', () => {
+  assert.deepEqual([...html.matchAll(/<script\b[^>]*src="([^"]+)"/g)].map((m) => m[1]), [
+    '/web/public-nav.js', '/web/sidebar-init.js', '/web/supabase-config.js',
+    '/web/home-dashboard.js', '/assets/js/class-clock.js', '/web/class-mode.js',
+    '/assets/js/viewer-compat.js', '/web/public-shell.js',
+  ]);
+  assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/);
+  assert.doesNotMatch(html, /student-canyonpath\.(?:js|css)/);
+});
+
+test('Homepage keeps existing entry routes and a keyboard skip target', () => {
+  for (const href of ['/', '/student/', '/teacher/', '/substitute/', '/language-arts/', '/life-skills/', '/math-toolkit/']) {
+    assert.ok(html.includes(`href="${href}"`), href);
+  }
+  assert.match(html, /class="home-student-cta" href="\/student\/"/);
+  assert.match(html, /class="home-teacher-cta" href="\/teacher\/"/);
+  assert.match(html, /href="#home-main"/);
+  assert.match(html, /<main[^>]*id="home-main"[^>]*tabindex="-1"/);
+  assert.equal((html.match(/<h1\b/g) || []).length, 1);
+  assert.equal((html.match(/class="home-pathway"/g) || []).length, 3);
+  assert.ok(html.indexOf('class="home-student-cta"') < html.indexOf('id="home-focus-section"'));
+});
+
+test('Homepage CSS is scoped and does not introduce data access or external dependencies', () => {
+  assert.match(html, /<body class="rc-home-canyonpath">/);
+  for (const block of withoutComments.matchAll(/([^{}]+)\{/g)) {
+    const selector = block[1].trim();
+    if (selector.startsWith('@')) continue;
+    assert.ok(selector.includes('body.rc-home-canyonpath'), selector);
+  }
+  assert.doesNotMatch(css, /@import|https?:|fetch\(|localStorage|sessionStorage|supabase|!important/);
+});
+
+test('Scenery is a complete locally hosted vector with a small decorative pug', () => {
+  assert.match(scene, /viewBox="0 0 2400 1350"/);
+  assert.match(scene, /id="trail-pug"/);
+  assert.match(scene, /id="strata"/);
+  assert.match(scene, /id="saguaro"/);
+  assert.doesNotMatch(scene, /<script\b|<image\b|<foreignObject\b|feGaussianBlur|data:image|onload=/i);
+  for (const match of scene.matchAll(/\bhref="([^"]+)"/g)) assert.ok(match[1].startsWith('#'));
+  assert.ok(Buffer.byteLength(scene) < 60000, 'Keep the scalable scenery lightweight');
+  assert.match(html, /<img[^>]*home-arizona\.svg\?v=20260907-home1[^>]*alt=""[^>]*width="2400"[^>]*height="1350"[^>]*fetchpriority="high"/);
+  assert.match(html, /home-canyonpath\.css\?v=20260907-home1/);
+});
+
+test('Frosted card text retains 4.5:1 contrast with blur unavailable', () => {
+  for (const selector of ['body.rc-home-canyonpath', "html[data-theme='light'] body.rc-home-canyonpath"]) {
+    const tokens = declarations(selector);
+    const [r, g, b, a] = tokens['--home-panel'].match(/[\d.]+/g).map(Number);
+    assert.ok(a >= 0.94);
+    const surfaces = [[r * a, g * a, b * a], [r * a + 255 * (1 - a), g * a + 255 * (1 - a), b * a + 255 * (1 - a)], hex(tokens['--home-inner'])];
+    for (const name of ['ink', 'muted', 'accent']) {
+      for (const surface of surfaces) {
+        const ratio = contrast(hex(tokens[`--home-${name}`]), surface);
+        assert.ok(ratio >= 4.5, `${selector} ${name}: ${ratio.toFixed(2)}:1`);
+      }
+    }
+  }
+});
+
+test('Primary CTA and light-mode keyboard focus retain readable contrast', () => {
+  assert.ok(contrast(hex('#ffffff'), hex('#0b6852')) >= 4.5);
+  assert.ok(contrast(hex('#0b6f5c'), hex('#f5f8f6')) >= 3);
+  assert.match(css, /:focus-visible\s*\{[\s\S]*outline: 3px solid var\(--home-focus\)/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
+});
+
+test('Scenery remains unblurred and the layout has mobile and classroom-display rules', () => {
+  assert.equal(declarations('body.rc-home-canyonpath .home-landscape img').filter, 'none');
+  assert.match(css, /backdrop-filter: blur\(3px\)/);
+  assert.match(css, /@media \(max-width: 600px\)/);
+  assert.match(css, /@media \(min-width: 1920px\)/);
+  assert.match(css, /home-focus:not\(:has\(\.countdown-card, \.hd-standards-count\)\)/);
+});
