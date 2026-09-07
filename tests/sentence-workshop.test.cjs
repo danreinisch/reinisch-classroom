@@ -2,10 +2,217 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw6");
-const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw6");
-const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260906-sw6");
-const commas = import("../site/assets/js/sentence-workshop-commas.js?v=20260906-sw6");
+const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw8");
+const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw8");
+const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260906-sw8");
+const openings = import("../site/assets/js/sentence-workshop-openings.js?v=20260906-sw8");
+const commas = import("../site/assets/js/sentence-workshop-commas.js?v=20260906-sw8");
+
+test("opening commas match an independent editorial key for every selectable combination", async () => {
+  const c = await openings;
+  // Literal gap counts, not derived from the content's boundary/required fields.
+  const key = [
+    [[1], null],
+    [[4], null],
+    [[], null],
+    [[], 2],
+    [[1], null],
+    [[5], null],
+    [[], null],
+    [[], 2],
+    [[1], null],
+    [[5], null],
+    [[], null],
+    [[], 2],
+    [[1], null],
+    [[5], null],
+    [[], null],
+    [[], 3],
+    [[1], null],
+    [[5], null],
+    [[], null],
+    [[], 2],
+    [[1], null],
+    [[4], null],
+    [[], null],
+    [[], 2],
+    [[1], null],
+    [[4], null],
+    [[], null],
+    [[], 2],
+    [[1], null],
+    [[4], null],
+    [[], null],
+    [[], 3],
+  ];
+  assert.equal(c.models.length, 4);
+  assert.deepEqual(
+    c.bank.practice.slice(0, 4).map((item) => c.initialEdit(item).commas),
+    [[], [], [], []]
+  );
+  assert.equal(c.allItems.length, 32);
+  assert.equal(new Set(c.allItems.map((i) => i.id)).size, 32);
+  assert.equal(new Set(c.allItems.map((i) => i.words.join(" "))).size, 32);
+  assert.deepEqual(
+    Object.values(c.bank).map((items) => items.length),
+    [8, 12, 8, 4]
+  );
+  for (const [index, item] of c.allItems.entries()) {
+    const [required, optional] = key[index];
+    assert.deepEqual(item.required, required, item.id);
+    assert.equal(item.optional, optional, item.id);
+    for (let mask = 0; mask < 2 ** (item.words.length - 1); mask++) {
+      const selected = Array.from({ length: item.words.length - 1 }, (_, i) => i + 1).filter(
+        (gap) => mask & (2 ** (gap - 1))
+      );
+      const correct =
+        required.every((gap) => selected.includes(gap)) &&
+        selected.every((gap) => required.includes(gap) || gap === optional);
+      assert.equal(
+        c.checkEdit(item, { commas: selected }).correct,
+        correct,
+        `${item.id}: ${selected}`
+      );
+    }
+    for (const invalid of [
+      undefined,
+      {},
+      { commas: null },
+      { commas: [0] },
+      { commas: [1, 1] },
+      { commas: ["1"] },
+      { commas: [1.5] },
+      { commas: [item.words.length] },
+    ])
+      assert.equal(c.checkEdit(item, invalid).correct, false, item.id);
+    const draft = c.initialEdit(item);
+    draft.commas.push(999);
+    assert.equal(item.initial.includes(999), false);
+    assert.ok(c.hint(item) && c.clue(item) && item.context);
+  }
+  assert.equal(
+    c.editedText(c.bank.practice[1], { commas: [4] }),
+    "When the bell rings, put away your materials."
+  );
+  assert.equal(
+    c.editedText(c.bank.practice[2], { commas: [] }),
+    "Put away your materials when the bell rings."
+  );
+  assert.equal(
+    c.editedText(c.bank.practice[3], { commas: [2] }),
+    "After lunch, we will return the books."
+  );
+  assert.match(
+    c.checkEdit(c.bank.practice[1], { commas: [1] }).message,
+    /splits “When the bell rings”/
+  );
+  assert.match(
+    c.checkEdit(c.bank.practice[0], { commas: [1, 2] }).message,
+    /splits the main message/
+  );
+  assert.match(
+    c.checkEdit(c.bank.practice[2], { commas: [4] }).message,
+    /final clause attached without a comma here/
+  );
+  for (const selected of [[], [2]])
+    assert.match(
+      c.checkEdit(c.bank.practice[3], { commas: selected }).message,
+      /Both versions are correct/
+    );
+});
+
+test("opening route covers four kinds and accepts either short-opening style on fresh first tries", async () => {
+  const c = await openings,
+    e = await engine,
+    s = e.createSession("openings");
+  e.start(s);
+  const ids = [],
+    phases = [];
+  while (s.phase !== "summary") {
+    assert.ok(ids.length < 13);
+    ids.push(s.item.id);
+    phases.push(s.phase);
+    const edit = s.phase === "check" ? { commas: [...s.item.required] } : c.solution(s.item);
+    assert.equal(e.submit(s, edit).correct, true);
+    e.next(s);
+  }
+  assert.equal(new Set(ids).size, 12);
+  assert.deepEqual(phases, [
+    ...Array(4).fill("practice"),
+    ...Array(4).fill("check"),
+    ...Array(4).fill("apply"),
+  ]);
+  assert.equal(e.summary(s).freshIndependent, 4);
+  assert.equal(e.summary(s).appliedIndependent, 4);
+  assert.equal(e.summary(s).supported, 0);
+  assert.deepEqual(e.summary(s).freshKinds, ["response", "clause", "final", "short"]);
+});
+
+test("opening fresh checks require every kind and finish honestly when one remains supported", async () => {
+  const c = await openings,
+    e = await engine;
+  for (const missing of Object.keys(c.kindNames)) {
+    const s = e.createSession("openings");
+    e.start(s);
+    for (let step = 0; s.phase !== "summary"; step++) {
+      assert.ok(step < 21);
+      assert.notEqual(s.phase, "apply");
+      if (s.phase === "check" && s.item.kind === missing) e.hint(s);
+      e.submit(s, c.solution(s.item));
+      e.next(s);
+    }
+    const result = e.summary(s);
+    assert.equal(result.freshAttempted, 12);
+    assert.equal(result.freshIndependent, 9);
+    assert.equal(result.freshKinds.includes(missing), false);
+    assert.equal(result.appliedAttempted, 0);
+    assert.equal(result.supported, 3);
+  }
+});
+
+test("opening support uses a different matching task, caps detours, and preserves first checks", async () => {
+  const c = await openings,
+    e = await engine;
+  for (const kind of Object.keys(c.kindNames)) {
+    const s = e.createSession("openings");
+    e.start(s);
+    while (s.item.kind !== kind) {
+      e.submit(s, c.solution(s.item));
+      e.next(s);
+    }
+    const first = s.item.id;
+    e.demonstrate(s);
+    e.next(s);
+    assert.equal(s.phase, "simpler");
+    assert.equal(s.item.kind, kind);
+    assert.notEqual(s.item.id, first);
+  }
+  const s = e.createSession("openings");
+  e.start(s);
+  for (let i = 0; i < 4; i++) {
+    e.submit(s, c.solution(s.item));
+    e.next(s);
+  }
+  e.submit(s, { commas: [1, 2] });
+  assert.match(e.submit(s, { commas: [2, 1] }).message, /Change your edit/);
+  assert.equal(e.recordFor(s).attempts.length, 1);
+  e.submit(s, { commas: [] });
+  const original = structuredClone(e.recordFor(s).attempts);
+  e.retry(s);
+  e.submit(s, { commas: [1] });
+  assert.deepEqual(e.recordFor(s).attempts.slice(0, 2), original);
+  assert.equal(e.summary(s).freshIndependent, 0);
+  assert.equal(e.summary(s).supported, 1);
+  const supported = e.createSession("openings");
+  e.start(supported);
+  for (let i = 0; supported.phase !== "summary"; i++) {
+    assert.ok(i < 8);
+    e.demonstrate(supported);
+    e.next(supported);
+  }
+  assert.equal(supported.cursors.simpler, 2);
+  assert.equal(e.summary(supported).attempted, 0);
+});
 
 test("list comma answer sets match the editorial key across every selectable combination", async () => {
   const c = await commas;
@@ -646,8 +853,8 @@ test("both launch copies match and lesson assets use one version", () => {
     "utf8"
   );
   assert.equal(donor, mirror);
-  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw6/);
-  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw6/);
+  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw8/);
+  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw8/);
   for (const filename of [
     "sentence-workshop.js",
     "sentence-workshop-engine.js",
@@ -655,16 +862,17 @@ test("both launch copies match and lesson assets use one version", () => {
     "sentence-workshop-endings.js",
     "sentence-workshop-repairs.js",
     "sentence-workshop-commas.js",
+    "sentence-workshop-openings.js",
   ]) {
     const js = fs.readFileSync(path.join(root, "site/assets/js", filename), "utf8");
     assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(|XMLHttpRequest|sendBeacon/);
     for (const imported of js.matchAll(/from "\.\/sentence-workshop[^"?]*\.js\?v=([^"\s]+)"/g)) {
-      assert.equal(imported[1], "20260906-sw6");
+      assert.equal(imported[1], "20260906-sw8");
     }
   }
 });
 
-const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw6");
+const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw8");
 
 test("sentence endings follow the reviewed purpose key and accept both allowed tones", async () => {
   const c = await endings;
@@ -837,6 +1045,7 @@ async function navigationCases() {
     endings: await endings,
     repairs: await repairs,
     commas: await commas,
+    openings: await openings,
   };
   return Object.entries(modules).map(([id, c]) => ({
     id,
@@ -851,7 +1060,7 @@ async function navigationCases() {
           ? [{ ending: "." }, { ending: "!" }]
           : id === "repairs"
             ? [c.initialEdit(c.bank.practice[0]), { choice: "when", gap: null, join: null }]
-            : [{ commas: [] }, { commas: [1] }],
+            : [{ commas: [] }, { commas: [id === "openings" ? 2 : 1] }],
   }));
 }
 
