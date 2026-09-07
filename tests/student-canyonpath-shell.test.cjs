@@ -149,10 +149,11 @@ test('Phase 2A vector scene stays registered to the main canvas on Dashboard, Go
 });
 
 test('Phase 2A goal-card frost overrides the earlier two-ID transparent-card selector', () => {
-  const selector = 'body.rc-student-canyonpath #tabGoals #goalsContent .sgp-card';
-  const previous = declarationsFor(refineCss, selector);
+  // The child combinator changes matching, not specificity; both rules have
+  // the same two IDs, and the reference rule loads after the legacy rule.
+  const previous = declarationsFor(refineCss, 'body.rc-student-canyonpath #tabGoals #goalsContent > .sgp-card');
   assert.equal(previous.background, 'transparent');
-  const card = declarationsFor(referenceCss, selector);
+  const card = declarationsFor(referenceCss, 'body.rc-student-canyonpath #tabGoals #goalsContent .sgp-card');
   assert.equal(card.background, 'var(--stcpl-reading-surface)');
   assert.equal(card.padding, '22px');
   assert.equal(card['border-radius'], '16px');
