@@ -42,6 +42,7 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
     addStudentStylesheetOnce('/assets/css/student-canyonpath-refine.css?v=20260907-2a2', 'data-student-canyonpath-refine');
     addStudentStylesheetOnce('/assets/css/student-canyonpath-fixes.css?v=20260907-2a3', 'data-student-canyonpath-fixes');
     addStudentStylesheetOnce('/assets/css/student-canyonpath-cinematic.css?v=20260907-2a4', 'data-student-canyonpath-cinematic');
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-premium.css?v=20260907-2a5', 'data-student-canyonpath-premium');
   };
 
   // Append after the page's inline styles so the scoped polish layers are the
@@ -68,7 +69,7 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
   document.head.appendChild(canyonPathScript);
 
   var canyonPathRefineScript = document.createElement('script');
-  canyonPathRefineScript.src = '/web/student-canyonpath-refine.js?v=20260907-2a2';
+  canyonPathRefineScript.src = '/web/student-canyonpath-refine.js?v=20260907-2a3';
   canyonPathRefineScript.async = false;
   document.head.appendChild(canyonPathRefineScript);
 }
