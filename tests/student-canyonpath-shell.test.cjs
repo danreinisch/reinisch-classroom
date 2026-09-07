@@ -8,10 +8,11 @@ const fixesCss = fs.readFileSync('site/assets/css/student-canyonpath-fixes.css',
 const cinematicCss = fs.readFileSync('site/assets/css/student-canyonpath-cinematic.css', 'utf8');
 const premiumCss = fs.readFileSync('site/assets/css/student-canyonpath-premium.css', 'utf8');
 const finalCss = fs.readFileSync('site/assets/css/student-canyonpath-final.css', 'utf8');
+const referenceCss = fs.readFileSync('site/assets/css/student-canyonpath-reference-match.css', 'utf8');
 const js = fs.readFileSync('site/web/student-canyonpath.js', 'utf8');
 const refineJs = fs.readFileSync('site/web/student-canyonpath-refine.js', 'utf8');
 const sidebar = fs.readFileSync('site/web/sidebar-init.js', 'utf8');
-const allPresentationCss = css + refineCss + fixesCss + cinematicCss + premiumCss + finalCss;
+const allPresentationCss = css + refineCss + fixesCss + cinematicCss + premiumCss + finalCss + referenceCss;
 
 test('Student Portal Phase 2A CanyonPath layer stays presentation-only and scoped', () => {
   assert.match(css, /body\.rc-student-canyonpath/);
@@ -19,10 +20,11 @@ test('Student Portal Phase 2A CanyonPath layer stays presentation-only and scope
   assert.match(cinematicCss, /body\.rc-student-canyonpath/);
   assert.match(premiumCss, /body\.rc-student-canyonpath/);
   assert.match(finalCss, /body\.rc-student-canyonpath/);
+  assert.match(referenceCss, /body\.rc-student-canyonpath/);
   assert.match(refineCss + fixesCss, /rc-canyonpath-landscape-rich\.svg/);
   assert.match(cinematicCss, /rc-canyonpath-cinematic\.svg/);
   assert.match(refineCss + cinematicCss + premiumCss + finalCss, /prefers-reduced-motion/);
-  assert.match(refineCss + fixesCss + cinematicCss + premiumCss + finalCss, /html\[data-theme='light'\]/);
+  assert.match(refineCss + fixesCss + cinematicCss + premiumCss + finalCss + referenceCss, /html\[data-theme='light'\]/);
   assert.doesNotMatch(allPresentationCss, /supabase|fetch\(|localStorage|sessionStorage/);
 
   assert.match(js, /rc-student-canyonpath/);
@@ -32,6 +34,7 @@ test('Student Portal Phase 2A CanyonPath layer stays presentation-only and scope
   assert.match(js, /stcp-footer/);
   assert.match(refineJs, /stcp-page-hero/);
   assert.match(refineJs, /stcp-goals-more/);
+  assert.match(refineJs, /stcp-goal-aside/);
   assert.match(js, /observer\.observe\(portalRoot/);
   assert.match(refineJs, /observer\.observe\(portalRoot/);
   assert.doesNotMatch(js + refineJs, /supabase|\.insert\(|\.update\(|\.delete\(|fetch\(/);
@@ -55,6 +58,8 @@ test('Phase 2A final standard fixes collapsed rail alignment and dashboard densi
   assert.match(finalCss, /grid-template-areas:/);
   assert.match(finalCss, /'assignments goals'/);
   assert.match(finalCss, /#dashGoalsSnapshot \.sgp-card details/);
+  assert.match(referenceCss, /#dashRecentAssignments[\s\S]*repeat\(2/);
+  assert.match(referenceCss, /\.stcp-panel--progress[\s\S]*display:\s*none/);
   assert.match(refineJs, /visibleLimit = 2/);
   assert.match(refineJs, /View all \$\{cards\.length\} goals/);
 });
@@ -86,11 +91,15 @@ test('Phase 2A final standard matches approved dashboard, goals, and login compo
   assert.match(finalCss, /#tabGoals \.stcp-page-hero::after[\s\S]*Small steps add up to big possibilities/);
   assert.match(finalCss, /#tabGoals \.sgp-stats[\s\S]*repeat\(3/);
   assert.match(finalCss, /#tabGoals \.sgp-progress/);
-  assert.match(finalCss, /#tabGoals \.sgp-full/);
+  assert.match(referenceCss, /#tabGoals \.sgp-official/);
+  assert.match(referenceCss, /stcp-goal-card--reference[\s\S]*grid-template-areas/);
+  assert.match(referenceCss, /stcp-goal-aside/);
+  assert.match(refineJs, /Progress evidence/);
+  assert.match(refineJs, /No Progress Checks Yet/);
   assert.match(finalCss, /#loginView[\s\S]*place-items:\s*center/);
   assert.match(finalCss, /\.st-login-container[\s\S]*max-width:\s*500px/);
   assert.match(finalCss, /\.st-login-container[\s\S]*blur\(6px\)/);
-  assert.match(finalCss, /\.stcp-footer[\s\S]*Keep going|\.stcp-footer/);
+  assert.match(finalCss, /\.stcp-footer/);
 });
 
 test('Phase 2A light mode keeps an accessible dark focus accent', () => {
@@ -99,7 +108,7 @@ test('Phase 2A light mode keeps an accessible dark focus accent', () => {
   assert.match(finalCss, /html\[data-theme='light'\] body\.rc-student-canyonpath \.tc-main/);
 });
 
-test('Student route loads CanyonPath foundation and final Phase 2A visual standard last', () => {
+test('Student route loads CanyonPath foundation and approved-reference layers last', () => {
   assert.match(sidebar, /student-portal-polish\.css\?v=20260907-polish1/);
   assert.match(sidebar, /rc-canyonpath\.css\?v=20260907-cp1/);
   assert.match(sidebar, /rc-canyonpath-detail\.css\?v=20260907-cp1/);
@@ -109,7 +118,8 @@ test('Student route loads CanyonPath foundation and final Phase 2A visual standa
   assert.match(sidebar, /student-canyonpath-cinematic\.css\?v=20260907-2a4/);
   assert.match(sidebar, /student-canyonpath-premium\.css\?v=20260907-2a5/);
   assert.match(sidebar, /student-canyonpath-final\.css\?v=20260907-2a6/);
+  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260907-2a7/);
   assert.match(sidebar, /student-canyonpath\.js\?v=20260907-2a3/);
-  assert.match(sidebar, /student-canyonpath-refine\.js\?v=20260907-2a3/);
-  assert.ok(sidebar.indexOf('student-canyonpath-final.css') > sidebar.indexOf('student-canyonpath-premium.css'));
+  assert.match(sidebar, /student-canyonpath-refine\.js\?v=20260907-2a4/);
+  assert.ok(sidebar.indexOf('student-canyonpath-reference-match.css') > sidebar.indexOf('student-canyonpath-final.css'));
 });
