@@ -352,5 +352,5 @@ body.rc-student-canyonpath .tc-sidebar {
 }
 
 body.rc-student-canyonpath .tc-main::before {
-  inset-top: var(--tc-topbar-h);
+  top: var(--tc-topbar-h);
 }
