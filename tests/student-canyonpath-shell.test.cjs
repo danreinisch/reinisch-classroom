@@ -89,6 +89,15 @@ test('Phase 2A visual gate aligns content to the remaining canvas and keeps the 
   assert.doesNotMatch(referenceCss, /backdrop-filter:\s*blur\((1[0-9]|[2-9][0-9])px\)/);
 });
 
+test('Phase 2A keeps the Student Portal top bar visible while long pages scroll', () => {
+  assert.match(referenceCss, /--tc-topbar-h:\s*58px/);
+  assert.match(referenceCss, /\.tc-topbar[\s\S]*position:\s*fixed/);
+  assert.match(referenceCss, /\.tc-topbar[\s\S]*top:\s*0/);
+  assert.match(referenceCss, /\.tc-topbar[\s\S]*z-index:\s*120/);
+  assert.match(referenceCss, /\.tc-shell[\s\S]*margin-top:\s*var\(--tc-topbar-h\)/);
+  assert.match(referenceCss, /\.tc-sidebar[\s\S]*top:\s*var\(--tc-topbar-h\)/);
+});
+
 test('Phase 2A final standard removes rainy-window page blur and keeps restrained card glass only', () => {
   assert.match(finalCss, /\.tc-main,[\s\S]*backdrop-filter:\s*none/);
   assert.match(finalCss, /\.stcp-hero \.st-summary-cards[\s\S]*blur\(4px\)/);
@@ -132,7 +141,7 @@ test('Student route loads CanyonPath foundation and approved-reference layers la
   assert.match(sidebar, /student-canyonpath-cinematic\.css\?v=20260907-2a4/);
   assert.match(sidebar, /student-canyonpath-premium\.css\?v=20260907-2a5/);
   assert.match(sidebar, /student-canyonpath-final\.css\?v=20260907-2a6/);
-  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260907-2a7/);
+  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260907-2a8/);
   assert.match(sidebar, /student-canyonpath\.js\?v=20260907-2a3/);
   assert.match(sidebar, /student-canyonpath-refine\.js\?v=20260907-2a4/);
   assert.ok(sidebar.indexOf('student-canyonpath-reference-match.css') > sidebar.indexOf('student-canyonpath-final.css'));
