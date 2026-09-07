@@ -219,9 +219,12 @@
 
   function init() {
     scheduleEnhance();
-    if (!observer && document.body) {
-      observer = new MutationObserver(scheduleEnhance);
-      observer.observe(document.body, { childList: true, subtree: true });
+    if (!observer) {
+      const portalRoot = document.getElementById('studentDashboardView');
+      if (portalRoot) {
+        observer = new MutationObserver(scheduleEnhance);
+        observer.observe(portalRoot, { childList: true, subtree: true });
+      }
     }
   }
 
