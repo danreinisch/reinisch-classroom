@@ -1,0 +1,697 @@
+/* Student Portal polish — presentation-only layer.
+ * Keeps existing auth/data behavior intact while reducing card clutter.
+ */
+
+:root {
+  --stp-line: rgba(148, 163, 184, 0.14);
+  --stp-line-strong: rgba(148, 163, 184, 0.22);
+  --stp-surface: rgba(15, 23, 42, 0.42);
+  --stp-surface-soft: rgba(255, 255, 255, 0.025);
+  --stp-surface-hover: rgba(255, 255, 255, 0.045);
+  --stp-green: #4ade80;
+  --stp-blue: #60a5fa;
+  --stp-muted: rgba(226, 232, 240, 0.62);
+}
+
+/* ---------- shared visual rhythm ---------- */
+#studentDashboardView .st-dashboard-content {
+  max-width: 1180px;
+}
+
+#studentDashboardView .st-section {
+  margin-top: 26px;
+}
+
+#studentDashboardView .st-section > h2,
+.stp-section-head > h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+.stp-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.stp-section-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--stp-blue);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.stp-section-link:hover {
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.stp-section-link:focus-visible,
+.stp-control:focus-visible,
+.stp-quarter-tab:focus-visible,
+.stp-page-btn:focus-visible {
+  outline: 2px solid var(--stp-blue);
+  outline-offset: 2px;
+}
+
+/* ---------- dashboard ---------- */
+.st-streak-banner {
+  min-height: 46px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  gap: 10px;
+  border-radius: 12px;
+  border-color: rgba(74, 222, 128, 0.28);
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.11), rgba(34, 197, 94, 0.035));
+  box-shadow: none;
+}
+
+.st-streak-banner-fire {
+  font-size: 22px;
+}
+
+.st-streak-banner-title {
+  display: inline;
+  font-size: 14px;
+  color: #86efac;
+  margin-right: 8px;
+}
+
+.st-streak-banner-sub {
+  display: inline;
+  font-size: 12px;
+}
+
+.st-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 26px;
+  overflow: hidden;
+  border: 1px solid var(--stp-line-strong);
+  border-radius: 15px;
+  background: var(--stp-surface);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.st-summary-card,
+.st-summary-card.overdue {
+  min-width: 0;
+  padding: 18px 20px;
+  border: 0;
+  border-right: 1px solid var(--stp-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+  transform: none;
+}
+
+.st-summary-card:last-child {
+  border-right: 0;
+}
+
+.st-summary-card:hover,
+.st-summary-card.overdue:hover {
+  transform: none;
+  background: var(--stp-surface-hover);
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  box-shadow: none;
+}
+
+.st-summary-card.overdue {
+  background: transparent;
+}
+
+.st-summary-icon {
+  margin: 0 0 8px;
+  font-size: 0;
+  opacity: 0.78;
+}
+
+.st-summary-card.overdue .st-summary-icon {
+  color: #f87171;
+}
+
+.st-summary-value {
+  margin: 0 0 2px;
+  font-size: 29px;
+  line-height: 1.05;
+}
+
+.st-summary-label {
+  font-size: 13px;
+  opacity: 0.68;
+}
+
+/* Dashboard assignments become one quiet list rather than a grid of cards. */
+#dashRecentAssignments {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--stp-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+#dashRecentAssignments .st-assignment-card,
+#dashRecentAssignments .assignment-card {
+  margin: 0;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--stp-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+#dashRecentAssignments .st-assignment-card:last-of-type,
+#dashRecentAssignments .assignment-card:last-of-type {
+  border-bottom: 0;
+}
+
+#dashRecentAssignments .st-assignment-card:hover,
+#dashRecentAssignments .assignment-card:hover {
+  transform: none;
+  background: var(--stp-surface-hover);
+  box-shadow: none;
+}
+
+#dashRecentAssignments [data-stp-dashboard-overflow="true"] {
+  display: none !important;
+}
+
+/* ---------- grades ---------- */
+.stp-grade-snapshot {
+  padding: 18px 20px 6px;
+  margin-bottom: 14px;
+  border: 1px solid var(--stp-line-strong);
+  border-radius: 15px;
+  background: var(--stp-surface);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+}
+
+.stp-grade-snapshot-head {
+  margin-bottom: 12px;
+}
+
+.stp-grade-snapshot-head h2 {
+  margin: 0 0 3px;
+  font-size: 17px;
+}
+
+.stp-grade-snapshot-head p {
+  margin: 0;
+  color: var(--stp-muted);
+  font-size: 12px;
+}
+
+.stp-grade-snapshot .st-average-display {
+  margin: 0;
+  padding: 14px 0 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.stp-grade-snapshot .st-average-display h3 {
+  margin-bottom: 4px;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.stp-grade-snapshot .st-average-value {
+  font-size: 42px;
+  line-height: 1;
+}
+
+.stp-grade-snapshot .st-quarter-section {
+  margin: 0;
+  padding: 0 0 10px;
+  border-top: 1px solid var(--stp-line);
+}
+
+.stp-grade-snapshot .st-quarter-section-title {
+  margin: 12px 0 8px;
+  font-size: 12px;
+  opacity: 0.58;
+}
+
+.stp-grade-snapshot .st-quarter-grid {
+  gap: 0;
+}
+
+.stp-grade-snapshot .st-quarter-pill {
+  min-width: 0;
+  padding: 10px 14px;
+  border: 0;
+  border-right: 1px solid var(--stp-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.stp-grade-snapshot .st-quarter-pill:last-child {
+  border-right: 0;
+}
+
+.stp-grade-snapshot .st-quarter-green,
+.stp-grade-snapshot .st-quarter-yellow,
+.stp-grade-snapshot .st-quarter-red,
+.stp-grade-snapshot .st-quarter-muted {
+  background: transparent;
+}
+
+.stp-grade-snapshot .st-quarter-muted {
+  opacity: 0.48;
+}
+
+.st-trend-section,
+.grade-trend-insights {
+  padding: 10px 14px;
+  margin: 0 0 18px;
+  border: 1px solid var(--stp-line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.018);
+  box-shadow: none;
+}
+
+.st-trend-section-title,
+.grade-trend-insights .grade-stat-label {
+  margin: 0 12px 0 0;
+  display: inline-block;
+  font-size: 12px;
+  opacity: 0.58;
+}
+
+.st-trend-items,
+.grade-trend-insights {
+  gap: 6px;
+}
+
+.st-trend-item,
+.grade-trend-row {
+  display: inline-flex;
+  margin-right: 18px;
+  font-size: 12px;
+}
+
+.stp-history-shell {
+  margin-top: 16px;
+  border: 1px solid var(--stp-line-strong);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.018);
+  overflow: hidden;
+}
+
+.stp-history-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--stp-line);
+}
+
+.stp-history-head h2 {
+  margin: 0 0 2px;
+  font-size: 17px;
+}
+
+.stp-history-head p {
+  margin: 0;
+  color: var(--stp-muted);
+  font-size: 12px;
+}
+
+.stp-history-toolbar {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--stp-line);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.stp-quarter-tabs {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.stp-quarter-tab,
+.stp-page-btn {
+  appearance: none;
+  min-height: 34px;
+  border: 1px solid var(--stp-line-strong);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.stp-quarter-tab {
+  padding: 6px 12px;
+}
+
+.stp-quarter-tab[aria-pressed="true"] {
+  border-color: rgba(74, 222, 128, 0.38);
+  background: rgba(34, 197, 94, 0.11);
+  color: #86efac;
+}
+
+.stp-history-controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) minmax(140px, 0.8fr) minmax(145px, 0.8fr);
+  gap: 8px;
+}
+
+.stp-control {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid var(--stp-line-strong);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.18);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+
+.stp-history-count {
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--stp-line);
+  color: var(--stp-muted);
+  font-size: 11px;
+}
+
+.stp-history-rows {
+  display: block;
+}
+
+.stp-history-rows .st-grade-row {
+  margin: 0;
+  padding: 14px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--stp-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.stp-history-rows .st-grade-row:hover {
+  transform: none;
+  background: var(--stp-surface-hover);
+  box-shadow: none;
+}
+
+.stp-history-rows .st-grade-row:last-child {
+  border-bottom: 0;
+}
+
+.stp-history-rows .st-grade-score {
+  font-size: 20px;
+}
+
+.stp-history-empty {
+  padding: 34px 18px;
+  text-align: center;
+  color: var(--stp-muted);
+  font-size: 13px;
+}
+
+.stp-history-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-top: 1px solid var(--stp-line);
+}
+
+.stp-page-btn {
+  padding: 6px 11px;
+}
+
+.stp-page-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.stp-page-status {
+  min-width: 76px;
+  text-align: center;
+  color: var(--stp-muted);
+  font-size: 11px;
+}
+
+/* Fallback cleanup for legacy/table-based grade renderers. */
+#gradedAssignmentsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#gradedAssignmentsTable th,
+#gradedAssignmentsTable td {
+  border-color: var(--stp-line);
+}
+
+/* ---------- goals ---------- */
+#goalsContent .sgp-card,
+#dashGoalsSnapshot .sgp-card {
+  padding: 20px 22px;
+  border-color: var(--stp-line-strong);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+}
+
+#goalsContent .sgp-card:hover,
+#dashGoalsSnapshot .sgp-card:hover {
+  transform: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+}
+
+.sgp-stats {
+  margin-top: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--stp-line);
+  border-bottom: 1px solid var(--stp-line);
+  gap: 0;
+}
+
+.sgp-stat {
+  min-width: 0;
+  padding: 0 20px;
+  border-right: 1px solid var(--stp-line);
+}
+
+.sgp-stat:first-child {
+  padding-left: 0;
+}
+
+.sgp-stat:last-child {
+  border-right: 0;
+}
+
+.sgp-progress {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.sgp-progress > summary,
+.sgp-full-goal > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.sgp-trend {
+  margin-top: 10px;
+}
+
+.sgp-trend.sgp-trend--sparse .sgp-plot {
+  height: 104px;
+  min-height: 104px;
+}
+
+.sgp-trend.sgp-trend--sparse .sgp-plot-inner {
+  min-height: 84px;
+}
+
+.sgp-point[aria-pressed="true"]::before {
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18), 0 0 18px rgba(96, 165, 250, 0.22);
+}
+
+.sgp-work {
+  margin-top: 12px;
+  padding: 15px 16px;
+  border-color: var(--stp-line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.018);
+  box-shadow: none;
+}
+
+.sgp-work .sgp-eyebrow {
+  color: var(--stp-muted);
+}
+
+.sgp-question {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--stp-line);
+}
+
+.sgp-question-card,
+.sgp-feedback {
+  border-color: var(--stp-line);
+  box-shadow: none;
+}
+
+.sgp-pager {
+  border-top-color: var(--stp-line);
+}
+
+.sgp-point:focus-visible {
+  outline: 2px solid var(--stp-blue);
+  outline-offset: 2px;
+}
+
+/* Existing non-review goal cards stay quieter too. */
+#goalsContent > .st-goal-card,
+#dashGoalsSnapshot > .st-goal-card {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+}
+
+#goalsContent > .st-goal-card:hover,
+#dashGoalsSnapshot > .st-goal-card:hover {
+  transform: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+}
+
+/* ---------- light theme ---------- */
+[data-theme="light"] {
+  --stp-line: rgba(15, 23, 42, 0.10);
+  --stp-line-strong: rgba(15, 23, 42, 0.16);
+  --stp-surface: rgba(255, 255, 255, 0.82);
+  --stp-surface-soft: rgba(15, 23, 42, 0.018);
+  --stp-surface-hover: rgba(15, 23, 42, 0.035);
+  --stp-muted: rgba(51, 65, 85, 0.68);
+}
+
+[data-theme="light"] .stp-control {
+  background: #fff;
+  color: #1e293b;
+}
+
+[data-theme="light"] #dashRecentAssignments,
+[data-theme="light"] .stp-history-shell,
+[data-theme="light"] .sgp-work {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .st-summary-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .st-summary-card:nth-child(2) {
+    border-right: 0;
+  }
+
+  .st-summary-card:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--stp-line);
+  }
+
+  .stp-history-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stp-history-controls .stp-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .st-summary-card,
+  .st-summary-card.overdue {
+    padding: 14px 15px;
+  }
+
+  .st-summary-value {
+    font-size: 25px;
+  }
+
+  .stp-grade-snapshot {
+    padding: 15px 14px 5px;
+  }
+
+  .stp-grade-snapshot .st-quarter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stp-grade-snapshot .st-quarter-pill:nth-child(2) {
+    border-right: 0;
+  }
+
+  .stp-grade-snapshot .st-quarter-pill:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--stp-line);
+  }
+
+  .stp-history-head {
+    padding: 14px;
+  }
+
+  .stp-history-toolbar {
+    padding: 10px 14px;
+  }
+
+  .stp-history-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .stp-history-controls .stp-search {
+    grid-column: auto;
+  }
+
+  .stp-history-rows .st-grade-row {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 13px 14px;
+  }
+
+  .sgp-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sgp-stat {
+    padding: 8px 12px;
+    border-right: 0;
+  }
+
+  .sgp-stat:first-child {
+    padding-left: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-summary-card,
+  .st-assignment-card,
+  .st-grade-row,
+  .stp-section-link {
+    transition: none !important;
+  }
+}
