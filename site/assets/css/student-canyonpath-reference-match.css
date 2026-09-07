@@ -202,3 +202,116 @@ html[data-theme='light'] body.rc-student-canyonpath #tabGoals .sgp-official {
   background: rgba(246, 250, 248, 0.94);
   box-shadow: none;
 }
+
+/* ========================================================================== 
+   FINAL VISUAL-GATE CORRECTION — alignment + persistent scene
+   ========================================================================== */
+
+body.rc-student-canyonpath {
+  --stcpl-main-left: var(--tc-side-w, 260px);
+}
+
+html.tc-collapsed body.rc-student-canyonpath {
+  --stcpl-main-left: var(--tc-rail-w, 64px);
+}
+
+/* The prior viewport-based width ignored the expanded sidebar. Center the
+   portal inside the actual remaining main canvas instead. */
+body.rc-student-canyonpath .st-dashboard-content {
+  width: min(100%, 1380px);
+  max-width: 1380px;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+/* Keep one CanyonPath environment registered to the main-content edge. The
+   visually dead first quarter is omitted and the useful valley slices fill the
+   canvas. Because the layer is fixed, students keep environmental context on
+   long Goals / Grades / history pages without the old wet-glass blur. */
+body.rc-student-canyonpath .tc-main {
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+  min-width: 0;
+  background: var(--stcpf-bg, #031714);
+}
+
+body.rc-student-canyonpath .tc-main::before {
+  content: '';
+  display: block;
+  position: fixed;
+  inset: var(--tc-topbar-h, 56px) 0 0 var(--stcpl-main-left);
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg,
+      rgba(3, 23, 20, 0.06) 0%,
+      rgba(3, 23, 20, 0.13) 25%,
+      rgba(3, 23, 20, 0.34) 53%,
+      rgba(3, 23, 20, 0.58) 77%,
+      rgba(3, 23, 20, 0.70) 100%),
+    var(--stcp-premium-2) 0% 0 / 33.334% auto no-repeat,
+    var(--stcp-premium-3) 50% 0 / 33.334% auto no-repeat,
+    var(--stcp-premium-4) 100% 0 / 33.334% auto no-repeat,
+    var(--stcpf-bg, #031714);
+  transition: left 180ms ease;
+}
+
+body.rc-student-canyonpath .tc-main > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Pull the dashboard composition upward one visual beat to match the approved
+   reference instead of centering it too low in the panorama. */
+body.rc-student-canyonpath .stcp-hero {
+  min-height: 278px;
+  padding-top: clamp(28px, 3.2vw, 46px);
+  padding-bottom: clamp(22px, 2.5vw, 34px);
+}
+
+body.rc-student-canyonpath .stcp-hero__aside {
+  align-self: start;
+  padding-top: 4px;
+}
+
+body.rc-student-canyonpath .stcp-quick {
+  margin-top: 0;
+}
+
+/* Match the footer to the same useful scenic slices. */
+body.rc-student-canyonpath .stcp-footer {
+  background:
+    linear-gradient(90deg, rgba(3, 31, 27, 0.88), rgba(3, 31, 27, 0.48)),
+    var(--stcp-premium-2) 0% 54% / 33.334% auto no-repeat,
+    var(--stcp-premium-3) 50% 54% / 33.334% auto no-repeat,
+    var(--stcp-premium-4) 100% 54% / 33.334% auto no-repeat,
+    rgba(4, 35, 30, 0.94);
+}
+
+@media (max-width: 700px) {
+  body.rc-student-canyonpath .tc-main::before {
+    background:
+      linear-gradient(180deg,
+        rgba(3, 23, 20, 0.12),
+        rgba(3, 23, 20, 0.48) 58%,
+        rgba(3, 23, 20, 0.72)),
+      var(--stcp-premium-3) center top / cover no-repeat,
+      var(--stcpf-bg, #031714);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.rc-student-canyonpath .tc-main::before {
+    transition: none;
+  }
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .tc-main::before {
+  content: none;
+  display: none;
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .tc-main {
+  background: var(--bg, #f8f9fa);
+}
