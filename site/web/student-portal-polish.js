@@ -94,9 +94,16 @@
 
   function parseDateFromText(text) {
     const safe = String(text || '');
-    const match = safe.match(MONTH_DATE_RE) || safe.match(ISO_DATE_RE);
-    if (!match) return null;
-    const date = new Date(match[0]);
+    const isoMatch = safe.match(ISO_DATE_RE);
+    if (isoMatch) {
+      const [year, month, day] = isoMatch[0].split('-').map(Number);
+      const localDate = new Date(year, month - 1, day);
+      return Number.isNaN(localDate.getTime()) ? null : localDate;
+    }
+
+    const monthMatch = safe.match(MONTH_DATE_RE);
+    if (!monthMatch) return null;
+    const date = new Date(monthMatch[0]);
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
@@ -143,12 +150,13 @@
       if (!sourceRows.every((row) => root.contains(row))) return;
       if (root.dataset.stpHistoryReady === 'true') return;
 
-      const currentQuarter = qApi?.getCurrentQuarter?.() || 'Q1';
+      const canFilterByQuarter = typeof qApi?.getQuarterForDate === 'function';
+      const currentQuarter = canFilterByQuarter ? (qApi?.getCurrentQuarter?.() || 'Q1') : 'ALL';
       const models = sourceRows.map(gradeRowModel);
       const classes = [...new Set(models.map((item) => item.className).filter(Boolean))].sort();
 
       for (const model of models) {
-        model.quarter = model.date && qApi?.getQuarterForDate
+        model.quarter = model.date && canFilterByQuarter
           ? qApi.getQuarterForDate(model.date)
           : null;
       }
@@ -168,7 +176,9 @@
       const heading = document.createElement('h2');
       heading.textContent = 'Assignment History';
       const sub = document.createElement('p');
-      sub.textContent = `${currentSchoolYearText()} school year · current quarter shown first`;
+      sub.textContent = canFilterByQuarter
+        ? `${currentSchoolYearText()} school year · current quarter shown first`
+        : `${currentSchoolYearText()} school year · all assignments shown`;
       headCopy.append(heading, sub);
       head.appendChild(headCopy);
 
