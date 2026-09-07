@@ -2,11 +2,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const content = import("../site/assets/js/sentence-workshop-content.js?v=20260906-sw8");
-const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260906-sw8");
-const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260906-sw8");
-const openings = import("../site/assets/js/sentence-workshop-openings.js?v=20260906-sw8");
-const commas = import("../site/assets/js/sentence-workshop-commas.js?v=20260906-sw8");
+const content = import("../site/assets/js/sentence-workshop-content.js?v=20260907-sw9");
+const engine = import("../site/assets/js/sentence-workshop-engine.js?v=20260907-sw9");
+const repairs = import("../site/assets/js/sentence-workshop-repairs.js?v=20260907-sw9");
+const joining = import("../site/assets/js/sentence-workshop-joining.js?v=20260907-sw9");
+const openings = import("../site/assets/js/sentence-workshop-openings.js?v=20260907-sw9");
+const commas = import("../site/assets/js/sentence-workshop-commas.js?v=20260907-sw9");
 
 test("opening commas match an independent editorial key for every selectable combination", async () => {
   const c = await openings;
@@ -853,8 +854,8 @@ test("both launch copies match and lesson assets use one version", () => {
     "utf8"
   );
   assert.equal(donor, mirror);
-  assert.match(donor, /sentence-workshop\.js\?v=20260906-sw8/);
-  assert.match(donor, /sentence-workshop\.css\?v=20260906-sw8/);
+  assert.match(donor, /sentence-workshop\.js\?v=20260907-sw9/);
+  assert.match(donor, /sentence-workshop\.css\?v=20260907-sw9/);
   for (const filename of [
     "sentence-workshop.js",
     "sentence-workshop-engine.js",
@@ -863,16 +864,17 @@ test("both launch copies match and lesson assets use one version", () => {
     "sentence-workshop-repairs.js",
     "sentence-workshop-commas.js",
     "sentence-workshop-openings.js",
+    "sentence-workshop-joining.js",
   ]) {
     const js = fs.readFileSync(path.join(root, "site/assets/js", filename), "utf8");
     assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(|XMLHttpRequest|sendBeacon/);
     for (const imported of js.matchAll(/from "\.\/sentence-workshop[^"?]*\.js\?v=([^"\s]+)"/g)) {
-      assert.equal(imported[1], "20260906-sw8");
+      assert.equal(imported[1], "20260907-sw9");
     }
   }
 });
 
-const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260906-sw8");
+const endings = import("../site/assets/js/sentence-workshop-endings.js?v=20260907-sw9");
 
 test("sentence endings follow the reviewed purpose key and accept both allowed tones", async () => {
   const c = await endings;
@@ -1046,21 +1048,27 @@ async function navigationCases() {
     repairs: await repairs,
     commas: await commas,
     openings: await openings,
+    joining: await joining,
   };
   return Object.entries(modules).map(([id, c]) => ({
     id,
     c,
     wrong:
-      id === "boundaries"
+      id === "joining"
         ? [
-            { period: null, capitals: [0] },
-            { period: 1, capitals: [0] },
+            { link: "so", comma: false },
+            { link: "but", comma: true },
           ]
-        : id === "endings"
-          ? [{ ending: "." }, { ending: "!" }]
-          : id === "repairs"
-            ? [c.initialEdit(c.bank.practice[0]), { choice: "when", gap: null, join: null }]
-            : [{ commas: [] }, { commas: [id === "openings" ? 2 : 1] }],
+        : id === "boundaries"
+          ? [
+              { period: null, capitals: [0] },
+              { period: 1, capitals: [0] },
+            ]
+          : id === "endings"
+            ? [{ ending: "." }, { ending: "!" }]
+            : id === "repairs"
+              ? [c.initialEdit(c.bank.practice[0]), { choice: "when", gap: null, join: null }]
+              : [{ commas: [] }, { commas: [id === "openings" ? 2 : 1] }],
   }));
 }
 
@@ -1187,4 +1195,184 @@ test("revisiting a corrected fresh check cannot overwrite its first-try evidence
   assert.equal(e.summary(s).supported, 1);
   e.forward(s);
   assert.equal(s.item, shorter);
+});
+
+test("joining choices match an independent meaning and structure key for every task", async () => {
+  const c = await joining;
+  const key = [
+    ["and", true, "The art room has new brushes, and the music room has new drums."],
+    ["but", true, "We wanted to use the gym, but another class was already inside."],
+    ["so", true, "The bus broke down this morning, so we arrived at school late."],
+    ["and", false, "We packed our lunches and waited by the door."],
+    ["and", true, "The cafeteria serves hot meals, and the library lends board games."],
+    ["but", true, "I checked the office twice, but the missing folder was still gone."],
+    ["so", true, "Our table needed more chairs, so we brought some from the hallway."],
+    ["but", false, "The helper looked for the key but could not find it."],
+    ["and", true, "The workshop offers bike repairs, and the store sells used helmets."],
+    ["but", true, "The team practiced every afternoon, but the final game was still difficult."],
+    ["so", true, "The class ran out of paper, so the teacher ordered another box."],
+    ["and", false, "The volunteers sorted the books and placed them on the shelves."],
+    ["and", true, "The park has a walking trail, and the pool offers swimming lessons."],
+    ["but", true, "We reached the shop before noon, but it had already closed for the day."],
+    ["so", true, "The printer ran out of ink, so we sent the report by email."],
+    ["but", false, "I followed the directions but still needed help."],
+    ["and", true, "My brother likes cooking shows, and my sister likes nature programs."],
+    ["but", true, "The box looked small and light, but it was too heavy for one person."],
+    ["so", true, "The hallway lights stopped working, so the custodian brought a flashlight."],
+    ["and", false, "The worker cleaned the counter and put away the supplies."],
+    ["and", true, "The room has a sink, and the hall has a fountain."],
+    ["but", true, "I brought my library card, but the library was closed."],
+    ["so", true, "My shoes were wet, so I changed into dry ones."],
+    ["and", false, "We washed the cups and dried them."],
+    ["and", true, "The store sells bread, and the market sells fruit."],
+    ["but", true, "We had tickets to the show, but the show was canceled."],
+    ["so", true, "My pencil point broke, so I sharpened the pencil."],
+    ["but", false, "The child searched the bag but found no snack."],
+    ["and", true, "The clinic opens at eight, and the pharmacy delivers prescriptions."],
+    ["but", true, "I can work on Saturday morning, but I have class in the afternoon."],
+    ["so", true, "The meeting time changed to noon, so we updated the reminder on the board."],
+    ["and", false, "Our group checked the schedule and set up the room."],
+  ];
+  assert.equal(c.models.length, 4);
+  assert.equal(c.allItems.length, key.length);
+  assert.equal(new Set(c.allItems.map((i) => i.id)).size, key.length);
+  assert.equal(new Set(c.allItems.map((i) => i.first + i.second)).size, key.length);
+  assert.deepEqual(
+    Object.values(c.bank).map((a) => a.length),
+    [8, 12, 8, 4]
+  );
+  for (const [i, item] of c.allItems.entries()) {
+    const [word, mark, text] = key[i];
+    assert.equal(c.editedText(item, { link: word, comma: mark }), text);
+    assert.deepEqual(c.solution(item), { link: word, comma: mark });
+    assert.deepEqual(c.initialEdit(item), { link: null, comma: null });
+    for (const link of ["and", "but", "so", null, "", "because", "constructor"])
+      for (const comma of [true, false, null, undefined, "false", 1]) {
+        const actual = c.checkEdit(item, { link, comma });
+        assert.equal(actual.correct, link === word && comma === mark, item.id);
+        assert.equal(actual.connection, link === word, item.id);
+        assert.equal(actual.punctuation, comma === mark, item.id);
+        assert.equal(actual.kind, item.kind);
+        assert.ok(actual.message);
+      }
+    for (const invalid of [null, undefined, {}, [], "and"])
+      assert.equal(c.checkEdit(item, invalid).correct, false);
+    const draft = c.initialEdit(item);
+    draft.link = "so";
+    draft.comma = true;
+    assert.deepEqual(c.initialEdit(item), { link: null, comma: null });
+    assert.ok(item.context && item.purpose && item.meaning && c.hint(item) && c.clue(item));
+    if (!mark) assert.ok(item.subject);
+  }
+  const first = c.bank.practice[0];
+  assert.match(
+    c.checkEdit(first, { link: "and", comma: false }).message,
+    /linking word expresses the requested meaning/
+  );
+  assert.match(
+    c.checkEdit(first, { link: "but", comma: true }).message,
+    /comma choice fits the sentence structure/
+  );
+  assert.match(c.checkEdit(first, { link: "but", comma: true }).message, /requested connection/);
+  assert.match(
+    c.checkEdit(c.bank.practice[3], { link: "and", comma: true }).message,
+    /subject “We” belongs to both actions/
+  );
+  assert.match(c.editedText(first, c.initialEdit(first), true), /comma choice not selected/);
+});
+
+test("joining route requires four kinds and reports meaning and punctuation separately", async () => {
+  const c = await joining,
+    e = await engine,
+    s = e.createSession("joining"),
+    ids = [],
+    phases = [];
+  e.start(s);
+  while (s.phase !== "summary") {
+    assert.ok(ids.length < 13);
+    ids.push(s.item.id);
+    phases.push(s.phase);
+    assert.equal(e.submit(s, c.solution(s.item)).correct, true);
+    e.next(s);
+  }
+  assert.equal(new Set(ids).size, 12);
+  assert.deepEqual(phases, [
+    ...Array(4).fill("practice"),
+    ...Array(4).fill("check"),
+    ...Array(4).fill("apply"),
+  ]);
+  const r = e.summary(s);
+  assert.deepEqual(r.freshKinds, ["addition", "contrast", "result", "shared"]);
+  assert.equal(r.freshConnections, 4);
+  assert.equal(r.freshPunctuation, 4);
+  assert.equal(r.freshIndependent, 4);
+  assert.equal(r.appliedIndependent, 4);
+  assert.equal(r.supported, 0);
+});
+
+test("joining partial first tries stay partial after correction and all kinds need fresh success", async () => {
+  const c = await joining,
+    e = await engine;
+  for (const missing of Object.keys(c.kindNames)) {
+    const s = e.createSession("joining");
+    e.start(s);
+    for (let count = 0; s.phase !== "summary"; count++) {
+      assert.ok(count < 21);
+      assert.notEqual(s.phase, "apply");
+      if (s.phase === "check" && s.item.kind === missing) e.hint(s);
+      e.submit(s, c.solution(s.item));
+      e.next(s);
+    }
+    assert.equal(e.summary(s).freshIndependent, 9);
+    assert.equal(e.summary(s).freshKinds.includes(missing), false);
+    assert.equal(e.summary(s).supported, 3);
+  }
+  const s = e.createSession("joining");
+  e.start(s);
+  for (let i = 0; i < 4; i++) {
+    e.submit(s, c.solution(s.item));
+    e.next(s);
+  }
+  e.submit(s, { link: "and", comma: false });
+  e.submit(s, { link: "and", comma: false });
+  assert.equal(e.recordFor(s).attempts.length, 1);
+  e.submit(s, { link: "but", comma: true });
+  assert.equal(e.canEdit(s), false);
+  const first = structuredClone(e.recordFor(s).attempts);
+  e.retry(s);
+  e.submit(s, c.solution(s.item));
+  assert.deepEqual(e.recordFor(s).attempts.slice(0, 2), first);
+  assert.equal(e.summary(s).freshConnections, 1);
+  assert.equal(e.summary(s).freshPunctuation, 0);
+  assert.equal(e.summary(s).freshIndependent, 0);
+  assert.equal(e.summary(s).supported, 1);
+});
+
+test("joining models route to an unseen matching shorter task and stop finitely", async () => {
+  const c = await joining,
+    e = await engine;
+  for (const kind of Object.keys(c.kindNames)) {
+    const s = e.createSession("joining");
+    e.start(s);
+    while (s.item.kind !== kind) {
+      e.submit(s, c.solution(s.item));
+      e.next(s);
+    }
+    const id = s.item.id;
+    e.demonstrate(s);
+    e.next(s);
+    assert.equal(s.phase, "simpler");
+    assert.equal(s.item.kind, kind);
+    assert.notEqual(s.item.id, id);
+  }
+  const s = e.createSession("joining");
+  e.start(s);
+  for (let i = 0; s.phase !== "summary"; i++) {
+    assert.ok(i < 8);
+    e.demonstrate(s);
+    e.next(s);
+  }
+  assert.equal(s.cursors.simpler, 2);
+  assert.equal(e.summary(s).attempted, 0);
+  assert.match(s.reason, /choosing a connection/);
 });

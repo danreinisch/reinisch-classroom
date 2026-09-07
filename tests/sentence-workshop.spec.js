@@ -634,6 +634,10 @@ test("Viewer sandbox supports workshop, clear confirmation, and return to Activi
   await builder.locator('[data-sw-action="start"]').click();
   await checkCommas(builder, [1]);
   await builder.locator('[data-sw-action="read-marks"]').click();
+  await builder.locator('[data-sw-action="lesson-joining"]').click();
+  await builder.locator('[data-sw-action="start"]').click();
+  await checkJoin(builder, "and", true);
+  await builder.locator('[data-sw-action="read-marks"]').click();
   await page.screenshot({ path: testInfo.outputPath("sentence-workshop-viewer.png") });
   await builder.locator('[data-sw-action="clear"]').click();
   await expect(builder.locator("#clearPracticeDialog")).toBeVisible();
@@ -1311,5 +1315,250 @@ for (const route of [donor, mirror]) {
       await page.locator('[data-sw-action="finish"]').click();
       await expect(page.locator(".sw-card")).toContainText("You attempted 0 tasks");
     }
+  });
+}
+
+async function openJoining(page, route = donor) {
+  await page.goto(route);
+  await page.locator("#openSentenceWorkshopBtn").click();
+  await page.locator('[data-sw-action="lesson-joining"]').click();
+  await page.locator('[data-sw-action="start"]').click();
+}
+async function setJoin(scope, link, comma) {
+  for (const selector of [`[data-sw-link="${link}"]`, `[data-sw-link-comma="${comma}"]`]) {
+    const control = scope.locator(selector);
+    if ((await control.getAttribute("aria-pressed")) !== "true") await control.click();
+  }
+}
+async function checkJoin(scope, link, comma) {
+  await setJoin(scope, link, comma);
+  await scope.locator('[data-sw-action="check"]').click();
+  await expect(scope.locator("#sw-feedback")).toContainText("Edit complete.");
+}
+
+test("joining route connects meaning and structure with accurate fresh and applied results", async ({
+  page,
+}, testInfo) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto(donor);
+  await page.locator("#openSentenceWorkshopBtn").click();
+  await page.locator('[data-sw-action="lesson-joining"]').click();
+  await expect(page.locator(".sw-model-grid > div")).toHaveCount(4);
+  await page.locator('[data-sw-action="read-models"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("Repeating we");
+  await page.locator('[data-sw-action="start"]').click();
+  const route = [
+    ["practice-1", "and", true],
+    ["practice-2", "but", true],
+    ["practice-3", "so", true],
+    ["practice-4", "and", false],
+    ["check-1", "and", true],
+    ["check-2", "but", true],
+    ["check-3", "so", true],
+    ["check-4", "and", false],
+    ["apply-1", "and", true],
+    ["apply-2", "but", true],
+    ["apply-3", "so", true],
+    ["apply-4", "and", false],
+  ];
+  for (const [id, link, comma] of route) {
+    await expect(page.locator("[data-sw-item]")).toHaveAttribute("data-sw-item", `joining-${id}`);
+    await expect(
+      page.locator('[data-sw-link][aria-pressed="true"], [data-sw-link-comma][aria-pressed="true"]')
+    ).toHaveCount(0);
+    await page.locator('[data-sw-action="read-task"]').click();
+    expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("Writer's purpose:");
+    await page.locator('[data-sw-action="read-choices"]').click();
+    expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("and, but, so");
+    await expect(page.locator("#sw-feedback")).toBeEmpty();
+    await checkJoin(page, link, comma);
+    await page.locator('[data-sw-action="read-edit"]').click();
+    expect((await page.evaluate(() => window.swSpoken)).at(-1)).toBe(
+      await page.locator(".sw-preview p").textContent()
+    );
+    await page.locator('[data-sw-action="read-marks"]').click();
+    expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain(
+      `${comma ? "comma" : "no comma"} before ${link}`
+    );
+    await page.locator('[data-sw-action="read-feedback"]').click();
+    expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("fits the purpose");
+    if (id === "practice-4") {
+      await expect(page.locator(".sw-preview p")).toHaveText(
+        "We packed our lunches and waited by the door."
+      );
+      await page
+        .locator("#sentenceWorkshop")
+        .screenshot({ path: testInfo.outputPath("joining-shared-desktop.png") });
+    }
+    await page.locator('[data-sw-action="next"]').click();
+  }
+  await expect(page.locator(".sw-stats strong").first()).toHaveText("4 / 4");
+  await expect(page.locator(".sw-card")).toContainText("covered 4 of 4 connection checks");
+  await expect(page.locator(".sw-card")).toContainText("You attempted 12 tasks");
+  await expect(page.locator(".sw-card")).toContainText(
+    "Comma choices matched the structure: 4 / 4"
+  );
+  await expect(page.locator(".sw-card")).toContainText(
+    "Message edits correct on the first try without hints: 4 / 4"
+  );
+  await page.locator('[data-sw-action="read-report"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("4 of 4 connection checks");
+  await page.locator('.sw-card [data-sw-action="menu"]').click();
+  await expect(page.locator("#scoreNumMenu")).toHaveText("0");
+  await expect(page.locator("#scoreTotalMenu")).toHaveText("140");
+  await expect(page.locator("#skillMenuGrid > .skill-card")).toHaveCount(9);
+  expect(errors).toEqual([]);
+});
+
+test("joining partial feedback, worked examples, retries and shorter tasks preserve original evidence", async ({
+  page,
+}, testInfo) => {
+  await openJoining(page);
+  await setJoin(page, "and", false);
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText(
+    "linking word expresses the requested meaning"
+  );
+  await setJoin(page, "but", true);
+  await page.locator('[data-sw-action="check"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText(
+    "comma choice fits the sentence structure"
+  );
+  await expect(page.locator('[data-sw-action="check"]')).toBeDisabled();
+  await expect(page.locator('[data-sw-action="next"]')).toBeEnabled();
+  await page.locator('[data-sw-action="hint"]').click();
+  await page.locator('[data-sw-action="hint"]').click();
+  await expect(page.locator('[data-sw-link="and"]')).toHaveClass(/sw-cue/);
+  await page.locator('[data-sw-action="read-hint"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("Choose and");
+  await page.locator('[data-sw-action="demonstrate"]').click();
+  await page.locator('[data-sw-action="read-solution"]').click();
+  expect((await page.evaluate(() => window.swSpoken)).at(-1)).toContain("comma before and");
+  await page
+    .locator("#sentenceWorkshop")
+    .screenshot({ path: testInfo.outputPath("joining-support.png") });
+  await page.locator('[data-sw-action="retry"]').click();
+  await expect(page.locator('[data-sw-link="and"]')).toBeFocused();
+  await checkJoin(page, "and", true);
+  await page.locator('[data-sw-action="next"]').click();
+  await expect(page.locator("[data-sw-item]")).toHaveAttribute("data-sw-item", "joining-simpler-1");
+  await setJoin(page, "so", false);
+  await page.locator('[data-sw-action="previous"]').click();
+  await expect(page.locator("#sw-feedback")).toContainText("Edit complete");
+  await page.locator('[data-sw-action="next"]').click();
+  await expect(page.locator('[data-sw-link="so"]')).toHaveAttribute("aria-pressed", "true");
+  await page.locator('[data-sw-action="next"]').click();
+  await expect(page.locator("[data-sw-item]")).toHaveAttribute(
+    "data-sw-item",
+    "joining-practice-2"
+  );
+  await expect(page.locator('[data-sw-link][aria-pressed="true"]')).toHaveCount(0);
+  await page.locator('[data-sw-action="finish"]').click();
+  await expect(page.locator(".sw-stats strong").nth(1)).toHaveText("1");
+  await expect(page.locator(".sw-stats strong").nth(2)).toHaveText("1");
+  await expect(page.locator(".sw-card")).toContainText("You attempted 1 tasks");
+});
+
+test("joining keyboard controls and missing voice remain usable on a narrow screen", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openJoining(page);
+  const link = page.locator('[data-sw-link="and"]');
+  await link.focus();
+  await link.press("Enter");
+  await expect(link).toBeFocused();
+  await expect(link).toHaveAttribute("aria-pressed", "true");
+  await link.press("Space");
+  await expect(link).toHaveAttribute("aria-pressed", "false");
+  const comma = page.locator('[data-sw-link-comma="true"]');
+  await comma.focus();
+  await comma.press("Enter");
+  await expect(comma).toBeFocused();
+  for (const selector of [
+    '[data-sw-link="and"]',
+    '[data-sw-link-comma="false"]',
+    '[data-sw-action="next"]',
+  ]) {
+    const size = await page.locator(selector).boundingBox();
+    expect(size.width).toBeGreaterThanOrEqual(44);
+    expect(size.height).toBeGreaterThanOrEqual(44);
+  }
+  await page.evaluate(() => {
+    window.speechSynthesis = undefined;
+  });
+  await page.locator('[data-sw-action="read-choices"]').click();
+  await expect(page.locator("#sw-voice-note")).toContainText("Voice is unavailable");
+  await checkJoin(page, "and", true);
+  await page.locator('[data-sw-action="next"]').click();
+  await setJoin(page, "so", false);
+  await page.locator('[data-sw-action="check"]').click();
+  await page.locator('[data-sw-action="retry"]').press("Enter");
+  await checkJoin(page, "but", true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page
+    .locator("#sentenceWorkshop")
+    .screenshot({ path: testInfo.outputPath("joining-mobile.png") });
+});
+
+for (const route of [donor, mirror]) {
+  test(`joining fresh defaults and task history stay separate across lessons and clear: ${route}`, async ({
+    page,
+  }) => {
+    await openJoining(page, route);
+    await setJoin(page, "so", true);
+    await page.locator('[data-sw-action="next"]').click();
+    await expect(
+      page.locator('[data-sw-link][aria-pressed="true"], [data-sw-link-comma][aria-pressed="true"]')
+    ).toHaveCount(0);
+    await setJoin(page, "but", false);
+    await page.locator('[data-sw-action="previous"]').click();
+    await expect(page.locator('[data-sw-link="so"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator('[data-sw-link-comma="true"]')).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    for (const lesson of ["boundaries", "endings", "repairs", "commas", "openings"]) {
+      await page.locator(`[data-sw-action="lesson-${lesson}"]`).click();
+      await page.locator('[data-sw-action="start"]').click();
+      await page.locator('[data-sw-action="finish"]').click();
+      await expect(page.locator(".sw-card")).toContainText("You attempted 0 tasks");
+    }
+    await page.locator('[data-sw-action="lesson-joining"]').click();
+    await page.locator('[data-sw-action="next"]').click();
+    await expect(page.locator('[data-sw-link="but"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator('[data-sw-link-comma="false"]')).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await page.locator('[data-sw-action="finish"]').click();
+    await expect(page.locator(".sw-card")).toContainText("You attempted 0 tasks");
+    await page.locator('[data-sw-action="previous"]').click();
+    await page.locator('[data-sw-action="clear"]').click();
+    await page.locator("#cancelClearPracticeBtn").click();
+    await expect(page.locator('[data-sw-link="but"]')).toHaveAttribute("aria-pressed", "true");
+    await page.locator('[data-sw-action="clear"]').click();
+    await page.locator("#confirmClearPracticeBtn").click();
+    await page.locator("#openSentenceWorkshopBtn").click();
+    for (const lesson of ["boundaries", "endings", "repairs", "commas", "openings", "joining"]) {
+      await page.locator(`[data-sw-action="lesson-${lesson}"]`).click();
+      await expect(page.locator('[data-sw-action="start"]')).toBeVisible();
+    }
+    await page.locator('[data-sw-action="start"]').click();
+    await setJoin(page, "and", true);
+    await page.reload();
+    await page.locator("#openSentenceWorkshopBtn").click();
+    await page.locator('[data-sw-action="lesson-joining"]').click();
+    await page.locator('[data-sw-action="start"]').click();
+    await expect(
+      page.locator('[data-sw-link][aria-pressed="true"], [data-sw-link-comma][aria-pressed="true"]')
+    ).toHaveCount(0);
+    await setJoin(page, "but", false);
+    await page.evaluate(() =>
+      dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }))
+    );
+    await expect(page.locator("#sentenceWorkshop")).toBeEmpty();
+    await expect(page.locator("#mainMenu")).toBeVisible();
   });
 }
