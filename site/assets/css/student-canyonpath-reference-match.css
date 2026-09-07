@@ -1,0 +1,204 @@
+/*
+ * Student Portal CanyonPath — approved-reference composition details
+ * Loads after student-canyonpath-final.css. Presentation only.
+ */
+
+/* Dashboard reference: two recent-assignment tiles share the left panel. */
+@media (min-width: 981px) {
+  body.rc-student-canyonpath #dashRecentAssignments {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.rc-student-canyonpath #dashRecentAssignments > :only-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The approved dashboard ends after the assignment/goal snapshot row. Keep the
+   older progress-chart surface available in the Grades tab rather than making
+   the dashboard taller and emptier than the reference composition. */
+body.rc-student-canyonpath #tabDashboard .stcp-panel--progress {
+  display: none;
+}
+
+/* Goal cards use a main/detail split like the approved My Goals reference. */
+@media (min-width: 1040px) {
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(285px, 0.72fr);
+    grid-template-areas:
+      'header header'
+      'stats aside'
+      'progress aside'
+      'official aside';
+    column-gap: 20px;
+    align-items: start;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference > .sgp-header {
+    grid-area: header;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference > [data-sgp-stats] {
+    grid-area: stats;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference > .sgp-progress {
+    grid-area: progress;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference > .sgp-official {
+    grid-area: official;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference > .stcp-goal-aside {
+    grid-area: aside;
+    align-self: stretch;
+    margin-top: 14px;
+  }
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-official {
+  margin-top: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(161, 229, 208, 0.16);
+  border-radius: 10px;
+  background: rgba(50, 116, 97, 0.13);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-official > summary {
+  min-height: 45px;
+  display: flex;
+  align-items: center;
+  padding: 10px 13px;
+  color: var(--stcpf-ink);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress > summary {
+  list-style: none;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress > summary::-webkit-details-marker,
+body.rc-student-canyonpath #tabGoals .sgp-official > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-official > summary::after {
+  content: '⌄';
+  margin-left: auto;
+  color: var(--stcpf-mint);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-official[open] > summary {
+  background: rgba(78, 154, 130, 0.11);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-official > p {
+  margin: 0;
+  padding: 9px 13px;
+  border-top: 1px solid rgba(158, 226, 206, 0.10);
+  color: var(--stcpf-muted);
+  line-height: 1.5;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside {
+  min-height: 126px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid rgba(166, 233, 212, 0.18);
+  border-radius: 12px;
+  background: rgba(3, 35, 30, 0.62);
+  box-shadow: inset 0 1px rgba(247, 255, 252, 0.03);
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(177, 239, 219, 0.24);
+  border-radius: 11px;
+  background: rgba(72, 153, 128, 0.12);
+  color: var(--stcpf-mint-pale);
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__icon svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__copy {
+  min-width: 0;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__copy strong,
+body.rc-student-canyonpath .stcp-goal-aside__copy span {
+  display: block;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__copy strong {
+  margin-bottom: 4px;
+  color: var(--stcpf-ink);
+  font-size: 0.92rem;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__copy span {
+  color: var(--stcpf-muted);
+  font-size: 0.77rem;
+  line-height: 1.45;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__open {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(176, 238, 218, 0.22);
+  border-radius: 50%;
+  background: rgba(73, 153, 128, 0.10);
+  color: var(--stcpf-mint-pale);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__open:hover {
+  border-color: rgba(188, 246, 227, 0.42);
+  background: rgba(86, 178, 149, 0.17);
+}
+
+/* Keep the evidence timeline readable after the compact summary is opened. */
+body.rc-student-canyonpath #tabGoals .sgp-progress[open] {
+  background: rgba(3, 31, 27, 0.86);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress[open] > [data-sgp-body] {
+  padding: 14px;
+}
+
+@media (max-width: 1039px) {
+  body.rc-student-canyonpath .stcp-goal-aside {
+    margin-top: 8px;
+  }
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-goal-aside,
+html[data-theme='light'] body.rc-student-canyonpath #tabGoals .sgp-official {
+  border-color: rgba(11, 89, 75, 0.16);
+  background: rgba(246, 250, 248, 0.94);
+  box-shadow: none;
+}
