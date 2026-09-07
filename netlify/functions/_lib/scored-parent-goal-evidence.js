@@ -24,6 +24,25 @@ function goalCodesFor(item) {
 }
 
 /**
+ * Mirrors the legacy student-submit-answer Step 8 assignment-wide gate.
+ *
+ * The mixed-goal reconciler exists only to repair the hole created by this
+ * gate. Fully auto-scoreable assignments continue through the existing
+ * legacy path so we do not double-write or broaden this change unnecessarily.
+ */
+function hasLegacyBlockingConstructedItem(items) {
+  return (Array.isArray(items) ? items : []).some((item) => {
+    if (item?.answer_type !== 'constructed') return false;
+    const meta = item?.meta && typeof item.meta === 'object' ? item.meta : {};
+    const hasKeywords =
+      (meta.scoring && Array.isArray(meta.scoring.keywords) && meta.scoring.keywords.length > 0) ||
+      Array.isArray(meta.correct);
+    const hasExactMatch = typeof meta.correct === 'string';
+    return !hasKeywords && !hasExactMatch;
+  });
+}
+
+/**
  * Build exact item-level parent evidence and per-goal rollups from the scored
  * submission answers that already exist in memory.
  *
@@ -129,6 +148,15 @@ async function reconcileScoredParentGoalEvidence({
   serviceRoleKey,
   fetchImpl = global.fetch,
 }) {
+  if (!hasLegacyBlockingConstructedItem(items)) {
+    return {
+      data_points: 0,
+      progress: 0,
+      blocked_goal_codes: [],
+      handled_mixed_assignment: false,
+    };
+  }
+
   const built = buildScoredParentGoalEvidence({
     items,
     submissionAnswers,
@@ -145,7 +173,12 @@ async function reconcileScoredParentGoalEvidence({
     ]),
   ];
   if (!codes.length) {
-    return { data_points: 0, progress: 0, blocked_goal_codes: built.blockedGoalCodes };
+    return {
+      data_points: 0,
+      progress: 0,
+      blocked_goal_codes: built.blockedGoalCodes,
+      handled_mixed_assignment: true,
+    };
   }
 
   const goals = await fetchActiveGoals({
@@ -204,10 +237,12 @@ async function reconcileScoredParentGoalEvidence({
     data_points: dataPointCount,
     progress: progressCount,
     blocked_goal_codes: built.blockedGoalCodes,
+    handled_mixed_assignment: true,
   };
 }
 
 module.exports = {
   buildScoredParentGoalEvidence,
+  hasLegacyBlockingConstructedItem,
   reconcileScoredParentGoalEvidence,
 };
