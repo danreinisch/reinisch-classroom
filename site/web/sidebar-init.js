@@ -34,11 +34,12 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
     addStudentStylesheetOnce('/assets/css/student-goal-evidence-timeline.css?v=20260907-evidence1', 'data-student-goal-evidence-timeline');
 
     // Phase 2A: opt the Student Portal shell/dashboard into the shared CanyonPath
-    // visual foundation. The new student-specific layer is loaded last so it can
-    // adapt the existing portal DOM without changing portal behavior.
+    // visual foundation. Student-specific layers load last so they can adapt the
+    // established portal DOM without changing portal behavior.
     addStudentStylesheetOnce('/assets/css/rc-canyonpath.css?v=20260907-cp1', 'data-rc-canyonpath');
     addStudentStylesheetOnce('/assets/css/rc-canyonpath-detail.css?v=20260907-cp1', 'data-rc-canyonpath-detail');
     addStudentStylesheetOnce('/assets/css/student-canyonpath.css?v=20260907-2a1', 'data-student-canyonpath');
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-refine.css?v=20260907-2a2', 'data-student-canyonpath-refine');
   };
 
   // Append after the page's inline styles so the scoped polish layers are the
@@ -63,4 +64,9 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
   canyonPathScript.src = '/web/student-canyonpath.js?v=20260907-2a1';
   canyonPathScript.async = false;
   document.head.appendChild(canyonPathScript);
+
+  var canyonPathRefineScript = document.createElement('script');
+  canyonPathRefineScript.src = '/web/student-canyonpath-refine.js?v=20260907-2a2';
+  canyonPathRefineScript.async = false;
+  document.head.appendChild(canyonPathRefineScript);
 }
