@@ -29,6 +29,8 @@ const {
   reconcileAssignmentGoalProgress,
 } = require('./_lib/assignment-evidence-reconciliation');
 
+const { reconcileTeacherAssignmentEvidence } = require('./_lib/teacher-assignment-goal-evidence');
+
 const {
   url: SUPABASE_URL,
   key: SUPABASE_SERVICE_ROLE_KEY,
@@ -1502,7 +1504,7 @@ async function resolveAuthorizedInstance(
 
   instanceParams.set(
     'select',
-    'id,student_id,assignment_id',
+    'id,student_id,assignment_id,settings',
   );
 
   instanceParams.set(
@@ -1619,6 +1621,7 @@ async function resolveAuthorizedInstance(
 
   return {
     ok: true,
+    instance,
     classId:
       assignment.class_id,
   };
@@ -1937,6 +1940,11 @@ async function insertProgress(
     source === 'assignment' &&
     assignmentInstanceId
   ) {
+    await reconcileTeacherAssignmentEvidence({
+      instance: instanceAuthorization.instance,
+      goals: [goal], progressRows: [payload],
+      supabaseUrl: SUPABASE_URL, serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+    });
     const reconciled =
       await reconcileAssignmentGoalProgress({
         row: payload,
@@ -2221,6 +2229,12 @@ async function insertBatch(
       },
     };
   }
+
+  await reconcileTeacherAssignmentEvidence({
+    instance: instanceAuthorization.instance,
+    goals: activeGoals, progressRows: rows,
+    supabaseUrl: SUPABASE_URL, serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+  });
 
   const reconciled =
     await Promise.all(

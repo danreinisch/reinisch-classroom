@@ -538,6 +538,8 @@ async function run() {
         init,
       });
 
+      if (target.includes('/rest/v1/submissions?')) return mockResponse(200, []);
+
       if (
         target.includes(
           '/rest/v1/students?'
@@ -760,6 +762,8 @@ async function run() {
           progressRows
         );
       }
+
+      if (target.includes('/rest/v1/submissions?')) return mockResponse(200, []);
 
       if (
         target.includes(

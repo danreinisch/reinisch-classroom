@@ -1,0 +1,332 @@
+.sgp-card {
+  padding: 24px;
+  min-width: 0;
+  --sgp-line: var(--accent, #60a5fa);
+}
+.sgp-header,
+.sgp-work-heading,
+.sgp-question-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.sgp-header h3 {
+  margin: 5px 0 20px;
+  font-size: 1.25rem;
+}
+.sgp-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  opacity: 0.7;
+}
+.sgp-code,
+.sgp-note {
+  font-size: 0.85rem;
+  opacity: 0.78;
+  line-height: 1.5;
+}
+.sgp-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 40px;
+  margin-bottom: 18px;
+}
+.sgp-stats span {
+  display: block;
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin-bottom: 5px;
+}
+.sgp-stats strong {
+  font-size: 1.75rem;
+}
+.sgp-card details {
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+}
+.sgp-card summary {
+  cursor: pointer;
+  padding: 15px 0;
+  min-height: 44px;
+  box-sizing: border-box;
+  font-weight: 600;
+}
+.sgp-official p,
+.sgp-skill-text {
+  line-height: 1.65;
+}
+.sgp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 8px 0 20px;
+}
+.sgp-controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+.sgp-card button,
+.sgp-card select,
+.sgp-card input[type="search"] {
+  min-height: 44px;
+  border-radius: 8px;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  background: var(--rc-glass, rgba(128, 128, 128, 0.08));
+  color: inherit;
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.sgp-card select {
+  max-width: 100%;
+  color-scheme: dark;
+}
+:root[data-theme="light"] .sgp-card select,
+body[data-theme="light"] .sgp-card select {
+  color-scheme: light;
+}
+.sgp-card option {
+  color: #141c29;
+  background: #fff;
+}
+.sgp-card button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.sgp-card :is(button, select, summary, input):focus-visible {
+  outline: 3px solid var(--accent, #60a5fa);
+  outline-offset: 3px;
+}
+.sgp-plot {
+  height: 170px;
+  position: relative;
+  margin: 20px 0 0;
+}
+.sgp-plot svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.sgp-grid {
+  stroke: currentColor;
+  opacity: 0.2;
+}
+.sgp-line {
+  fill: none;
+  stroke: var(--sgp-line);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+.sgp-target {
+  stroke: var(--green, #4ade80);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  vector-effect: non-scaling-stroke;
+}
+.sgp-card .sgp-point {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.sgp-point span {
+  width: 13px;
+  height: 13px;
+  background: var(--sgp-line);
+  border-radius: 50%;
+  border: 3px solid var(--rc-bg, #121d2b);
+  box-sizing: content-box;
+}
+.sgp-point[aria-pressed="true"] span {
+  outline: 3px solid var(--sgp-line);
+  outline-offset: 3px;
+}
+.sgp-axis {
+  position: absolute;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  left: 0;
+  pointer-events: none;
+}
+.sgp-axis-top {
+  top: 0;
+}
+.sgp-axis-bottom {
+  top: 135px;
+}
+.sgp-axis-dates {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+.sgp-key {
+  display: inline-block;
+  width: 20px;
+  border-top: 2px dashed var(--green, #4ade80);
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.sgp-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0;
+}
+.sgp-pager span {
+  text-align: center;
+  font-size: 0.8rem;
+}
+.sgp-pager button {
+  font-size: 0.82rem;
+}
+.sgp-work {
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 18px 0;
+  background: rgba(128, 128, 128, 0.05);
+}
+.sgp-work h4 {
+  font-size: 1rem;
+  margin: 7px 0;
+  overflow-wrap: anywhere;
+}
+.sgp-work-heading > strong {
+  font-size: 1.4rem;
+  white-space: nowrap;
+}
+.sgp-question {
+  margin-top: 18px;
+}
+.sgp-question-heading {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sgp-result {
+  font-size: 0.78rem;
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: rgba(128, 128, 128, 0.12);
+}
+.sgp-review {
+  border: 1px solid #bd9245;
+}
+.sgp-prompt {
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sgp-question dl {
+  display: grid;
+  gap: 12px;
+}
+.sgp-question dt {
+  font-size: 0.78rem;
+  opacity: 0.75;
+  margin-bottom: 5px;
+}
+.sgp-question dd {
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sgp-feedback {
+  border-left: 3px solid var(--sgp-line);
+  padding: 12px 16px;
+  background: rgba(128, 128, 128, 0.06);
+}
+.sgp-feedback p {
+  margin: 7px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.sgp-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 0.85rem;
+}
+.sgp-filter input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent, #60a5fa);
+}
+.sgp-calculation table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.8rem;
+}
+.sgp-calculation th,
+.sgp-calculation td {
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+  text-align: left;
+}
+.sgp-calculation caption {
+  padding: 10px;
+  text-align: left;
+}
+.sgp-calculation p {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+@media (max-width: 600px) {
+  .sgp-card {
+    padding: 16px;
+  }
+  .sgp-stats {
+    gap: 14px 24px;
+  }
+  .sgp-stats strong {
+    font-size: 1.4rem;
+  }
+  .sgp-header {
+    flex-wrap: wrap;
+    gap: 0;
+    margin-bottom: 12px;
+  }
+  .sgp-header h3 {
+    margin-bottom: 8px;
+  }
+  .sgp-work {
+    padding: 12px;
+  }
+  .sgp-pager button {
+    padding: 8px;
+    font-size: 0.75rem;
+  }
+}
+
+.sgp-card :is(p, dt, dd, li) {
+  color: inherit;
+}
+[data-theme="light"] .sgp-card {
+  color: #172033;
+  --sgp-line: #2563eb;
+  --green: #14783d;
+  --rc-bg: #fff;
+}
+[data-theme="light"] .sgp-card :is(button, select, input[type="search"]) {
+  background: #f5f7fa;
+  color: #172033;
+}
+[data-theme="light"] .sgp-card button.sgp-point {
+  background: transparent;
+}

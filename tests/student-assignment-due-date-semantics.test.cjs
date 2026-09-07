@@ -498,7 +498,7 @@ const studentIndex =
 
 assert.ok(
   studentIndex.includes(
-    '/web/student-portal-init.js?v=20260906-dictation-three-details'
+    '/web/student-portal-init.js?v=20260907-goal-review1'
   ),
   'Student Portal cache key must move with due-date semantics'
 );

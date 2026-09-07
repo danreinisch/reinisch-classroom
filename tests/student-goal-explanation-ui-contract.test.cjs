@@ -127,8 +127,8 @@ const explanationEndpointMatches =
 
 assert.strictEqual(
   explanationEndpointMatches.length,
-  1,
-  '5C3B must make one browser request to the Student Goal Explanation endpoint'
+  3,
+  'Summary, timeline, and selected-work request paths must be present'
 );
 
 assert.ok(
@@ -596,8 +596,8 @@ console.log(
 
 assert.strictEqual(
   explanationEndpointMatches.length,
-  1,
-  'one explanation request must cover all applicable goals/objectives'
+  3,
+  'one overview request covers all goals; timeline and selected-work paths load details only when opened'
 );
 
 assert.ok(

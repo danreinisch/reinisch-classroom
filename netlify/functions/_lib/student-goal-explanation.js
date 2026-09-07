@@ -435,6 +435,11 @@ function projectParentEvidence(
     );
 
   return {
+    ...(row?.assignment_title !== undefined ? {
+      assignment_title: row.assignment_title,
+      question_ref: row.question_ref ?? null,
+      teacher_feedback: released ? row.teacher_feedback ?? null : null,
+    } : {}),
     date:
       dateOnly(row?.date),
     source:
@@ -506,7 +511,8 @@ function evidenceForCheckpoint({
     return [];
   }
 
-  return points
+  const candidates = points instanceof Map ? (points.get(`${goalId}|${sourceId}`) || []) : points;
+  return candidates
     .filter(
       point =>
         String(
@@ -537,6 +543,10 @@ function projectCheckpoint({
   instances,
 }) {
   return {
+    ...(checkpoint?.work_ref ? { work_ref: checkpoint.work_ref } : {}),
+    ...(instances.get(String(checkpoint?.assignment_instance_id))?.assignment_title ? {
+      assignment_title: instances.get(String(checkpoint.assignment_instance_id)).assignment_title,
+    } : {}),
     date:
       dateOnly(
         checkpoint?.date
@@ -729,6 +739,12 @@ function normalizeCoverage(
 
 function projectObjectiveEvidence(row) {
   return {
+    ...(row?.work_ref ? { work_ref: row.work_ref } : {}),
+    ...(row?.assignment_title !== undefined ? {
+      assignment_title: row.assignment_title,
+      question_ref: row.question_ref ?? null,
+      teacher_feedback: row.answer_review_available === true ? row.teacher_feedback ?? null : null,
+    } : {}),
     date:
       dateOnly(row?.date),
     source:
@@ -996,6 +1012,13 @@ function buildStudentGoalExplanationBundle({
         )
     );
 
+  const pointsByCheckpoint = new Map();
+  for (const point of quarterPoints) {
+    const key = `${point.goal_id}|${point.assignment_instance_id}`;
+    if (!pointsByCheckpoint.has(key)) pointsByCheckpoint.set(key, []);
+    pointsByCheckpoint.get(key).push(point);
+  }
+
   const safeGoals =
     Array.isArray(goals)
       ? goals
@@ -1054,7 +1077,7 @@ function buildStudentGoalExplanationBundle({
                 progressRows:
                   quarterProgress,
                 points:
-                  quarterPoints,
+                  pointsByCheckpoint,
                 instances,
                 percentage:
                   objectiveParent
@@ -1099,7 +1122,7 @@ function buildStudentGoalExplanationBundle({
           progressRows:
             quarterProgress,
           points:
-            quarterPoints,
+            pointsByCheckpoint,
           instances,
         });
 
