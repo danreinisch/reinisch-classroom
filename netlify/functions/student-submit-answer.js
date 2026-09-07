@@ -54,6 +54,10 @@ const {
   reconcileAssignmentObjectiveDataPoints,
 } = require('./_lib/objective-auto-evidence-writer');
 
+const {
+  reconcileScoredParentGoalEvidence,
+} = require('./_lib/scored-parent-goal-evidence');
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[student-submit-answer] [${requestId}] Request received`);
@@ -722,6 +726,41 @@ exports.handler = async (event) => {
                   }
                 }
 
+                /*
+                 * Mixed-assignment parent evidence must be per-goal, not
+                 * all-or-nothing. A teacher-reviewed writing response for CG2
+                 * must not suppress valid auto-scored CG1 questions in the same
+                 * assignment. The helper writes every scored mapped question
+                 * and auto-writes progress only for goals whose own mapped
+                 * items are fully scored.
+                 */
+                try {
+                  const parentEvidenceResult =
+                    await reconcileScoredParentGoalEvidence({
+                      items,
+                      submissionAnswers: subAnswers,
+                      studentId: student.id,
+                      assignmentInstanceId: instance_id,
+                      date: getSchoolLocalDate(),
+                      schoolYear,
+                      supabaseUrl: SUPABASE_URL,
+                      serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY
+                    });
+
+                  console.log(
+                    `[student-submit-answer] [${requestId}] ` +
+                    `scored parent evidence reconciled: ${parentEvidenceResult.data_points} data point(s), ` +
+                    `${parentEvidenceResult.progress} progress row(s), ` +
+                    `${parentEvidenceResult.blocked_goal_codes.length} goal(s) awaiting unscored work`
+                  );
+                } catch (parentEvidenceErr) {
+                  console.warn(
+                    `[student-submit-answer] [${requestId}] ` +
+                    'scored parent evidence reconciliation error (non-fatal):',
+                    parentEvidenceErr
+                  );
+                }
+
                 // Compute score_auto from auto-scored answers and update the parent submission
                 const autoScoredAnswers = subAnswers.filter(a => a.earned_points != null);
                 const scoreAuto = autoScoredAnswers.reduce((sum, a) => sum + (a.earned_points || 0), 0);
@@ -757,7 +796,7 @@ exports.handler = async (event) => {
                     });
 
                     if (hasUnscoredConstructed) {
-                      console.log(`[student-submit-answer] [${requestId}] Skipping auto goal progress — assignment has constructed items requiring teacher review`);
+                      console.log(`[student-submit-answer] [${requestId}] Skipping legacy all-assignment goal progress — per-goal scored evidence was handled above`);
                     } else {
                       // Build goal rollups from items with goal_codes
                       const goalRollups = {};
