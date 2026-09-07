@@ -238,11 +238,13 @@ test('Phase 2A final standard matches approved dashboard, goals, and login compo
   assert.match(referenceCss, /\.stcp-footer[\s\S]*var\(--stcpl-scene-image\)/);
 });
 
-test('Phase 2A light mode keeps an accessible dark focus accent', () => {
+test('Phase 2A light mode keeps an accessible dark focus accent and existing question-review ink', () => {
   assert.match(fixesCss, /--stcp-mint: #0b6f5c/);
   assert.match(fixesCss, /outline-color: #0b6f5c/);
   assert.match(finalCss, /html\[data-theme='light'\] body\.rc-student-canyonpath \.tc-main/);
   assert.match(referenceCss, /html\[data-theme='light'\] body\.rc-student-canyonpath \.tc-main::before/);
+  const light = declarationsFor(referenceCss, "html[data-theme='light'] body.rc-student-canyonpath");
+  assert.equal(light['--stcpl-reading-ink'], '#172033');
 });
 
 test('Student route loads CanyonPath foundation and approved-reference layers last', () => {
@@ -255,7 +257,7 @@ test('Student route loads CanyonPath foundation and approved-reference layers la
   assert.match(sidebar, /student-canyonpath-cinematic\.css\?v=20260907-2a4/);
   assert.match(sidebar, /student-canyonpath-premium\.css\?v=20260907-2a5/);
   assert.match(sidebar, /student-canyonpath-final\.css\?v=20260907-2a6/);
-  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260907-2a10/);
+  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260907-2a11/);
   assert.match(sidebar, /student-canyonpath\.js\?v=20260907-2a3/);
   assert.match(sidebar, /student-canyonpath-refine\.js\?v=20260907-2a4/);
   assert.ok(sidebar.indexOf('student-canyonpath-reference-match.css') > sidebar.indexOf('student-canyonpath-final.css'));
