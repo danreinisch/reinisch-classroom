@@ -15,3 +15,18 @@ try {
 } catch (_) {
   document.documentElement.classList.add('tc-collapsed');
 }
+
+// Student Portal presentation polish is intentionally scoped to /student/.
+// Loading it here avoids coupling the visual pass to the large portal runtime
+// and leaves Teacher Center / public pages untouched.
+if (window.location.pathname === '/student/' || window.location.pathname.startsWith('/student/')) {
+  var polishCss = document.createElement('link');
+  polishCss.rel = 'stylesheet';
+  polishCss.href = '/assets/css/student-portal-polish.css?v=20260907-polish1';
+  document.head.appendChild(polishCss);
+
+  var polishScript = document.createElement('script');
+  polishScript.src = '/web/student-portal-polish.js?v=20260907-polish1';
+  polishScript.async = false;
+  document.head.appendChild(polishScript);
+}
