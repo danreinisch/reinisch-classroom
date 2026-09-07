@@ -47,7 +47,7 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
     // every exploratory pass so the approved Dashboard / Goals / Login images
     // define the effective presentation standard.
     addStudentStylesheetOnce('/assets/css/student-canyonpath-final.css?v=20260907-2a6', 'data-student-canyonpath-final');
-    addStudentStylesheetOnce('/assets/css/student-canyonpath-reference-match.css?v=20260907-2a10', 'data-student-canyonpath-reference-match');
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-reference-match.css?v=20260907-2a11', 'data-student-canyonpath-reference-match');
   };
 
   // Append after the page's inline styles so the scoped polish layers are the
