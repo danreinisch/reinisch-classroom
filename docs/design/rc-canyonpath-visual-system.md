@@ -34,7 +34,7 @@ Load the universal theme first, then the CanyonPath foundation. Pages that use t
 7. **Keyboard focus is obvious.** All interactive elements require a visible `:focus-visible` treatment.
 8. **Reduced motion is honored.** The shared layer disables meaningful transitions when `prefers-reduced-motion` is enabled.
 9. **Responsive behavior is part of the component.** Three-column layouts collapse deliberately; tables remain horizontally scrollable rather than crushing content.
-10. **No broken or decorative media placeholders.** Scenic art is delivered through known local SVG/CSS assets; preview and production surfaces should never leave empty image/object frames on screen.
+10. **No broken or decorative media placeholders.** Scenic art is delivered through known local SVG/CSS assets; preview and production surfaces should never leave empty image, object, embed, picture, or iframe frames on screen.
 
 ## Shared palette roles
 
@@ -78,7 +78,7 @@ The Phase 1A component gallery is available at:
 
 `/design-system/canyonpath/`
 
-It uses synthetic data only and exists to review the shared design language before production surfaces adopt it. The gallery should represent the polished target, including SVG icon tiles and the richer scenic treatment.
+It uses synthetic data only and exists to review the shared design language before production surfaces adopt it. The gallery should represent the polished target, including SVG icon tiles, richer scenic treatment, and no stray media placeholder frames.
 
 ## Rollout sequence
 
