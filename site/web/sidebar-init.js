@@ -52,7 +52,7 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
   document.head.appendChild(polishScript);
 
   var evidenceScript = document.createElement('script');
-  evidenceScript.src = '/web/student-goal-evidence-timeline.js?v=20260907-evidence1';
+  evidenceScript.src = '/web/student-goal-evidence-timeline.js?v=20260907-evidence2';
   evidenceScript.async = false;
   document.head.appendChild(evidenceScript);
 }
