@@ -79,13 +79,21 @@
     };
   }
 
-  function answerText(value) {
-    if (value === null || value === undefined || value === '') return 'Not recorded';
-    if (Array.isArray(value)) return value.map((item) => String(item)).join(', ');
+  function answerParts(value) {
+    if (Array.isArray(value)) return value.flatMap(answerParts);
+    if (value === null || value === undefined || value === '') return [];
     if (typeof value === 'object') {
-      try { return JSON.stringify(value); } catch (_) { return String(value); }
+      const fields = ['letter', 'label', 'key', 'value', 'text', 'answer', 'choice', 'selected'];
+      const parts = fields.flatMap((field) => answerParts(value[field]));
+      if (parts.length) return parts;
+      try { return [JSON.stringify(value)]; } catch (_) { return []; }
     }
-    return String(value);
+    return [String(value).trim()];
+  }
+
+  function answerText(value) {
+    const parts = answerParts(value).filter(Boolean);
+    return parts.length ? parts.join(', ') : 'Not recorded';
   }
 
   function resultClass(status) {
@@ -113,30 +121,40 @@
     return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
   }
 
-  function answerParts(value) {
-    if (Array.isArray(value)) return value.flatMap(answerParts);
-    if (value === null || value === undefined || value === '') return [];
-    return [String(value).trim()];
+  function choiceRecord(value, fallbackLabel) {
+    const fallback = String(fallbackLabel || '').trim().toUpperCase();
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const rawLabel = value.letter ?? value.label ?? value.key ?? value.id ?? fallback;
+      const labelMatch = String(rawLabel ?? '').trim().match(/[A-Z]/i);
+      const label = labelMatch ? labelMatch[0].toUpperCase() : fallback;
+      const textValue = value.text ?? value.value ?? value.content ?? value.answer ?? value.choice ?? value.option ?? value.description ?? '';
+      const text = String(textValue ?? '').trim();
+      return { label: label || fallback, text: text || 'Choice not recorded', raw: text };
+    }
+
+    const raw = String(value ?? '').trim();
+    const detected = raw.match(/^\s*([A-Z])\s*[).:]\s*/i);
+    const label = detected?.[1]?.toUpperCase() || fallback;
+    const prefix = label ? new RegExp(`^\\s*${label}\\s*[).:]\\s*`, 'i') : null;
+    const stripped = prefix ? raw.replace(prefix, '').trim() : raw;
+    return { label, text: stripped || raw || 'Choice not recorded', raw };
   }
 
   function choiceText(value, label) {
-    const raw = String(value ?? '').trim();
-    const prefix = new RegExp(`^\\s*${label}\\s*[).:]\\s*`, 'i');
-    const stripped = raw.replace(prefix, '').trim();
-    return stripped || raw || 'Choice not recorded';
+    return choiceRecord(value, label).text;
   }
 
-  function answerMatchesChoice(answer, rawChoice, label) {
-    const choice = String(rawChoice ?? '').trim();
-    const display = choiceText(choice, label);
+  function answerMatchesChoice(answer, rawChoice, fallbackLabel) {
+    const record = choiceRecord(rawChoice, fallbackLabel);
+    const labels = new Set([fallbackLabel, record.label].filter(Boolean).map((value) => String(value).toUpperCase()));
     return answerParts(answer).some((part) => {
       const raw = part.trim();
       const bareLetter = raw.match(/^([A-Z])\s*[).:]?$/i);
-      if (bareLetter && bareLetter[1].toUpperCase() === label) return true;
+      if (bareLetter && labels.has(bareLetter[1].toUpperCase())) return true;
       const prefixed = raw.match(/^([A-Z])\s*[).:]\s+/i);
-      if (prefixed && prefixed[1].toUpperCase() === label) return true;
+      if (prefixed && labels.has(prefixed[1].toUpperCase())) return true;
       const normalized = normalizeChoice(raw);
-      return normalized === normalizeChoice(choice) || normalized === normalizeChoice(display);
+      return normalized === normalizeChoice(record.raw) || normalized === normalizeChoice(record.text);
     });
   }
 
@@ -149,7 +167,9 @@
       <span class="et-choice-heading">Answer choices</span>
       <ol class="et-choice-list">
         ${choices.map((choice, index) => {
-          const label = String.fromCharCode(65 + index);
+          const fallbackLabel = String.fromCharCode(65 + index);
+          const record = choiceRecord(choice, fallbackLabel);
+          const label = record.label || fallbackLabel;
           const selected = answerMatchesChoice(event.student_answer, choice, label);
           const correct = canReview && answerMatchesChoice(event.correct_answer, choice, label);
           const classes = [
