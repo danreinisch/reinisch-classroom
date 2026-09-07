@@ -57,6 +57,10 @@ async function setup(page, context, baseURL, options = {}) {
   await context.route("**/*", async (route) => {
     const url = new URL(route.request().url());
     if (url.origin !== new URL(baseURL).origin) return route.abort();
+    // These tests exercise the established checkpoint/question review module
+    // in isolation. The newer one-dot-per-evidence enhancement has its own
+    // Student Portal polish suite and would intentionally replace these dots.
+    if (url.pathname === "/web/student-goal-evidence-timeline.js") return route.abort();
     if (options.missingHelper && url.pathname === "/web/student-goal-progress-view.js")
       return route.abort();
     if (!url.pathname.startsWith("/.netlify/functions/")) return route.continue();
