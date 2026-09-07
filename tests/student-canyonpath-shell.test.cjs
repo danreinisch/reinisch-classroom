@@ -9,10 +9,45 @@ const cinematicCss = fs.readFileSync('site/assets/css/student-canyonpath-cinemat
 const premiumCss = fs.readFileSync('site/assets/css/student-canyonpath-premium.css', 'utf8');
 const finalCss = fs.readFileSync('site/assets/css/student-canyonpath-final.css', 'utf8');
 const referenceCss = fs.readFileSync('site/assets/css/student-canyonpath-reference-match.css', 'utf8');
+const sceneSvg = fs.readFileSync('site/assets/bg/rc-canyonpath-cinematic.svg', 'utf8');
 const js = fs.readFileSync('site/web/student-canyonpath.js', 'utf8');
 const refineJs = fs.readFileSync('site/web/student-canyonpath-refine.js', 'utf8');
 const sidebar = fs.readFileSync('site/web/sidebar-init.js', 'utf8');
 const allPresentationCss = css + refineCss + fixesCss + cinematicCss + premiumCss + finalCss + referenceCss;
+
+// Read declarations from a specific rule instead of allowing an assertion to
+// accidentally match a property in some unrelated later rule. This is a source
+// contract helper, not a browser layout or full CSS-cascade implementation.
+function declarationsFor(source, selector) {
+  const uncommented = source.replace(/\/\*[\s\S]*?\*\//g, '');
+  const blocks = [...uncommented.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+  const block = blocks.find((entry) => entry[1].split(',').some((part) => part.trim() === selector));
+  assert.ok(block, `Missing CSS rule: ${selector}`);
+  return Object.fromEntries(block[2].split(';').filter((part) => part.trim()).map((part) => {
+    const colon = part.indexOf(':');
+    assert.ok(colon > 0, `Invalid declaration: ${part}`);
+    return [part.slice(0, colon).trim(), part.slice(colon + 1).trim()];
+  }));
+}
+
+function rgbFromHex(value) {
+  assert.match(value, /^#[0-9a-f]{6}$/i);
+  return [1, 3, 5].map((start) => Number.parseInt(value.slice(start, start + 2), 16));
+}
+
+function luminance(rgb) {
+  const linear = rgb.map((channel) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+function contrastRatio(first, second) {
+  const a = luminance(first);
+  const b = luminance(second);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
 
 test('Student Portal Phase 2A CanyonPath layer stays presentation-only and scoped', () => {
   assert.match(css, /body\.rc-student-canyonpath/);
@@ -64,31 +99,98 @@ test('Phase 2A final standard fixes collapsed rail alignment and dashboard densi
   assert.match(refineJs, /View all \$\{cards\.length\} goals/);
 });
 
-test('Phase 2A legacy scenic layers stay presentation-only while the reference layer owns the effective scene', () => {
-  assert.match(finalCss, /body\.rc-student-canyonpath \.tc-app\s*\{[\s\S]*background:\s*var\(--stcpf-bg\)/);
-  assert.match(finalCss, /body\.rc-student-canyonpath \.tc-main\s*\{[\s\S]*canyonpath-premium-1/);
-  assert.match(finalCss, /canyonpath-premium-2/);
-  assert.match(finalCss, /canyonpath-premium-3/);
-  assert.match(finalCss, /canyonpath-premium-4/);
-  assert.match(finalCss, /background-attachment:\s*scroll/);
-  assert.doesNotMatch(finalCss, /background-attachment:\s*fixed/);
+test('Phase 2A legacy scenery is overridden at the main canvas without changing hero composition', () => {
+  // The legacy file uses custom properties, not literal JPEG filenames. Check
+  // the actual contract, then require the last layer to replace its background.
+  const legacyMain = declarationsFor(finalCss, 'body.rc-student-canyonpath .tc-main');
+  for (let index = 1; index <= 4; index += 1) {
+    assert.ok(legacyMain.background.includes(`var(--stcp-premium-${index})`));
+  }
+  assert.equal(legacyMain['background-attachment'], 'scroll');
+  const main = declarationsFor(referenceCss, 'body.rc-student-canyonpath .tc-main');
+  assert.equal(main.background, 'var(--stcpf-bg, #031714)');
   assert.match(finalCss, /\.stcp-hero[\s\S]*background:\s*transparent/);
   assert.match(finalCss, /\.stcp-page-hero[\s\S]*background:\s*transparent/);
 });
 
-test('Phase 2A visual gate uses one crisp registered scene per approved Dashboard, Goals, and Login surface', () => {
+test('Phase 2A scenery uses a full landscape vector rather than enlarging portrait JPEG tiles', () => {
+  const tokens = declarationsFor(referenceCss, 'body.rc-student-canyonpath');
+  assert.equal(tokens['--stcpl-scene-image'], "url('/assets/bg/rc-canyonpath-cinematic.svg')");
+  assert.doesNotMatch(referenceCss, /var\(--stcp-premium-[1-4]\)|canyonpath-premium-[1-4]\.jpg/);
+  assert.equal((referenceCss.match(/--stcpl-scene-image\s*:/g) || []).length, 1);
+
+  const viewBox = sceneSvg.match(/viewBox=["']0 0 (\d+) (\d+)["']/);
+  assert.ok(viewBox, 'Scene must have an explicit landscape viewBox');
+  assert.ok(Number(viewBox[1]) >= 1600);
+  assert.ok(Number(viewBox[1]) > Number(viewBox[2]));
+  assert.doesNotMatch(sceneSvg, /<image\b|data:image\//i, 'Do not hide an enlarged raster inside an SVG');
+});
+
+test('Phase 2A vector scene stays registered to the main canvas on Dashboard, Goals, and Login', () => {
   assert.match(referenceCss, /--stcpl-main-left:\s*var\(--tc-side-w/);
   assert.match(referenceCss, /html\.tc-collapsed body\.rc-student-canyonpath[\s\S]*--stcpl-main-left:\s*var\(--tc-rail-w/);
   assert.match(referenceCss, /\.st-dashboard-content[\s\S]*width:\s*min\(100%,\s*1380px\)/);
-  assert.match(referenceCss, /--stcpl-scene-image:\s*var\(--stcp-premium-3\)/);
-  assert.match(referenceCss, /#tabDashboard\.active[\s\S]*--stcpl-scene-image:\s*var\(--stcp-premium-2\)/);
-  assert.match(referenceCss, /#tabGoals\.active[\s\S]*--stcpl-scene-image:\s*var\(--stcp-premium-3\)/);
-  assert.match(referenceCss, /#loginView:not\(\.hidden\)[\s\S]*--stcpl-scene-image:\s*var\(--stcp-premium-4\)/);
-  assert.match(referenceCss, /\.tc-main::before[\s\S]*position:\s*fixed/);
-  assert.match(referenceCss, /\.tc-main::before[\s\S]*inset:\s*var\(--tc-topbar-h,[\s\S]*var\(--stcpl-main-left\)/);
-  assert.match(referenceCss, /\.tc-main::before[\s\S]*var\(--stcpl-scene-image\)[\s\S]*cover no-repeat/);
-  assert.doesNotMatch(referenceCss, /var\(--stcp-premium-2\) 0% 0 \/ 33\.334%/);
-  assert.doesNotMatch(referenceCss, /backdrop-filter:\s*blur\((1[0-9]|[2-9][0-9])px\)/);
+  for (const selector of [
+    'body.rc-student-canyonpath:has(#studentDashboardView:not(.hidden) #tabDashboard.active)',
+    'body.rc-student-canyonpath:has(#studentDashboardView:not(.hidden) #tabGoals.active)',
+    'body.rc-student-canyonpath:has(#loginView:not(.hidden))',
+  ]) {
+    const view = declarationsFor(referenceCss, selector);
+    assert.match(view['--stcpl-scene-position'], /^center \d+%$/);
+    assert.equal(view['--stcpl-scene-image'], undefined, 'Views must retain the full vector source');
+  }
+  const scene = declarationsFor(referenceCss, 'body.rc-student-canyonpath .tc-main::before');
+  assert.equal(scene.position, 'fixed');
+  assert.match(scene.inset, /var\(--stcpl-main-left\)/);
+  assert.match(scene.background, /var\(--stcpl-scene-image\).*cover no-repeat/);
+  assert.equal(scene.filter, 'none');
+  assert.equal(scene['backdrop-filter'], 'none');
+  assert.equal(scene['-webkit-backdrop-filter'], 'none');
+});
+
+test('Phase 2A goal-card frost overrides the earlier two-ID transparent-card selector', () => {
+  const selector = 'body.rc-student-canyonpath #tabGoals #goalsContent .sgp-card';
+  const previous = declarationsFor(refineCss, selector);
+  assert.equal(previous.background, 'transparent');
+  const card = declarationsFor(referenceCss, selector);
+  assert.equal(card.background, 'var(--stcpl-reading-surface)');
+  assert.equal(card.padding, '22px');
+  assert.equal(card['border-radius'], '16px');
+  assert.equal(card.border, '1px solid var(--stcpl-reading-border)');
+  assert.equal(card.color, 'var(--stcpl-reading-ink)');
+  assert.ok(sidebar.indexOf('student-canyonpath-reference-match.css') > sidebar.indexOf('student-canyonpath-refine.css'));
+
+  for (const component of ['.sgp-official', '.sgp-progress', '.stcp-goal-aside']) {
+    const inner = declarationsFor(referenceCss, `body.rc-student-canyonpath #tabGoals #goalsContent ${component}`);
+    assert.equal(inner.background, 'var(--stcpl-reading-inner)');
+  }
+  const paragraph = declarationsFor(referenceCss, 'body.rc-student-canyonpath #tabGoals #goalsContent .sgp-official > p');
+  assert.equal(paragraph.color, 'var(--stcpl-reading-muted)');
+  assert.equal(paragraph.opacity, '1');
+});
+
+test('Phase 2A reading-surface text tokens retain 4.5:1 contrast without relying on blur', () => {
+  for (const selector of ['body.rc-student-canyonpath', "html[data-theme='light'] body.rc-student-canyonpath"]) {
+    const tokens = declarationsFor(referenceCss, selector);
+    const rgba = tokens['--stcpl-reading-surface'].match(/^rgba\(([^)]+)\)$/);
+    assert.ok(rgba, 'Reading surface must supply an explicit fallback tint');
+    const [r, g, b, alpha] = rgba[1].split(',').map(Number);
+    assert.ok([r, g, b, alpha].every(Number.isFinite));
+    assert.ok(alpha >= 0.90 && alpha <= 1, 'Readable tint must work even without backdrop-filter');
+    const surfaces = [
+      // Test both extrema of possible scenery under the translucent surface.
+      [r, g, b].map((channel) => channel * alpha),
+      [r, g, b].map((channel) => channel * alpha + 255 * (1 - alpha)),
+      rgbFromHex(tokens['--stcpl-reading-inner']),
+    ];
+    for (const name of ['ink', 'muted', 'label']) {
+      const text = rgbFromHex(tokens[`--stcpl-reading-${name}`]);
+      for (const surface of surfaces) {
+        const contrast = contrastRatio(text, surface);
+        assert.ok(contrast >= 4.5, `${selector} ${name}: ${contrast.toFixed(2)}:1`);
+      }
+    }
+  }
 });
 
 test('Phase 2A approved dashboard hero uses a balanced greeting and compact 2x2 status panel', () => {
@@ -112,7 +214,7 @@ test('Phase 2A final standard removes rainy-window page blur and keeps restraine
   assert.match(finalCss, /\.tc-main,[\s\S]*backdrop-filter:\s*none/);
   assert.match(finalCss, /\.stcp-hero \.st-summary-cards[\s\S]*blur\(4px\)/);
   assert.match(finalCss, /\.stcp-quick__link[\s\S]*blur\(3px\)/);
-  assert.doesNotMatch(finalCss, /blur\((1[0-9]|[2-9][0-9])px\)/);
+  assert.doesNotMatch(finalCss + referenceCss, /blur\((1[0-9]|[2-9][0-9])px\)/);
   assert.match(referenceCss, /\.st-login-container[\s\S]*blur\(3px\)/);
 });
 
@@ -152,7 +254,7 @@ test('Student route loads CanyonPath foundation and approved-reference layers la
   assert.match(sidebar, /student-canyonpath-cinematic\.css\?v=20260907-2a4/);
   assert.match(sidebar, /student-canyonpath-premium\.css\?v=20260907-2a5/);
   assert.match(sidebar, /student-canyonpath-final\.css\?v=20260907-2a6/);
-  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260907-2a9/);
+  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260907-2a10/);
   assert.match(sidebar, /student-canyonpath\.js\?v=20260907-2a3/);
   assert.match(sidebar, /student-canyonpath-refine\.js\?v=20260907-2a4/);
   assert.ok(sidebar.indexOf('student-canyonpath-reference-match.css') > sidebar.indexOf('student-canyonpath-final.css'));
