@@ -1,0 +1,273 @@
+/*
+ * RC CanyonPath Detail Layer
+ * Phase 1A polish pass: richer scenic depth, icon tiles, highlights, micro-detail,
+ * and compositional accents. Still opt-in and presentation-only.
+ */
+
+.rc-canyonpath.rc-canyonpath--detailed {
+  --rc-cp-detail-line: rgba(214, 248, 236, 0.13);
+  --rc-cp-detail-shine: rgba(231, 255, 248, 0.055);
+  --rc-cp-detail-mint: #9ff1d7;
+  --rc-cp-detail-cream: #f1dfaa;
+}
+
+body.rc-canyonpath.rc-canyonpath--detailed {
+  background-image:
+    linear-gradient(180deg, rgba(2, 26, 22, 0.04) 0, rgba(3, 23, 20, 0.30) 390px, rgba(3, 23, 20, 0.90) 790px),
+    url("/assets/bg/rc-canyonpath-landscape-rich.svg"),
+    radial-gradient(circle at 16% 7%, rgba(74, 190, 151, 0.17), transparent 35rem),
+    radial-gradient(circle at 87% 3%, rgba(239, 220, 160, 0.08), transparent 28rem),
+    linear-gradient(180deg, var(--rc-cp-bg) 0, var(--rc-cp-bg-deep) 100%);
+  background-repeat: no-repeat;
+  background-size: 100% 800px, max(1750px, 100vw) auto, 100% 100%, 100% 100%, 100% 100%;
+  background-position: top center;
+}
+
+.rc-canyonpath--detailed .rc-cp-scenic {
+  background:
+    linear-gradient(90deg, rgba(4, 34, 29, 0.94) 0%, rgba(4, 34, 29, 0.75) 48%, rgba(4, 34, 29, 0.28) 100%),
+    url("/assets/bg/rc-canyonpath-landscape-rich.svg") center 30% / cover no-repeat;
+  border-color: rgba(188, 238, 220, 0.22);
+  box-shadow:
+    0 30px 90px rgba(0, 12, 10, 0.46),
+    inset 0 1px rgba(241, 255, 250, 0.045);
+}
+
+.rc-canyonpath--detailed .rc-cp-scenic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 76% 18%, rgba(248, 227, 169, 0.09), transparent 16rem),
+    linear-gradient(105deg, rgba(123, 232, 195, 0.035), transparent 38%, rgba(255,255,255,0.025) 58%, transparent 76%);
+  mix-blend-mode: screen;
+}
+
+.rc-canyonpath--detailed .rc-cp-hero {
+  min-height: clamp(280px, 35vw, 420px);
+}
+
+.rc-canyonpath--detailed .rc-cp-hero__content {
+  text-shadow: 0 3px 20px rgba(0, 15, 12, 0.34);
+}
+
+.rc-canyonpath--detailed .rc-cp-title {
+  font-weight: 880;
+  letter-spacing: -0.05em;
+}
+
+.rc-canyonpath--detailed .rc-cp-subtitle {
+  color: #d6e8e1;
+}
+
+.rc-canyonpath--detailed .rc-cp-card {
+  border-color: rgba(184, 238, 220, 0.20);
+  background:
+    linear-gradient(160deg, rgba(165, 232, 209, 0.095), rgba(8, 50, 43, 0.03) 38%, rgba(2, 28, 24, 0.08) 100%),
+    rgba(8, 50, 43, 0.76);
+  box-shadow:
+    0 12px 32px rgba(0, 12, 10, 0.25),
+    inset 0 1px rgba(240, 255, 249, 0.035);
+}
+
+.rc-canyonpath--detailed .rc-cp-card::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(219, 255, 243, 0.10), transparent);
+}
+
+.rc-canyonpath--detailed .rc-cp-card--strong {
+  background:
+    linear-gradient(150deg, rgba(160, 231, 206, 0.11), rgba(6, 43, 37, 0.08) 48%),
+    rgba(7, 42, 36, 0.90);
+  box-shadow:
+    0 22px 58px rgba(0, 12, 10, 0.33),
+    inset 0 1px rgba(240, 255, 249, 0.045);
+}
+
+.rc-canyonpath--detailed .rc-cp-card--interactive:hover {
+  transform: translateY(-3px);
+  border-color: rgba(188, 242, 224, 0.38);
+  box-shadow:
+    0 18px 38px rgba(0, 12, 10, 0.34),
+    0 0 0 1px rgba(125, 227, 198, 0.07),
+    0 0 28px rgba(60, 205, 155, 0.055);
+}
+
+.rc-cp-icon-tile {
+  width: 48px;
+  height: 48px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(184, 238, 220, 0.28);
+  border-radius: 13px;
+  background:
+    linear-gradient(145deg, rgba(153, 233, 205, 0.14), rgba(71, 145, 122, 0.045)),
+    rgba(7, 48, 41, 0.76);
+  color: var(--rc-cp-detail-mint, var(--rc-cp-mint));
+  box-shadow:
+    inset 0 1px rgba(242, 255, 250, 0.055),
+    0 8px 18px rgba(0, 12, 10, 0.16);
+}
+
+.rc-cp-icon-tile svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rc-cp-icon-tile--soft {
+  background: rgba(88, 157, 135, 0.10);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.rc-cp-icon-tile--cream {
+  color: #fae6ad;
+  border-color: rgba(239, 220, 160, 0.25);
+  background: rgba(239, 220, 160, 0.075);
+}
+
+.rc-cp-stat-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid rgba(184, 238, 220, 0.20);
+  background: rgba(125, 227, 198, 0.075);
+  color: var(--rc-cp-mint-strong);
+}
+
+.rc-cp-stat-icon svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rc-cp-section-rule {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
+  align-items: center;
+}
+
+.rc-cp-section-rule::after {
+  content: "";
+  height: 1px;
+  background: linear-gradient(90deg, rgba(178, 233, 214, 0.18), transparent);
+}
+
+.rc-cp-detail-label {
+  color: var(--rc-cp-mint-strong);
+  font-size: 0.7rem;
+  font-weight: 780;
+  letter-spacing: 0.21em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rc-cp-progress--glow .rc-cp-progress__bar {
+  box-shadow: 0 0 22px rgba(91, 220, 177, 0.28);
+}
+
+.rc-canyonpath--detailed .rc-cp-btn {
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.045),
+    0 5px 14px rgba(0, 14, 12, 0.12);
+}
+
+.rc-canyonpath--detailed .rc-cp-btn--primary {
+  background: linear-gradient(180deg, #c9f8e9, #aeeedb);
+}
+
+.rc-canyonpath--detailed .rc-cp-btn--cream {
+  background: linear-gradient(180deg, #f4e4b4, #e8d28e);
+}
+
+.rc-cp-quote {
+  position: relative;
+  padding-left: 22px;
+  color: #d6e8e1;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.rc-cp-quote::before {
+  content: "“";
+  position: absolute;
+  left: 0;
+  top: -4px;
+  color: var(--rc-cp-mint-strong);
+  font-size: 2.1rem;
+  font-family: Georgia, serif;
+  line-height: 1;
+}
+
+.rc-cp-hero-motto {
+  position: absolute;
+  right: clamp(22px, 3.4vw, 48px);
+  bottom: 24px;
+  color: rgba(167, 238, 214, 0.74);
+  font-size: 0.68rem;
+  font-weight: 720;
+  letter-spacing: 0.24em;
+  line-height: 1.65;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.rc-cp-footer-scenic--rich {
+  background:
+    linear-gradient(90deg, rgba(3, 28, 24, 0.95), rgba(3, 28, 24, 0.58)),
+    url("/assets/bg/rc-canyonpath-landscape-rich.svg") center 84% / cover no-repeat;
+  box-shadow: inset 0 1px rgba(230, 255, 247, 0.035);
+}
+
+.rc-cp-footer-mark {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: rgba(188, 238, 220, 0.76);
+}
+
+.rc-cp-footer-mark::before {
+  content: "";
+  width: 1px;
+  height: 42px;
+  background: rgba(189, 244, 228, 0.35);
+}
+
+@media (max-width: 720px) {
+  body.rc-canyonpath.rc-canyonpath--detailed {
+    background-size: auto 560px, 1200px auto, 100% 100%, 100% 100%, 100% 100%;
+  }
+
+  .rc-cp-hero-motto {
+    display: none;
+  }
+
+  .rc-cp-section-rule {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .rc-cp-section-rule::after {
+    display: none;
+  }
+}

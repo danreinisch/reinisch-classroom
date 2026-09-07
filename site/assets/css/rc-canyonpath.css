@@ -1,0 +1,906 @@
+/*
+ * RC CanyonPath — Opt-in visual layer for Reinisch Classroom
+ * Phase 1A foundation: tokens, atmosphere, surfaces, controls, focus, and responsive rules.
+ *
+ * Usage:
+ *   <link rel="stylesheet" href="/assets/css/rc-theme.css">
+ *   <link rel="stylesheet" href="/assets/css/rc-canyonpath.css">
+ *   <body class="rc-canyonpath">
+ *
+ * This file is intentionally opt-in. Loading it alone does not restyle existing pages.
+ * Icons in new CanyonPath UI must be inline SVG or text monograms — never emoji or icon fonts.
+ */
+
+.rc-canyonpath {
+  color-scheme: dark;
+
+  /* Core palette */
+  --rc-cp-bg: #061f1c;
+  --rc-cp-bg-deep: #031714;
+  --rc-cp-bg-raised: #082925;
+  --rc-cp-panel: rgba(9, 49, 43, 0.78);
+  --rc-cp-panel-strong: rgba(8, 42, 37, 0.92);
+  --rc-cp-panel-soft: rgba(119, 193, 169, 0.08);
+  --rc-cp-panel-hover: rgba(138, 216, 190, 0.12);
+  --rc-cp-panel-active: rgba(143, 224, 197, 0.16);
+  --rc-cp-sage: #315e54;
+  --rc-cp-sage-soft: #4d796e;
+  --rc-cp-mint: #bdf4e4;
+  --rc-cp-mint-strong: #7de3c6;
+  --rc-cp-mint-deep: #25b889;
+  --rc-cp-cream: #efdca0;
+  --rc-cp-cream-ink: #443612;
+  --rc-cp-ink: #f2fbf7;
+  --rc-cp-ink-dim: #c9ded6;
+  --rc-cp-muted: #9cbab0;
+  --rc-cp-faint: #6d9588;
+
+  /* Semantics */
+  --rc-cp-success: #59d99a;
+  --rc-cp-warning: #e9c875;
+  --rc-cp-danger: #ef8275;
+  --rc-cp-info: #76c9d8;
+
+  /* Lines / shadows / glow */
+  --rc-cp-line: rgba(177, 232, 214, 0.18);
+  --rc-cp-line-strong: rgba(184, 238, 220, 0.32);
+  --rc-cp-line-faint: rgba(177, 232, 214, 0.10);
+  --rc-cp-shadow-sm: 0 8px 24px rgba(0, 14, 12, 0.24);
+  --rc-cp-shadow: 0 18px 54px rgba(0, 14, 12, 0.32);
+  --rc-cp-shadow-lg: 0 28px 80px rgba(0, 13, 11, 0.42);
+  --rc-cp-glow: rgba(90, 224, 179, 0.28);
+  --rc-cp-glow-cream: rgba(239, 220, 160, 0.22);
+  --rc-cp-focus: #bdf4e4;
+  --rc-cp-focus-ring: 0 0 0 3px rgba(189, 244, 228, 0.28);
+
+  /* Shape / layout */
+  --rc-cp-radius-sm: 10px;
+  --rc-cp-radius: 14px;
+  --rc-cp-radius-lg: 20px;
+  --rc-cp-radius-xl: 26px;
+  --rc-cp-radius-pill: 999px;
+  --rc-cp-content: 1240px;
+  --rc-cp-gutter: clamp(16px, 3vw, 34px);
+  --rc-cp-section-gap: clamp(18px, 2.4vw, 30px);
+
+  /* Bridge the existing universal tokens while the page is opted in. */
+  --rc-base: var(--rc-cp-bg);
+  --rc-panel: var(--rc-cp-bg-raised);
+  --rc-panel-2: var(--rc-cp-panel-strong);
+  --rc-glass: var(--rc-cp-panel);
+  --rc-glass-border: var(--rc-cp-line);
+  --rc-glass-hover: var(--rc-cp-panel-hover);
+  --rc-glass-active: var(--rc-cp-panel-active);
+  --rc-ink: var(--rc-cp-ink);
+  --rc-ink-dim: var(--rc-cp-ink-dim);
+  --rc-muted: var(--rc-cp-muted);
+  --rc-border: var(--rc-cp-line);
+  --rc-border-strong: var(--rc-cp-line-strong);
+  --rc-brand: var(--rc-cp-mint-deep);
+  --rc-brand-2: var(--rc-cp-mint-strong);
+  --rc-success: var(--rc-cp-success);
+  --rc-warning: var(--rc-cp-warning);
+  --rc-danger: var(--rc-cp-danger);
+  --rc-info: var(--rc-cp-info);
+  --rc-shadow: var(--rc-cp-shadow);
+  --rc-shadow-sm: var(--rc-cp-shadow-sm);
+  --rc-glow: var(--rc-cp-glow);
+  --rc-glow-ring: var(--rc-cp-focus-ring);
+}
+
+body.rc-canyonpath {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--rc-cp-ink);
+  background-color: var(--rc-cp-bg-deep);
+  background-image:
+    linear-gradient(180deg, rgba(3, 25, 22, 0.06) 0, rgba(3, 23, 20, 0.48) 410px, rgba(3, 23, 20, 0.94) 780px),
+    url("/assets/bg/rc-canyonpath-landscape.svg"),
+    radial-gradient(circle at 18% 8%, rgba(71, 183, 145, 0.16), transparent 34rem),
+    linear-gradient(180deg, var(--rc-cp-bg) 0, var(--rc-cp-bg-deep) 100%);
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size: 100% 760px, max(1600px, 100vw) auto, 100% 100%, 100% 100%;
+  background-position: top center, top center, top center, top center;
+  background-attachment: scroll, scroll, fixed, fixed;
+}
+
+.rc-canyonpath * {
+  box-sizing: border-box;
+}
+
+.rc-canyonpath ::selection {
+  background: var(--rc-cp-mint);
+  color: #06231f;
+}
+
+.rc-canyonpath a {
+  color: var(--rc-cp-mint);
+  text-underline-offset: 0.18em;
+}
+
+.rc-canyonpath a:hover {
+  color: #e1fff6;
+}
+
+/* --------------------------------------------------------------------------
+   Layout / scenic framing
+   -------------------------------------------------------------------------- */
+
+.rc-cp-page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  padding: var(--rc-cp-gutter);
+}
+
+.rc-cp-shell {
+  width: min(var(--rc-cp-content), calc(100vw - (2 * var(--rc-cp-gutter))));
+  margin-inline: auto;
+}
+
+.rc-cp-stack {
+  display: grid;
+  gap: var(--rc-cp-section-gap);
+}
+
+.rc-cp-grid {
+  display: grid;
+  gap: clamp(12px, 1.5vw, 18px);
+}
+
+.rc-cp-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rc-cp-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.rc-cp-grid--auto {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+
+.rc-cp-scenic {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--rc-cp-line);
+  border-radius: var(--rc-cp-radius-xl);
+  background:
+    linear-gradient(90deg, rgba(5, 35, 31, 0.96) 0%, rgba(5, 35, 31, 0.74) 48%, rgba(5, 35, 31, 0.34) 100%),
+    url("/assets/bg/rc-canyonpath-landscape.svg") center 34% / cover no-repeat;
+  box-shadow: var(--rc-cp-shadow-lg);
+}
+
+.rc-cp-scenic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 28%),
+    linear-gradient(0deg, rgba(2, 22, 19, 0.28), transparent 44%);
+}
+
+.rc-cp-scenic > * {
+  position: relative;
+  z-index: 1;
+}
+
+.rc-cp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.8fr);
+  gap: clamp(22px, 4vw, 54px);
+  align-items: end;
+  min-height: clamp(250px, 34vw, 390px);
+  padding: clamp(24px, 4vw, 52px);
+}
+
+.rc-cp-hero__content {
+  align-self: center;
+  max-width: 760px;
+}
+
+.rc-cp-hero__aside {
+  align-self: center;
+}
+
+.rc-cp-footer-scenic {
+  position: relative;
+  overflow: hidden;
+  min-height: 112px;
+  border-top: 1px solid var(--rc-cp-line);
+  background:
+    linear-gradient(90deg, rgba(4, 31, 27, 0.94), rgba(4, 31, 27, 0.64)),
+    url("/assets/bg/rc-canyonpath-landscape.svg") center 82% / cover no-repeat;
+}
+
+.rc-cp-footer-scenic__inner {
+  width: min(var(--rc-cp-content), calc(100vw - (2 * var(--rc-cp-gutter))));
+  min-height: inherit;
+  margin-inline: auto;
+  padding: 22px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+/* --------------------------------------------------------------------------
+   Type hierarchy
+   -------------------------------------------------------------------------- */
+
+.rc-cp-eyebrow {
+  margin: 0 0 8px;
+  color: var(--rc-cp-mint-strong);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.rc-cp-title {
+  margin: 0;
+  color: var(--rc-cp-ink);
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 850;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.rc-cp-subtitle {
+  margin: 12px 0 0;
+  max-width: 70ch;
+  color: var(--rc-cp-ink-dim);
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  line-height: 1.55;
+}
+
+.rc-cp-section-title {
+  margin: 0;
+  color: var(--rc-cp-ink);
+  font-size: clamp(1.25rem, 2.2vw, 1.7rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.rc-cp-card-title {
+  margin: 0;
+  color: var(--rc-cp-ink);
+  font-size: 1.04rem;
+  font-weight: 760;
+  line-height: 1.25;
+}
+
+.rc-cp-muted {
+  color: var(--rc-cp-muted);
+}
+
+.rc-cp-fine {
+  color: var(--rc-cp-faint);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.rc-cp-motto {
+  color: var(--rc-cp-mint-strong);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  line-height: 1.55;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   Glass surfaces
+   -------------------------------------------------------------------------- */
+
+.rc-cp-card {
+  position: relative;
+  border: 1px solid var(--rc-cp-line);
+  border-radius: var(--rc-cp-radius-lg);
+  background:
+    linear-gradient(145deg, rgba(127, 202, 178, 0.075), rgba(6, 39, 34, 0.04) 55%),
+    var(--rc-cp-panel);
+  box-shadow: var(--rc-cp-shadow-sm);
+  backdrop-filter: blur(16px) saturate(115%);
+  -webkit-backdrop-filter: blur(16px) saturate(115%);
+}
+
+.rc-cp-card--pad {
+  padding: clamp(16px, 2.4vw, 26px);
+}
+
+.rc-cp-card--strong {
+  background:
+    linear-gradient(145deg, rgba(135, 211, 187, 0.09), rgba(5, 31, 28, 0.08)),
+    var(--rc-cp-panel-strong);
+  box-shadow: var(--rc-cp-shadow);
+}
+
+.rc-cp-card--quiet {
+  background: rgba(9, 49, 43, 0.56);
+  box-shadow: none;
+}
+
+.rc-cp-card--interactive {
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.rc-cp-card--interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--rc-cp-line-strong);
+  background:
+    linear-gradient(145deg, rgba(150, 226, 201, 0.11), rgba(7, 45, 39, 0.05)),
+    rgba(10, 56, 49, 0.82);
+  box-shadow: var(--rc-cp-shadow-sm), 0 0 0 1px rgba(125, 227, 198, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   Buttons / controls
+   -------------------------------------------------------------------------- */
+
+.rc-cp-btn {
+  appearance: none;
+  min-height: 44px;
+  border: 1px solid var(--rc-cp-line-strong);
+  border-radius: var(--rc-cp-radius);
+  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: rgba(9, 54, 47, 0.72);
+  color: var(--rc-cp-ink);
+  font: inherit;
+  font-weight: 740;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.035);
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.rc-cp-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(17, 76, 65, 0.88);
+  border-color: rgba(189, 244, 228, 0.45);
+  box-shadow: 0 8px 22px rgba(0, 16, 13, 0.22), 0 0 18px rgba(74, 204, 160, 0.08);
+}
+
+.rc-cp-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.rc-cp-btn--primary {
+  border-color: rgba(189, 244, 228, 0.76);
+  background: var(--rc-cp-mint);
+  color: #082a24;
+  box-shadow: 0 8px 24px rgba(49, 202, 152, 0.12);
+}
+
+.rc-cp-btn--primary:hover:not(:disabled) {
+  background: #d8fff4;
+  border-color: #eafff9;
+  box-shadow: 0 10px 28px rgba(58, 220, 165, 0.18);
+}
+
+.rc-cp-btn--cream {
+  border-color: rgba(255, 241, 191, 0.65);
+  background: var(--rc-cp-cream);
+  color: var(--rc-cp-cream-ink);
+  box-shadow: 0 8px 24px rgba(239, 220, 160, 0.10);
+}
+
+.rc-cp-btn--cream:hover:not(:disabled) {
+  background: #f8e9b7;
+  border-color: #fff1c3;
+  box-shadow: 0 10px 28px var(--rc-cp-glow-cream);
+}
+
+.rc-cp-btn--quiet {
+  border-color: var(--rc-cp-line);
+  background: rgba(4, 34, 30, 0.42);
+  color: var(--rc-cp-ink-dim);
+}
+
+.rc-cp-btn--danger {
+  border-color: rgba(239, 130, 117, 0.4);
+  background: rgba(141, 46, 39, 0.16);
+  color: #ffd4ce;
+}
+
+.rc-cp-btn--icon {
+  width: 44px;
+  padding-inline: 0;
+}
+
+.rc-cp-btn:disabled,
+.rc-cp-btn[aria-disabled="true"] {
+  opacity: 0.46;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.rc-cp-icon {
+  width: 1.15em;
+  height: 1.15em;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+.rc-cp-icon > svg,
+svg.rc-cp-icon {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rc-cp-monogram {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--rc-cp-line-strong);
+  border-radius: 12px;
+  background: rgba(138, 216, 190, 0.08);
+  color: var(--rc-cp-mint);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+}
+
+/* --------------------------------------------------------------------------
+   Tabs / navigation / rows
+   -------------------------------------------------------------------------- */
+
+.rc-cp-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 5px;
+  overflow-x: auto;
+  border: 1px solid var(--rc-cp-line);
+  border-radius: var(--rc-cp-radius-lg);
+  background: rgba(4, 34, 30, 0.48);
+  scrollbar-width: none;
+}
+
+.rc-cp-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.rc-cp-tab {
+  appearance: none;
+  min-height: 42px;
+  flex: 1 0 auto;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 9px 16px;
+  background: transparent;
+  color: var(--rc-cp-ink-dim);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.rc-cp-tab:hover {
+  background: var(--rc-cp-panel-hover);
+  color: var(--rc-cp-ink);
+}
+
+.rc-cp-tab[aria-selected="true"],
+.rc-cp-tab[aria-pressed="true"],
+.rc-cp-tab.is-active {
+  border-color: rgba(189, 244, 228, 0.62);
+  background: var(--rc-cp-mint);
+  color: #082a24;
+}
+
+.rc-cp-row {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--rc-cp-line);
+  border-radius: var(--rc-cp-radius);
+  background: rgba(42, 91, 79, 0.30);
+}
+
+.rc-cp-row--interactive {
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.rc-cp-row--interactive:hover {
+  background: rgba(72, 125, 110, 0.36);
+  border-color: var(--rc-cp-line-strong);
+  transform: translateY(-1px);
+}
+
+.rc-cp-row__main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.rc-cp-row__aside {
+  flex: 0 0 auto;
+  color: var(--rc-cp-muted);
+  font-size: 0.86rem;
+}
+
+.rc-cp-chevron {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--rc-cp-line);
+  border-radius: 50%;
+  color: var(--rc-cp-mint);
+  background: rgba(105, 175, 153, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   Progress / status
+   -------------------------------------------------------------------------- */
+
+.rc-cp-progress {
+  height: 9px;
+  overflow: hidden;
+  border-radius: var(--rc-cp-radius-pill);
+  background: rgba(188, 228, 216, 0.14);
+  box-shadow: inset 0 1px 2px rgba(0, 14, 12, 0.28);
+}
+
+.rc-cp-progress__bar {
+  height: 100%;
+  width: var(--rc-cp-progress, 0%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--rc-cp-mint-strong), var(--rc-cp-mint));
+  box-shadow: 0 0 16px rgba(91, 220, 177, 0.20);
+}
+
+.rc-cp-ring {
+  --rc-cp-ring-value: 0%;
+  width: 72px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--rc-cp-mint-strong) var(--rc-cp-ring-value), rgba(182, 226, 211, 0.14) 0);
+  position: relative;
+}
+
+.rc-cp-ring::after {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: var(--rc-cp-bg-raised);
+  box-shadow: inset 0 0 0 1px var(--rc-cp-line-faint);
+}
+
+.rc-cp-ring > span {
+  position: relative;
+  z-index: 1;
+  color: var(--rc-cp-ink);
+  font-weight: 820;
+}
+
+.rc-cp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  border: 1px solid var(--rc-cp-line);
+  border-radius: var(--rc-cp-radius-pill);
+  padding: 5px 10px;
+  background: rgba(115, 182, 160, 0.08);
+  color: var(--rc-cp-ink-dim);
+  font-size: 0.78rem;
+  font-weight: 720;
+}
+
+.rc-cp-badge--success {
+  border-color: rgba(89, 217, 154, 0.34);
+  background: rgba(89, 217, 154, 0.10);
+  color: #bdf4d3;
+}
+
+.rc-cp-badge--warning {
+  border-color: rgba(233, 200, 117, 0.36);
+  background: rgba(233, 200, 117, 0.10);
+  color: #f8e7b6;
+}
+
+.rc-cp-badge--danger {
+  border-color: rgba(239, 130, 117, 0.34);
+  background: rgba(239, 130, 117, 0.10);
+  color: #ffd2cc;
+}
+
+/* --------------------------------------------------------------------------
+   Inputs / tables
+   -------------------------------------------------------------------------- */
+
+.rc-cp-input,
+.rc-cp-select,
+.rc-cp-textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--rc-cp-line-strong);
+  border-radius: var(--rc-cp-radius);
+  padding: 10px 12px;
+  background: rgba(4, 31, 27, 0.62);
+  color: var(--rc-cp-ink);
+  font: inherit;
+  outline: none;
+}
+
+.rc-cp-input::placeholder,
+.rc-cp-textarea::placeholder {
+  color: var(--rc-cp-faint);
+}
+
+.rc-cp-select option {
+  background: var(--rc-cp-bg-raised);
+  color: var(--rc-cp-ink);
+}
+
+.rc-cp-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.rc-cp-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--rc-cp-line);
+  border-radius: var(--rc-cp-radius-lg);
+  background: rgba(4, 31, 27, 0.38);
+}
+
+.rc-cp-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--rc-cp-ink-dim);
+  font-size: 0.9rem;
+}
+
+.rc-cp-table th,
+.rc-cp-table td {
+  padding: 11px 13px;
+  text-align: left;
+  border-bottom: 1px solid var(--rc-cp-line-faint);
+}
+
+.rc-cp-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(5, 37, 32, 0.96);
+  color: var(--rc-cp-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.rc-cp-table tbody tr:hover {
+  background: rgba(108, 179, 156, 0.08);
+}
+
+.rc-cp-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Instruction / question surfaces
+   -------------------------------------------------------------------------- */
+
+.rc-cp-callout {
+  border: 1px solid var(--rc-cp-line-strong);
+  border-left: 4px solid var(--rc-cp-mint-strong);
+  border-radius: var(--rc-cp-radius);
+  padding: 12px 14px;
+  background: rgba(64, 113, 100, 0.30);
+  color: var(--rc-cp-ink-dim);
+  line-height: 1.5;
+}
+
+.rc-cp-choice {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--rc-cp-line);
+  border-radius: var(--rc-cp-radius);
+  padding: 10px 12px;
+  background: rgba(87, 132, 119, 0.26);
+  color: var(--rc-cp-ink);
+}
+
+.rc-cp-choice:hover:not([aria-disabled="true"]) {
+  border-color: var(--rc-cp-line-strong);
+  background: rgba(105, 158, 142, 0.32);
+}
+
+.rc-cp-choice[aria-checked="true"],
+.rc-cp-choice.is-selected {
+  border-color: rgba(125, 227, 198, 0.72);
+  background: rgba(43, 143, 107, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(125, 227, 198, 0.16);
+}
+
+.rc-cp-choice.is-correct {
+  border-color: rgba(89, 217, 154, 0.78);
+  background: rgba(43, 143, 91, 0.24);
+}
+
+.rc-cp-choice.is-wrong {
+  border-color: rgba(239, 130, 117, 0.66);
+  background: rgba(151, 63, 52, 0.18);
+}
+
+.rc-cp-choice__letter {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--rc-cp-line-strong);
+  border-radius: 50%;
+  background: rgba(4, 35, 30, 0.36);
+  color: var(--rc-cp-mint);
+  font-weight: 820;
+}
+
+.rc-cp-feedback {
+  border: 1px solid var(--rc-cp-line-strong);
+  border-radius: var(--rc-cp-radius-lg);
+  padding: 16px;
+  background: rgba(56, 105, 91, 0.28);
+  color: var(--rc-cp-ink-dim);
+}
+
+.rc-cp-feedback--success {
+  border-color: rgba(89, 217, 154, 0.46);
+  background: rgba(38, 124, 82, 0.20);
+}
+
+.rc-cp-feedback--warning {
+  border-color: rgba(233, 200, 117, 0.42);
+  background: rgba(130, 100, 35, 0.15);
+}
+
+/* --------------------------------------------------------------------------
+   Accessibility / focus
+   -------------------------------------------------------------------------- */
+
+.rc-canyonpath :where(
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 3px solid var(--rc-cp-focus);
+  outline-offset: 3px;
+  box-shadow: var(--rc-cp-focus-ring);
+}
+
+.rc-canyonpath :where(button, a, [role="button"]) svg {
+  transition: filter 140ms ease, transform 140ms ease;
+}
+
+.rc-canyonpath :where(button, a, [role="button"]):hover svg {
+  filter: drop-shadow(0 0 7px var(--rc-cp-glow));
+}
+
+.rc-canyonpath [aria-live],
+.rc-canyonpath [role="status"] {
+  scroll-margin-top: 90px;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive behavior
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 980px) {
+  .rc-cp-hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .rc-cp-hero__aside {
+    max-width: 520px;
+  }
+
+  .rc-cp-grid--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  body.rc-canyonpath {
+    background-attachment: scroll;
+    background-size: auto 520px, 1100px auto, 100% 100%, 100% 100%;
+  }
+
+  .rc-cp-page {
+    padding: 12px;
+  }
+
+  .rc-cp-shell,
+  .rc-cp-footer-scenic__inner {
+    width: 100%;
+  }
+
+  .rc-cp-grid--2,
+  .rc-cp-grid--3 {
+    grid-template-columns: 1fr;
+  }
+
+  .rc-cp-footer-scenic__inner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rc-cp-title {
+    font-size: clamp(2.1rem, 12vw, 3.2rem);
+  }
+
+  .rc-cp-btn {
+    min-height: 46px;
+  }
+
+  .rc-cp-table {
+    min-width: 620px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-canyonpath *,
+  .rc-canyonpath *::before,
+  .rc-canyonpath *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .rc-canyonpath {
+    --rc-cp-line: rgba(219, 255, 244, 0.36);
+    --rc-cp-line-strong: rgba(231, 255, 248, 0.62);
+    --rc-cp-ink-dim: #e1f2ec;
+    --rc-cp-muted: #c3dcd4;
+  }
+}
+
+@media (forced-colors: active) {
+  .rc-cp-card,
+  .rc-cp-btn,
+  .rc-cp-tab,
+  .rc-cp-row,
+  .rc-cp-choice,
+  .rc-cp-input,
+  .rc-cp-select,
+  .rc-cp-textarea {
+    forced-color-adjust: auto;
+    box-shadow: none;
+  }
+}
