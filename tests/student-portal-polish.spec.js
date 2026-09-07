@@ -4,9 +4,15 @@ test.describe('Student Portal polish layer', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/student/');
     await page.waitForFunction(() => Boolean(window.RCStudentPortalPolish));
+    await page.waitForFunction(() => Boolean(window.RCStudentGoalEvidenceTimeline));
     await page.waitForFunction(() =>
       Array.from(document.styleSheets).some((sheet) =>
         String(sheet.href || '').includes('/assets/css/student-portal-polish.css')
+      )
+    );
+    await page.waitForFunction(() =>
+      Array.from(document.styleSheets).some((sheet) =>
+        String(sheet.href || '').includes('/assets/css/student-goal-evidence-timeline.css')
       )
     );
   });
@@ -131,5 +137,70 @@ test.describe('Student Portal polish layer', () => {
     await expect(page.locator('#goalsContent .sgp-trend')).toHaveClass(/sgp-trend--sparse/);
     await expect(page.locator('#goalsContent .sgp-eyebrow')).toHaveText('EVIDENCE FOR THIS CHECK');
     await expect(page.locator('#goalsContent .sgp-work p')).toContainText('no question-level evidence is linked');
+  });
+
+  test('shows one dot per evidence event and reveals the selected question', async ({ page }) => {
+    await page.route('**/.netlify/functions/student-goal-evidence-events?**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          available: true,
+          quarter: { quarter: 'Q1', start: '2026-08-16', end: '2026-10-17' },
+          goal: { code: 'S065.CG1', goal_area: 'Reading Comprehension', measurement_type: 'Accuracy' },
+          counts: { total: 5, question: 5, recorded_check: 0 },
+          skills: [
+            { objective_number: 1, objective_text: 'Identify author purpose' },
+            { objective_number: 2, objective_text: 'Identify main idea' },
+            { objective_number: 3, objective_text: 'Explain cause and effect' },
+          ],
+          events: [
+            { key: 'a', kind: 'objective', date: '2026-09-03', source: 'assignment', assignment_title: 'Week 1 Reading', item_ref: '1_1', question_text: 'What is the author purpose?', student_answer: 'Inform', answer_review_available: true, correct_answer: 'Inform', is_correct: true, score: 100, objective_earned: 1, objective_max: 1, objective_number: 1, objective_text: 'Identify author purpose', status: 'Correct' },
+            { key: 'b', kind: 'objective', date: '2026-09-03', source: 'assignment', assignment_title: 'Week 1 Reading', item_ref: '1_2', question_text: 'What is the main idea?', student_answer: 'A', answer_review_available: true, correct_answer: 'B', is_correct: false, score: 0, objective_earned: 0, objective_max: 1, objective_number: 2, objective_text: 'Identify main idea', status: 'Review this answer' },
+            { key: 'c', kind: 'objective', date: '2026-09-03', source: 'assignment', assignment_title: 'Week 1 Reading', item_ref: '1_3', question_text: 'Which detail supports the main idea?', student_answer: 'C', answer_review_available: true, correct_answer: 'C', is_correct: true, score: 100, objective_earned: 1, objective_max: 1, objective_number: 2, objective_text: 'Identify main idea', status: 'Correct' },
+            { key: 'd', kind: 'objective', date: '2026-09-03', source: 'assignment', assignment_title: 'Week 1 Reading', item_ref: '1_4', question_text: 'What caused the problem?', student_answer: 'A', answer_review_available: true, correct_answer: 'B', is_correct: false, score: 0, objective_earned: 0, objective_max: 1, objective_number: 3, objective_text: 'Explain cause and effect', status: 'Review this answer' },
+            { key: 'e', kind: 'objective', date: '2026-09-03', source: 'assignment', assignment_title: 'Week 1 Reading', item_ref: '1_5', question_text: 'What was the effect?', student_answer: 'C', answer_review_available: true, correct_answer: 'C', is_correct: true, score: 100, objective_earned: 1, objective_max: 1, objective_number: 3, objective_text: 'Explain cause and effect', status: 'Correct' },
+          ],
+        }),
+      });
+    });
+
+    await page.evaluate(() => {
+      document.getElementById('goalsContent')?.remove();
+      const goals = document.createElement('div');
+      goals.id = 'goalsContent';
+      goals.innerHTML = `
+        <article class="sgp-card" data-sgp-goal="S065.CG1" style="width:900px">
+          <div class="sgp-stats"><div><span>Q1 average</span><strong>83.3%</strong></div><div><span>Goal target</span><strong>80%</strong></div><div><span>Evidence records</span><strong>5</strong></div></div>
+          <details class="sgp-progress" open>
+            <summary>Explore my progress</summary>
+            <div data-sgp-body>
+              <div class="sgp-controls"><label>Quarter<select data-sgp-quarter><option selected>2026–27 · Q1</option></select></label><label>Goal skill<select data-sgp-objective><option>Skill 1</option></select></label></div>
+              <p class="sgp-skill-text">Identify author purpose</p>
+              <section class="sgp-trend"><details class="sgp-calculation"><summary>How my progress is calculated</summary><p>Official math stays separate.</p></details></section>
+              <div data-sgp-selected></div>
+            </div>
+          </details>
+        </article>`;
+      document.body.appendChild(goals);
+      window.RCStudentGoalEvidenceTimeline.enhance();
+    });
+
+    await expect(page.locator('.et-dot')).toHaveCount(5);
+    await expect(page.locator('[data-et-skill]')).toHaveValue('all');
+    await expect(page.locator('.et-heading')).toContainText('Each dot is one piece of evidence');
+
+    await page.locator('.et-dot[data-et-key-value="b"]').click();
+    await expect(page.locator('.et-detail')).toContainText('What is the main idea?');
+    await expect(page.locator('.et-detail')).toContainText('Your answer');
+    await expect(page.locator('.et-detail')).toContainText('Review this answer');
+    await expect(page.locator('.et-detail')).toContainText('Correct answer');
+
+    await page.locator('[data-et-skill]').selectOption('1');
+    await expect(page.locator('.et-dot')).toHaveCount(1);
+    await expect(page.locator('.et-count')).toHaveText('1 event');
+    await expect(page.locator('.sgp-stats > div').last().locator('span')).toHaveText('Evidence events');
+    await expect(page.locator('.sgp-stats > div').last().locator('strong')).toHaveText('5');
   });
 });
