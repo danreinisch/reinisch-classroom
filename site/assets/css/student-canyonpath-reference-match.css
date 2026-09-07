@@ -315,3 +315,42 @@ html[data-theme='light'] body.rc-student-canyonpath .tc-main::before {
 html[data-theme='light'] body.rc-student-canyonpath .tc-main {
   background: var(--bg, #f8f9fa);
 }
+
+/* ========================================================================== 
+   FINAL SHELL CORRECTION — top bar stays visible during long-page scrolling
+   ========================================================================== */
+
+body.rc-student-canyonpath {
+  --tc-topbar-h: 58px;
+}
+
+/* The shared shell's sticky bar can scroll away when the browser page itself
+   owns scrolling. Fix it to the viewport so class/period/countdown/time remain
+   visible on long Goals, Grades, and evidence pages. */
+body.rc-student-canyonpath .tc-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: var(--tc-topbar-h);
+  min-height: var(--tc-topbar-h);
+  box-sizing: border-box;
+  z-index: 120;
+}
+
+/* Fixed positioning removes the bar from normal flow. Restore that exact space
+   once at the shell boundary so neither main content nor sidebar jumps under it. */
+body.rc-student-canyonpath .tc-shell {
+  margin-top: var(--tc-topbar-h);
+  min-height: calc(100vh - var(--tc-topbar-h));
+}
+
+body.rc-student-canyonpath .tc-sidebar {
+  top: var(--tc-topbar-h);
+  height: calc(100vh - var(--tc-topbar-h));
+}
+
+body.rc-student-canyonpath .tc-main::before {
+  inset-top: var(--tc-topbar-h);
+}
