@@ -16,29 +16,41 @@ try {
   document.documentElement.classList.add('tc-collapsed');
 }
 
-// Student Portal presentation polish is intentionally scoped to /student/.
-// Loading it here avoids coupling the visual pass to the large portal runtime
+// Student Portal presentation layers are intentionally scoped to /student/.
+// Loading them here avoids coupling presentation work to the large portal runtime
 // and leaves Teacher Center / public pages untouched.
 if (window.location.pathname === '/student/' || window.location.pathname.startsWith('/student/')) {
-  var loadPolishCss = function () {
-    if (!document.querySelector('link[data-student-portal-polish]')) {
-      var polishCss = document.createElement('link');
-      polishCss.rel = 'stylesheet';
-      polishCss.href = '/assets/css/student-portal-polish.css?v=20260907-polish1';
-      polishCss.setAttribute('data-student-portal-polish', 'true');
-      document.head.appendChild(polishCss);
-    }
-
-    if (!document.querySelector('link[data-student-goal-evidence-timeline]')) {
-      var evidenceCss = document.createElement('link');
-      evidenceCss.rel = 'stylesheet';
-      evidenceCss.href = '/assets/css/student-goal-evidence-timeline.css?v=20260907-evidence1';
-      evidenceCss.setAttribute('data-student-goal-evidence-timeline', 'true');
-      document.head.appendChild(evidenceCss);
-    }
+  var addStudentStylesheetOnce = function (href, marker) {
+    if (document.querySelector('link[' + marker + ']')) return;
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.setAttribute(marker, 'true');
+    document.head.appendChild(link);
   };
 
-  // Append after the page's inline styles so the scoped polish layer is the
+  var loadPolishCss = function () {
+    addStudentStylesheetOnce('/assets/css/student-portal-polish.css?v=20260907-polish1', 'data-student-portal-polish');
+    addStudentStylesheetOnce('/assets/css/student-goal-evidence-timeline.css?v=20260907-evidence1', 'data-student-goal-evidence-timeline');
+
+    // Phase 2A: opt the Student Portal shell/dashboard into the shared CanyonPath
+    // visual foundation. Student-specific layers load last so they can adapt the
+    // established portal DOM without changing portal behavior.
+    addStudentStylesheetOnce('/assets/css/rc-canyonpath.css?v=20260907-cp1', 'data-rc-canyonpath');
+    addStudentStylesheetOnce('/assets/css/rc-canyonpath-detail.css?v=20260907-cp1', 'data-rc-canyonpath-detail');
+    addStudentStylesheetOnce('/assets/css/student-canyonpath.css?v=20260907-2a1', 'data-student-canyonpath');
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-refine.css?v=20260907-2a2', 'data-student-canyonpath-refine');
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-fixes.css?v=20260907-2a3', 'data-student-canyonpath-fixes');
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-cinematic.css?v=20260907-2a4', 'data-student-canyonpath-cinematic');
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-premium.css?v=20260907-2a5', 'data-student-canyonpath-premium');
+    // Final Phase 2A visual contract. These two layers intentionally load after
+    // every exploratory pass so the approved Dashboard / Goals / Login images
+    // define the effective presentation standard.
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-final.css?v=20260907-2a6', 'data-student-canyonpath-final');
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-reference-match.css?v=20260907-2a11', 'data-student-canyonpath-reference-match');
+  };
+
+  // Append after the page's inline styles so the scoped polish layers are the
   // final presentation rule set without using a forest of !important rules.
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadPolishCss, { once: true });
@@ -55,4 +67,14 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
   evidenceScript.src = '/web/student-goal-evidence-timeline.js?v=20260907-evidence2';
   evidenceScript.async = false;
   document.head.appendChild(evidenceScript);
+
+  var canyonPathScript = document.createElement('script');
+  canyonPathScript.src = '/web/student-canyonpath.js?v=20260907-2a3';
+  canyonPathScript.async = false;
+  document.head.appendChild(canyonPathScript);
+
+  var canyonPathRefineScript = document.createElement('script');
+  canyonPathRefineScript.src = '/web/student-canyonpath-refine.js?v=20260907-2a4';
+  canyonPathRefineScript.async = false;
+  document.head.appendChild(canyonPathRefineScript);
 }

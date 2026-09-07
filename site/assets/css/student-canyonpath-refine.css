@@ -1,0 +1,605 @@
+/*
+ * Student Portal CanyonPath — Phase 2A refinement pass
+ * Presentation-only. This layer fixes composition, scenic depth, box density,
+ * and collapsed-rail alignment without changing portal data or behavior.
+ */
+
+body.rc-student-canyonpath {
+  --stcp-rich-scene: url('/assets/bg/rc-canyonpath-landscape-rich.svg');
+}
+
+/* --------------------------------------------------------------------------
+   Use the actual rich CanyonPath scene. The first 2A pass referenced a
+   non-existent detail asset, which is why the preview looked much flatter
+   than the approved concepts.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .tc-app {
+  background:
+    linear-gradient(180deg, rgba(2, 25, 21, 0.04) 0, rgba(2, 25, 21, 0.28) 430px, rgba(2, 20, 17, 0.92) 940px),
+    var(--stcp-rich-scene) center top / max(1760px, 100vw) auto no-repeat,
+    radial-gradient(circle at 18% 8%, rgba(72, 194, 154, 0.13), transparent 35rem),
+    #031714;
+}
+
+body.rc-student-canyonpath .tc-sidebar {
+  background:
+    linear-gradient(180deg, rgba(3, 28, 24, 0.92), rgba(3, 20, 18, 0.985)),
+    var(--stcp-rich-scene) 34% bottom / 920px auto no-repeat;
+}
+
+/* Remove the old giant shell-card around every tab. Purposeful content groups
+   may still use glass panels, but the whole page no longer sits inside a box. */
+body.rc-student-canyonpath .tc-main {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #studentDashboardView > .st-actions {
+  width: min(1320px, 100%);
+  margin: 0 auto;
+  padding: 0 clamp(22px, 3vw, 38px) 28px;
+  justify-content: flex-end;
+  box-sizing: border-box;
+}
+
+body.rc-student-canyonpath #studentDashboardView > .st-actions #btnLogout {
+  width: auto;
+  min-width: 116px;
+  padding: 8px 14px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--stcp-faint);
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #studentDashboardView > .st-actions #btnLogout:hover {
+  border-color: var(--stcp-line);
+  background: rgba(125, 227, 198, 0.045);
+  color: var(--stcp-ink);
+}
+
+body.rc-student-canyonpath #studentDashboardView .st-dashboard-content {
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: clamp(22px, 3vw, 38px);
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   Dashboard hero — richer scene, less opaque wash, more concept-like depth.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .stcp-hero {
+  min-height: 330px;
+  grid-template-columns: minmax(0, 1.38fr) minmax(300px, 0.72fr);
+  padding: clamp(28px, 4vw, 52px);
+  border-color: rgba(190, 240, 223, 0.24);
+  background:
+    linear-gradient(90deg, rgba(3, 31, 26, 0.90) 0%, rgba(3, 31, 26, 0.66) 46%, rgba(3, 31, 26, 0.20) 100%),
+    var(--stcp-rich-scene) center 30% / cover no-repeat;
+  box-shadow:
+    0 30px 86px rgba(0, 12, 10, 0.38),
+    inset 0 1px rgba(245, 255, 251, 0.045);
+}
+
+body.rc-student-canyonpath .stcp-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 78% 17%, rgba(244, 222, 161, 0.11), transparent 15rem),
+    linear-gradient(115deg, rgba(138, 238, 204, 0.035), transparent 40%, rgba(255,255,255,0.022) 61%, transparent 78%);
+  mix-blend-mode: screen;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header h1 {
+  text-shadow: 0 4px 26px rgba(0, 13, 11, 0.34);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-cards {
+  background:
+    linear-gradient(150deg, rgba(158, 230, 205, 0.085), rgba(5, 36, 31, 0.08) 55%),
+    rgba(4, 35, 30, 0.76);
+  box-shadow:
+    0 18px 48px rgba(0, 13, 11, 0.31),
+    inset 0 1px rgba(241, 255, 250, 0.04);
+}
+
+/* --------------------------------------------------------------------------
+   Quick activities — one purposeful section, not a box containing four boxes.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .stcp-quick {
+  margin: 12px 0 22px;
+  padding: 14px 0 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.rc-student-canyonpath .stcp-quick__head {
+  margin-bottom: 13px;
+  padding-inline: 2px;
+}
+
+body.rc-student-canyonpath .stcp-quick__grid {
+  gap: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--stcp-line);
+  border-bottom: 1px solid var(--stcp-line);
+}
+
+body.rc-student-canyonpath .stcp-quick__link {
+  min-height: 86px;
+  border: 0;
+  border-right: 1px solid var(--stcp-line);
+  border-radius: 0;
+  background: rgba(45, 94, 81, 0.13);
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath .stcp-quick__link:last-child {
+  border-right: 0;
+}
+
+body.rc-student-canyonpath .stcp-quick__link:hover {
+  transform: none;
+  background: rgba(73, 129, 112, 0.23);
+  box-shadow: inset 0 -2px 0 rgba(125, 227, 198, 0.42);
+}
+
+/* --------------------------------------------------------------------------
+   Dashboard composition — balanced first row, optional progress below.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .stcp-dashboard-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  grid-template-areas:
+    'assignments goals'
+    'progress progress';
+  gap: 16px;
+}
+
+body.rc-student-canyonpath .stcp-panel--assignments {
+  grid-area: assignments;
+  grid-row: auto;
+}
+
+body.rc-student-canyonpath .stcp-panel--goals {
+  grid-area: goals;
+}
+
+body.rc-student-canyonpath .stcp-panel--progress {
+  grid-area: progress;
+}
+
+/* Section panels keep just enough surface to organize the page; nested content
+   is flattened so the eye does not have to parse borders inside borders. */
+body.rc-student-canyonpath #tabDashboard .st-section {
+  padding: 18px 20px;
+  border-color: rgba(177, 232, 214, 0.16);
+  background:
+    linear-gradient(150deg, rgba(125, 210, 181, 0.055), rgba(4, 32, 28, 0.015)),
+    rgba(7, 47, 41, 0.60);
+  box-shadow: 0 12px 32px rgba(0, 13, 11, 0.19);
+}
+
+body.rc-student-canyonpath #dashRecentAssignments {
+  margin-top: 12px;
+  overflow: visible;
+  border: 0;
+  border-top: 1px solid var(--stcp-line);
+  border-radius: 0;
+  background: transparent;
+}
+
+body.rc-student-canyonpath #dashRecentAssignments .st-assignment-card,
+body.rc-student-canyonpath #dashRecentAssignments .assignment-card {
+  padding: 14px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--stcp-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #dashRecentAssignments .st-assignment-card:hover,
+body.rc-student-canyonpath #dashRecentAssignments .assignment-card:hover {
+  background: linear-gradient(90deg, rgba(125, 227, 198, 0.05), transparent 80%);
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot {
+  margin-top: 12px;
+  border-top: 1px solid var(--stcp-line);
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-card,
+body.rc-student-canyonpath #dashGoalsSnapshot .st-goal-card {
+  margin: 0;
+  padding: 14px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--stcp-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-card:hover,
+body.rc-student-canyonpath #dashGoalsSnapshot .st-goal-card:hover {
+  transform: none;
+  background: linear-gradient(90deg, rgba(125, 227, 198, 0.04), transparent 85%);
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-header h3 {
+  margin: 4px 0 11px;
+  font-size: 1rem;
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-stats span {
+  margin-bottom: 3px;
+  font-size: 0.70rem;
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-stats strong {
+  font-size: 1.25rem;
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-card details {
+  display: none;
+}
+
+body.rc-student-canyonpath .stcp-goals-more {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(125, 227, 198, 0.055);
+  color: var(--stcp-mint);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+body.rc-student-canyonpath .stcp-goals-more:hover {
+  background: rgba(125, 227, 198, 0.10);
+}
+
+/* --------------------------------------------------------------------------
+   Secondary-tab scenic headers. This gives every Student Portal area the same
+   CanyonPath identity without surrounding the entire page with another panel.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .stcp-page-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 0 0 24px;
+  padding: 28px 30px;
+  border-bottom: 1px solid rgba(189, 240, 223, 0.20);
+  border-radius: 20px;
+  background:
+    linear-gradient(90deg, rgba(3, 31, 26, 0.92) 0%, rgba(3, 31, 26, 0.66) 52%, rgba(3, 31, 26, 0.20) 100%),
+    var(--stcp-rich-scene) center 34% / cover no-repeat;
+  box-shadow: 0 18px 46px rgba(0, 13, 11, 0.20);
+}
+
+body.rc-student-canyonpath .stcp-page-hero::before {
+  content: attr(data-stcp-eyebrow);
+  display: block;
+  margin-bottom: 8px;
+  color: var(--stcp-mint-strong);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+body.rc-student-canyonpath .stcp-page-hero h1 {
+  margin: 0;
+  color: var(--stcp-ink);
+  font-size: clamp(2rem, 4vw, 3rem);
+  text-shadow: 0 3px 20px rgba(0, 13, 11, 0.28);
+}
+
+body.rc-student-canyonpath .stcp-page-hero > p {
+  margin-top: 9px;
+  color: #c9ddd6;
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Secondary page rhythm — use space, not extra rectangles, as the organizer.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath #tabAssignments #assignmentsContent {
+  display: block;
+  border-top: 1px solid var(--stcp-line);
+}
+
+body.rc-student-canyonpath #tabAssignments #assignmentsContent .st-assignment-card {
+  margin: 0;
+  padding: 18px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--stcp-line);
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #tabAssignments #assignmentsContent .st-assignment-card:hover {
+  transform: none;
+  background: linear-gradient(90deg, rgba(125, 227, 198, 0.05), transparent 82%);
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #tabLibrary .st-resources-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+body.rc-student-canyonpath #tabLibrary .st-resource-card {
+  flex: 1 1 210px;
+  min-width: 210px;
+  padding: 24px 20px;
+  border-color: rgba(177, 232, 214, 0.15);
+  background: rgba(42, 90, 77, 0.12);
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #tabLibrary .st-resource-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--stcp-line-strong);
+  background: rgba(60, 111, 96, 0.20);
+  box-shadow: 0 12px 28px rgba(0, 13, 11, 0.18);
+}
+
+body.rc-student-canyonpath #tabActivities .st-activity-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+body.rc-student-canyonpath #tabActivities .st-activity-card {
+  flex: 1 1 245px;
+  min-width: 245px;
+  min-height: 170px;
+  border-color: rgba(177, 232, 214, 0.15);
+  background:
+    linear-gradient(150deg, rgba(125, 210, 181, 0.05), rgba(4, 32, 28, 0.01)),
+    rgba(42, 90, 77, 0.11);
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #tabActivities .st-activity-card:hover,
+body.rc-student-canyonpath #tabActivities .st-activity-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--stcp-line-strong);
+  background: rgba(60, 111, 96, 0.20);
+}
+
+body.rc-student-canyonpath #tabActivities .st-activity-card__icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--stcp-line-strong);
+  border-radius: 13px;
+  background: rgba(125, 227, 198, 0.065);
+  color: var(--stcp-mint);
+  font-size: 0;
+}
+
+body.rc-student-canyonpath #tabActivities .st-activity-card__icon svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body.rc-student-canyonpath #tabGoals #goalsContent {
+  border-top: 1px solid var(--stcp-line);
+}
+
+body.rc-student-canyonpath #tabGoals #goalsContent > .sgp-card {
+  margin: 0;
+  padding: 22px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--stcp-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #tabSettings .st-settings-card {
+  width: min(640px, 100%);
+  max-width: none;
+  padding: 24px 0 4px;
+  border: 0;
+  border-top: 1px solid var(--stcp-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Keep the established Grades grouping because the data hierarchy benefits
+   from it, but soften the nested shell treatment. */
+body.rc-student-canyonpath #tabGrades .stp-grade-snapshot,
+body.rc-student-canyonpath #tabGrades .stp-history-shell {
+  border-color: rgba(177, 232, 214, 0.17);
+  background: rgba(7, 47, 41, 0.45);
+  box-shadow: 0 10px 28px rgba(0, 13, 11, 0.15);
+}
+
+/* --------------------------------------------------------------------------
+   Collapsed sidebar — exact centering, no cut-off profile text or crooked glow.
+   -------------------------------------------------------------------------- */
+
+html.tc-collapsed body.rc-student-canyonpath .tc-sidebar .tc-nav {
+  padding: 10px 8px;
+}
+
+html.tc-collapsed body.rc-student-canyonpath .tc-sidebar .tc-nav a {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 3px auto;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  box-sizing: border-box;
+}
+
+html.tc-collapsed body.rc-student-canyonpath .tc-sidebar .tc-nav a.active {
+  border-color: rgba(125, 227, 198, 0.34);
+  background: rgba(66, 191, 149, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(125, 227, 198, 0.04), 0 7px 18px rgba(0, 17, 14, 0.14);
+}
+
+html.tc-collapsed body.rc-student-canyonpath .tc-sidebar .tc-icon {
+  width: 24px;
+  margin: 0;
+}
+
+html.tc-collapsed body.rc-student-canyonpath .st-profile-card {
+  width: 44px;
+  min-height: 44px;
+  margin: 14px auto;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  box-sizing: border-box;
+}
+
+html.tc-collapsed body.rc-student-canyonpath .st-profile-card .st-profile-avatar {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+
+html.tc-collapsed body.rc-student-canyonpath .st-profile-name,
+html.tc-collapsed body.rc-student-canyonpath .st-profile-code,
+html.tc-collapsed body.rc-student-canyonpath .st-profile-class {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  body.rc-student-canyonpath .stcp-dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'assignments'
+      'goals'
+      'progress';
+  }
+
+  body.rc-student-canyonpath .stcp-quick__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.rc-student-canyonpath .stcp-quick__link:nth-child(2n) {
+    border-right: 0;
+  }
+
+  body.rc-student-canyonpath .stcp-quick__link:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--stcp-line);
+  }
+}
+
+@media (max-width: 720px) {
+  body.rc-student-canyonpath #studentDashboardView .st-dashboard-content {
+    padding: 12px;
+  }
+
+  body.rc-student-canyonpath .stcp-page-hero {
+    padding: 22px 18px;
+    border-radius: 16px;
+  }
+
+  body.rc-student-canyonpath .stcp-hero {
+    min-height: 0;
+    grid-template-columns: 1fr;
+  }
+
+  body.rc-student-canyonpath .stcp-quick__grid {
+    display: block;
+  }
+
+  body.rc-student-canyonpath .stcp-quick__link,
+  body.rc-student-canyonpath .stcp-quick__link:nth-child(2n),
+  body.rc-student-canyonpath .stcp-quick__link:nth-child(-n + 2) {
+    border-right: 0;
+    border-bottom: 1px solid var(--stcp-line);
+  }
+
+  body.rc-student-canyonpath .stcp-quick__link:last-child {
+    border-bottom: 0;
+  }
+
+  body.rc-student-canyonpath #dashGoalsSnapshot .sgp-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Light mode remains intentionally non-scenic and keeps the established
+   readable palette; only the spacing/box-density fixes carry over. */
+html[data-theme='light'] body.rc-student-canyonpath .stcp-page-hero {
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: linear-gradient(135deg, #f8fafc, #eef5f2);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-page-hero::before {
+  color: #16705a;
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-page-hero h1,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-page-hero > p {
+  color: var(--ink, #172033);
+  text-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.rc-student-canyonpath .stcp-page-hero,
+  body.rc-student-canyonpath .stcp-quick__link,
+  body.rc-student-canyonpath #tabAssignments .st-assignment-card,
+  body.rc-student-canyonpath #tabActivities .st-activity-card,
+  body.rc-student-canyonpath #tabLibrary .st-resource-card {
+    transition: none !important;
+  }
+}

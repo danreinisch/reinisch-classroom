@@ -1,0 +1,575 @@
+/*
+ * Student Portal CanyonPath — approved-reference composition details
+ * Loads after student-canyonpath-final.css. Presentation only.
+ */
+
+/* Dashboard reference: two recent-assignment tiles share the left panel. */
+@media (min-width: 981px) {
+  body.rc-student-canyonpath #dashRecentAssignments {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.rc-student-canyonpath #dashRecentAssignments > :only-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The approved dashboard ends after the assignment/goal snapshot row. Keep the
+   older progress-chart surface available in the Grades tab rather than making
+   the dashboard taller and emptier than the reference composition. */
+body.rc-student-canyonpath #tabDashboard .stcp-panel--progress {
+  display: none;
+}
+
+/* Goal cards use the main/detail split shown in the approved My Goals reference.
+   Keep the goal identity, stats, and expandable records in the main column; the
+   evidence summary is a true full-height companion panel rather than a small
+   card floating beneath a full-width header. */
+@media (min-width: 1040px) {
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference {
+    display: grid;
+    grid-template-columns: minmax(0, 1.66fr) minmax(300px, 0.64fr);
+    grid-template-areas:
+      'header aside'
+      'stats aside'
+      'progress aside'
+      'official aside';
+    column-gap: 22px;
+    row-gap: 0;
+    align-items: start;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference > .sgp-header {
+    grid-area: header;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference > [data-sgp-stats] {
+    grid-area: stats;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference > .sgp-progress {
+    grid-area: progress;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference > .sgp-official {
+    grid-area: official;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-card.stcp-goal-card--reference > .stcp-goal-aside {
+    grid-area: aside;
+    align-self: stretch;
+    min-height: 100%;
+    margin: 0;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas:
+      'icon copy'
+      'action action';
+    align-content: start;
+    align-items: start;
+    padding: 18px;
+  }
+
+  body.rc-student-canyonpath #tabGoals .stcp-goal-aside__icon {
+    grid-area: icon;
+    width: 44px;
+    height: 44px;
+  }
+
+  body.rc-student-canyonpath #tabGoals .stcp-goal-aside__copy {
+    grid-area: copy;
+    align-self: center;
+    padding-top: 1px;
+  }
+
+  body.rc-student-canyonpath #tabGoals .stcp-goal-aside__open {
+    grid-area: action;
+    width: 100%;
+    height: 40px;
+    margin-top: 8px;
+    border-radius: 10px;
+    font-size: 0;
+  }
+
+  body.rc-student-canyonpath #tabGoals .stcp-goal-aside__open::before {
+    content: 'View progress evidence';
+    font-size: 0.78rem;
+    font-weight: 750;
+    letter-spacing: 0.01em;
+  }
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-official {
+  margin-top: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(161, 229, 208, 0.16);
+  border-radius: 10px;
+  background: rgba(50, 116, 97, 0.13);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-official > summary {
+  min-height: 45px;
+  display: flex;
+  align-items: center;
+  padding: 10px 13px;
+  color: var(--stcpf-ink);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress > summary {
+  list-style: none;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress > summary::-webkit-details-marker,
+body.rc-student-canyonpath #tabGoals .sgp-official > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-official > summary::after {
+  content: '⌄';
+  margin-left: auto;
+  color: var(--stcpf-mint);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-official[open] > summary {
+  background: rgba(78, 154, 130, 0.11);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-official > p {
+  margin: 0;
+  padding: 9px 13px;
+  border-top: 1px solid rgba(158, 226, 206, 0.10);
+  color: var(--stcpf-muted);
+  line-height: 1.5;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside {
+  min-height: 126px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid rgba(166, 233, 212, 0.18);
+  border-radius: 12px;
+  background:
+    linear-gradient(150deg, rgba(119, 207, 179, 0.08), rgba(3, 35, 30, 0.01) 48%),
+    rgba(3, 35, 30, 0.72);
+  box-shadow: inset 0 1px rgba(247, 255, 252, 0.03);
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(177, 239, 219, 0.24);
+  border-radius: 11px;
+  background: rgba(72, 153, 128, 0.12);
+  color: var(--stcpf-mint-pale);
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__icon svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__copy {
+  min-width: 0;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__copy strong,
+body.rc-student-canyonpath .stcp-goal-aside__copy span {
+  display: block;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__copy strong {
+  margin-bottom: 4px;
+  color: var(--stcpf-ink);
+  font-size: 0.92rem;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__copy span {
+  color: var(--stcpf-muted);
+  font-size: 0.77rem;
+  line-height: 1.45;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__open {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(176, 238, 218, 0.22);
+  border-radius: 50%;
+  background: rgba(73, 153, 128, 0.10);
+  color: var(--stcpf-mint-pale);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+body.rc-student-canyonpath .stcp-goal-aside__open:hover {
+  border-color: rgba(188, 246, 227, 0.42);
+  background: rgba(86, 178, 149, 0.17);
+}
+
+/* Keep the evidence timeline readable after the compact summary is opened. */
+body.rc-student-canyonpath #tabGoals .sgp-progress[open] {
+  background: rgba(3, 31, 27, 0.86);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress[open] > [data-sgp-body] {
+  padding: 14px;
+}
+
+@media (max-width: 1039px) {
+  body.rc-student-canyonpath .stcp-goal-aside {
+    margin-top: 8px;
+  }
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-goal-aside,
+html[data-theme='light'] body.rc-student-canyonpath #tabGoals .sgp-official {
+  border-color: rgba(11, 89, 75, 0.16);
+  background: rgba(246, 250, 248, 0.94);
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   REFERENCE COMPOSITION — full vector landscape, not enlarged portrait crops
+   ========================================================================== */
+
+body.rc-student-canyonpath {
+  --stcpl-main-left: var(--tc-side-w, 260px);
+  --stcpl-scene-image: url('/assets/bg/rc-canyonpath-cinematic.svg');
+  --stcpl-scene-position: center 30%;
+  --stcpl-reading-surface: rgba(5, 48, 40, 0.94);
+  --stcpl-reading-inner: #0a3a31;
+  --stcpl-reading-ink: #effaf6;
+  --stcpl-reading-muted: #bdd6cd;
+  --stcpl-reading-label: #a3c7b9;
+  --stcpl-reading-border: rgba(158, 226, 206, 0.24);
+}
+
+html.tc-collapsed body.rc-student-canyonpath {
+  --stcpl-main-left: var(--tc-rail-w, 64px);
+}
+
+/* The premium JPEGs are small portrait slices, not full-resolution scenes.
+   Reuse the complete 1800x1000 vector mountain valley on every surface instead.
+   Only the crop position changes; the SVG remains resolution-independent. */
+body.rc-student-canyonpath:has(#studentDashboardView:not(.hidden) #tabDashboard.active) {
+  --stcpl-scene-position: center 34%;
+}
+
+body.rc-student-canyonpath:has(#studentDashboardView:not(.hidden) #tabGoals.active) {
+  --stcpl-scene-position: center 28%;
+}
+
+body.rc-student-canyonpath:has(#loginView:not(.hidden)) {
+  --stcpl-scene-position: center 42%;
+}
+
+/* Center the portal inside the actual remaining main canvas. */
+body.rc-student-canyonpath .st-dashboard-content {
+  width: min(100%, 1380px);
+  max-width: 1380px;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+/* Keep the landscape registered to the main-content edge while long pages
+   scroll. A directional contrast veil protects hero text, without blurring
+   the scene or applying a filter to the entire content canvas. */
+body.rc-student-canyonpath .tc-main {
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+  min-width: 0;
+  background: var(--stcpf-bg, #031714);
+}
+
+body.rc-student-canyonpath .tc-main::before {
+  content: '';
+  display: block;
+  position: fixed;
+  inset: var(--tc-topbar-h, 56px) 0 0 var(--stcpl-main-left);
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(3, 23, 20, 0.30), rgba(3, 23, 20, 0) 70%),
+    linear-gradient(180deg,
+      rgba(3, 23, 20, 0.04) 0%,
+      rgba(3, 23, 20, 0.10) 25%,
+      rgba(3, 23, 20, 0.29) 54%,
+      rgba(3, 23, 20, 0.55) 79%,
+      rgba(3, 23, 20, 0.68) 100%),
+    var(--stcpl-scene-image) var(--stcpl-scene-position) / cover no-repeat,
+    var(--stcpf-bg, #031714);
+  filter: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: left 180ms ease, background-position 180ms ease;
+}
+
+body.rc-student-canyonpath .tc-main > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Dashboard reference: large greeting over the landscape, with a compact 2x2
+   status panel aligned vertically to the greeting instead of four skinny tiles. */
+body.rc-student-canyonpath .stcp-hero {
+  grid-template-columns: minmax(0, 1fr) minmax(350px, 390px);
+  align-items: center;
+  gap: clamp(34px, 4.2vw, 66px);
+  min-height: 320px;
+  padding-top: clamp(38px, 4.1vw, 58px);
+  padding-bottom: clamp(28px, 3vw, 42px);
+}
+
+body.rc-student-canyonpath .stcp-hero__copy {
+  align-self: center;
+  max-width: 760px;
+}
+
+body.rc-student-canyonpath .stcp-hero__aside {
+  width: 100%;
+  max-width: 390px;
+  justify-self: end;
+  align-self: center;
+  padding-top: 0;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header h1 {
+  max-width: 760px;
+  font-size: clamp(2.75rem, 4.6vw, 4.25rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-card,
+body.rc-student-canyonpath .stcp-hero .st-summary-card.overdue {
+  min-height: 92px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-card:nth-child(odd) {
+  border-right: 1px solid rgba(158, 226, 206, 0.14);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-card:nth-child(-n + 2) {
+  border-bottom: 1px solid rgba(158, 226, 206, 0.14);
+}
+
+body.rc-student-canyonpath .stcp-quick {
+  margin-top: 0;
+}
+
+/* Login keeps the centered reference composition. Frost only the form card;
+   the complete mountain valley remains visible around it. */
+body.rc-student-canyonpath:has(#loginView:not(.hidden)) #loginView {
+  min-height: calc(100vh - var(--tc-topbar-h, 58px));
+  padding: clamp(44px, 6vh, 72px) clamp(28px, 5vw, 64px) 72px;
+}
+
+body.rc-student-canyonpath:has(#loginView:not(.hidden)) .st-login-container {
+  width: min(460px, 92vw);
+  max-width: 460px;
+  padding: 30px 34px;
+  background: var(--stcpl-reading-surface);
+  border-color: rgba(184, 242, 223, 0.34);
+  box-shadow: 0 28px 70px rgba(0, 12, 10, 0.38), inset 0 1px rgba(247, 255, 252, 0.05);
+  backdrop-filter: blur(3px) saturate(104%);
+  -webkit-backdrop-filter: blur(3px) saturate(104%);
+}
+
+/* The footer shares the full vector source, not the old portrait slices. */
+body.rc-student-canyonpath .stcp-footer {
+  background:
+    linear-gradient(90deg, rgba(3, 31, 27, 0.90), rgba(3, 31, 27, 0.54)),
+    var(--stcpl-scene-image) center 54% / cover no-repeat,
+    rgba(4, 35, 30, 0.94);
+}
+
+/* Readability first: opaque-enough evergreen provides the contrast even when
+   backdrop-filter is unsupported. Blur is a small card-only finishing detail. */
+body.rc-student-canyonpath .stcp-panel,
+body.rc-student-canyonpath .st-card,
+body.rc-student-canyonpath .stcp-hero .st-summary-cards,
+body.rc-student-canyonpath .stcp-quick__link,
+body.rc-student-canyonpath #tabGoals .stcp-page-hero::after {
+  background: var(--stcpl-reading-surface);
+  border-color: var(--stcpl-reading-border);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* Match BOTH IDs in the earlier refinement selector. A later one-ID rule
+   cannot override that earlier transparent background, border, or padding. */
+body.rc-student-canyonpath #tabGoals #goalsContent .sgp-card {
+  margin: 0 0 18px;
+  padding: 22px;
+  border: 1px solid var(--stcpl-reading-border);
+  border-radius: 16px;
+  background: var(--stcpl-reading-surface);
+  color: var(--stcpl-reading-ink);
+  box-shadow: 0 14px 32px rgba(0, 12, 10, 0.16), inset 0 1px rgba(247, 255, 252, 0.04);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* These are reading surfaces, not windows. In particular an expanded goal
+   statement or evidence view must not place paragraph text over trees. */
+body.rc-student-canyonpath #tabGoals #goalsContent .sgp-official,
+body.rc-student-canyonpath #tabGoals #goalsContent .sgp-progress,
+body.rc-student-canyonpath #tabGoals #goalsContent .stcp-goal-aside {
+  background: var(--stcpl-reading-inner);
+  border-color: var(--stcpl-reading-border);
+  color: var(--stcpl-reading-ink);
+}
+
+body.rc-student-canyonpath #tabGoals #goalsContent .sgp-official > p,
+body.rc-student-canyonpath #tabGoals #goalsContent .stcp-goal-aside__copy span {
+  color: var(--stcpl-reading-muted);
+  opacity: 1;
+}
+
+body.rc-student-canyonpath #tabGoals #goalsContent .sgp-k,
+body.rc-student-canyonpath #tabGoals #goalsContent .sgp-code {
+  color: var(--stcpl-reading-label);
+  opacity: 1;
+}
+
+@media (max-width: 1180px) {
+  body.rc-student-canyonpath .stcp-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+    gap: 30px;
+  }
+
+  body.rc-student-canyonpath .stcp-hero__aside {
+    max-width: 360px;
+  }
+}
+
+@media (max-width: 900px) {
+  body.rc-student-canyonpath .stcp-hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    gap: 20px;
+    padding-top: 34px;
+  }
+
+  body.rc-student-canyonpath .stcp-hero__aside {
+    max-width: none;
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 700px) {
+  body.rc-student-canyonpath .tc-main::before {
+    background:
+      linear-gradient(180deg,
+        rgba(3, 23, 20, 0.09),
+        rgba(3, 23, 20, 0.42) 58%,
+        rgba(3, 23, 20, 0.70)),
+      var(--stcpl-scene-image) center top / cover no-repeat,
+      var(--stcpf-bg, #031714);
+  }
+
+  body.rc-student-canyonpath .stcp-hero .st-summary-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.rc-student-canyonpath #tabGoals #goalsContent .sgp-card {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.rc-student-canyonpath .tc-main::before {
+    transition: none;
+  }
+}
+
+/* The same specific reading-surface selectors also receive light-theme tokens;
+   preserve the existing neutral question-review ink rather than tinting it. */
+html[data-theme='light'] body.rc-student-canyonpath {
+  --stcpl-reading-surface: rgba(255, 255, 255, 0.98);
+  --stcpl-reading-inner: #f0f7f3;
+  --stcpl-reading-ink: #172033;
+  --stcpl-reading-muted: #3f6458;
+  --stcpl-reading-label: #416959;
+  --stcpl-reading-border: rgba(11, 89, 75, 0.20);
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .tc-main::before {
+  content: none;
+  display: none;
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .tc-main {
+  background: var(--bg, #f8f9fa);
+}
+
+html[data-theme='light'] body.rc-student-canyonpath:has(#loginView:not(.hidden)) .st-login-container {
+  background: var(--stcpl-reading-surface);
+  border-color: rgba(11, 89, 75, 0.16);
+  box-shadow: 0 24px 58px rgba(27, 68, 59, 0.12);
+}
+
+/* ==========================================================================
+   FINAL SHELL CORRECTION — top bar stays visible during long-page scrolling
+   ========================================================================== */
+
+body.rc-student-canyonpath {
+  --tc-topbar-h: 58px;
+}
+
+/* The shared shell's sticky bar can scroll away when the browser page itself
+   owns scrolling. Fix it to the viewport so class/period/countdown/time remain
+   visible on long Goals, Grades, and evidence pages. */
+body.rc-student-canyonpath .tc-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: var(--tc-topbar-h);
+  min-height: var(--tc-topbar-h);
+  box-sizing: border-box;
+  z-index: 120;
+}
+
+/* Fixed positioning removes the bar from normal flow. Restore that exact space
+   once at the shell boundary so neither main content nor sidebar jumps under it. */
+body.rc-student-canyonpath .tc-shell {
+  margin-top: var(--tc-topbar-h);
+  min-height: calc(100vh - var(--tc-topbar-h));
+}
+
+body.rc-student-canyonpath .tc-sidebar {
+  top: var(--tc-topbar-h);
+  height: calc(100vh - var(--tc-topbar-h));
+}
+
+body.rc-student-canyonpath .tc-main::before {
+  top: var(--tc-topbar-h);
+}

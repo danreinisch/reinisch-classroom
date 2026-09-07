@@ -1,0 +1,27 @@
+/* Phase 2A follow-up: review fixes and final scenic asset corrections. */
+
+body.rc-student-canyonpath .stcp-footer {
+  background:
+    linear-gradient(90deg, rgba(4, 31, 27, 0.92), rgba(4, 31, 27, 0.48)),
+    url('/assets/bg/rc-canyonpath-landscape-rich.svg') center 80% / cover no-repeat;
+}
+
+html[data-theme='light'] body.rc-student-canyonpath {
+  --stcp-mint: #0b6f5c;
+  --stcp-mint-strong: #08705b;
+  --stcp-line-strong: rgba(8, 112, 91, 0.36);
+}
+
+html[data-theme='light'] body.rc-student-canyonpath :where(
+  .tc-btn,
+  .tc-nav a,
+  .stcp-quick__link,
+  .stp-section-link,
+  button,
+  a,
+  input,
+  select
+):focus-visible {
+  outline-color: #0b6f5c;
+  box-shadow: 0 0 0 3px rgba(11, 111, 92, 0.18);
+}
