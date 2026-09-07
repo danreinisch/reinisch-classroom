@@ -59,6 +59,14 @@
     },
     {
       "files": [
+        "site/web/tc-observation-contract-capture.js"
+      ],
+      "rules": {
+        "no-useless-escape": "off"
+      }
+    },
+    {
+      "files": [
         "tests/**/*.cjs"
       ],
       "env": {
