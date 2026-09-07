@@ -1,1 +1,1027 @@
-/* Placeholder; replaced in next commit. */
+/*
+ * Student Portal CanyonPath — Phase 2A final visual-standard pass
+ *
+ * This layer intentionally loads LAST. It converts the earlier exploratory
+ * passes into the approved Student Portal visual contract without changing
+ * authentication, assignments, grades, goals, evidence, storage, APIs, or
+ * any other student-data behavior.
+ */
+
+body.rc-student-canyonpath {
+  --stcpf-bg: #031714;
+  --stcpf-panel: rgba(4, 43, 37, 0.88);
+  --stcpf-panel-soft: rgba(7, 55, 47, 0.72);
+  --stcpf-row: rgba(42, 105, 88, 0.18);
+  --stcpf-row-hover: rgba(60, 132, 111, 0.25);
+  --stcpf-line: rgba(157, 230, 207, 0.23);
+  --stcpf-line-strong: rgba(180, 244, 223, 0.43);
+  --stcpf-ink: #f4fbf8;
+  --stcpf-muted: #b3cec5;
+  --stcpf-faint: #7ea599;
+  --stcpf-mint: #82e7c9;
+  --stcpf-mint-pale: #c8f6e9;
+  --stcpf-cream: #f0d98f;
+  --stcpf-shadow: 0 18px 48px rgba(0, 13, 11, 0.28), inset 0 1px rgba(244, 255, 251, 0.045);
+  --stcpf-shadow-small: 0 10px 26px rgba(0, 13, 11, 0.20), inset 0 1px rgba(244, 255, 251, 0.035);
+}
+
+/* ========================================================================== 
+   1. ONE COHERENT SCENE
+   The approved samples start the landscape at the MAIN content edge, not
+   behind the sidebar. The earlier pass started the four slices at .tc-app,
+   which shifted the panorama and made it look misregistered. The four scene
+   slices now behave as one panorama anchored to .tc-main and fade naturally
+   into the evergreen workspace.
+   ========================================================================== */
+
+body.rc-student-canyonpath .tc-app {
+  background: var(--stcpf-bg);
+}
+
+body.rc-student-canyonpath .tc-main {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  min-height: calc(100vh - 58px);
+  background:
+    linear-gradient(180deg,
+      rgba(3, 23, 20, 0.01) 0,
+      rgba(3, 23, 20, 0.03) 230px,
+      rgba(3, 23, 20, 0.20) 390px,
+      rgba(3, 23, 20, 0.62) 560px,
+      rgba(3, 23, 20, 0.94) 720px,
+      var(--stcpf-bg) 840px),
+    var(--stcp-premium-1) 0% 0 / 25% auto no-repeat,
+    var(--stcp-premium-2) 33.333% 0 / 25% auto no-repeat,
+    var(--stcp-premium-3) 66.667% 0 / 25% auto no-repeat,
+    var(--stcp-premium-4) 100% 0 / 25% auto no-repeat,
+    var(--stcpf-bg);
+  background-attachment: scroll;
+}
+
+body.rc-student-canyonpath .tc-main::before,
+body.rc-student-canyonpath .tc-main::after {
+  content: none;
+  display: none;
+}
+
+body.rc-student-canyonpath .tc-shell,
+body.rc-student-canyonpath #studentDashboardView,
+body.rc-student-canyonpath .st-dashboard-content,
+body.rc-student-canyonpath .st-tab-panel {
+  background: transparent;
+}
+
+/* No full-page blur. Glass belongs to cards, not the scenery itself. */
+body.rc-student-canyonpath .tc-main,
+body.rc-student-canyonpath #studentDashboardView,
+body.rc-student-canyonpath .st-dashboard-content {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ========================================================================== 
+   2. PLATFORM SHELL
+   ========================================================================== */
+
+body.rc-student-canyonpath .tc-topbar {
+  min-height: 58px;
+  border-bottom: 1px solid rgba(155, 229, 206, 0.18);
+  background: rgba(2, 29, 25, 0.94);
+  box-shadow: 0 8px 24px rgba(0, 12, 10, 0.12);
+  backdrop-filter: blur(8px) saturate(106%);
+  -webkit-backdrop-filter: blur(8px) saturate(106%);
+}
+
+body.rc-student-canyonpath .tc-title {
+  color: var(--stcpf-ink);
+  font-weight: 760;
+  letter-spacing: -0.012em;
+}
+
+body.rc-student-canyonpath .tc-sidebar {
+  border-right: 1px solid rgba(155, 229, 206, 0.17);
+  background: linear-gradient(180deg, rgba(2, 32, 28, 0.985), rgba(2, 23, 21, 0.995));
+  box-shadow: 10px 0 26px rgba(0, 12, 10, 0.15);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.rc-student-canyonpath .tc-sidebar .tc-nav a {
+  min-height: 48px;
+  margin: 4px 10px;
+  padding-inline: 13px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--stcpf-muted);
+  box-shadow: none;
+  transform: none;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+body.rc-student-canyonpath .tc-sidebar .tc-nav a:hover {
+  transform: none;
+  border-color: rgba(157, 230, 207, 0.16);
+  background: rgba(92, 184, 154, 0.075);
+  color: var(--stcpf-ink);
+}
+
+body.rc-student-canyonpath .tc-sidebar .tc-nav a.active {
+  border-color: rgba(130, 231, 201, 0.52);
+  background: linear-gradient(90deg, rgba(30, 139, 112, 0.26), rgba(70, 178, 147, 0.12));
+  color: var(--stcpf-mint-pale);
+  box-shadow: inset 3px 0 0 var(--stcpf-mint), 0 7px 20px rgba(0, 16, 13, 0.14);
+}
+
+body.rc-student-canyonpath .tc-sidebar .tc-icon {
+  color: var(--stcpf-mint);
+}
+
+body.rc-student-canyonpath .st-profile,
+body.rc-student-canyonpath .st-profile-card,
+body.rc-student-canyonpath .tc-sidebar .st-student-profile {
+  border-color: rgba(157, 230, 207, 0.18);
+  background: rgba(18, 71, 61, 0.16);
+  box-shadow: inset 0 1px rgba(245, 255, 251, 0.025);
+}
+
+/* Collapsed navigation stays perfectly centered. */
+html.tc-collapsed body.rc-student-canyonpath .tc-sidebar .tc-nav a {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 5px auto;
+  padding: 0;
+  justify-content: center;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+html.tc-collapsed body.rc-student-canyonpath .tc-sidebar .tc-nav a.active {
+  border-color: rgba(130, 231, 201, 0.48);
+  background: rgba(35, 143, 116, 0.22);
+  box-shadow: 0 7px 18px rgba(0, 16, 13, 0.13);
+}
+
+html.tc-collapsed body.rc-student-canyonpath .tc-sidebar .tc-nav a.active::before,
+html.tc-collapsed body.rc-student-canyonpath .tc-sidebar .tc-nav a.active::after {
+  display: none;
+}
+
+/* ========================================================================== 
+   3. CONTENT WIDTH + TYPOGRAPHY RHYTHM
+   ========================================================================== */
+
+body.rc-student-canyonpath .st-dashboard-content {
+  width: min(1380px, calc(100vw - 42px));
+  max-width: 1380px;
+  margin-inline: auto;
+  padding: clamp(18px, 2.2vw, 30px);
+}
+
+body.rc-student-canyonpath .st-section h2,
+body.rc-student-canyonpath .st-section h3,
+body.rc-student-canyonpath .stcp-quick h2 {
+  color: var(--stcpf-ink);
+  letter-spacing: -0.024em;
+}
+
+body.rc-student-canyonpath .stcp-quick__eyebrow,
+body.rc-student-canyonpath .st-section[data-stcp-eyebrow]::before,
+body.rc-student-canyonpath .stcp-page-hero::before,
+body.rc-student-canyonpath .sgp-eyebrow {
+  color: var(--stcpf-mint);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+/* ========================================================================== 
+   4. DASHBOARD HERO — TEXT ON THE LANDSCAPE, GLASS ONLY WHERE NEEDED
+   ========================================================================== */
+
+body.rc-student-canyonpath .stcp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.52fr) minmax(340px, 0.72fr);
+  align-items: center;
+  gap: clamp(26px, 4vw, 60px);
+  min-height: 340px;
+  margin: 0 0 10px;
+  padding: clamp(42px, 5vw, 72px) 8px clamp(26px, 3vw, 42px);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.rc-student-canyonpath .stcp-hero::before,
+body.rc-student-canyonpath .stcp-hero::after {
+  display: none;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header::before {
+  margin-bottom: 10px;
+  color: var(--stcpf-mint);
+  font-size: 0.73rem;
+  font-weight: 820;
+  letter-spacing: 0.21em;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header h1 {
+  max-width: 800px;
+  color: var(--stcpf-ink);
+  font-size: clamp(2.7rem, 5vw, 4.55rem);
+  font-weight: 880;
+  line-height: 0.96;
+  letter-spacing: -0.055em;
+  text-shadow: 0 4px 24px rgba(0, 14, 12, 0.56);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header p {
+  margin-top: 15px;
+  color: #d5e8e1;
+  font-size: clamp(1rem, 1.45vw, 1.16rem);
+  line-height: 1.5;
+  text-shadow: 0 2px 14px rgba(0, 14, 12, 0.52);
+}
+
+body.rc-student-canyonpath .stcp-hero__motto {
+  display: none;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-cards {
+  overflow: hidden;
+  border: 1px solid rgba(174, 239, 218, 0.37);
+  border-radius: 17px;
+  background: rgba(3, 39, 33, 0.87);
+  box-shadow: 0 18px 46px rgba(0, 12, 10, 0.32), inset 0 1px rgba(247, 255, 252, 0.05);
+  backdrop-filter: blur(4px) saturate(106%);
+  -webkit-backdrop-filter: blur(4px) saturate(106%);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-card,
+body.rc-student-canyonpath .stcp-hero .st-summary-card.overdue {
+  min-height: 104px;
+  padding: 14px 16px;
+  background: transparent;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-card:hover,
+body.rc-student-canyonpath .stcp-hero .st-summary-card.overdue:hover {
+  background: rgba(92, 184, 154, 0.075);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 8px;
+  border-color: rgba(161, 231, 209, 0.22);
+  background: rgba(94, 186, 157, 0.08);
+  color: var(--stcpf-mint);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-value {
+  color: var(--stcpf-ink);
+  font-size: 1.82rem;
+  font-weight: 800;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-label {
+  color: var(--stcpf-muted);
+}
+
+body.rc-student-canyonpath .stcp-hero #dashStreakBanner {
+  margin-top: 9px;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-streak-banner {
+  min-height: 46px;
+  padding: 10px 13px;
+  border: 1px solid rgba(158, 228, 207, 0.20);
+  border-radius: 12px;
+  background: rgba(3, 37, 31, 0.85);
+  box-shadow: var(--stcpf-shadow-small);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* ========================================================================== 
+   5. QUICK ACTIVITIES
+   ========================================================================== */
+
+body.rc-student-canyonpath .stcp-quick {
+  margin: 2px 0 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.rc-student-canyonpath .stcp-quick__head {
+  margin-bottom: 10px;
+}
+
+body.rc-student-canyonpath .stcp-quick__note {
+  color: var(--stcpf-faint);
+}
+
+body.rc-student-canyonpath .stcp-quick__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body.rc-student-canyonpath .stcp-quick__link {
+  min-width: 0;
+  min-height: 76px;
+  padding: 11px 12px;
+  border: 1px solid var(--stcpf-line);
+  border-radius: 13px;
+  background: rgba(4, 49, 42, 0.83);
+  box-shadow: var(--stcpf-shadow-small);
+  backdrop-filter: blur(3px) saturate(104%);
+  -webkit-backdrop-filter: blur(3px) saturate(104%);
+}
+
+body.rc-student-canyonpath .stcp-quick__link:hover {
+  transform: translateY(-1px);
+  border-color: var(--stcpf-line-strong);
+  background: rgba(8, 63, 53, 0.90);
+  box-shadow: 0 14px 30px rgba(0, 13, 11, 0.24), inset 0 1px rgba(246, 255, 252, 0.05);
+}
+
+body.rc-student-canyonpath .stcp-quick__icon,
+body.rc-student-canyonpath .st-activity-card__icon {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(181, 240, 221, 0.30);
+  border-radius: 12px;
+  background: rgba(78, 156, 132, 0.13);
+  color: var(--stcpf-mint-pale);
+  box-shadow: inset 0 1px rgba(247, 255, 252, 0.045);
+}
+
+body.rc-student-canyonpath .stcp-quick__copy strong {
+  color: var(--stcpf-ink);
+}
+
+body.rc-student-canyonpath .stcp-quick__copy > span {
+  color: var(--stcpf-muted);
+}
+
+body.rc-student-canyonpath .stcp-quick__chevron {
+  border-color: rgba(171, 236, 216, 0.24);
+  background: rgba(83, 167, 141, 0.09);
+  color: var(--stcpf-mint-pale);
+}
+
+/* ========================================================================== 
+   6. DASHBOARD CONTENT CARDS
+   ========================================================================== */
+
+body.rc-student-canyonpath .stcp-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.16fr) minmax(360px, 0.84fr);
+  grid-template-areas:
+    'assignments goals'
+    'progress progress';
+  gap: 14px;
+  align-items: start;
+}
+
+body.rc-student-canyonpath .stcp-panel--assignments { grid-area: assignments; }
+body.rc-student-canyonpath .stcp-panel--goals { grid-area: goals; }
+body.rc-student-canyonpath .stcp-panel--progress { grid-area: progress; }
+
+body.rc-student-canyonpath #tabDashboard .st-section {
+  padding: 17px 18px;
+  border: 1px solid var(--stcpf-line);
+  border-radius: 15px;
+  background: var(--stcpf-panel);
+  box-shadow: var(--stcpf-shadow);
+  backdrop-filter: blur(3px) saturate(104%);
+  -webkit-backdrop-filter: blur(3px) saturate(104%);
+}
+
+body.rc-student-canyonpath #tabDashboard .st-section:hover {
+  border-color: var(--stcpf-line-strong);
+}
+
+body.rc-student-canyonpath #dashRecentAssignments,
+body.rc-student-canyonpath #dashGoalsSnapshot {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(158, 227, 207, 0.16);
+}
+
+body.rc-student-canyonpath #dashRecentAssignments .st-assignment-card,
+body.rc-student-canyonpath #dashRecentAssignments .assignment-card,
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-card,
+body.rc-student-canyonpath #dashGoalsSnapshot .st-goal-card {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(158, 226, 205, 0.14);
+  border-radius: 11px;
+  background: var(--stcpf-row);
+  box-shadow: inset 0 1px rgba(246, 255, 252, 0.025);
+}
+
+body.rc-student-canyonpath #dashRecentAssignments .st-assignment-card:hover,
+body.rc-student-canyonpath #dashRecentAssignments .assignment-card:hover,
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-card:hover,
+body.rc-student-canyonpath #dashGoalsSnapshot .st-goal-card:hover {
+  border-color: rgba(181, 239, 220, 0.28);
+  background: var(--stcpf-row-hover);
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-card details,
+body.rc-student-canyonpath #dashGoalsSnapshot .st-goal-card details {
+  display: none;
+}
+
+body.rc-student-canyonpath .stcp-goals-more {
+  min-height: 36px;
+  margin-top: 2px;
+  border: 1px solid rgba(158, 226, 205, 0.13);
+  border-radius: 9px;
+  background: rgba(78, 145, 124, 0.14);
+  color: var(--stcpf-mint-pale);
+}
+
+/* ========================================================================== 
+   7. SECONDARY PAGE HEROES
+   ========================================================================== */
+
+body.rc-student-canyonpath .stcp-page-hero {
+  position: relative;
+  min-height: 170px;
+  margin: 0 0 18px;
+  padding: 46px 6px 26px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.rc-student-canyonpath .stcp-page-hero h1 {
+  margin: 0;
+  color: var(--stcpf-ink);
+  font-size: clamp(2.35rem, 4vw, 3.35rem);
+  font-weight: 860;
+  letter-spacing: -0.045em;
+  text-shadow: 0 4px 22px rgba(0, 14, 12, 0.52);
+}
+
+body.rc-student-canyonpath .stcp-page-hero > p {
+  margin-top: 8px;
+  color: #d0e4dd;
+  font-size: 1rem;
+  text-shadow: 0 2px 12px rgba(0, 14, 12, 0.50);
+}
+
+body.rc-student-canyonpath #tabGoals .stcp-page-hero {
+  padding-right: min(28vw, 330px);
+}
+
+body.rc-student-canyonpath #tabGoals .stcp-page-hero::after {
+  content: '“  Small steps add up to big possibilities.\A\A      KEEP GOING.';
+  white-space: pre-wrap;
+  position: absolute;
+  top: 28px;
+  right: 0;
+  width: 250px;
+  padding: 20px 22px;
+  border: 1px solid rgba(173, 239, 218, 0.29);
+  border-radius: 15px;
+  background: rgba(3, 39, 33, 0.84);
+  color: var(--stcpf-mint-pale);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: 0.015em;
+  text-align: center;
+  box-shadow: var(--stcpf-shadow-small);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* ========================================================================== 
+   8. ASSIGNMENTS
+   ========================================================================== */
+
+body.rc-student-canyonpath #tabAssignments #assignmentsContent {
+  overflow: hidden;
+  border: 1px solid var(--stcpf-line);
+  border-radius: 15px;
+  background: rgba(4, 39, 34, 0.82);
+  box-shadow: var(--stcpf-shadow);
+}
+
+body.rc-student-canyonpath #tabAssignments #assignmentsContent .st-assignment-card {
+  margin: 0;
+  padding: 16px 18px;
+  border: 0;
+  border-bottom: 1px solid rgba(158, 226, 206, 0.16);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath #tabAssignments #assignmentsContent .st-assignment-card:last-child {
+  border-bottom: 0;
+}
+
+body.rc-student-canyonpath #tabAssignments #assignmentsContent .st-assignment-card:hover {
+  background: linear-gradient(90deg, rgba(93, 188, 156, 0.10), rgba(21, 82, 69, 0.04) 74%, transparent);
+}
+
+body.rc-student-canyonpath #tabAssignments .st-filter-bar,
+body.rc-student-canyonpath #tabAssignments .st-assignment-filters {
+  border-color: rgba(158, 226, 206, 0.18);
+  background: rgba(3, 34, 29, 0.58);
+}
+
+/* ========================================================================== 
+   9. LIBRARY + RESOURCES + ACTIVITIES
+   ========================================================================== */
+
+body.rc-student-canyonpath #tabLibrary .st-resources-grid,
+body.rc-student-canyonpath #tabResources .st-resources-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body.rc-student-canyonpath #tabActivities .st-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body.rc-student-canyonpath #tabLibrary .st-resource-card,
+body.rc-student-canyonpath #tabResources .st-resource-card,
+body.rc-student-canyonpath #tabActivities .st-activity-card {
+  min-width: 0;
+  min-height: 0;
+  padding: 20px;
+  border: 1px solid var(--stcpf-line);
+  border-radius: 14px;
+  background: rgba(4, 46, 39, 0.84);
+  box-shadow: var(--stcpf-shadow-small);
+  backdrop-filter: blur(3px) saturate(104%);
+  -webkit-backdrop-filter: blur(3px) saturate(104%);
+}
+
+body.rc-student-canyonpath #tabLibrary .st-resource-card,
+body.rc-student-canyonpath #tabResources .st-resource-card {
+  min-height: 145px;
+}
+
+body.rc-student-canyonpath #tabActivities .st-activity-card {
+  min-height: 215px;
+}
+
+body.rc-student-canyonpath #tabLibrary .st-resource-card:hover,
+body.rc-student-canyonpath #tabResources .st-resource-card:hover,
+body.rc-student-canyonpath #tabActivities .st-activity-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--stcpf-line-strong);
+  background: rgba(7, 59, 50, 0.91);
+  box-shadow: 0 15px 34px rgba(0, 13, 11, 0.25), inset 0 1px rgba(246, 255, 252, 0.05);
+}
+
+/* ========================================================================== 
+   10. GRADES / HISTORY
+   ========================================================================== */
+
+body.rc-student-canyonpath #tabGrades .st-grade-snapshot,
+body.rc-student-canyonpath #tabGrades .st-assignment-history,
+body.rc-student-canyonpath #tabGrades .st-grade-card {
+  border: 1px solid var(--stcpf-line);
+  border-radius: 15px;
+  background: rgba(4, 42, 36, 0.89);
+  box-shadow: var(--stcpf-shadow);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+body.rc-student-canyonpath #tabGrades .st-assignment-history {
+  overflow: hidden;
+}
+
+body.rc-student-canyonpath #tabGrades input,
+body.rc-student-canyonpath #tabGrades select {
+  border-color: rgba(160, 226, 206, 0.20);
+  background: rgba(2, 30, 26, 0.78);
+  color: var(--stcpf-ink);
+}
+
+/* ========================================================================== 
+   11. GOALS — RECREATE THE APPROVED CLEAN CARD LANGUAGE
+   ========================================================================== */
+
+body.rc-student-canyonpath #goalsContent {
+  display: grid;
+  gap: 14px;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-card {
+  margin: 0;
+  padding: 19px 20px;
+  border: 1px solid var(--stcpf-line);
+  border-radius: 15px;
+  background: rgba(4, 45, 38, 0.90);
+  box-shadow: var(--stcpf-shadow);
+  backdrop-filter: blur(2px) saturate(103%);
+  -webkit-backdrop-filter: blur(2px) saturate(103%);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(158, 226, 206, 0.14);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-header h3 {
+  margin: 4px 0 0;
+  color: var(--stcpf-ink);
+  font-size: 1.22rem;
+  letter-spacing: -0.025em;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-code {
+  color: var(--stcpf-muted);
+  font-size: 0.78rem;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 16px;
+  padding: 14px 0 12px;
+  border-bottom: 1px solid rgba(158, 226, 206, 0.13);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-stats span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--stcpf-muted);
+  font-size: 0.76rem;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-stats strong {
+  color: var(--stcpf-ink);
+  font-size: clamp(1.35rem, 2.25vw, 1.75rem);
+  letter-spacing: -0.035em;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress,
+body.rc-student-canyonpath #tabGoals .sgp-full {
+  margin-top: 7px;
+  border: 1px solid rgba(161, 229, 208, 0.16);
+  border-radius: 10px;
+  background: rgba(50, 116, 97, 0.13);
+  overflow: hidden;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress > summary,
+body.rc-student-canyonpath #tabGoals .sgp-full > summary {
+  min-height: 45px;
+  display: flex;
+  align-items: center;
+  padding: 10px 13px;
+  color: var(--stcpf-ink);
+  font-weight: 700;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress > summary::after,
+body.rc-student-canyonpath #tabGoals .sgp-full > summary::after {
+  content: '⌄';
+  margin-left: auto;
+  color: var(--stcpf-mint);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress[open] > summary,
+body.rc-student-canyonpath #tabGoals .sgp-full[open] > summary {
+  background: rgba(78, 154, 130, 0.11);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-progress > [data-sgp-body],
+body.rc-student-canyonpath #tabGoals .sgp-full > div {
+  padding: 12px 13px 14px;
+  border-top: 1px solid rgba(158, 226, 206, 0.12);
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-work,
+body.rc-student-canyonpath #tabGoals .sget-evidence-detail,
+body.rc-student-canyonpath #tabGoals .sgp-question {
+  border: 1px solid rgba(158, 226, 206, 0.15);
+  border-radius: 11px;
+  background: rgba(3, 31, 27, 0.86);
+  box-shadow: none;
+}
+
+/* ========================================================================== 
+   12. SETTINGS
+   ========================================================================== */
+
+body.rc-student-canyonpath #tabSettings .st-settings-card {
+  max-width: 620px;
+  padding: 20px;
+  border: 1px solid var(--stcpf-line);
+  border-radius: 15px;
+  background: rgba(4, 43, 37, 0.90);
+  box-shadow: var(--stcpf-shadow);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+body.rc-student-canyonpath #tabSettings input {
+  min-height: 44px;
+  border-color: rgba(159, 228, 207, 0.20);
+  background: rgba(2, 29, 25, 0.82);
+  color: var(--stcpf-ink);
+}
+
+/* ========================================================================== 
+   13. LOGIN — MATCH THE APPROVED SAMPLE
+   ========================================================================== */
+
+body.rc-student-canyonpath #loginView {
+  min-height: calc(100vh - 58px);
+  display: grid;
+  place-items: center;
+  padding: 40px 28px 72px;
+  background: transparent;
+}
+
+body.rc-student-canyonpath #loginView[style*='display: none'],
+body.rc-student-canyonpath #loginView[hidden] {
+  display: none;
+}
+
+body.rc-student-canyonpath .st-login-container {
+  width: min(500px, 92vw);
+  max-width: 500px;
+  margin: 0;
+  padding: 32px 36px;
+  border: 1px solid rgba(180, 242, 222, 0.38);
+  border-radius: 18px;
+  background: rgba(4, 45, 38, 0.82);
+  box-shadow: 0 26px 64px rgba(0, 12, 10, 0.34), inset 0 1px rgba(247, 255, 252, 0.05);
+  backdrop-filter: blur(6px) saturate(105%);
+  -webkit-backdrop-filter: blur(6px) saturate(105%);
+}
+
+body.rc-student-canyonpath .st-login-container h1 {
+  margin-bottom: 6px !important;
+  color: var(--stcpf-ink);
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+body.rc-student-canyonpath .st-login-container > p {
+  margin-bottom: 27px !important;
+  color: var(--stcpf-muted);
+  opacity: 1 !important;
+}
+
+body.rc-student-canyonpath .st-login-container label {
+  color: var(--stcpf-ink);
+  font-weight: 650;
+}
+
+body.rc-student-canyonpath .st-login-container input,
+body.rc-student-canyonpath .st-login-container select {
+  min-height: 47px;
+  border: 1px solid rgba(168, 232, 212, 0.24);
+  border-radius: 10px;
+  background: rgba(2, 31, 27, 0.83);
+  color: var(--stcpf-ink);
+  box-shadow: inset 0 1px rgba(247, 255, 252, 0.025);
+}
+
+body.rc-student-canyonpath .st-login-container input::placeholder {
+  color: #82a89d;
+}
+
+body.rc-student-canyonpath .st-login-container .st-btn {
+  min-height: 47px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+body.rc-student-canyonpath .st-login-container .st-btn:not(.secondary) {
+  border-color: rgba(130, 231, 201, 0.60);
+  background: linear-gradient(180deg, rgba(21, 146, 116, 0.82), rgba(11, 112, 91, 0.88));
+  color: #f6fffc;
+  box-shadow: 0 10px 24px rgba(0, 20, 16, 0.18), inset 0 1px rgba(245, 255, 251, 0.10);
+}
+
+body.rc-student-canyonpath .st-login-container .st-btn.secondary {
+  border-color: rgba(168, 232, 212, 0.28);
+  background: rgba(83, 147, 128, 0.15);
+  color: var(--stcpf-ink);
+}
+
+body.rc-student-canyonpath .st-login-container a {
+  color: #78d9c1;
+}
+
+/* ========================================================================== 
+   14. FOOTER — DELIBERATE SCENIC CLOSING BAND
+   ========================================================================== */
+
+body.rc-student-canyonpath .stcp-footer {
+  min-height: 96px;
+  margin-top: 26px;
+  padding: 20px 24px;
+  border: 1px solid rgba(173, 236, 216, 0.22);
+  border-radius: 15px;
+  background:
+    linear-gradient(90deg, rgba(2, 30, 26, 0.91), rgba(3, 34, 29, 0.63)),
+    var(--stcp-premium-1) 0% 52% / 25% auto no-repeat,
+    var(--stcp-premium-2) 33.333% 52% / 25% auto no-repeat,
+    var(--stcp-premium-3) 66.667% 52% / 25% auto no-repeat,
+    var(--stcp-premium-4) 100% 52% / 25% auto no-repeat,
+    rgba(3, 35, 30, 0.95);
+  box-shadow: var(--stcpf-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.rc-student-canyonpath .stcp-footer__lead strong {
+  color: #f0f6ee;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 500;
+}
+
+body.rc-student-canyonpath .stcp-footer__lead span,
+body.rc-student-canyonpath .stcp-footer__brand {
+  color: var(--stcpf-mint);
+  letter-spacing: 0.18em;
+}
+
+/* ========================================================================== 
+   15. FOCUS + MOTION + RESPONSIVE
+   ========================================================================== */
+
+body.rc-student-canyonpath :where(a, button, input, select, summary):focus-visible {
+  outline: 2px solid var(--stcpf-mint);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1180px) {
+  body.rc-student-canyonpath .stcp-hero {
+    grid-template-columns: minmax(0, 1.3fr) minmax(310px, 0.8fr);
+  }
+
+  body.rc-student-canyonpath #tabLibrary .st-resources-grid,
+  body.rc-student-canyonpath #tabResources .st-resources-grid,
+  body.rc-student-canyonpath #tabActivities .st-activity-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  body.rc-student-canyonpath .stcp-hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    padding-top: 36px;
+  }
+
+  body.rc-student-canyonpath .stcp-hero__aside {
+    max-width: 540px;
+  }
+
+  body.rc-student-canyonpath .stcp-dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'assignments'
+      'goals'
+      'progress';
+  }
+
+  body.rc-student-canyonpath .stcp-quick__grid,
+  body.rc-student-canyonpath #tabLibrary .st-resources-grid,
+  body.rc-student-canyonpath #tabResources .st-resources-grid,
+  body.rc-student-canyonpath #tabActivities .st-activity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.rc-student-canyonpath #tabGoals .stcp-page-hero {
+    padding-right: 6px;
+  }
+
+  body.rc-student-canyonpath #tabGoals .stcp-page-hero::after {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  body.rc-student-canyonpath .st-dashboard-content {
+    width: 100%;
+    padding: 14px;
+  }
+
+  body.rc-student-canyonpath .tc-main {
+    background:
+      linear-gradient(180deg, rgba(3, 23, 20, 0.04) 0, rgba(3, 23, 20, 0.48) 380px, var(--stcpf-bg) 650px),
+      var(--stcp-premium-2) center top / cover no-repeat,
+      var(--stcpf-bg);
+  }
+
+  body.rc-student-canyonpath .stcp-quick__grid,
+  body.rc-student-canyonpath #tabLibrary .st-resources-grid,
+  body.rc-student-canyonpath #tabResources .st-resources-grid,
+  body.rc-student-canyonpath #tabActivities .st-activity-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.rc-student-canyonpath #tabGoals .sgp-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  body.rc-student-canyonpath #loginView {
+    padding: 24px 14px 48px;
+  }
+
+  body.rc-student-canyonpath .st-login-container {
+    width: 100%;
+    padding: 26px 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.rc-student-canyonpath .stcp-quick__link:hover,
+  body.rc-student-canyonpath #tabLibrary .st-resource-card:hover,
+  body.rc-student-canyonpath #tabResources .st-resource-card:hover,
+  body.rc-student-canyonpath #tabActivities .st-activity-card:hover {
+    transform: none;
+  }
+}
+
+/* ========================================================================== 
+   16. LIGHT THEME SAFETY
+   The cinematic scene is a dark-theme identity layer. Light mode remains a
+   deliberate accessible fallback and never inherits low-contrast glass.
+   ========================================================================== */
+
+html[data-theme='light'] body.rc-student-canyonpath .tc-main {
+  background: var(--bg, #f8f9fa);
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-page-hero,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-hero {
+  text-shadow: none;
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-hero .st-welcome-header h1,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-page-hero h1 {
+  color: #173d34;
+  text-shadow: none;
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-hero .st-welcome-header p,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-page-hero > p {
+  color: #365d52;
+  text-shadow: none;
+}
+
+html[data-theme='light'] body.rc-student-canyonpath #tabDashboard .st-section,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-quick__link,
+html[data-theme='light'] body.rc-student-canyonpath #tabLibrary .st-resource-card,
+html[data-theme='light'] body.rc-student-canyonpath #tabResources .st-resource-card,
+html[data-theme='light'] body.rc-student-canyonpath #tabActivities .st-activity-card,
+html[data-theme='light'] body.rc-student-canyonpath #tabAssignments #assignmentsContent,
+html[data-theme='light'] body.rc-student-canyonpath #tabGrades .st-grade-snapshot,
+html[data-theme='light'] body.rc-student-canyonpath #tabGrades .st-assignment-history,
+html[data-theme='light'] body.rc-student-canyonpath #tabGoals .sgp-card,
+html[data-theme='light'] body.rc-student-canyonpath #tabSettings .st-settings-card,
+html[data-theme='light'] body.rc-student-canyonpath .st-login-container {
+  border-color: rgba(11, 89, 75, 0.18);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 30px rgba(22, 67, 58, 0.08);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-theme='light'] body.rc-student-canyonpath #tabGoals .stcp-page-hero::after {
+  display: none;
+}
