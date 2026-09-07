@@ -78,3 +78,51 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
   canyonPathRefineScript.async = false;
   document.head.appendChild(canyonPathRefineScript);
 }
+
+// Public CanyonPath browsing surfaces. Presentation-only, explicit opt-in:
+// do not load this theme in Teacher Center, Student Portal, viewers, or lessons.
+(function () {
+  var path = window.location.pathname.replace(/\/index\.html$/i, '/').replace(/\/+$/, '') || '/';
+  var publicPages = [
+    '/classroom-resources', '/language-arts', '/language-arts/collection',
+    '/language-arts/toolkit', '/life-skills', '/life-skills/collection',
+    '/toolkits', '/math-toolkit', '/math-toolkit/algebra',
+    '/language-arts/a-door-into-time', '/language-arts/lost-in-kragdon-ah',
+    '/language-arts/return-from-kragdon-ah', '/language-arts/warrior-of-kragdon-ah'
+  ];
+  if (publicPages.indexOf(path) === -1) return;
+
+  document.documentElement.classList.add('rc-public-canyonpath');
+  var marker = 'data-public-canyonpath';
+  if (!document.querySelector('link[' + marker + ']')) {
+    var stylesheet = document.createElement('link');
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = '/assets/css/public-canyonpath.css?v=20260907-public1';
+    stylesheet.setAttribute(marker, 'true');
+    document.head.appendChild(stylesheet);
+  }
+
+  function addScenery() {
+    var main = document.querySelector('.tc-main');
+    if (!main) return;
+    var scene = '/assets/bg/home-arizona.svg?v=20260907-home1';
+    if (main.querySelector('.cp-public-landscape')) return;
+    var landscape = document.createElement('div');
+    landscape.className = 'cp-public-landscape';
+    landscape.setAttribute('aria-hidden', 'true');
+    var image = document.createElement('img');
+    image.src = scene;
+    image.alt = '';
+    image.width = 2400;
+    image.height = 1350;
+    image.decoding = 'async';
+    landscape.appendChild(image);
+    main.insertBefore(landscape, main.firstChild);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addScenery, { once: true });
+  } else {
+    addScenery();
+  }
+})();
