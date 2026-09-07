@@ -1,0 +1,464 @@
+/*
+ * Student Portal CanyonPath — Phase 2A premium polish pass
+ * Presentation-only. Uses the user-approved painterly CanyonPath scene as a
+ * naturally scrolling top environment and refines cards/tiles to the shared
+ * platform visual language without touching portal behavior or data.
+ */
+
+body.rc-student-canyonpath {
+  --stcp-premium-1: url('/assets/bg/canyonpath-premium-1.jpg');
+  --stcp-premium-2: url('/assets/bg/canyonpath-premium-2.jpg');
+  --stcp-premium-3: url('/assets/bg/canyonpath-premium-3.jpg');
+  --stcp-premium-4: url('/assets/bg/canyonpath-premium-4.jpg');
+  --stcp-card-bg: rgba(4, 47, 40, 0.80);
+  --stcp-card-bg-soft: rgba(7, 54, 46, 0.66);
+  --stcp-card-line: rgba(164, 232, 210, 0.22);
+  --stcp-card-line-hover: rgba(184, 244, 224, 0.40);
+  --stcp-card-shadow: 0 14px 36px rgba(0, 12, 10, 0.25), inset 0 1px rgba(245, 255, 251, 0.045);
+}
+
+/* --------------------------------------------------------------------------
+   One premium top landscape. It scrolls with the document and fades to the
+   deep-green workspace rather than behaving like fixed wallpaper.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .tc-app {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg,
+      rgba(3, 23, 20, 0.02) 0,
+      rgba(3, 23, 20, 0.06) 300px,
+      rgba(3, 23, 20, 0.30) 520px,
+      rgba(3, 23, 20, 0.80) 760px,
+      #031714 940px),
+    var(--stcp-premium-1) 0% 0 / 25% auto no-repeat,
+    var(--stcp-premium-2) 33.333% 0 / 25% auto no-repeat,
+    var(--stcp-premium-3) 66.667% 0 / 25% auto no-repeat,
+    var(--stcp-premium-4) 100% 0 / 25% auto no-repeat,
+    #031714;
+  background-attachment: scroll;
+}
+
+/* Retire the fixed cinematic SVG wallpaper from the previous review pass. */
+body.rc-student-canyonpath .tc-app::before,
+body.rc-student-canyonpath .tc-app::after {
+  content: none;
+  display: none;
+}
+
+body.rc-student-canyonpath .tc-shell,
+body.rc-student-canyonpath .tc-main,
+body.rc-student-canyonpath #studentDashboardView,
+body.rc-student-canyonpath .st-dashboard-content {
+  background: transparent;
+}
+
+/* Sidebar remains quiet and legible while allowing a hint of the environment. */
+body.rc-student-canyonpath .tc-sidebar {
+  background:
+    linear-gradient(180deg, rgba(3, 27, 24, 0.94), rgba(3, 20, 18, 0.985));
+  backdrop-filter: blur(18px) saturate(108%);
+  -webkit-backdrop-filter: blur(18px) saturate(108%);
+}
+
+/* --------------------------------------------------------------------------
+   Hero composition — title over scenery, not scenery trapped inside a box.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .stcp-hero {
+  min-height: 300px;
+  margin: 0 0 18px;
+  padding: clamp(34px, 4.7vw, 62px) 10px clamp(30px, 4vw, 48px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.rc-student-canyonpath .stcp-hero::before,
+body.rc-student-canyonpath .stcp-hero::after {
+  display: none;
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header h1 {
+  text-shadow: 0 4px 24px rgba(0, 13, 11, 0.48);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-welcome-header p {
+  text-shadow: 0 2px 12px rgba(0, 13, 11, 0.44);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-summary-cards {
+  border: 1px solid rgba(184, 240, 222, 0.28);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(145, 224, 199, 0.10), rgba(7, 49, 42, 0.02) 48%),
+    rgba(3, 39, 33, 0.82);
+  box-shadow:
+    0 20px 52px rgba(0, 12, 10, 0.34),
+    inset 0 1px rgba(247, 255, 252, 0.055);
+  backdrop-filter: blur(16px) saturate(112%);
+  -webkit-backdrop-filter: blur(16px) saturate(112%);
+}
+
+body.rc-student-canyonpath .stcp-hero .st-streak-banner {
+  border-color: rgba(175, 232, 213, 0.18);
+  border-radius: 12px;
+  background: rgba(3, 37, 31, 0.74);
+  box-shadow: inset 0 1px rgba(245, 255, 251, 0.035);
+}
+
+/* Secondary pages use the same scenic top band, with the heading directly on
+   the environment rather than another rounded landscape window. */
+body.rc-student-canyonpath .stcp-page-hero {
+  min-height: 150px;
+  margin: 0 0 22px;
+  padding: 34px 8px 38px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.rc-student-canyonpath .stcp-page-hero h1,
+body.rc-student-canyonpath .stcp-page-hero > p,
+body.rc-student-canyonpath .stcp-page-hero::before {
+  text-shadow: 0 3px 18px rgba(0, 13, 11, 0.50);
+}
+
+/* --------------------------------------------------------------------------
+   Shared premium surface treatment. Purposeful cards remain; nested boxes are
+   kept lighter so the page reads as hierarchy instead of container soup.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath #tabDashboard .st-section,
+body.rc-student-canyonpath #tabLibrary .st-resource-card,
+body.rc-student-canyonpath #tabResources .st-resource-card,
+body.rc-student-canyonpath #tabActivities .st-activity-card,
+body.rc-student-canyonpath #tabGrades .st-grade-snapshot,
+body.rc-student-canyonpath #tabGrades .st-assignment-history,
+body.rc-student-canyonpath #tabGrades .st-grade-card,
+body.rc-student-canyonpath #tabGoals .sgp-card,
+body.rc-student-canyonpath #tabSettings .st-settings-card {
+  border: 1px solid var(--stcp-card-line);
+  border-radius: 16px;
+  background:
+    linear-gradient(145deg, rgba(151, 230, 204, 0.085), rgba(10, 70, 58, 0.025) 42%, rgba(3, 31, 27, 0.06) 100%),
+    var(--stcp-card-bg);
+  box-shadow: var(--stcp-card-shadow);
+  backdrop-filter: blur(14px) saturate(110%);
+  -webkit-backdrop-filter: blur(14px) saturate(110%);
+}
+
+body.rc-student-canyonpath #tabDashboard .st-section:hover,
+body.rc-student-canyonpath #tabLibrary .st-resource-card:hover,
+body.rc-student-canyonpath #tabResources .st-resource-card:hover,
+body.rc-student-canyonpath #tabActivities .st-activity-card:hover {
+  border-color: var(--stcp-card-line-hover);
+}
+
+/* Small top-edge highlight makes cards feel machined rather than flat. */
+body.rc-student-canyonpath #tabDashboard .st-section,
+body.rc-student-canyonpath #tabLibrary .st-resource-card,
+body.rc-student-canyonpath #tabResources .st-resource-card,
+body.rc-student-canyonpath #tabActivities .st-activity-card,
+body.rc-student-canyonpath #tabGrades .st-grade-snapshot,
+body.rc-student-canyonpath #tabGrades .st-assignment-history,
+body.rc-student-canyonpath #tabGoals .sgp-card,
+body.rc-student-canyonpath #tabSettings .st-settings-card {
+  position: relative;
+}
+
+/* --------------------------------------------------------------------------
+   Quick activities — compact premium launch cards, no outer box.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath .stcp-quick {
+  margin: 8px 0 24px;
+  padding: 12px 0 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.rc-student-canyonpath .stcp-quick__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  overflow: visible;
+  border: 0;
+}
+
+body.rc-student-canyonpath .stcp-quick__link {
+  min-height: 86px;
+  border: 1px solid rgba(166, 230, 209, 0.20);
+  border-radius: 14px;
+  background:
+    linear-gradient(145deg, rgba(145, 224, 199, 0.08), rgba(5, 45, 38, 0.01)),
+    rgba(5, 48, 41, 0.70);
+  box-shadow: 0 10px 26px rgba(0, 13, 11, 0.18), inset 0 1px rgba(245, 255, 251, 0.035);
+}
+
+body.rc-student-canyonpath .stcp-quick__link:last-child {
+  border-right: 1px solid rgba(166, 230, 209, 0.20);
+}
+
+body.rc-student-canyonpath .stcp-quick__link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(184, 244, 224, 0.40);
+  background:
+    linear-gradient(145deg, rgba(155, 236, 208, 0.12), rgba(5, 45, 38, 0.02)),
+    rgba(8, 59, 50, 0.78);
+  box-shadow: 0 16px 34px rgba(0, 13, 11, 0.24), inset 0 1px rgba(245, 255, 251, 0.05);
+}
+
+body.rc-student-canyonpath .stcp-quick__icon,
+body.rc-student-canyonpath .st-activity-card__icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(181, 240, 221, 0.30);
+  border-radius: 13px;
+  background:
+    linear-gradient(145deg, rgba(161, 236, 212, 0.15), rgba(67, 142, 120, 0.04)),
+    rgba(6, 52, 44, 0.72);
+  color: var(--stcp-mint);
+  box-shadow: inset 0 1px rgba(246, 255, 252, 0.055), 0 8px 18px rgba(0, 12, 10, 0.14);
+}
+
+body.rc-student-canyonpath .st-activity-card__icon svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --------------------------------------------------------------------------
+   Dashboard rows — compact data inside premium sections, without nested cards.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath #dashRecentAssignments {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(169, 229, 209, 0.16);
+}
+
+body.rc-student-canyonpath #dashRecentAssignments .st-assignment-card,
+body.rc-student-canyonpath #dashRecentAssignments .assignment-card {
+  padding: 13px 14px;
+  border: 1px solid rgba(162, 226, 206, 0.14);
+  border-radius: 12px;
+  background: rgba(51, 112, 95, 0.14);
+  box-shadow: inset 0 1px rgba(245, 255, 251, 0.025);
+}
+
+body.rc-student-canyonpath #dashRecentAssignments .st-assignment-card:hover,
+body.rc-student-canyonpath #dashRecentAssignments .assignment-card:hover {
+  border-color: rgba(177, 238, 218, 0.28);
+  background: rgba(70, 134, 115, 0.20);
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(169, 229, 209, 0.16);
+}
+
+body.rc-student-canyonpath #dashGoalsSnapshot .sgp-card,
+body.rc-student-canyonpath #dashGoalsSnapshot .st-goal-card {
+  padding: 13px 14px;
+  border: 1px solid rgba(162, 226, 206, 0.14);
+  border-radius: 12px;
+  background: rgba(51, 112, 95, 0.14);
+  box-shadow: inset 0 1px rgba(245, 255, 251, 0.025);
+}
+
+body.rc-student-canyonpath .stcp-goals-more {
+  border: 1px solid rgba(166, 230, 209, 0.15);
+  background: rgba(76, 139, 120, 0.14);
+}
+
+/* --------------------------------------------------------------------------
+   Library / resources / activities — disciplined grids prevent orphan giants.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath #tabLibrary .st-resources-grid,
+body.rc-student-canyonpath #tabResources .st-resources-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body.rc-student-canyonpath #tabLibrary .st-resource-card,
+body.rc-student-canyonpath #tabResources .st-resource-card {
+  min-width: 0;
+  min-height: 150px;
+  padding: 22px 18px;
+}
+
+body.rc-student-canyonpath #tabLibrary .st-resource-card:hover,
+body.rc-student-canyonpath #tabResources .st-resource-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(0, 12, 10, 0.28), inset 0 1px rgba(245, 255, 251, 0.05);
+}
+
+body.rc-student-canyonpath #tabActivities .st-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body.rc-student-canyonpath #tabActivities .st-activity-card {
+  min-width: 0;
+  min-height: 230px;
+  padding: 20px;
+}
+
+body.rc-student-canyonpath #tabActivities .st-activity-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(0, 12, 10, 0.28), inset 0 1px rgba(245, 255, 251, 0.05);
+}
+
+/* --------------------------------------------------------------------------
+   Assignments / grades / goals — strengthen hierarchy while keeping long-form
+   evidence and history readable over the scenic top fade.
+   -------------------------------------------------------------------------- */
+
+body.rc-student-canyonpath #tabAssignments #assignmentsContent {
+  border-top-color: rgba(172, 231, 212, 0.18);
+}
+
+body.rc-student-canyonpath #tabAssignments #assignmentsContent .st-assignment-card {
+  padding: 18px 12px;
+  border-bottom-color: rgba(166, 226, 207, 0.18);
+}
+
+body.rc-student-canyonpath #tabAssignments #assignmentsContent .st-assignment-card:hover {
+  background: linear-gradient(90deg, rgba(126, 222, 190, 0.075), rgba(15, 75, 63, 0.025) 74%, transparent);
+}
+
+body.rc-student-canyonpath #tabGrades .st-grade-snapshot,
+body.rc-student-canyonpath #tabGrades .st-assignment-history {
+  overflow: hidden;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-card {
+  padding: 22px;
+}
+
+body.rc-student-canyonpath #tabGoals .sgp-work,
+body.rc-student-canyonpath #tabGoals .sget-evidence-detail,
+body.rc-student-canyonpath #tabGoals .sgp-question {
+  border-color: rgba(164, 226, 207, 0.16);
+  background: rgba(3, 34, 29, 0.62);
+  box-shadow: inset 0 1px rgba(245, 255, 251, 0.025);
+}
+
+body.rc-student-canyonpath #tabSettings .st-settings-card {
+  max-width: 620px;
+}
+
+/* Footer keeps the premium scene as a deliberate closing band, matching the
+   reference concepts while the main document itself fades to deep green. */
+body.rc-student-canyonpath .stcp-footer {
+  background:
+    linear-gradient(90deg, rgba(3, 31, 27, 0.88), rgba(3, 31, 27, 0.50)),
+    var(--stcp-premium-1) 0% 50% / 25% auto no-repeat,
+    var(--stcp-premium-2) 33.333% 50% / 25% auto no-repeat,
+    var(--stcp-premium-3) 66.667% 50% / 25% auto no-repeat,
+    var(--stcp-premium-4) 100% 50% / 25% auto no-repeat,
+    rgba(4, 35, 30, 0.92);
+  border-color: rgba(178, 235, 216, 0.20);
+  box-shadow: 0 16px 38px rgba(0, 12, 10, 0.24), inset 0 1px rgba(245, 255, 251, 0.04);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive and accessibility safeguards.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1180px) {
+  body.rc-student-canyonpath #tabLibrary .st-resources-grid,
+  body.rc-student-canyonpath #tabResources .st-resources-grid,
+  body.rc-student-canyonpath #tabActivities .st-activity-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  body.rc-student-canyonpath .stcp-quick__grid,
+  body.rc-student-canyonpath #tabLibrary .st-resources-grid,
+  body.rc-student-canyonpath #tabResources .st-resources-grid,
+  body.rc-student-canyonpath #tabActivities .st-activity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.rc-student-canyonpath .stcp-hero {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  body.rc-student-canyonpath .tc-app {
+    background:
+      linear-gradient(180deg, rgba(3, 23, 20, 0.02) 0, rgba(3, 23, 20, 0.30) 440px, #031714 760px),
+      var(--stcp-premium-2) center top / cover no-repeat,
+      #031714;
+  }
+
+  body.rc-student-canyonpath .stcp-quick__grid,
+  body.rc-student-canyonpath #tabLibrary .st-resources-grid,
+  body.rc-student-canyonpath #tabResources .st-resources-grid,
+  body.rc-student-canyonpath #tabActivities .st-activity-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.rc-student-canyonpath .stcp-quick__link:hover,
+  body.rc-student-canyonpath #tabLibrary .st-resource-card:hover,
+  body.rc-student-canyonpath #tabResources .st-resource-card:hover,
+  body.rc-student-canyonpath #tabActivities .st-activity-card:hover {
+    transform: none;
+  }
+}
+
+/* Light mode stays intentionally non-scenic and keeps the accessible focus
+   treatment established by the prior review-fix layer. */
+html[data-theme='light'] body.rc-student-canyonpath .tc-app {
+  background: var(--bg, #f8f9fa);
+}
+
+html[data-theme='light'] body.rc-student-canyonpath .stcp-hero,
+html[data-theme='light'] body.rc-student-canyonpath .stcp-page-hero {
+  text-shadow: none;
+}
+
+html[data-theme='light'] body.rc-student-canyonpath #tabDashboard .st-section,
+html[data-theme='light'] body.rc-student-canyonpath #tabLibrary .st-resource-card,
+html[data-theme='light'] body.rc-student-canyonpath #tabResources .st-resource-card,
+html[data-theme='light'] body.rc-student-canyonpath #tabActivities .st-activity-card,
+html[data-theme='light'] body.rc-student-canyonpath #tabGrades .st-grade-snapshot,
+html[data-theme='light'] body.rc-student-canyonpath #tabGrades .st-assignment-history,
+html[data-theme='light'] body.rc-student-canyonpath #tabGoals .sgp-card,
+html[data-theme='light'] body.rc-student-canyonpath #tabSettings .st-settings-card {
+  border-color: rgba(11, 89, 75, 0.18);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 30px rgba(22, 67, 58, 0.08);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
