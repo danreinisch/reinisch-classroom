@@ -121,7 +121,7 @@
 
   function choiceText(value, label) {
     const raw = String(value ?? '').trim();
-    const prefix = new RegExp(`^\\s*${label}\\s*[\\).:]\\s*`, 'i');
+    const prefix = new RegExp(`^\\s*${label}\\s*[).:]\\s*`, 'i');
     const stripped = raw.replace(prefix, '').trim();
     return stripped || raw || 'Choice not recorded';
   }
@@ -131,9 +131,9 @@
     const display = choiceText(choice, label);
     return answerParts(answer).some((part) => {
       const raw = part.trim();
-      const bareLetter = raw.match(/^([A-Z])\s*[\).:]?$/i);
+      const bareLetter = raw.match(/^([A-Z])\s*[).:]?$/i);
       if (bareLetter && bareLetter[1].toUpperCase() === label) return true;
-      const prefixed = raw.match(/^([A-Z])\s*[\).:]\s+/i);
+      const prefixed = raw.match(/^([A-Z])\s*[).:]\s+/i);
       if (prefixed && prefixed[1].toUpperCase() === label) return true;
       const normalized = normalizeChoice(raw);
       return normalized === normalizeChoice(choice) || normalized === normalizeChoice(display);
@@ -287,7 +287,7 @@
       state.selectedKey = events.at(-1)?.key || null;
     }
 
-    let windowed = pageWindow(state, events);
+    const windowed = pageWindow(state, events);
     state.page = windowed.pageIndex;
     if (windowed.page.length && !windowed.page.some((event) => event.key === state.selectedKey)) {
       state.selectedKey = windowed.page.at(-1)?.key || null;
