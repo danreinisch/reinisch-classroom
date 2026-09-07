@@ -75,7 +75,7 @@ test('Scenery is a complete locally hosted vector with a small decorative pug', 
   for (const match of scene.matchAll(/\bhref="([^"]+)"/g)) assert.ok(match[1].startsWith('#'));
   assert.ok(Buffer.byteLength(scene) < 60000, 'Keep the scalable scenery lightweight');
   assert.match(html, /<img[^>]*home-arizona\.svg\?v=20260907-home1[^>]*alt=""[^>]*width="2400"[^>]*height="1350"[^>]*fetchpriority="high"/);
-  assert.match(html, /home-canyonpath\.css"/);
+  assert.match(html, /home-canyonpath\.css\?v=20260907-home1/);
 });
 
 test('Frosted card text retains 4.5:1 contrast with blur unavailable', () => {
