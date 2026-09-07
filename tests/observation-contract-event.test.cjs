@@ -76,7 +76,7 @@ test('S060 reading trial cannot be reduced to comprehension alone', () => {
     components: {
       independent_reading: 'met',
       comprehension_participation: 'met',
-      regulation_strategy_use: 'met',
+      regulation_strategy: 'met',
     },
   });
   assert.strictEqual(normalized.ok, true);
