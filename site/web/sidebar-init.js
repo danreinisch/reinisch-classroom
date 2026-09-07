@@ -21,12 +21,21 @@ try {
 // and leaves Teacher Center / public pages untouched.
 if (window.location.pathname === '/student/' || window.location.pathname.startsWith('/student/')) {
   var loadPolishCss = function () {
-    if (document.querySelector('link[data-student-portal-polish]')) return;
-    var polishCss = document.createElement('link');
-    polishCss.rel = 'stylesheet';
-    polishCss.href = '/assets/css/student-portal-polish.css?v=20260907-polish1';
-    polishCss.setAttribute('data-student-portal-polish', 'true');
-    document.head.appendChild(polishCss);
+    if (!document.querySelector('link[data-student-portal-polish]')) {
+      var polishCss = document.createElement('link');
+      polishCss.rel = 'stylesheet';
+      polishCss.href = '/assets/css/student-portal-polish.css?v=20260907-polish1';
+      polishCss.setAttribute('data-student-portal-polish', 'true');
+      document.head.appendChild(polishCss);
+    }
+
+    if (!document.querySelector('link[data-student-goal-evidence-timeline]')) {
+      var evidenceCss = document.createElement('link');
+      evidenceCss.rel = 'stylesheet';
+      evidenceCss.href = '/assets/css/student-goal-evidence-timeline.css?v=20260907-evidence1';
+      evidenceCss.setAttribute('data-student-goal-evidence-timeline', 'true');
+      document.head.appendChild(evidenceCss);
+    }
   };
 
   // Append after the page's inline styles so the scoped polish layer is the
@@ -41,4 +50,9 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
   polishScript.src = '/web/student-portal-polish.js?v=20260907-polish1';
   polishScript.async = false;
   document.head.appendChild(polishScript);
+
+  var evidenceScript = document.createElement('script');
+  evidenceScript.src = '/web/student-goal-evidence-timeline.js?v=20260907-evidence1';
+  evidenceScript.async = false;
+  document.head.appendChild(evidenceScript);
 }
