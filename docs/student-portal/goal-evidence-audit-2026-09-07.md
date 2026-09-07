@@ -127,7 +127,7 @@ Weeks 1 and 2 explicitly did not target assignment-based IEP evidence for S060, 
 
 `S060.CG1` is a composite x/y performance goal involving reading/comprehension plus regulation/strategy use. `S060.CG2` is a prompt-count behavior goal. Generic academic question correctness would not faithfully measure either goal.
 
-These require an explicit teacher-recorded performance/observation evidence contract rather than invented question mappings.
+These require explicit teacher-recorded performance/observation evidence contracts rather than invented question mappings.
 
 ---
 
@@ -150,31 +150,49 @@ New Student Portal layer:
 - Objective goals default to **All Evidence**.
 - Cross-skill All Evidence dots are not connected by a trend line.
 - Students may filter to one child skill when they want a skill-specific view.
+- Students may filter evidence by **All / Needs Review / Demonstrated** without changing official progress math.
+- The timeline is windowed for scalability: **five events on normal desktop cards and three on compact/mobile cards**, with Older/Newer navigation. Large quarters do not become an unbounded wall of dots.
+- The newest evidence window is full whenever enough events exist; pagination is anchored from the newest evidence rather than leaving a partially filled final page.
 - Selecting a dot exposes the associated assignment/task, date, skill/component, question when available, student response, released correct answer/result, and other stored evidence details.
-- Correct-answer/result review remains gated by Reviewed/Graded assignment status. An evidence event may still appear before release, but it must not leak the correct answer or finalized correctness state.
+- Multiple-choice evidence displays the **actual answer choices**, marks the student's selected choice, and — only after review release — marks the correct choice.
+- Before Reviewed/Graded release, the student may see their own selected response, but the correct answer, correctness state, evidence score, and child-objective score remain hidden.
 - Official goal math is not recalculated by this timeline.
+
+### Scalability regression
+
+The browser regression now stress-tests a synthetic **40-event quarter** and verifies:
+
+- only five newest evidence dots appear on a desktop card
+- Older/Newer navigation moves through fixed windows
+- Needs Review filtering scales independently
+- compact/mobile rendering uses three-dot windows
+- the total count remains visible without rendering all events at once
 
 ---
 
-## 5. Assignment-plan audit
+## 5. Assignment-plan audit and Week 3 repair
 
 The canonical Week 1, Week 2, and Week 3 upload files were checked for consistency between each assignment header's `Targeted IEP Goal Codes` and the actual `[IG: ...]` tags used in the assignment.
 
-Results:
+Initial results:
 
 - **Week 1: 0 header/tag mismatches**
 - **Week 2: 0 header/tag mismatches**
 - **Week 3: 1 mismatch**
 
-### Week 3 action item
+### S063 Week 3 repair
 
-`S063` — Language Arts 1 SC:
+`S063` — Language Arts 1 SC — originally listed `S063.CG2` in the Week 3 targeted-goal header but had no actual `S063.CG2` evidence item.
 
-- Week 3 header targets `S063.CG1`, `S063.CG2`, and `S063.CG3`.
-- Actual Week 3 `[IG: ...]` tags include `S063.CG1` and `S063.CG3`.
-- **`S063.CG2` has no actual tagged evidence item in the assignment.**
+The canonical `WEEK_03_UPLOAD.txt` was repaired in place on Google Drive by tagging three existing, already-appropriate comprehension items rather than inventing new questions:
 
-This was caught before Week 3 issuance and should be corrected deliberately in the Week 3 assignment source rather than silently invented at runtime.
+- Day 1 Question 2 — significance/main-idea comprehension about Dan Hadaller
+- Day 2 Question 6 — identifying the most important change across Chapters 7–8
+- Day 3 Question 6 — sequencing the pattern of Alex moving toward belonging across Chapters 7–9
+
+Post-repair validation:
+
+- **Week 3: 0 header/tag mismatches across all 58 student assignment blocks**
 
 All `[IO: ...]` objective tags appearing across Weeks 1–3 were checked against the live active `goal_objectives` registry:
 
@@ -200,16 +218,23 @@ Current Q1 status:
 
 This is a separate design/cadence issue, not the repaired question-evidence bug.
 
-These goals need explicit evidence contracts such as:
+The 20 missing-contract goals were individually reviewed against the live goal wording and active child objectives. The reviewed recommendations are in:
 
-- teacher-recorded observation
-- prompt count
-- successful/unsuccessful performance opportunity
-- fluency performance check
-- social/behavior task observation
-- transition/life-skill performance record
+- `docs/student-portal/non-question-evidence-contracts-review-2026-09-07.md`
 
-Do **not** convert these to generic academic-question evidence simply to make the chart non-empty.
+The review organizes future capture into reusable event types rather than twenty custom workflows:
+
+- opportunity / no opportunity
+- prompt count or numeric rubric
+- defined performance trial
+- teacher-reviewed work sample
+- composite checklist
+- objective-specific evidence
+- periodic benchmark evidence
+
+Special cases include S060's composite reading/regulation trial, S069's MAP benchmark + objective probes, and S070's objective-driven parent goals.
+
+Do **not** convert these goals to generic academic-question evidence simply to make the chart non-empty.
 
 ---
 
@@ -223,12 +248,22 @@ The evidence timeline may preserve the existence of the attempt, but official pr
 
 ---
 
-## 8. Recommended next steps
+## 8. Current release gate
 
-1. Teacher visual QA on PR #1478 with S016 and S065.
-2. Confirm S016 shows three evidence dots for `S016.CG1` and that selecting a miss displays the exact question/response.
-3. Confirm S065 defaults to five All Evidence dots for `S065.CG1`, with skill filtering available.
-4. Keep S060 empty until an appropriate performance/observation capture contract is designed.
-5. Correct the Week 3 `S063.CG2` assignment mapping before Week 3 is issued.
-6. Build a concise capture contract for the 20 current non-question class-context goals with no Q1 check, using Observation Center / teacher-recorded evidence rather than forced question mappings.
-7. Only after visual/functional QA, merge PR #1478.
+Completed:
+
+1. Student Portal evidence timeline built around one event per dot.
+2. Historical Q1 reconstructable question/objective evidence repaired and verified.
+3. Mixed-assignment evidence-writing bug fixed going forward.
+4. S016 and S065 live visual QA confirmed item-level evidence is now visible and clickable.
+5. Scalable five/three-event windows and result filters added.
+6. Actual answer-choice text added to goal evidence review.
+7. S063 Week 3 `CG2` targeting gap repaired; Week 3 now validates at zero header/tag mismatches.
+8. The 20 current non-question evidence contracts reviewed and separated into a follow-up capture-design slice.
+
+Remaining before merge:
+
+- final teacher visual QA of the newest window/filter/answer-choice presentation
+- green repository CI, Supabase Validation, and Netlify preview on the final head
+
+The non-question Observation Center implementation is intentionally **not** part of PR #1478. It belongs in a focused follow-up after the Student Portal evidence presentation is merged.
