@@ -355,6 +355,41 @@ body.rc-home-canyonpath .home-skip-link:focus { transform: translateY(0); }
   body.rc-home-canyonpath .home-pathway { min-height: 90px; }
   body.rc-home-canyonpath .home-pathway-arrow { display: inline; }
 }
+/* The shared clock does not shrink. A second header row keeps every clock
+   detail visible on phones instead of forcing horizontal page overflow. */
+@media (max-width: 768px) {
+  body.rc-home-canyonpath { --tc-topbar-h: 100px; }
+  body.rc-home-canyonpath .tc-topbar {
+    height: var(--tc-topbar-h);
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 2px 8px;
+    padding: 6px 12px;
+  }
+  body.rc-home-canyonpath .tc-topbar .tc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    min-height: 44px;
+  }
+  body.rc-home-canyonpath .tc-topbar .tc-title {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 0.94rem;
+  }
+  body.rc-home-canyonpath .tc-topbar .tc-clock {
+    flex: 0 0 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    white-space: normal;
+    gap: 2px 5px;
+    line-height: 1.3;
+  }
+}
 @media (max-width: 600px) {
   body.rc-home-canyonpath .home-hero { min-height: 470px; padding-top: 40px; }
   body.rc-home-canyonpath .home-hero .home-hero-title { font-size: clamp(2.65rem, 11.5vw, 3.8rem); }
@@ -376,6 +411,14 @@ body.rc-home-canyonpath .home-skip-link:focus { transform: translateY(0); }
   body.rc-home-canyonpath *,
   body.rc-home-canyonpath *::before,
   body.rc-home-canyonpath *::after { transition: none; animation: none; scroll-behavior: auto; }
+  /* Match the component selectors, not just the universal selector. */
+  body.rc-home-canyonpath .home-pathway,
+  body.rc-home-canyonpath .home-student-cta,
+  body.rc-home-canyonpath .home-teacher-cta,
+  body.rc-home-canyonpath .tc-nav a,
+  body.rc-home-canyonpath .tc-sidebar,
+  body.rc-home-canyonpath .tc-class-mode-btn,
+  body.rc-home-canyonpath .tc-class-mode-tab-btn { transition: none; animation: none; }
 }
 /* Light mode follows the Portal's readable, non-scenic light alternative. */
 html[data-theme='light'] body.rc-home-canyonpath {

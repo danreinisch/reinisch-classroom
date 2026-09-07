@@ -1,5 +1,15 @@
 import { test, expect } from '@playwright/test';
 
+test.afterEach(async ({ page }, testInfo) => {
+  if (testInfo.status !== testInfo.expectedStatus && !page.isClosed()) {
+    await page.screenshot({ path: testInfo.outputPath('home-failure.png'), fullPage: true });
+    const overflow = await page.evaluate(() => [...document.querySelectorAll('body *')]
+      .map((el) => ({ element: el.tagName, id: el.id, className: String(el.className), right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width }))
+      .filter((item) => item.right > innerWidth + 1));
+    console.log('Homepage overflow diagnostics:', JSON.stringify(overflow));
+  }
+});
+
 const mockConfig = {
   languageArts: { unit: 'MOCK CLASS ANNOUNCEMENT', currentWeek: 1, currentTitle: 'Mock reading', nextWeek: 2, nextTitle: 'Mock next lesson' },
   lifeSkills: { currentTitle: 'MOCK CLASS ANNOUNCEMENT', nextTitle: 'Mock next skill' },
@@ -43,6 +53,7 @@ async function openHome(page, { teacher = false, failure = false, empty = false,
   await expect(page.locator('#daily-quote')).not.toHaveText('Loading…');
   if (!failure) await expect(page.locator('#home-stats')).toContainText('4 total presentations');
   await page.evaluate(() => document.fonts.ready);
+  await expect(page.locator('#classClock .tc-clock-time')).toBeVisible();
   return { errors, writes };
 }
 
