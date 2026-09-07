@@ -151,7 +151,7 @@ New Student Portal layer:
 - Cross-skill All Evidence dots are not connected by a trend line.
 - Students may filter to one child skill when they want a skill-specific view.
 - Selecting a dot exposes the associated assignment/task, date, skill/component, question when available, student response, released correct answer/result, and other stored evidence details.
-- Answer review remains gated by Reviewed/Graded assignment status.
+- Correct-answer/result review remains gated by Reviewed/Graded assignment status. An evidence event may still appear before release, but it must not leak the correct answer or finalized correctness state.
 - Official goal math is not recalculated by this timeline.
 
 ---
