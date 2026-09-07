@@ -64,7 +64,7 @@ test('Phase 2A final standard fixes collapsed rail alignment and dashboard densi
   assert.match(refineJs, /View all \$\{cards\.length\} goals/);
 });
 
-test('Phase 2A final standard aligns one scrolling panorama to main content rather than the sidebar shell', () => {
+test('Phase 2A legacy scenic layers stay presentation-only while the reference layer owns the effective scene', () => {
   assert.match(finalCss, /body\.rc-student-canyonpath \.tc-app\s*\{[\s\S]*background:\s*var\(--stcpf-bg\)/);
   assert.match(finalCss, /body\.rc-student-canyonpath \.tc-main\s*\{[\s\S]*canyonpath-premium-1/);
   assert.match(finalCss, /canyonpath-premium-2/);
@@ -76,17 +76,27 @@ test('Phase 2A final standard aligns one scrolling panorama to main content rath
   assert.match(finalCss, /\.stcp-page-hero[\s\S]*background:\s*transparent/);
 });
 
-test('Phase 2A visual gate aligns content to the remaining canvas and keeps the scene present while scrolling', () => {
+test('Phase 2A visual gate uses one crisp registered scene per approved Dashboard, Goals, and Login surface', () => {
   assert.match(referenceCss, /--stcpl-main-left:\s*var\(--tc-side-w/);
   assert.match(referenceCss, /html\.tc-collapsed body\.rc-student-canyonpath[\s\S]*--stcpl-main-left:\s*var\(--tc-rail-w/);
   assert.match(referenceCss, /\.st-dashboard-content[\s\S]*width:\s*min\(100%,\s*1380px\)/);
+  assert.match(referenceCss, /--stcpl-scene-image:\s*var\(--stcp-premium-3\)/);
+  assert.match(referenceCss, /#tabDashboard\.active[\s\S]*--stcpl-scene-image:\s*var\(--stcp-premium-2\)/);
+  assert.match(referenceCss, /#tabGoals\.active[\s\S]*--stcpl-scene-image:\s*var\(--stcp-premium-3\)/);
+  assert.match(referenceCss, /#loginView:not\(\.hidden\)[\s\S]*--stcpl-scene-image:\s*var\(--stcp-premium-4\)/);
   assert.match(referenceCss, /\.tc-main::before[\s\S]*position:\s*fixed/);
   assert.match(referenceCss, /\.tc-main::before[\s\S]*inset:\s*var\(--tc-topbar-h,[\s\S]*var\(--stcpl-main-left\)/);
-  assert.match(referenceCss, /\.tc-main::before[\s\S]*canyonpath-premium-2/);
-  assert.match(referenceCss, /\.tc-main::before[\s\S]*canyonpath-premium-3/);
-  assert.match(referenceCss, /\.tc-main::before[\s\S]*canyonpath-premium-4/);
-  assert.match(referenceCss, /\.stcp-hero[\s\S]*min-height:\s*278px/);
+  assert.match(referenceCss, /\.tc-main::before[\s\S]*var\(--stcpl-scene-image\)[\s\S]*cover no-repeat/);
+  assert.doesNotMatch(referenceCss, /var\(--stcp-premium-2\) 0% 0 \/ 33\.334%/);
   assert.doesNotMatch(referenceCss, /backdrop-filter:\s*blur\((1[0-9]|[2-9][0-9])px\)/);
+});
+
+test('Phase 2A approved dashboard hero uses a balanced greeting and compact 2x2 status panel', () => {
+  assert.match(referenceCss, /\.stcp-hero\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(350px, 390px\)/);
+  assert.match(referenceCss, /\.stcp-hero\s*\{[\s\S]*min-height:\s*320px/);
+  assert.match(referenceCss, /\.stcp-hero__aside[\s\S]*align-self:\s*center/);
+  assert.match(referenceCss, /\.stcp-hero \.st-summary-cards[\s\S]*repeat\(2/);
+  assert.match(referenceCss, /\.stcp-hero \.st-summary-card:nth-child\(odd\)/);
 });
 
 test('Phase 2A keeps the Student Portal top bar visible while long pages scroll', () => {
@@ -103,6 +113,7 @@ test('Phase 2A final standard removes rainy-window page blur and keeps restraine
   assert.match(finalCss, /\.stcp-hero \.st-summary-cards[\s\S]*blur\(4px\)/);
   assert.match(finalCss, /\.stcp-quick__link[\s\S]*blur\(3px\)/);
   assert.doesNotMatch(finalCss, /blur\((1[0-9]|[2-9][0-9])px\)/);
+  assert.match(referenceCss, /\.st-login-container[\s\S]*blur\(3px\)/);
 });
 
 test('Phase 2A final standard matches approved dashboard, goals, and login component contracts', () => {
@@ -114,14 +125,14 @@ test('Phase 2A final standard matches approved dashboard, goals, and login compo
   assert.match(finalCss, /#tabGoals \.sgp-stats[\s\S]*repeat\(3/);
   assert.match(finalCss, /#tabGoals \.sgp-progress/);
   assert.match(referenceCss, /#tabGoals \.sgp-official/);
-  assert.match(referenceCss, /stcp-goal-card--reference[\s\S]*grid-template-areas/);
-  assert.match(referenceCss, /stcp-goal-aside/);
+  assert.match(referenceCss, /stcp-goal-card--reference[\s\S]*'header aside'[\s\S]*'official aside'/);
+  assert.match(referenceCss, /stcp-goal-aside__open::before[\s\S]*View progress evidence/);
   assert.match(refineJs, /Progress evidence/);
   assert.match(refineJs, /No Progress Checks Yet/);
   assert.match(finalCss, /#loginView[\s\S]*place-items:\s*center/);
-  assert.match(finalCss, /\.st-login-container[\s\S]*max-width:\s*500px/);
-  assert.match(finalCss, /\.st-login-container[\s\S]*blur\(6px\)/);
-  assert.match(finalCss, /\.stcp-footer/);
+  assert.match(referenceCss, /#loginView:not\(\.hidden\)[\s\S]*min-height:\s*calc\(100vh/);
+  assert.match(referenceCss, /\.st-login-container[\s\S]*max-width:\s*460px/);
+  assert.match(referenceCss, /\.stcp-footer[\s\S]*var\(--stcpl-scene-image\)/);
 });
 
 test('Phase 2A light mode keeps an accessible dark focus accent', () => {
@@ -141,7 +152,7 @@ test('Student route loads CanyonPath foundation and approved-reference layers la
   assert.match(sidebar, /student-canyonpath-cinematic\.css\?v=20260907-2a4/);
   assert.match(sidebar, /student-canyonpath-premium\.css\?v=20260907-2a5/);
   assert.match(sidebar, /student-canyonpath-final\.css\?v=20260907-2a6/);
-  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260907-2a8/);
+  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260907-2a9/);
   assert.match(sidebar, /student-canyonpath\.js\?v=20260907-2a3/);
   assert.match(sidebar, /student-canyonpath-refine\.js\?v=20260907-2a4/);
   assert.ok(sidebar.indexOf('student-canyonpath-reference-match.css') > sidebar.indexOf('student-canyonpath-final.css'));
