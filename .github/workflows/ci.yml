@@ -106,7 +106,7 @@ jobs:
         run: npx playwright install chromium
       
       - name: Run smoke tests
-        run: npm run test:smoke && npm run test:goal-review:ui
+        run: npm run test:smoke && npm run test:goal-review:ui && npx playwright test tests/student-portal-polish.spec.js
       
       - name: Upload test results
         if: failure()
@@ -127,8 +127,6 @@ jobs:
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        with:
-          node-version: '20'
       
       - name: Run leak guard check
         run: node scripts/check-env-leaks.js
@@ -147,10 +145,8 @@ jobs:
         with:
           # Full history required so origin/main is available for the diff
           fetch-depth: 0
-      
       - name: Fetch main branch for diff base
         run: git fetch origin main:refs/remotes/origin/main
-      
       - name: Check cache-bust strings are bumped
         run: bash scripts/check-cache-bust.sh
         env:
