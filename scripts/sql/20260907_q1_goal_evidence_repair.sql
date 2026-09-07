@@ -154,9 +154,9 @@ inserted_parent AS (
 single_objective_mapping AS (
   SELECT
     aio.item_id,
-    min(aio.objective_id) AS objective_id,
-    min(aio.component_label) AS component_label,
-    min(aio.objective_max) AS objective_max
+    (array_agg(aio.objective_id ORDER BY aio.id))[1] AS objective_id,
+    (array_agg(aio.component_label ORDER BY aio.id))[1] AS component_label,
+    (array_agg(aio.objective_max ORDER BY aio.id))[1] AS objective_max
   FROM public.assignment_item_objectives aio
   GROUP BY aio.item_id
   HAVING count(*) = 1
