@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1000" preserveAspectRatio="xMidYMid slice" role="img" aria-labelledby="title desc">
+  <title id="title">CanyonPath cinematic mountain valley</title>
+  <desc id="desc">A layered evergreen mountain valley at dawn with atmospheric mist, a winding pale river, distant ridgelines, and a warm moon-like sun.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c5f58"/>
+      <stop offset="0.34" stop-color="#154d47"/>
+      <stop offset="0.68" stop-color="#0b3934"/>
+      <stop offset="1" stop-color="#05231f"/>
+    </linearGradient>
+    <radialGradient id="sunHalo" cx="76%" cy="14%" r="30%">
+      <stop offset="0" stop-color="#f7e6ae" stop-opacity="0.32"/>
+      <stop offset="0.28" stop-color="#e3e4bc" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#d6eadc" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="farRidge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5b8e84" stop-opacity="0.58"/>
+      <stop offset="1" stop-color="#2a6259" stop-opacity="0.72"/>
+    </linearGradient>
+    <linearGradient id="midRidge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#39766b"/>
+      <stop offset="1" stop-color="#174940"/>
+    </linearGradient>
+    <linearGradient id="nearRidge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b5148"/>
+      <stop offset="1" stop-color="#092f2a"/>
+    </linearGradient>
+    <linearGradient id="foreRidge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#103e37"/>
+      <stop offset="1" stop-color="#041d1a"/>
+    </linearGradient>
+    <linearGradient id="riverFill" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#dbead4" stop-opacity="0.18"/>
+      <stop offset="0.42" stop-color="#b8e0cc" stop-opacity="0.44"/>
+      <stop offset="0.72" stop-color="#dbe6c5" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#8ccdb9" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="riverGlow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7f0ca" stop-opacity="0.05"/>
+      <stop offset="0.55" stop-color="#edf5dc" stop-opacity="0.44"/>
+      <stop offset="1" stop-color="#9fe1ca" stop-opacity="0.06"/>
+    </linearGradient>
+    <linearGradient id="groundFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#031c19" stop-opacity="0"/>
+      <stop offset="1" stop-color="#021310" stop-opacity="0.86"/>
+    </linearGradient>
+    <linearGradient id="mist" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#d3ebe0" stop-opacity="0"/>
+      <stop offset="0.48" stop-color="#d3ebe0" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#d3ebe0" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blur36" x="-20%" y="-80%" width="140%" height="260%"><feGaussianBlur stdDeviation="36"/></filter>
+    <filter id="blur18" x="-20%" y="-80%" width="140%" height="260%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="softSun" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="22"/></filter>
+    <filter id="softTree" x="-60%" y="-20%" width="220%" height="140%"><feGaussianBlur stdDeviation="2.3"/></filter>
+    <symbol id="pineOrganic" viewBox="0 0 88 190">
+      <path d="M44 3c-3 18-13 28-23 42 7-2 13-2 18-1-9 16-21 29-33 44 10-3 19-4 27-2-11 18-22 34-33 51 12-4 24-5 36-3v46h16v-46c12-2 24-1 36 3-11-17-22-33-33-51 8-2 17-1 27 2-12-15-24-28-33-44 5-1 11-1 18 1C57 31 47 21 44 3Z" fill="currentColor"/>
+      <path d="M44 12v162" stroke="currentColor" stroke-width="2.2" stroke-opacity="0.34"/>
+    </symbol>
+  </defs>
+
+  <rect width="1800" height="1000" fill="url(#sky)"/>
+  <rect width="1800" height="1000" fill="url(#sunHalo)"/>
+  <circle cx="1370" cy="138" r="48" fill="#f2dea2" opacity="0.88"/>
+  <circle cx="1370" cy="138" r="104" fill="#f4e6b9" opacity="0.075" filter="url(#softSun)"/>
+
+  <!-- Far ridges use long, rolling bezier silhouettes rather than hard triangles. -->
+  <path d="M0 340 C120 300 205 314 315 274 C430 231 510 255 605 210 C718 156 818 202 908 180 C1028 150 1118 202 1218 184 C1320 164 1426 194 1524 167 C1638 136 1710 171 1800 146 L1800 1000 L0 1000Z" fill="url(#farRidge)"/>
+  <path d="M0 410 C102 356 186 374 280 332 C386 284 488 330 577 279 C675 223 760 254 854 229 C964 200 1043 245 1144 224 C1245 203 1338 238 1437 207 C1542 176 1661 205 1800 184 L1800 1000 L0 1000Z" fill="url(#midRidge)" opacity="0.96"/>
+
+  <!-- Subtle peak light catches. -->
+  <path d="M564 286c15-7 32-15 51-27 16-9 30-15 44-17-15 8-28 19-39 31-17 4-35 8-56 13Z" fill="#d9ece0" opacity="0.12"/>
+  <path d="M1110 235c18-5 35-10 54-12 18-2 36 0 52 4-22 2-42 7-60 15-15-4-31-6-46-7Z" fill="#dcece2" opacity="0.085"/>
+
+  <!-- Atmospheric valley mist. -->
+  <ellipse cx="830" cy="385" rx="720" ry="56" fill="url(#mist)" filter="url(#blur36)" opacity="0.82"/>
+  <ellipse cx="1245" cy="474" rx="610" ry="43" fill="url(#mist)" filter="url(#blur18)" opacity="0.58"/>
+
+  <!-- Mid valley walls. -->
+  <path d="M0 515 C105 458 196 489 303 436 C424 377 530 442 639 391 C752 338 845 392 958 360 C1067 330 1172 375 1279 351 C1392 326 1497 375 1602 338 C1680 310 1738 319 1800 299 L1800 1000 L0 1000Z" fill="url(#nearRidge)"/>
+  <path d="M0 644 C112 584 213 620 331 566 C444 514 538 557 652 524 C777 488 880 531 1002 505 C1115 482 1212 522 1323 496 C1436 469 1551 519 1652 489 C1712 472 1755 474 1800 466 L1800 1000 L0 1000Z" fill="url(#foreRidge)" opacity="0.96"/>
+
+  <!-- Winding river / path through the center-right valley. -->
+  <path d="M1434 300 C1307 354 1215 415 1137 488 C1064 557 1010 637 947 748 C917 801 879 855 834 911 L1035 911 C1071 846 1103 785 1131 724 C1172 635 1229 567 1299 511 C1380 447 1461 396 1547 352 C1502 328 1467 311 1434 300Z" fill="url(#riverFill)"/>
+  <path d="M1456 318 C1334 372 1244 428 1170 497 C1102 560 1046 637 991 735 C962 787 931 837 896 884" fill="none" stroke="url(#riverGlow)" stroke-width="10" stroke-linecap="round" opacity="0.88"/>
+  <path d="M1450 324 C1350 368 1263 422 1192 486 C1122 548 1068 622 1022 707" fill="none" stroke="#f1ebc6" stroke-width="24" stroke-linecap="round" stroke-opacity="0.04" filter="url(#blur18)"/>
+
+  <!-- Distant tree clusters, intentionally uneven and soft. -->
+  <g color="#1a4a42" opacity="0.54" filter="url(#softTree)">
+    <use href="#pineOrganic" x="40" y="335" width="45" height="98"/><use href="#pineOrganic" x="98" y="350" width="38" height="84"/><use href="#pineOrganic" x="165" y="321" width="52" height="112"/>
+    <use href="#pineOrganic" x="262" y="352" width="36" height="79"/><use href="#pineOrganic" x="330" y="332" width="48" height="104"/><use href="#pineOrganic" x="414" y="346" width="40" height="86"/>
+    <use href="#pineOrganic" x="510" y="325" width="51" height="110"/><use href="#pineOrganic" x="602" y="354" width="35" height="76"/>
+    <use href="#pineOrganic" x="1528" y="334" width="46" height="100"/><use href="#pineOrganic" x="1604" y="318" width="55" height="118"/><use href="#pineOrganic" x="1693" y="346" width="39" height="84"/>
+  </g>
+
+  <!-- Foreground trees are clustered at the edges, leaving the valley open. -->
+  <g color="#062722" opacity="0.96">
+    <use href="#pineOrganic" x="-12" y="548" width="115" height="248"/><use href="#pineOrganic" x="74" y="590" width="88" height="191"/><use href="#pineOrganic" x="132" y="518" width="128" height="276"/>
+    <use href="#pineOrganic" x="222" y="602" width="79" height="171"/><use href="#pineOrganic" x="284" y="557" width="104" height="225"/><use href="#pineOrganic" x="378" y="620" width="70" height="151"/>
+    <use href="#pineOrganic" x="1465" y="585" width="94" height="203"/><use href="#pineOrganic" x="1542" y="535" width="121" height="261"/><use href="#pineOrganic" x="1640" y="604" width="76" height="164"/><use href="#pineOrganic" x="1704" y="548" width="111" height="240"/>
+  </g>
+
+  <!-- Low rolling foreground, softer than a hard flat floor. -->
+  <path d="M0 808 C145 770 252 798 380 778 C526 754 632 801 775 783 C927 764 1030 813 1182 788 C1322 766 1420 803 1577 785 C1666 774 1737 779 1800 772 L1800 1000 L0 1000Z" fill="#031a17" opacity="0.88"/>
+  <rect width="1800" height="1000" fill="url(#groundFade)"/>
+
+  <!-- Very subtle film-like glow so the image stays atmospheric, not cartoon-flat. -->
+  <rect x="0" y="0" width="1800" height="1000" fill="none" stroke="#ccebdd" stroke-opacity="0.025"/>
+</svg>
