@@ -25,3 +25,16 @@ html[data-theme='light'] body.rc-student-canyonpath :where(
   outline-color: #0b6f5c;
   box-shadow: 0 0 0 3px rgba(11, 111, 92, 0.18);
 }
+
+/* The annotated field-guide scene makes the older per-view crop animation
+   visibly read as one giant poster sliding behind the UI. Keep the artwork
+   pinned to the viewport instead: the sidebar/content may change, but the
+   canyon, labels, grid, and leader lines stay spatially stable. */
+body.rc-student-canyonpath {
+  --stcpl-main-left: 0px !important;
+  --stcpl-scene-position: center 34% !important;
+}
+
+body.rc-student-canyonpath .tc-main::before {
+  transition: none !important;
+}
