@@ -57,7 +57,7 @@ export function getGoalStaleness(daysSinceLastCollection) {
  * Aggregate an array of per-goal staleness objects into a single student-level
  * health indicator (worst tier wins).
  *
- * @param {Array<{tier:string, label:string, cssClass:string, icon:string,sortOrder:number}>} goalStalenessArray
+ * @param {Array<{tier:string, label:string, cssClass:string, icon:string, sortOrder:number}>} goalStalenessArray
  * @returns {{ tier: string, label: string, cssClass: string, icon: string, sortOrder: number }}
  */
 export function getStudentHealthDot(goalStalenessArray) {
