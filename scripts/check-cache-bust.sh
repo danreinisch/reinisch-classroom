@@ -8,7 +8,7 @@
 #
 # HOW IT WORKS:
 #   1. Parses all portal HTML files (site/student/index.html and any sibling
-#      index.html files under site/) for <script> tags whose src contains
+#      index.html files under site/student/) for <script> tags whose src contains
 #      /web/<file>.js?v=<version>.
 #   2. Uses `git diff --name-only origin/main...HEAD` to determine which files
 #      changed in this PR.
@@ -33,15 +33,17 @@ set -euo pipefail
 BASE_REF="${BASE_REF:-origin/main}"
 PORTAL_HTML_GLOB="site/student/index.html"
 
-# ---- Collect all portal HTML files ----
+# ---- Collect all actual Student Portal HTML files ----
+# Do not match Teacher Center routes such as site/teacher/students/ merely
+# because their directory name contains the substring "student".
 PORTAL_HTMLS=()
 while IFS= read -r -d '' f; do
   PORTAL_HTMLS+=("$f")
-done < <(find site -name "index.html" -path "*/student*" -print0 2>/dev/null)
+done < <(find site/student -name "index.html" -print0 2>/dev/null)
 
 # Fallback: always include the primary student portal
 if [[ ${#PORTAL_HTMLS[@]} -eq 0 ]]; then
-  PORTAL_HTMLS=("site/student/index.html")
+  PORTAL_HTMLS=("$PORTAL_HTML_GLOB")
 fi
 
 # ---- Get files changed in this PR ----
