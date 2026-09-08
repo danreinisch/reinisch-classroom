@@ -90,22 +90,52 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
     '/language-arts/a-door-into-time', '/language-arts/lost-in-kragdon-ah',
     '/language-arts/return-from-kragdon-ah', '/language-arts/warrior-of-kragdon-ah'
   ];
-  if (publicPages.indexOf(path) === -1) return;
+  var isHome = path === '/';
+  if (!isHome && publicPages.indexOf(path) === -1) return;
+
+  // Match public-shell.js before the first paint. Previously its late default
+  // could collapse an already-painted desktop rail (or a saved-open mobile one).
+  // Read only the existing presentation preference; never write storage here.
+  var collapsed = true;
+  try {
+    collapsed = window.innerWidth <= 768 || localStorage.getItem('rc_public_sidebar') !== 'expanded';
+  } catch (_) { /* Keep the existing collapsed fallback when storage is denied. */ }
+  document.documentElement.classList.toggle('tc-collapsed', collapsed);
+  document.documentElement.classList.add('rc-public-navigation');
+
+  function addStyle(href, attribute) {
+    if (document.querySelector('link[' + attribute + ']')) return;
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    // Dynamically inserted stylesheets are not implicitly render-blocking.
+    // Set this before insertion so supported browsers never paint the old skin.
+    link.setAttribute('blocking', 'render');
+    link.setAttribute(attribute, 'true');
+    document.head.appendChild(link);
+  }
+  addStyle('/assets/css/public-navigation.css?v=20260908-nav1', 'data-public-navigation');
+
+  // Start the same small, cacheable decorative asset during head parsing,
+  // rather than first discovering it in the DOMContentLoaded scenery callback.
+  var scene = '/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1';
+  if (!document.querySelector('link[data-canyon-scene-preload]')) {
+    var preload = document.createElement('link');
+    preload.rel = 'preload';
+    preload.as = 'image';
+    preload.href = scene;
+    preload.setAttribute('data-canyon-scene-preload', 'true');
+    document.head.appendChild(preload);
+  }
+  // Home keeps its existing, parser-discovered stylesheet and landscape markup.
+  if (isHome) return;
 
   document.documentElement.classList.add('rc-public-canyonpath');
-  var marker = 'data-public-canyonpath';
-  if (!document.querySelector('link[' + marker + ']')) {
-    var stylesheet = document.createElement('link');
-    stylesheet.rel = 'stylesheet';
-    stylesheet.href = '/assets/css/public-canyonpath.css?v=20260907-moonlit1';
-    stylesheet.setAttribute(marker, 'true');
-    document.head.appendChild(stylesheet);
-  }
+  addStyle('/assets/css/public-canyonpath.css?v=20260907-moonlit1', 'data-public-canyonpath');
 
   function addScenery() {
     var main = document.querySelector('.tc-main');
     if (!main) return;
-    var scene = '/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1';
     if (main.querySelector('.cp-public-landscape')) return;
     var landscape = document.createElement('div');
     landscape.className = 'cp-public-landscape';

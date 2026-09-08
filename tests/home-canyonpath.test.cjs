@@ -115,3 +115,15 @@ test('Scenery remains unblurred and the layout has mobile and classroom-display 
   assert.match(css, /@media \(min-width: 1920px\)/);
   assert.match(css, /home-focus:not\(:has\(\.countdown-card, \.hd-standards-count\)\)/);
 });
+
+
+test('Home offers Language Arts, Transitional Skills, and Student Portal in that order', () => {
+  const cards = [...html.matchAll(/<a class="home-pathway" href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)];
+  assert.deepEqual(cards.map((m) => m[1]), ['/language-arts/', '/life-skills/', '/student/']);
+  assert.deepEqual(cards.map((m) => m[2].match(/<strong>(.*?)<\/strong>/)[1]), ['Language Arts', 'Transitional Skills', 'Student Portal']);
+  assert.match(html, /class="home-pathway" href="\/student\/" aria-label="Open Student Portal"/);
+  assert.match(cards[2][2], /Assignments, goals, and your progress/);
+  // Only the front-door card changes. Existing hero entries and toolkit access stay.
+  assert.match(html, /class="home-teacher-cta" href="\/teacher\/"/);
+  assert.match(html, /href="\/math-toolkit\/" data-href="\/math-toolkit\/"/);
+});
