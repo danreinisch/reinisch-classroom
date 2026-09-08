@@ -87,7 +87,7 @@ test('navigation delayed CSS: first content paint waits for the public theme', a
   const timing = await page.evaluate(() => ({
     paint: performance.getEntriesByName('first-contentful-paint')[0].startTime,
     stylesheet: performance.getEntriesByType('resource').find((r) => r.name.includes('/public-canyonpath.css')).responseEnd,
-    sceneStart: performance.getEntriesByType('resource').find((r) => r.name.includes('/moonlit-canyon.webp')).startTime,
+    sceneStart: performance.getEntriesByType('resource').find((r) => r.name.includes('/rc-annotated-canyon.svg')).startTime,
     ready: performance.getEntriesByType('navigation')[0].domContentLoadedEventStart,
   }));
   expect(timing.stylesheet).toBeGreaterThan(0);
@@ -142,7 +142,7 @@ test('navigation sidebar choice persists across documents and keyboard links rem
 test('navigation failed enhancement or scenery never leaves content hidden or links blocked', async ({ page }) => {
   const result = await isolatedPublic(page);
   await page.route('**/assets/css/public-navigation.css*', (route) => route.abort());
-  await page.route('**/assets/bg/moonlit-canyon.webp*', (route) => route.abort());
+  await page.route('**/assets/bg/rc-annotated-canyon.svg*', (route) => route.abort());
   await page.goto('/');
   await expect(page.locator('.home-pathway').nth(2)).toBeVisible();
   await page.locator('.home-pathway[href="/language-arts/"]').click();

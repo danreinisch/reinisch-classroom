@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 const LOGIN = '/teacher/login/';
-const SCENE = '/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1';
-const CSS = '/assets/css/teacher-canyonpath-login.css?v=20260908-login1';
+const SCENE = '/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1';
+const CSS = '/assets/css/teacher-canyonpath-login.css?v=20260908-annotated1';
 const SYNTHETIC = { username: 'synthetic-teacher', password: 'not-a-real-password' };
 
 // Fresh Playwright contexts; every function request is intercepted locally.
@@ -88,7 +88,7 @@ for (const size of [{ name: 'desktop', width: 1440, height: 1000 }, { name: 'chr
       image.src = src;
     }), SCENE);
     expect(natural).toEqual([912, 579]);
-    await expect(page.locator('.tc-main')).toHaveCSS('background-image', /moonlit-canyon\.webp/);
+    await expect(page.locator('.tc-main')).toHaveCSS('background-image', /rc-annotated-canyon\.svg/);
     await expect(page.locator('#username')).toBeEditable();
     await expect(page.locator('#password')).toHaveAttribute('autocomplete', 'current-password');
     await expect(page.locator('#submitButton')).toBeInViewport();

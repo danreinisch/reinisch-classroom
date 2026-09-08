@@ -1,0 +1,91 @@
+/* Substitute-facing CanyonPath presentation only.
+   Authentication, session handling, plans, and print behavior remain owned
+   by the existing page. All rules here are screen-only. */
+
+@media screen {
+  body.rc-substitute-canyonpath {
+    --sub-cp-bg: #031714;
+    --sub-cp-panel: rgba(5, 48, 40, .96);
+    --sub-cp-inner: #082d25;
+    --sub-cp-ink: #f4fbf8;
+    --sub-cp-muted: #bdd6cd;
+    --sub-cp-border: rgba(158, 226, 206, .30);
+    color: var(--sub-cp-ink);
+    background: var(--sub-cp-bg);
+  }
+
+  body.rc-substitute-canyonpath .tc-app,
+  body.rc-substitute-canyonpath .tc-shell {
+    background: var(--sub-cp-bg);
+  }
+
+  body.rc-substitute-canyonpath .tc-topbar {
+    background: #05251f;
+    color: var(--sub-cp-ink);
+    border-bottom-color: var(--sub-cp-border);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  body.rc-substitute-canyonpath .tc-main {
+    min-width: 0;
+    min-height: calc(100vh - var(--tc-topbar-h, 56px));
+    margin: 0;
+    padding: clamp(24px, 4vw, 48px);
+    border: 0;
+    border-radius: 0;
+    background-color: var(--sub-cp-bg);
+    background-image:
+      linear-gradient(180deg,
+        rgba(3,23,20,.05) 0%,
+        rgba(3,23,20,.16) 48%,
+        rgba(3,23,20,.78) 100%),
+      linear-gradient(90deg,
+        rgba(3,23,20,.56),
+        rgba(3,23,20,.08) 72%),
+      url('/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1');
+    background-size: 100% 100%, 100% 100%, cover;
+    background-position: center, center, 62% top;
+    background-repeat: no-repeat;
+    box-shadow: none;
+  }
+
+  body.rc-substitute-canyonpath :is(.sp-login-card, .sp-card) {
+    background: var(--sub-cp-panel);
+    border-color: var(--sub-cp-border);
+    box-shadow:
+      0 14px 38px rgba(0,12,10,.26),
+      inset 0 1px rgba(246,255,251,.045);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+
+  body.rc-substitute-canyonpath .sp-form-group input {
+    background: var(--sub-cp-inner);
+    border-color: var(--sub-cp-border);
+    color: var(--sub-cp-ink);
+  }
+
+  body.rc-substitute-canyonpath :is(.sp-pres-link, .sp-notes-box) {
+    background: var(--sub-cp-inner);
+    border-color: var(--sub-cp-border);
+  }
+
+  body.rc-substitute-canyonpath :where(a, button, input):focus-visible {
+    outline: 3px solid #b6f3de;
+    outline-offset: 3px;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  body.rc-substitute-canyonpath .tc-main {
+    padding: 18px;
+    background-position: center, center, 67% top;
+  }
+}
+
+@media (forced-colors: active) {
+  body.rc-substitute-canyonpath .tc-main {
+    background-image: none;
+  }
+}

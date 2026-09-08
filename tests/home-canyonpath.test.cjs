@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const html = fs.readFileSync('site/index.html', 'utf8');
 const css = fs.readFileSync('site/assets/css/home-canyonpath.css', 'utf8');
-const scene = fs.readFileSync('site/assets/bg/moonlit-canyon.webp');
-const asset = JSON.parse(fs.readFileSync('site/assets/bg/moonlit-canyon.meta.json', 'utf8'));
+const scene = fs.readFileSync('site/assets/bg/rc-annotated-canyon.svg', 'utf8');
+const asset = JSON.parse(fs.readFileSync('site/assets/bg/rc-annotated-canyon.meta.json', 'utf8'));
 const { createHash } = require('node:crypto');
 const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
 
@@ -68,22 +68,54 @@ test('Homepage CSS is scoped and does not introduce data access or external depe
   assert.doesNotMatch(css, /@import|https?:|fetch\(|localStorage|sessionStorage|supabase|!important/);
 });
 
-test('Approved standalone scenery is local, optimized, and honest about native resolution', () => {
-  assert.equal(scene.toString('ascii', 0, 4), 'RIFF');
-  assert.equal(scene.toString('ascii', 8, 12), 'WEBP');
-  assert.equal(scene.toString('ascii', 12, 16), 'VP8 ');
-  assert.equal(scene.readUInt16LE(26) & 0x3fff, 912);
-  assert.equal(scene.readUInt16LE(28) & 0x3fff, 579);
-  assert.equal(asset.width, 912);
-  assert.equal(asset.height, 579);
-  assert.equal(asset.bytes, scene.length);
-  assert.equal(asset.sha256, createHash('sha256').update(scene).digest('hex'));
-  assert.ok(scene.length < 100000, 'Keep the original-size decorative scene lightweight');
-  assert.match(asset.resolution_note, /not a 4K or high-resolution master/);
-  assert.match(html, /<img[^>]*moonlit-canyon\.webp\?v=20260907-moonlit1[^>]*alt=""[^>]*width="912"[^>]*height="579"[^>]*fetchpriority="high"/);
+test('Approved annotated scenery is local, decorative, and self-contained', () => {
+  assert.match(scene, /^<svg\b/);
+  assert.match(scene, /viewBox="0 0 912 579"/);
+  assert.match(scene, /href="data:image\/webp;base64,/);
+  assert.doesNotMatch(scene, /<script\b/i);
+  assert.doesNotMatch(
+    scene,
+    /\b(?:href|xlink:href)=["']https?:\/\//i
+  );
+  assert.doesNotMatch(
+    scene,
+    /url\(\s*["']?https?:\/\//i
+  );
+
+  assert.equal(asset.file, 'rc-annotated-canyon.svg');
+  assert.equal(asset.format, 'svg');
+  assert.equal(asset.viewBox, '0 0 912 579');
+  assert.equal(
+    asset.sha256,
+    createHash('sha256').update(Buffer.from(scene, 'utf8')).digest('hex')
+  );
+  assert.ok(
+    Buffer.byteLength(scene, 'utf8') < 120000,
+    'Keep shared decorative scenery lightweight'
+  );
+
+  for (const label of [
+    'Lunar Illumination',
+    'Stratified Canyon Walls',
+    'Colorado River',
+    'Saguaro Cactus',
+    'Carnegiea gigantea',
+    'Pug',
+    'Canis lupus familiaris',
+  ]) {
+    assert.ok(scene.includes(label), label);
+  }
+
+  assert.match(
+    html,
+    /<img[^>]*rc-annotated-canyon\.svg\?v=20260908-annotated1[^>]*alt=""[^>]*width="912"[^>]*height="579"[^>]*fetchpriority="high"/
+  );
   assert.doesNotMatch(html, /home-arizona\.svg/);
   assert.match(html, /home-canyonpath\.css\?v=20260907-moonlit1/);
-  assert.match(html, /href="\/life-skills\/" aria-label="Open Transitional Skills"/);
+  assert.match(
+    html,
+    /href="\/life-skills\/" aria-label="Open Transitional Skills"/
+  );
 });
 
 test('Frosted card text retains 4.5:1 contrast with blur unavailable', () => {

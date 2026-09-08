@@ -1,6 +1,6 @@
 /* Teacher login only: parser-loaded by /teacher/login/index.html.
    No public-theme opt-in, protected navigation, auth gate or runtime dependency.
-   Reuses the original 912 x 579 moonlit canyon; no new artwork or image claim.
+   Reuses the shared annotated CanyonPath scene; no auth/runtime dependency.
    Screen styles leave existing print behavior unchanged. */
 @media screen {
   body.rc-teacher-login {
@@ -74,7 +74,7 @@
     background-color: var(--login-bg);
     background-image:
       linear-gradient(180deg, rgba(3, 23, 20, .08) 55%, rgba(3, 23, 20, .68)),
-      url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
+      url('/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1');
     background-size: cover;
     background-position: 66% center;
     background-repeat: no-repeat;
