@@ -1,0 +1,16 @@
+/* Native Teacher navigation only. Loaded in <head> by sidebar-init.js's
+   independent Teacher allowlist, never by the public-theme allowlist.
+   No cross-document snapshots: login, logout, errors and access-denied states
+   must remain immediate. Existing links, tab handlers and browser history win. */
+@media screen {
+  html.rc-teacher-navigation {
+    background: #031714;
+    /* Internal tabs can be short or long. Reserve the classic scrollbar's
+       space so switching them does not resize the entire shell and scenery. */
+    scrollbar-gutter: stable;
+  }
+  html.rc-teacher-navigation[data-theme='light'] { background: #e7f1eb; }
+}
+@media (forced-colors: active) {
+  html.rc-teacher-navigation { background: Canvas; }
+}
