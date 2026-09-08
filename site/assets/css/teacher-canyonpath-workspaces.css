@@ -75,7 +75,7 @@
      Match its static upload controls, without revealing #app or changing #gate. */
   body:has(#objectPath):has(#videoFile) {
     color: #f4fbf8;
-    background: #031714 url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1') top right / auto 660px no-repeat;
+    background: #031714 url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4') top right / auto 660px no-repeat;
   }
   body:has(#objectPath):has(#videoFile) .wrap {
     background: rgba(5,48,40,.97);

@@ -48,7 +48,7 @@ async function openHome(page, { teacher = false, failure = false, empty = false,
   });
   await page.route('**/assets/data/home-config.json*', (route) => failure ? route.abort() : route.fulfill({ json: empty ? { countdowns: [] } : mockConfig }));
   await page.route('**/assets/data/site-state.json*', (route) => route.fulfill({ json: mockState }));
-  if (imageFailure) await page.route('**/assets/bg/moonlit-canyon.webp*', (route) => route.abort());
+  if (imageFailure) await page.route('**/assets/bg/rc-annotated-canyon-approved.webp*', (route) => route.abort());
   await page.goto('/');
   await expect(page.locator('.home-student-cta')).toBeVisible();
   await expect(page.locator('#daily-quote')).not.toHaveText('Loading…');
@@ -76,8 +76,8 @@ for (const view of [
     await expect(page.locator('.countdown-card')).toContainText('Mock classroom checkpoint');
     await expect(page.locator('#focus-standards')).toBeHidden();
     const image = page.locator('.home-landscape img');
-    await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth === 912 && el.naturalHeight === 579)).toBe(true);
-    await expect(image).toHaveAttribute('src', /\/assets\/bg\/moonlit-canyon\.webp\?v=20260907-moonlit1/);
+    await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth === 1672 && el.naturalHeight === 941)).toBe(true);
+    await expect(image).toHaveAttribute('src', /\/assets\/bg\/rc-annotated-canyon-approved\.webp\?v=20260908-annotated4/);
     await expect(image).toHaveCSS('filter', 'none');
     await expect(page.locator('.tc-main')).toHaveCSS('backdrop-filter', 'none');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);

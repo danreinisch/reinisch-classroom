@@ -1,0 +1,19 @@
+{
+  "file": "rc-annotated-canyon.svg",
+  "format": "svg",
+  "viewBox": "0 0 912 579",
+  "source": "moonlit-canyon.webp",
+  "source_sha256": "3ef4307289eee1c0a5e1a8a3f90ae2ea8406da2a0e3884ec5c0d27ca3c44fced",
+  "sha256": "51210f69cde39b91c46eff51f61daf507a9048122008e3fb233e35957fa40c3b",
+  "purpose": "Shared decorative CanyonPath/Reinisch Classroom textbook-style annotated canyon background",
+  "accessibility": "Decorative only; must remain aria-hidden or CSS background imagery",
+  "annotations": [
+    "Lunar Illumination",
+    "Stratified Canyon Walls",
+    "Colorado River",
+    "Saguaro Cactus \u2014 Carnegiea gigantea",
+    "Pug \u2014 Canis lupus familiaris",
+    "Grand Canyon Region / Arizona coordinates",
+    "Atlas grid, scale bar, compass rose"
+  ]
+}

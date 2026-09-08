@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const ORIGIN = 'http://localhost:8888';
-const SCENE = '/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1';
+const SCENE = '/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4';
 
 async function isolate(page, { imageFailure = false, denied = false } = {}) {
   await page.clock.install({ time: new Date('2026-09-08T09:00:00-05:00') });
@@ -20,7 +20,7 @@ async function isolate(page, { imageFailure = false, denied = false } = {}) {
     const url = new URL(request.url());
     // A fresh context, local static code, and synthetic responses only.
     if (url.origin !== ORIGIN || request.method() !== 'GET') return route.abort();
-    if (imageFailure && url.pathname === '/assets/bg/moonlit-canyon.webp') return route.abort();
+    if (imageFailure && url.pathname === '/assets/bg/rc-annotated-canyon-approved.webp') return route.abort();
     if (url.pathname.startsWith('/.netlify/functions/')) {
       if (url.pathname.endsWith('/teacher-session')) return route.fulfill({ status: denied ? 401 : 200, json: denied ? { ok: false } : { ok: true, session: { code: 'teacher_local', role: 'teacher' } } });
       if (url.pathname.endsWith('/browser-supabase-config')) return route.fulfill({ status: 503, json: { ok: false } });
@@ -38,8 +38,8 @@ async function assertDecodedScene(page) {
     await image.decode();
     return [image.naturalWidth, image.naturalHeight];
   }, SCENE);
-  expect(dimensions).toEqual([912, 579]);
-  await expect(page.locator('.tc-shell')).toHaveCSS('background-image', /moonlit-canyon\.webp/);
+  expect(dimensions).toEqual([1672, 941]);
+  await expect(page.locator('.tc-shell')).toHaveCSS('background-image', /rc-annotated-canyon-approved\.webp/);
   // The fade must continue below its last color stop: a fixed-height gradient
   // exposes the larger image again at the bottom of a long or wide dashboard.
   await expect(page.locator('.tc-shell')).toHaveCSS('background-size', /^100% 100%, 100% 100%,/);

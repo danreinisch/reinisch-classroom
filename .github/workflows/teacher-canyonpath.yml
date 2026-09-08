@@ -11,6 +11,7 @@ on:
       - 'site/assets/css/teacher-canyonpath*.css'
       - 'site/assets/css/substitute-canyonpath.css'
       - 'tests/teacher-canyonpath*'
+      - 'tests/shared-annotated-canyon*'
       - '.github/workflows/teacher-canyonpath.yml'
 
 permissions:
@@ -35,7 +36,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - name: Protected presentation and existing authentication and Observation contracts
-        run: npx playwright test tests/teacher-canyonpath*.spec.js tests/teacher-center-auth-redirect.spec.js tests/observation-center-ui.spec.js tests/observation-center-card-deck-ui.spec.js tests/observation-center-goal-quick-capture-ui.spec.js tests/observation-center-student-first-ui.spec.js tests/observation-center-student-rail-ui.spec.js --project=chromium --workers=2 --retries=0 --reporter=list,html
+        run: npx playwright test tests/teacher-canyonpath*.spec.js tests/shared-annotated-canyon-visual.spec.js tests/teacher-center-auth-redirect.spec.js tests/observation-center-ui.spec.js tests/observation-center-card-deck-ui.spec.js tests/observation-center-goal-quick-capture-ui.spec.js tests/observation-center-student-first-ui.spec.js tests/observation-center-student-rail-ui.spec.js --project=chromium --workers=2 --retries=0 --reporter=list,html
       - name: Preserve synthetic screenshots and browser report
         if: always()
         uses: actions/upload-artifact@v4

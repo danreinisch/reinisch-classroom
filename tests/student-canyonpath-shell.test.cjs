@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const { createHash } = require('node:crypto');
 
 const css = fs.readFileSync('site/assets/css/student-canyonpath.css', 'utf8');
 const refineCss = fs.readFileSync('site/assets/css/student-canyonpath-refine.css', 'utf8');
@@ -9,7 +10,8 @@ const cinematicCss = fs.readFileSync('site/assets/css/student-canyonpath-cinemat
 const premiumCss = fs.readFileSync('site/assets/css/student-canyonpath-premium.css', 'utf8');
 const finalCss = fs.readFileSync('site/assets/css/student-canyonpath-final.css', 'utf8');
 const referenceCss = fs.readFileSync('site/assets/css/student-canyonpath-reference-match.css', 'utf8');
-const sceneSvg = fs.readFileSync('site/assets/bg/rc-canyonpath-cinematic.svg', 'utf8');
+const sceneBytes = fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.webp');
+const sceneMeta = JSON.parse(fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.meta.json', 'utf8'));
 const js = fs.readFileSync('site/web/student-canyonpath.js', 'utf8');
 const refineJs = fs.readFileSync('site/web/student-canyonpath-refine.js', 'utf8');
 const sidebar = fs.readFileSync('site/web/sidebar-init.js', 'utf8');
@@ -113,20 +115,56 @@ test('Phase 2A legacy scenery is overridden at the main canvas without changing 
   assert.match(finalCss, /\.stcp-page-hero[\s\S]*background:\s*transparent/);
 });
 
-test('Phase 2A scenery uses a full landscape vector rather than enlarging portrait JPEG tiles', () => {
-  const tokens = declarationsFor(referenceCss, 'body.rc-student-canyonpath');
-  assert.equal(tokens['--stcpl-scene-image'], "url('/assets/bg/rc-canyonpath-cinematic.svg')");
-  assert.doesNotMatch(referenceCss, /var\(--stcp-premium-[1-4]\)|canyonpath-premium-[1-4]\.jpg/);
-  assert.equal((referenceCss.match(/--stcpl-scene-image\s*:/g) || []).length, 1);
+test('Phase 2A scenery uses the shared approved field-guide landscape', () => {
+  const tokens = declarationsFor(
+    referenceCss,
+    'body.rc-student-canyonpath'
+  );
 
-  const viewBox = sceneSvg.match(/viewBox=["']0 0 (\d+) (\d+)["']/);
-  assert.ok(viewBox, 'Scene must have an explicit landscape viewBox');
-  assert.ok(Number(viewBox[1]) >= 1600);
-  assert.ok(Number(viewBox[1]) > Number(viewBox[2]));
-  assert.doesNotMatch(sceneSvg, /<image\b|data:image\//i, 'Do not hide an enlarged raster inside an SVG');
+  assert.equal(
+    tokens['--stcpl-scene-image'],
+    "url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4')"
+  );
+
+  assert.doesNotMatch(
+    referenceCss,
+    /var\(--stcp-premium-[1-4]\)|canyonpath-premium-[1-4]\.jpg/
+  );
+
+  assert.equal(
+    (referenceCss.match(/--stcpl-scene-image\s*:/g) || []).length,
+    1
+  );
+
+  assert.equal(sceneMeta.file, 'rc-annotated-canyon-approved.webp');
+  assert.equal(sceneMeta.format, 'webp');
+  assert.equal(sceneMeta.width, 1672);
+  assert.equal(sceneMeta.height, 941);
+
+  assert.equal(
+    sceneMeta.sha256,
+    createHash('sha256').update(sceneBytes).digest('hex')
+  );
+
+  assert.equal(
+    sceneMeta.sha256,
+    'e5a9850c93073d0fe450b5ee7627ff541a33414323bc6237ba05c370cfb90d14'
+  );
+
+  for (const label of [
+    'Lunar Illumination',
+    'Stratified Canyon Walls',
+    'Colorado River',
+    'Saguaro Cactus',
+    'Pug',
+    'Scale bar',
+    'Compass',
+  ]) {
+    assert.ok(sceneMeta.labels.includes(label), label);
+  }
 });
 
-test('Phase 2A vector scene stays registered to the main canvas on Dashboard, Goals, and Login', () => {
+test('Phase 2A shared scene stays registered to the main canvas on Dashboard, Goals, and Login', () => {
   assert.match(referenceCss, /--stcpl-main-left:\s*var\(--tc-side-w/);
   assert.match(referenceCss, /html\.tc-collapsed body\.rc-student-canyonpath[\s\S]*--stcpl-main-left:\s*var\(--tc-rail-w/);
   assert.match(referenceCss, /\.st-dashboard-content[\s\S]*width:\s*min\(100%,\s*1380px\)/);
@@ -257,7 +295,7 @@ test('Student route loads CanyonPath foundation and approved-reference layers la
   assert.match(sidebar, /student-canyonpath-cinematic\.css\?v=20260907-2a4/);
   assert.match(sidebar, /student-canyonpath-premium\.css\?v=20260907-2a5/);
   assert.match(sidebar, /student-canyonpath-final\.css\?v=20260907-2a6/);
-  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260907-2a11/);
+  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260908-annotated4/);
   assert.match(sidebar, /student-canyonpath\.js\?v=20260907-2a3/);
   assert.match(sidebar, /student-canyonpath-refine\.js\?v=20260907-2a4/);
   assert.ok(sidebar.indexOf('student-canyonpath-reference-match.css') > sidebar.indexOf('student-canyonpath-final.css'));

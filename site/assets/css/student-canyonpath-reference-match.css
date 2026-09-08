@@ -251,7 +251,7 @@ html[data-theme='light'] body.rc-student-canyonpath #tabGoals .sgp-official {
 
 body.rc-student-canyonpath {
   --stcpl-main-left: var(--tc-side-w, 260px);
-  --stcpl-scene-image: url('/assets/bg/rc-canyonpath-cinematic.svg');
+  --stcpl-scene-image: url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4');
   --stcpl-scene-position: center 30%;
   --stcpl-reading-surface: rgba(5, 48, 40, 0.94);
   --stcpl-reading-inner: #0a3a31;

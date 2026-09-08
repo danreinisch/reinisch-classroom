@@ -37,18 +37,21 @@
   }
   /* Keep the actual scene visible, rather than fading it out under a second
      82%-opaque page-sized panel. The solid work cards provide reading contrast.
-     Native 912 x 579 artwork is reused unchanged; this is not a high-res master. */
+     Shared annotated scenery remains decorative; solid work cards protect reading contrast. */
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell {
     background-image:
       linear-gradient(180deg, transparent var(--tcp-scene-fade-start), #031714 var(--tcp-scene-fade-end)),
       linear-gradient(90deg, rgba(3,23,20,.55), rgba(3,23,20,.04) 65%),
-      url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
+      url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4');
     /* Fill the canvas without distorting the image or leaving a hard edge.
        Gradients cover the full page so larger artwork cannot reappear below
        the fade's last color stop on a long dashboard. */
     background-size: 100% 100%, 100% 100%, max(100%, 1197px) auto;
     background-position: top right;
     background-repeat: no-repeat;
+    /* The shell may be much taller than the viewport. Keep all scenic layers
+       registered to the viewport while the Teacher content scrolls over them. */
+    background-attachment: fixed, fixed, fixed;
   }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-topbar {
     background: #05251f;
@@ -161,7 +164,7 @@
     background-image:
       linear-gradient(180deg, transparent var(--tcp-scene-fade-start), #e7f1eb var(--tcp-scene-fade-end)),
       linear-gradient(90deg, rgba(3,23,20,.55), rgba(3,23,20,.04) 65%),
-      url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
+      url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4');
   }
   html[data-theme="light"] body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-main {
     background: linear-gradient(180deg, rgba(3,29,24,.24) 240px, #073128 700px);
@@ -189,4 +192,53 @@
 @media (forced-colors: active) {
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell { background-image: none; }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.tc-main,.rc-card,.tc-card) { border: 1px solid CanvasText; }
+}
+
+/* Shared CanyonPath viewport pin.
+   The Student Portal already uses a fixed pseudo-layer. These remaining scenic
+   owners now follow the same rule: content scrolls, scenery does not. */
+body.rc-home-canyonpath {
+  --rc-cp-viewport-left: var(--tc-side-w, 260px);
+}
+html.tc-collapsed body.rc-home-canyonpath {
+  --rc-cp-viewport-left: var(--tc-rail-w, 64px);
+}
+body.rc-home-canyonpath .home-landscape {
+  position: fixed !important;
+  inset: var(--tc-topbar-h, 56px) 0 0 var(--rc-cp-viewport-left) !important;
+  height: auto !important;
+}
+
+/* The primary Student Portal CTA remains above the hero. Hide only the lower,
+   redundant pathway card so the annotated pug stays visible on the right. */
+body.rc-home-canyonpath .home-pathway[href="/student/"] {
+  display: none;
+}
+
+html.rc-public-canyonpath body {
+  --rc-cp-viewport-left: var(--tc-side-w, 260px);
+}
+html.rc-public-canyonpath.tc-collapsed body {
+  --rc-cp-viewport-left: var(--tc-rail-w, 64px);
+}
+html.rc-public-canyonpath body .cp-public-landscape {
+  position: fixed !important;
+  inset: var(--tc-topbar-h, 56px) 0 0 var(--rc-cp-viewport-left) !important;
+  height: auto !important;
+}
+
+@media screen {
+  body.rc-teacher-login .tc-main {
+    background-attachment: fixed, fixed !important;
+  }
+  body.rc-substitute-canyonpath .tc-main {
+    background-attachment: fixed, fixed, fixed !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  body.rc-home-canyonpath,
+  html.rc-public-canyonpath body {
+    --rc-cp-viewport-left: 0px;
+  }
 }

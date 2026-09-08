@@ -1,5 +1,5 @@
-@import url("/assets/css/teacher-canyonpath-shell.css?v=20260908-tc-scene2");
-@import url("/assets/css/teacher-canyonpath-workspaces.css?v=20260908-tc2");
+@import url("/assets/css/teacher-canyonpath-shell.css?v=20260908-annotated4");
+@import url("/assets/css/teacher-canyonpath-workspaces.css?v=20260908-annotated4");
 
 /* Teacher Shell uses rc-theme.css as base — aliases for backward compat */
 :root{
@@ -301,7 +301,7 @@ iframe[src*="app.netlify.com"]{
   border-radius: 10px;
   background: rgba(255,255,255,.06);
   color: var(--tc-text);
-  text-decoration: none;
+  text-decoration:none;
   font-size: 0.9rem;
   font-weight: 750;
   line-height: 1;

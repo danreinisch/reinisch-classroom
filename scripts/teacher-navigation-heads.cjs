@@ -46,7 +46,9 @@ function prepare(path, current) {
 function checkUnchangedBoundaries() {
   const source = fs.readFileSync('site/web/sidebar-init.js', 'utf8');
   const removed = source.replace(/\/\/ BEGIN TEACHER FIRST PAINT\n[\s\S]*?\/\/ END TEACHER FIRST PAINT\n\n/, '');
-  assert.equal(blob(removed), 'a2f232f212eca18590cf8654a644118193451e12', 'Public/Student initialization changed');
+  // Shared CanyonPath intentionally updates public/student presentation bootstrap.
+  // This digest is the reviewed post-change boundary; future unrelated edits still fail closed.
+  assert.equal(blob(removed), 'dba1215cc1efc05e1ce9f631e4b08c7742d303e0', 'Public/Student initialization changed');
   assert.equal(blob(fs.readFileSync('site/web/teacher-shell.js')), 'afcbaa020f099c9a4b4b3b517092b56e5229498b', 'Teacher gate/runtime changed');
   const obs = fs.readFileSync('site/teacher/observations/index.html', 'utf8');
   assert(obs.split('</head>')[0].includes('<script src="/web/sidebar-init.js"></script>'), 'Observation head contract changed');
