@@ -1,0 +1,86 @@
+name: Teacher navigation candidate review
+
+on:
+  push:
+    branches: ['fix/teacher-navigation-first-paint-20260908']
+  pull_request:
+    paths:
+      - 'site/teacher/**'
+      - 'site/web/sidebar-init.js'
+      - 'site/assets/css/teacher-navigation.css'
+      - 'scripts/teacher-navigation-heads.cjs'
+      - 'tests/teacher-navigation-first-paint.spec.js'
+      - '.github/workflows/teacher-navigation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teacher-navigation-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  candidate-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Stage candidate head references (not a committed-preview claim)
+        run: node scripts/teacher-navigation-heads.cjs --stage --manifest
+      - name: Verify original runtime and page-body integrity
+        run: |
+          node scripts/teacher-navigation-heads.cjs
+          git diff --check
+      - run: npm ci --ignore-scripts
+      - run: npx eslint site/web/sidebar-init.js tests/teacher-navigation-first-paint.spec.js scripts/teacher-navigation-heads.cjs
+      - run: npx playwright install --with-deps chromium
+      - name: First paint, native navigation and existing protected/public contracts
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: navigation-review/results.json
+        run: npx playwright test tests/teacher-navigation-first-paint.spec.js tests/teacher-canyonpath-login.spec.js tests/teacher-center-auth-redirect.spec.js tests/observation-center-ui.spec.js tests/observation-center-student-rail-ui.spec.js tests/observation-center-goal-quick-capture-ui.spec.js tests/public-navigation.spec.js tests/home-canyonpath.spec.js tests/public-canyonpath.spec.js tests/student-portal-no-supabase.spec.js --project=chromium --workers=2 --retries=0 --reporter=list,json,html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: teacher-navigation-candidate-review
+          path: |
+            navigation-review/
+            test-results/
+            playwright-report/
+          retention-days: 7
+  unchanged-main-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 'a39008909727295cb3c5564a0cc28c9fd711c0b0'
+          path: baseline
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reproduce old frame resizing with the same synthetic harness
+        working-directory: baseline
+        env:
+          TC_NAV_BASELINE: '1'
+          PLAYWRIGHT_JSON_OUTPUT_NAME: navigation-review/results.json
+        run: |
+          cp ../tests/teacher-navigation-first-paint.spec.js tests/teacher-navigation-first-paint.spec.js
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+          npx playwright test tests/teacher-navigation-first-paint.spec.js --project=chromium --workers=2 --retries=0 --reporter=list,json,html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: teacher-navigation-unchanged-main-diagnostic
+          path: |
+            baseline/navigation-review/
+            baseline/test-results/
+            baseline/playwright-report/
+          retention-days: 7
