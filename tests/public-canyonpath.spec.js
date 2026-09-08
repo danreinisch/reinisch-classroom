@@ -48,8 +48,9 @@ for (const entry of pages) {
       await expect(page.locator('link[data-public-canyonpath]')).toHaveCount(1);
       await expect(page.locator('.cp-public-landscape')).toHaveCount(1);
       const image = page.locator('.cp-public-landscape img');
-      await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth === 2400)).toBe(true);
+      await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth === 912 && el.naturalHeight === 579)).toBe(true);
       await expect(image).toHaveAttribute('alt', '');
+      await expect(image).toHaveAttribute('src', /\/assets\/bg\/moonlit-canyon\.webp\?v=20260907-moonlit1/);
       await expect(image).toHaveCSS('filter', 'none');
       await expect(page.locator('.tc-main')).toHaveCSS('backdrop-filter', 'none');
       const card = page.locator(entry.card).first();

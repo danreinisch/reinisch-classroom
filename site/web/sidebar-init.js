@@ -97,7 +97,7 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
   if (!document.querySelector('link[' + marker + ']')) {
     var stylesheet = document.createElement('link');
     stylesheet.rel = 'stylesheet';
-    stylesheet.href = '/assets/css/public-canyonpath.css?v=20260907-public1';
+    stylesheet.href = '/assets/css/public-canyonpath.css?v=20260907-moonlit1';
     stylesheet.setAttribute(marker, 'true');
     document.head.appendChild(stylesheet);
   }
@@ -105,7 +105,7 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
   function addScenery() {
     var main = document.querySelector('.tc-main');
     if (!main) return;
-    var scene = '/assets/bg/home-arizona.svg?v=20260907-home1';
+    var scene = '/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1';
     if (main.querySelector('.cp-public-landscape')) return;
     var landscape = document.createElement('div');
     landscape.className = 'cp-public-landscape';
@@ -113,8 +113,8 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
     var image = document.createElement('img');
     image.src = scene;
     image.alt = '';
-    image.width = 2400;
-    image.height = 1350;
+    image.width = 912;
+    image.height = 579;
     image.decoding = 'async';
     landscape.appendChild(image);
     main.insertBefore(landscape, main.firstChild);

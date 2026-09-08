@@ -1,0 +1,11 @@
+{
+  "file": "moonlit-canyon.webp",
+  "width": 912,
+  "height": 579,
+  "bytes": 58778,
+  "sha256": "3ef4307289eee1c0a5e1a8a3f90ae2ea8406da2a0e3884ec5c0d27ca3c44fced",
+  "source": "User-approved standalone scene-only crop from the moonlit CanyonPath design reference.",
+  "processing": "WebP quality 80, no resize, no sharpening filter, no UI text or interface controls embedded.",
+  "resolution_note": "Native source is 912 x 579. This is not a 4K or high-resolution master; large displays will scale this source.",
+  "review_gate": "Visual preview only. Obtain explicit approval before merging PR #1483."
+}

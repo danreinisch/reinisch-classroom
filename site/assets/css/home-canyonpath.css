@@ -78,7 +78,7 @@ body.rc-home-canyonpath .tc-main {
 body.rc-home-canyonpath .home-landscape {
   position: absolute;
   inset: 0 0 auto;
-  height: clamp(680px, 58vw, 940px);
+  height: clamp(620px, 46vw, 860px);
   overflow: hidden;
   z-index: -1;
   pointer-events: none;
@@ -88,7 +88,9 @@ body.rc-home-canyonpath .home-landscape img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 64% 42%;
+  object-position: 66% bottom;
+  max-width: 1440px;
+  margin-left: auto;
   filter: none;
 }
 body.rc-home-canyonpath .home-landscape::after {
@@ -96,8 +98,8 @@ body.rc-home-canyonpath .home-landscape::after {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(3, 23, 20, 0.91), rgba(3, 23, 20, 0.70) 31%, rgba(3, 23, 20, 0.10) 67%, rgba(3, 23, 20, 0.02)),
-    linear-gradient(180deg, rgba(3, 23, 20, 0.04) 32%, rgba(3, 23, 20, 0.35) 66%, var(--home-bg) 99%);
+    linear-gradient(90deg, rgba(3, 23, 20, 0.70), rgba(3, 23, 20, 0.48) 31%, rgba(3, 23, 20, 0.08) 67%, rgba(3, 23, 20, 0.02)),
+    linear-gradient(180deg, transparent 68%, rgba(3, 23, 20, 0.12) 85%, var(--home-bg) 100%);
 }
 body.rc-home-canyonpath .home-frame {
   width: min(100%, 1440px);
@@ -105,7 +107,7 @@ body.rc-home-canyonpath .home-frame {
   padding: 0 clamp(20px, 3.2vw, 52px) 22px;
 }
 body.rc-home-canyonpath .home-hero {
-  min-height: 500px;
+  min-height: 550px;
   padding: clamp(46px, 5vw, 76px) 0 38px;
 }
 body.rc-home-canyonpath .home-hero .home-eyebrow {
@@ -393,7 +395,7 @@ body.rc-home-canyonpath .home-skip-link:focus { transform: translateY(0); }
 @media (max-width: 600px) {
   body.rc-home-canyonpath .home-hero { min-height: 470px; padding-top: 40px; }
   body.rc-home-canyonpath .home-hero .home-hero-title { font-size: clamp(2.65rem, 11.5vw, 3.8rem); }
-  body.rc-home-canyonpath .home-landscape img { object-position: 72% 42%; }
+  body.rc-home-canyonpath .home-landscape img { object-position: 70% top; }
   body.rc-home-canyonpath .home-landscape::after {
     background: linear-gradient(90deg, rgba(3, 23, 20, 0.88), rgba(3, 23, 20, 0.48)), linear-gradient(180deg, transparent 35%, var(--home-bg) 97%);
   }
@@ -404,7 +406,8 @@ body.rc-home-canyonpath .home-skip-link:focus { transform: translateY(0); }
 }
 @media (min-width: 1920px) {
   body.rc-home-canyonpath .home-frame { max-width: 1680px; }
-  body.rc-home-canyonpath .home-hero { min-height: 580px; }
+  body.rc-home-canyonpath .home-hero { min-height: 650px; }
+  body.rc-home-canyonpath .home-landscape img { mask-image: linear-gradient(90deg, transparent, #000 16%); }
   body.rc-home-canyonpath .home-pathway { min-height: 130px; }
 }
 @media (prefers-reduced-motion: reduce) {

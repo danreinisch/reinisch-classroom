@@ -63,7 +63,7 @@ test('public browsing routes and index aliases opt in without touching data', ()
     assert.equal(h.children.length, 1);
     assert.equal(h.children[0].attributes['aria-hidden'], 'true');
     assert.equal(h.children[0].children[0].alt, '');
-    assert.match(h.children[0].children[0].src, /^\/assets\/bg\/home-arizona\.svg\?v=/);
+    assert.match(h.children[0].children[0].src, /^\/assets\/bg\/moonlit-canyon\.webp\?v=/);
   }
 });
 
@@ -130,9 +130,11 @@ test('public reading surfaces retain text contrast even without background blur'
   }
 });
 
-test('public pages reuse the existing homepage illustration without a new remote dependency', () => {
-  assert.match(bootstrap, /image.width = 2400/);
-  assert.match(bootstrap, /image.height = 1350/);
-  assert.doesNotMatch(bootstrap, /https?:|data:image|\.webp/);
-  assert.match(css, /current homepage illustration until the realistic master is ready/);
+test('public pages use the same standalone scene with accurate native dimensions', () => {
+  assert.match(bootstrap, /image.width = 912/);
+  assert.match(bootstrap, /image.height = 579/);
+  assert.match(bootstrap, /moonlit-canyon\.webp\?v=20260907-moonlit1/);
+  assert.match(bootstrap, /public-canyonpath\.css\?v=20260907-moonlit1/);
+  assert.doesNotMatch(bootstrap, /https?:|data:image|home-arizona\.svg/);
+  assert.match(css, /approved standalone scene/);
 });

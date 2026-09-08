@@ -1,6 +1,6 @@
 /* CanyonPath public browsing theme. Loaded only by the explicit public-page
    allowlist in sidebar-init.js. No Teacher Center, Portal, viewer, or lesson skin.
-   Reuses the current homepage illustration until the realistic master is ready. */
+   Uses the approved standalone scene at its recorded native source dimensions. */
 html.rc-public-canyonpath body {
   --cp-bg: #031714;
   --cp-panel: rgba(5, 48, 40, 0.95);
@@ -102,8 +102,8 @@ html.rc-public-canyonpath body .cp-public-landscape::after {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(3, 23, 20, 0.86), rgba(3, 23, 20, 0.52) 42%, rgba(3, 23, 20, 0.12)),
-    linear-gradient(180deg, rgba(3, 23, 20, 0.12) 15%, transparent 58%, var(--cp-bg) 100%);
+    linear-gradient(90deg, rgba(3, 23, 20, 0.66), rgba(3, 23, 20, 0.30) 42%, rgba(3, 23, 20, 0.04)),
+    linear-gradient(180deg, rgba(3, 23, 20, 0.04) 15%, transparent 75%, var(--cp-bg) 100%);
 }
 html.rc-public-canyonpath body:not(.rc-home-canyonpath) .tc-main > :is(.content-wrapper, .wrap) {
   position: relative;

@@ -18,7 +18,7 @@ const mockConfig = {
 };
 const mockState = { categories: { mockBook: { titles: ['Mock lesson A', 'Mock lesson B'] }, life: { titles: ['Mock skill'] }, toolkit: { titles: ['Mock toolkit'] } } };
 
-async function openHome(page, { teacher = false, failure = false, empty = false, collapsed = false } = {}) {
+async function openHome(page, { teacher = false, failure = false, empty = false, collapsed = false, imageFailure = false } = {}) {
   const errors = [];
   const writes = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -48,6 +48,7 @@ async function openHome(page, { teacher = false, failure = false, empty = false,
   });
   await page.route('**/assets/data/home-config.json*', (route) => failure ? route.abort() : route.fulfill({ json: empty ? { countdowns: [] } : mockConfig }));
   await page.route('**/assets/data/site-state.json*', (route) => route.fulfill({ json: mockState }));
+  if (imageFailure) await page.route('**/assets/bg/moonlit-canyon.webp*', (route) => route.abort());
   await page.goto('/');
   await expect(page.locator('.home-student-cta')).toBeVisible();
   await expect(page.locator('#daily-quote')).not.toHaveText('Loading…');
@@ -75,7 +76,8 @@ for (const view of [
     await expect(page.locator('.countdown-card')).toContainText('Mock classroom checkpoint');
     await expect(page.locator('#focus-standards')).toBeHidden();
     const image = page.locator('.home-landscape img');
-    await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth === 2400)).toBe(true);
+    await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth === 912 && el.naturalHeight === 579)).toBe(true);
+    await expect(image).toHaveAttribute('src', /\/assets\/bg\/moonlit-canyon\.webp\?v=20260907-moonlit1/);
     await expect(image).toHaveCSS('filter', 'none');
     await expect(page.locator('.tc-main')).toHaveCSS('backdrop-filter', 'none');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -144,4 +146,15 @@ test('homepage presentation does not load on Student Portal or Teacher Center ro
     expect(source).not.toContain('home-canyonpath.css');
     expect(source).not.toContain('class="rc-home-canyonpath"');
   }
+});
+
+
+test('missing decorative scenery never blocks homepage entry links', async ({ page }) => {
+  const result = await openHome(page, { imageFailure: true });
+  await expect.poll(() => page.locator('.home-landscape img').evaluate((el) => el.complete && el.naturalWidth === 0)).toBe(true);
+  await expect(page.locator('.home-student-cta')).toBeVisible();
+  await expect(page.locator('.home-teacher-cta')).toBeVisible();
+  await expect(page.locator('.home-pathway[href="/life-skills/"]')).toHaveAccessibleName('Open Transitional Skills');
+  expect(result.errors).toEqual([]);
+  expect(result.writes).toEqual([]);
 });

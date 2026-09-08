@@ -3,7 +3,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const html = fs.readFileSync('site/index.html', 'utf8');
 const css = fs.readFileSync('site/assets/css/home-canyonpath.css', 'utf8');
-const scene = fs.readFileSync('site/assets/bg/home-arizona.svg', 'utf8');
+const scene = fs.readFileSync('site/assets/bg/moonlit-canyon.webp');
+const asset = JSON.parse(fs.readFileSync('site/assets/bg/moonlit-canyon.meta.json', 'utf8'));
+const { createHash } = require('node:crypto');
 const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
 
 function declarations(selector) {
@@ -66,16 +68,22 @@ test('Homepage CSS is scoped and does not introduce data access or external depe
   assert.doesNotMatch(css, /@import|https?:|fetch\(|localStorage|sessionStorage|supabase|!important/);
 });
 
-test('Scenery is a complete locally hosted vector with a small decorative pug', () => {
-  assert.match(scene, /viewBox="0 0 2400 1350"/);
-  assert.match(scene, /id="trail-pug"/);
-  assert.match(scene, /id="strata"/);
-  assert.match(scene, /id="saguaro"/);
-  assert.doesNotMatch(scene, /<script\b|<image\b|<foreignObject\b|feGaussianBlur|data:image|onload=/i);
-  for (const match of scene.matchAll(/\bhref="([^"]+)"/g)) assert.ok(match[1].startsWith('#'));
-  assert.ok(Buffer.byteLength(scene) < 60000, 'Keep the scalable scenery lightweight');
-  assert.match(html, /<img[^>]*home-arizona\.svg\?v=20260907-home1[^>]*alt=""[^>]*width="2400"[^>]*height="1350"[^>]*fetchpriority="high"/);
-  assert.match(html, /home-canyonpath\.css\?v=20260907-home1/);
+test('Approved standalone scenery is local, optimized, and honest about native resolution', () => {
+  assert.equal(scene.toString('ascii', 0, 4), 'RIFF');
+  assert.equal(scene.toString('ascii', 8, 12), 'WEBP');
+  assert.equal(scene.toString('ascii', 12, 16), 'VP8 ');
+  assert.equal(scene.readUInt16LE(26) & 0x3fff, 912);
+  assert.equal(scene.readUInt16LE(28) & 0x3fff, 579);
+  assert.equal(asset.width, 912);
+  assert.equal(asset.height, 579);
+  assert.equal(asset.bytes, scene.length);
+  assert.equal(asset.sha256, createHash('sha256').update(scene).digest('hex'));
+  assert.ok(scene.length < 100000, 'Keep the original-size decorative scene lightweight');
+  assert.match(asset.resolution_note, /not a 4K or high-resolution master/);
+  assert.match(html, /<img[^>]*moonlit-canyon\.webp\?v=20260907-moonlit1[^>]*alt=""[^>]*width="912"[^>]*height="579"[^>]*fetchpriority="high"/);
+  assert.doesNotMatch(html, /home-arizona\.svg/);
+  assert.match(html, /home-canyonpath\.css\?v=20260907-moonlit1/);
+  assert.match(html, /href="\/life-skills\/" aria-label="Open Transitional Skills"/);
 });
 
 test('Frosted card text retains 4.5:1 contrast with blur unavailable', () => {
