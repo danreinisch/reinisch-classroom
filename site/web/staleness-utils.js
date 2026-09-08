@@ -10,6 +10,8 @@
  *   formatRelativeTime(daysSince)             → string  e.g. "3d ago" | "never"
  */
 
+import './tc-students-objective-hydration.js';
+
 "use strict";
 
 // ---------------------------------------------------------------------------
