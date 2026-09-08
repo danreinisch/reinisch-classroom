@@ -209,5 +209,14 @@ test('Navigation enhancement is optional, short, scoped, and reduced-motion awar
 
 test('Original sidebar and Student Portal bootstrap prefix is unchanged', () => {
   const { createHash } = require('node:crypto');
-  assert.equal(createHash('sha256').update(source.slice(0, offset)).digest('hex'), '13761f6bc65381a60f847559ef937db0bf3984efe1d4189989ee09d2497858c1');
+  const prefix = source.slice(0, offset);
+  // The separately scoped Teacher initializer is now a sibling in this file.
+  // Pin its exact bytes before excluding it; retain the original public/Student
+  // digest so unrelated bootstrap edits, duplicate blocks or moved code fail.
+  const teacherBlock = prefix.match(/\/\/ BEGIN TEACHER FIRST PAINT\n[\s\S]*?\/\/ END TEACHER FIRST PAINT\n\n/);
+  if (teacherBlock) {
+    assert.equal(createHash('sha256').update(teacherBlock[0]).digest('hex'), '2d1fc5ce6049ae38a3b72ecde7b0fece22cba17bc38cc273a34d51c47cc4f05b', 'Only the reviewed Teacher-only block may be excluded');
+  }
+  const originalPrefix = teacherBlock ? prefix.replace(teacherBlock[0], '') : prefix;
+  assert.equal(createHash('sha256').update(originalPrefix).digest('hex'), '13761f6bc65381a60f847559ef937db0bf3984efe1d4189989ee09d2497858c1');
 });

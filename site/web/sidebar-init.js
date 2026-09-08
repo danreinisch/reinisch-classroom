@@ -16,6 +16,47 @@ try {
   document.documentElement.classList.add('tc-collapsed');
 }
 
+// BEGIN TEACHER FIRST PAINT
+// Native Teacher documents have their own saved sidebar preference. Match
+// teacher-shell.js now, before its bottom/deferred script and session request.
+// This block reads presentation state only; it neither gates nor authenticates.
+(function () {
+  var path = window.location.pathname.replace(/\/index\.html$/i, '/').replace(/\/+$/, '') || '/';
+  var teacherPages = [
+    '/teacher', '/teacher/work', '/teacher/ai-builder', '/teacher/library',
+    '/teacher/review', '/teacher/gradebook', '/teacher/students',
+    '/teacher/observations', '/teacher/calendar', '/teacher/schedule',
+    '/teacher/substitute', '/teacher/archive', '/teacher/admin',
+    '/teacher/reporting', '/teacher/district-export', '/teacher/share',
+    '/teacher/settings', '/teacher/close-year', '/teacher/students/spreadsheet'
+  ];
+  // Login, media admin's independent gate, redirects, public/student pages,
+  // and the separate substitute-facing route do not opt into this layer.
+  if (teacherPages.indexOf(path) === -1) return;
+  var collapsed = true;
+  try { collapsed = localStorage.getItem('rc_tc_sidebar') !== 'expanded'; }
+  catch (_) { /* Same collapsed fallback as the existing Teacher shell. */ }
+  document.documentElement.classList.toggle('tc-collapsed', collapsed);
+  document.documentElement.classList.add('rc-teacher-navigation');
+
+  var link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = '/assets/css/teacher-navigation.css?v=20260908-nav1';
+  link.setAttribute('blocking', 'render');
+  link.setAttribute('data-teacher-navigation', 'true');
+  if (!document.querySelector('link[data-teacher-navigation]')) document.head.appendChild(link);
+
+  if (!document.querySelector('link[data-teacher-scene-preload]')) {
+    var preload = document.createElement('link');
+    preload.rel = 'preload';
+    preload.as = 'image';
+    preload.href = '/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1';
+    preload.setAttribute('data-teacher-scene-preload', 'true');
+    document.head.appendChild(preload);
+  }
+})();
+// END TEACHER FIRST PAINT
+
 // Student Portal presentation layers are intentionally scoped to /student/.
 // Loading them here avoids coupling presentation work to the large portal runtime
 // and leaves Teacher Center / public pages untouched.
