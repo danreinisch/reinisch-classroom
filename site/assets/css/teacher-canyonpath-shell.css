@@ -33,9 +33,15 @@
     color: var(--tcp-ink);
     background: var(--tcp-bg);
   }
+  /* Keep the actual scene visible, rather than fading it out under a second
+     82%-opaque page-sized panel. The solid work cards provide reading contrast.
+     Native 912 x 579 artwork is reused unchanged; this is not a high-res master. */
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell {
-    background-image: linear-gradient(180deg, rgba(3,23,20,.16), #031714 720px), url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
-    background-size: 100% 100%, auto 660px;
+    background-image:
+      linear-gradient(180deg, transparent 460px, #031714 820px),
+      linear-gradient(90deg, rgba(3,23,20,.55), rgba(3,23,20,.04) 65%),
+      url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
+    background-size: 100% 820px, 100% 820px, auto 760px;
     background-position: top right;
     background-repeat: no-repeat;
   }
@@ -86,15 +92,21 @@
     min-width: 0;
     margin: 16px;
     padding: clamp(16px, 2vw, 26px);
-    background: rgba(3,29,24,.82);
+    background: rgba(3,29,24,.24);
     border-color: var(--tcp-border);
     border-radius: 16px;
     box-shadow: var(--rc-shadow);
+  }
+  /* Compact scenic heading space on Overview only. No hero tiles, content
+     removal, extra DOM, or added vertical space in the dense workspaces. */
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-main:has(#ovKpis) > div:first-child {
+    min-height: 150px;
   }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-main h1 {
     font-size: clamp(1.65rem, 2.6vw, 2.15rem);
     line-height: 1.18;
     letter-spacing: -.035em;
+    text-shadow: 0 2px 8px #031714;
   }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.rc-card,.tc-card) {
     background: var(--tcp-panel);
@@ -120,7 +132,7 @@
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-kpi-label { font-size: .8rem; opacity: 1; color: var(--tcp-muted); }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-kpi-value { font-size: 1.9rem; letter-spacing: -.035em; }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-kpi-sub { font-size: .76rem; opacity: 1; color: var(--tcp-muted); }
-  body:has(.tc-sidebar[aria-label="Teacher navigation"]) .ov-section-title { letter-spacing: -.02em; }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) .ov-section-title { letter-spacing: -.02em; text-shadow: 0 2px 8px #031714; }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .ov-card-header { color: var(--tcp-ink); }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .ov-card-header svg { color: var(--tcp-accent); }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.ov-card-error,.ov-card-alert) { opacity: 1; }
@@ -138,10 +150,20 @@
   html[data-theme="light"] body:has(.tc-sidebar[aria-label="Teacher navigation"]) { background: #e7f1eb; }
   html[data-theme="light"] body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell {
     background-color: #e7f1eb;
-    background-image: linear-gradient(180deg, rgba(231,241,235,.2), #e7f1eb 720px), url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
+    background-image:
+      linear-gradient(180deg, transparent 460px, #e7f1eb 820px),
+      linear-gradient(90deg, rgba(3,23,20,.55), rgba(3,23,20,.04) 65%),
+      url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
+  }
+  html[data-theme="light"] body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-main {
+    background: linear-gradient(180deg, rgba(3,29,24,.24) 240px, #073128 700px);
   }
 }
 @media screen and (max-width: 768px) {
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell {
+    background-size: 100% 820px, 100% 820px, auto 600px;
+    background-position: top center;
+  }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-main {
     margin: 10px;
     margin-left: 10px !important;
