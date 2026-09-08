@@ -573,3 +573,46 @@ body.rc-student-canyonpath .tc-sidebar {
 body.rc-student-canyonpath .tc-main::before {
   top: var(--tc-topbar-h);
 }
+
+/* STUDENT COMPACT-DESKTOP SIDEBAR CONTRACT
+   The shared shell switches to an off-canvas sidebar at 768px. That breakpoint
+   is too aggressive for the Student Portal on compact desktop/Chromebook
+   windows. Keep the Student rail in normal layout from 600px upward; phone
+   widths retain the established off-canvas behavior. */
+@media screen and (min-width: 600px) {
+  body.rc-student-canyonpath .tc-sidebar {
+    display: flex !important;
+    position: sticky !important;
+    top: var(--tc-topbar-h) !important;
+    left: auto !important;
+    bottom: auto !important;
+    height: calc(100vh - var(--tc-topbar-h));
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    flex-shrink: 0;
+    z-index: 20;
+  }
+
+  html.tc-collapsed body.rc-student-canyonpath .tc-sidebar {
+    width: var(--tc-rail-w, 64px) !important;
+    transform: none !important;
+  }
+
+  html:not(.tc-collapsed) body.rc-student-canyonpath .tc-sidebar {
+    width: var(--tc-side-w, 260px) !important;
+    transform: none !important;
+  }
+
+  body.rc-student-canyonpath .tc-main {
+    width: auto !important;
+    flex: 1 1 auto;
+  }
+
+  html:not(.tc-collapsed)
+    body.rc-student-canyonpath
+    .tc-shell::before {
+    content: none !important;
+    display: none !important;
+  }
+}

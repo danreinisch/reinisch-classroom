@@ -295,8 +295,20 @@ test('Student route loads CanyonPath foundation and approved-reference layers la
   assert.match(sidebar, /student-canyonpath-cinematic\.css\?v=20260907-2a4/);
   assert.match(sidebar, /student-canyonpath-premium\.css\?v=20260907-2a5/);
   assert.match(sidebar, /student-canyonpath-final\.css\?v=20260907-2a6/);
-  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260908-annotated4/);
+  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260908-sidebar2/);
   assert.match(sidebar, /student-canyonpath\.js\?v=20260907-2a3/);
   assert.match(sidebar, /student-canyonpath-refine\.js\?v=20260907-2a4/);
   assert.ok(sidebar.indexOf('student-canyonpath-reference-match.css') > sidebar.indexOf('student-canyonpath-final.css'));
+});
+
+
+test('Student compact-desktop rail overrides the shared mobile breakpoint', () => {
+  assert.match(
+    referenceCss,
+    /@media screen and \(min-width: 600px\)[\s\S]*\.tc-sidebar[\s\S]*transform:\s*none !important/
+  );
+  assert.match(
+    referenceCss,
+    /html\.tc-collapsed body\.rc-student-canyonpath \.tc-sidebar[\s\S]*--tc-rail-w/
+  );
 });

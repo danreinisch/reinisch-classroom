@@ -5503,9 +5503,18 @@
         opacity: 0.8;
       }
 
-      /* Hide student sidebar nav when not authenticated; show after login */
-      .tc-sidebar .tc-nav [data-tab] { display: none; }
-      .st-authenticated .tc-sidebar .tc-nav [data-tab] { display: flex; }
+      /* Student navigation is part of the Portal shell on both login and
+         authenticated views. Authentication still controls the content view;
+         navigation is simply no longer removed from the shell. */
+      .tc-sidebar .tc-nav [data-tab] { display: flex; }
+
+      /* Before login, keep the Portal destinations visible for shell
+         consistency but non-interactive until authentication succeeds. */
+      body:has(#loginView:not(.hidden)) .tc-sidebar .tc-nav [data-tab] {
+        pointer-events: none;
+        opacity: 0.58;
+        cursor: default;
+      }
 
       /* SVG icons inside any hovered interactive Student Portal element inherit glow */
       .st-btn:hover svg,
