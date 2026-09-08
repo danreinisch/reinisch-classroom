@@ -242,3 +242,56 @@ html.rc-public-canyonpath body .cp-public-landscape {
     --rc-cp-viewport-left: 0px;
   }
 }
+
+/* RC HOME FULL-SCENE + STUDENT LOGIN SIDEBAR CORRECTION
+   The approved 1672×941 artwork should remain horizontally registered to the
+   full Home canvas. The earlier Home layer right-biased and heavily veiled the
+   scene, making its left side appear missing after the viewport-pin change. */
+body.rc-home-canyonpath .home-landscape img {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  object-position: center bottom !important;
+}
+
+body.rc-home-canyonpath .home-landscape::after {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(3, 23, 20, 0.28),
+      rgba(3, 23, 20, 0.12) 28%,
+      rgba(3, 23, 20, 0.035) 56%,
+      rgba(3, 23, 20, 0) 76%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 68%,
+      rgba(3, 23, 20, 0.12) 85%,
+      var(--home-bg) 100%
+    ) !important;
+}
+
+/* The Student Navigation markup exists before authentication. On desktop keep
+   that shell visible during login just like the rest of Reinisch Classroom.
+   Mobile retains the existing <=768px off-canvas behavior. */
+@media screen and (min-width: 769px) {
+  body.rc-student-canyonpath:has(#loginView:not(.hidden)) .tc-sidebar {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    flex-shrink: 0;
+  }
+
+  html.tc-collapsed
+    body.rc-student-canyonpath:has(#loginView:not(.hidden))
+    .tc-sidebar {
+    width: var(--tc-rail-w, 64px) !important;
+  }
+
+  html:not(.tc-collapsed)
+    body.rc-student-canyonpath:has(#loginView:not(.hidden))
+    .tc-sidebar {
+    width: var(--tc-side-w, 260px) !important;
+  }
+}
