@@ -209,6 +209,12 @@ body.rc-home-canyonpath .home-landscape {
   height: auto !important;
 }
 
+/* The primary Student Portal CTA remains above the hero. Hide only the lower,
+   redundant pathway card so the annotated pug stays visible on the right. */
+body.rc-home-canyonpath .home-pathway[href="/student/"] {
+  display: none;
+}
+
 html.rc-public-canyonpath body {
   --rc-cp-viewport-left: var(--tc-side-w, 260px);
 }
