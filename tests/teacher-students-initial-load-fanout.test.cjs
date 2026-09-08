@@ -15,15 +15,15 @@ const hydrationPath = path.join(
   root,
   'site/web/tc-students-objective-hydration.js'
 );
-const sidebarInitPath = path.join(
+const stalenessUtilsPath = path.join(
   root,
-  'site/web/sidebar-init.js'
+  'site/web/staleness-utils.js'
 );
 
 const source = fs.readFileSync(sourcePath, 'utf8');
 const html = fs.readFileSync(htmlPath, 'utf8');
 const hydration = fs.readFileSync(hydrationPath, 'utf8');
-const sidebarInit = fs.readFileSync(sidebarInitPath, 'utf8');
+const stalenessUtils = fs.readFileSync(stalenessUtilsPath, 'utf8');
 
 function extractNamedFunction(text, name) {
   const marker = `function ${name}(`;
@@ -191,22 +191,16 @@ assert.ok(
 /* ========================================================================== */
 
 assert.ok(
-  sidebarInit.includes(
-    "if (path !== '/teacher/students') return;"
+  stalenessUtils.includes(
+    "import './tc-students-objective-hydration.js';"
   ),
-  'objective hydration loader must be scoped to Teacher Students only'
-);
-
-assert.ok(
-  sidebarInit.includes(
-    '/web/tc-students-objective-hydration.js?v=20260908-hydration1'
-  ),
-  'Teacher Students must load the dedicated boot-hydration companion'
+  'Teacher Students utilities must load the dedicated boot-hydration companion'
 );
 
 for (
   const marker
   of [
+    "if (path !== '/teacher/students')",
     'IEP Objective Progress',
     '.st-tab.active[data-tab="goals"]',
     '.st-objective-manual-entry',
