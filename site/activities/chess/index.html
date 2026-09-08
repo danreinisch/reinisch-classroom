@@ -3,46 +3,104 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark light">
-  <title>Classroom Chess · Reinisch Classroom</title>
+  <meta name="color-scheme" content="dark">
+  <title>Classroom Chess HD · Reinisch Classroom</title>
   <link rel="stylesheet" href="./chess.css?v=20260906-chess-1">
-  <script type="module" src="./app.js?v=20260906-chess-2"></script>
+  <link rel="stylesheet" href="./chess-hd.css?v=20260908-chess-hd-1">
+  <script type="module" src="./hd-ui.js?v=20260908-chess-hd-1"></script>
 </head>
 <body>
-  <div class="chess-app">
-    <header class="app-header">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">♞</span><div><p class="eyebrow">Reinisch Classroom</p><h1>Classroom Chess</h1></div></div>
-      <div class="header-actions"><a id="backLink" href="/student/?tab=activities">← Activities</a><button id="settingsBtn" class="quiet" type="button">Board &amp; pieces</button></div>
+  <div class="chess-app chess-hd-app">
+    <header class="app-header hd-app-header">
+      <div class="brand hd-brand">
+        <span class="brand-mark hd-brand-mark" aria-hidden="true">♞</span>
+        <div>
+          <p class="eyebrow">Reinisch Classroom</p>
+          <h1>Classroom Chess <span class="hd-title-tag">HD</span></h1>
+          <p class="hd-tagline">Think ahead. Build a brighter tomorrow.</p>
+        </div>
+      </div>
+      <div class="header-actions hd-header-actions">
+        <a id="backLink" href="/student/?tab=activities">← Activities</a>
+        <button id="settingsBtn" class="quiet hd-settings-button" type="button"><span aria-hidden="true">⚙</span> Board &amp; pieces</button>
+      </div>
     </header>
-    <nav class="view-nav" aria-label="Chess activities">
+
+    <nav class="view-nav hd-view-nav" aria-label="Chess activities">
       <button type="button" data-view="play" aria-current="page">Play</button>
       <button type="button" data-view="learn">Learn</button>
       <button type="button" data-view="challenges">Challenges</button>
       <button type="button" data-view="saves">My games <span class="count">3 slots</span></button>
     </nav>
+
     <p id="storageStatus" class="storage-status" role="status">Opening chess…</p>
     <div id="sessionNotice" class="notice error" role="alert" hidden>Your student session changed. <a href="/student/?tab=activities">Return to Activities</a> and reopen chess to keep saved games separate.</div>
+
     <main id="mainContent">
-      <section id="workspace" class="workspace" aria-label="Chess game">
-        <div class="board-card">
-          <div class="board-heading"><span id="boardCaption">A little thinking. A great next move.</span><button id="flipBtn" class="quiet small" type="button">Flip board</button></div>
-          <div id="board" class="board" role="group" aria-label="Chess board" aria-describedby="boardHelp"></div>
-          <p id="positionStatus" class="position-status" role="status" aria-live="polite"></p>
-          <p id="boardHelp" class="board-help">Select a piece, then a square. Keyboard: arrow keys to move; Enter or Space to select.</p>
+      <section id="workspace" class="workspace hd-workspace" aria-label="Chess game">
+        <div class="board-card hd-board-card">
+          <div class="board-heading hd-board-heading">
+            <span id="boardCaption">A little thinking. A great next move.</span>
+            <button id="flipBtn" class="quiet small" type="button">Flip board</button>
+          </div>
+          <div class="hd-board-frame">
+            <div id="board" class="board" role="group" aria-label="Chess board" aria-describedby="boardHelp"></div>
+          </div>
+          <div class="hd-board-footer">
+            <p id="positionStatus" class="position-status" role="status" aria-live="polite"></p>
+            <p id="boardHelp" class="board-help">Select a piece, then a square. Keyboard: arrow keys to move; Enter or Space to select.</p>
+          </div>
         </div>
-        <aside class="side-card">
+
+        <aside class="side-card hd-side-card">
           <div id="playPanel">
-            <p class="eyebrow" id="modeLabel">Play the computer</p>
-            <h2 id="gameTitle">Your next move.</h2>
-            <p id="gameDetails" class="muted"></p>
-            <button id="newGameBtn" class="primary wide" type="button">New game</button>
-            <div class="button-row"><button id="hintBtn" type="button">Give me a hint</button><button id="undoBtn" type="button">Undo turn</button></div>
+            <div id="hdPlayerStrip" class="hd-player-strip" aria-label="Players">
+              <div class="hd-player hd-player-human">
+                <span class="hd-player-icon" aria-hidden="true">♙</span>
+                <span><strong id="hdHumanLabel">You — White</strong><small id="hdHumanStatus">Your move</small></span>
+              </div>
+              <div class="hd-player hd-player-opponent">
+                <span class="hd-player-icon" aria-hidden="true">▣</span>
+                <span><strong id="hdOpponentLabel">Computer — Black</strong><small id="hdOpponentStatus">Friendly game</small></span>
+              </div>
+            </div>
+
+            <div class="hd-game-summary">
+              <div>
+                <p class="eyebrow" id="modeLabel">Play the computer</p>
+                <h2 id="gameTitle">Your next move.</h2>
+                <p id="gameDetails" class="muted"></p>
+              </div>
+              <button id="newGameBtn" class="primary hd-new-game" type="button">▶ New game</button>
+            </div>
+
+            <div class="button-row hd-action-row">
+              <button id="hintBtn" type="button">💡 Give me a hint</button>
+              <button id="undoBtn" type="button">↶ Undo turn</button>
+            </div>
             <button id="retryComputerBtn" class="wide" type="button" hidden>Retry computer move</button>
-            <p id="playFeedback" class="feedback" role="status" aria-live="polite">Try to control the center, develop your pieces, and keep your king safe.</p>
-            <div class="move-heading"><h3>Moves</h3><span id="moveCount" class="muted">New game</span></div>
-            <ol id="moveList" class="move-list" aria-label="Move history"></ol>
+
+            <section class="hd-coach" aria-labelledby="hdCoachTitle">
+              <div class="hd-panel-title"><span aria-hidden="true">🎓</span><h3 id="hdCoachTitle">Coach</h3></div>
+              <p id="playFeedback" class="feedback" role="status" aria-live="polite">Try to control the center, develop your pieces, and keep your king safe.</p>
+            </section>
+
+            <section class="hd-moves-panel" aria-labelledby="hdMovesTitle">
+              <div class="move-heading"><h3 id="hdMovesTitle">Moves</h3><span id="moveCount" class="muted">New game</span></div>
+              <ol id="moveList" class="move-list" aria-label="Move history"></ol>
+            </section>
+
+            <section id="hdCapturedPanel" class="hd-captured-panel" aria-labelledby="hdCapturedTitle">
+              <div class="hd-panel-title"><span aria-hidden="true">♟</span><h3 id="hdCapturedTitle">Captured pieces</h3></div>
+              <div class="hd-captured-grid">
+                <div><small>White captured</small><div id="hdWhiteCaptured" class="hd-captured-list" aria-label="Pieces captured by White"></div></div>
+                <div><small>Black captured</small><div id="hdBlackCaptured" class="hd-captured-list" aria-label="Pieces captured by Black"></div></div>
+              </div>
+            </section>
+
             <details class="rules-note"><summary>Quick rules &amp; controls</summary><p>Checkmate ends the game; the king is never captured. Castling, en passant, and all four promotion choices are supported.</p><p>These are casual, untimed games. Three repetitions of a position or 50 moves by each side without a pawn move or capture automatically end in a draw. Tutorial and challenge positions are separate from your saved games.</p><p>Learning plays random legal moves. Friendly looks a little ahead. Challenge looks further, with a short thinking limit. These levels do not have chess ratings.</p></details>
           </div>
+
           <div id="exercisePanel" hidden>
             <button id="allExercisesBtn" class="text-button" type="button">← All lessons</button>
             <p class="eyebrow" id="exerciseTag"></p><h2 id="exerciseTitle"></h2>
@@ -53,9 +111,26 @@
           </div>
         </aside>
       </section>
-      <section id="catalog" hidden aria-labelledby="catalogTitle"><div class="section-heading"><div><p class="eyebrow" id="catalogEyebrow"></p><h2 id="catalogTitle"></h2><p id="catalogDescription" class="muted"></p></div><p id="catalogProgress" class="progress-pill"></p></div><div id="exerciseCards" class="card-grid"></div></section>
-      <section id="saves" hidden aria-labelledby="savesTitle"><div class="section-heading"><div><p class="eyebrow">Pick up where you left off</p><h2 id="savesTitle">My games</h2><p class="muted">Three slots, saved for your student login in this browser on this device. Clearing browser data removes these saves.</p></div></div><div id="saveCards" class="card-grid save-grid"></div><div class="transfer-card"><div><h3>Moving to another device?</h3><p class="muted">Copy a game code here, then paste it into chess on the other device.</p></div><div class="button-row"><button id="copyGameBtn" type="button">Copy current game</button><button id="importGameBtn" type="button">Paste a game code</button></div></div></section>
+
+      <div id="hdSaveStrip" class="hd-save-strip" aria-label="Game slots">
+        <span class="hd-save-label">Saves</span>
+        <button type="button" data-hd-save-slot="0" aria-label="Open My games, slot 1"><span class="hd-save-thumb"></span><small>1</small></button>
+        <button type="button" data-hd-save-slot="1" aria-label="Open My games, slot 2"><span class="hd-save-thumb"></span><small>2</small></button>
+        <button type="button" data-hd-save-slot="2" aria-label="Open My games, slot 3"><span class="hd-save-thumb"></span><small>3</small></button>
+      </div>
+
+      <section id="catalog" hidden aria-labelledby="catalogTitle">
+        <div class="section-heading"><div><p class="eyebrow" id="catalogEyebrow"></p><h2 id="catalogTitle"></h2><p id="catalogDescription" class="muted"></p></div><p id="catalogProgress" class="progress-pill"></p></div>
+        <div id="exerciseCards" class="card-grid"></div>
+      </section>
+
+      <section id="saves" hidden aria-labelledby="savesTitle">
+        <div class="section-heading"><div><p class="eyebrow">Pick up where you left off</p><h2 id="savesTitle">My games</h2><p class="muted">Three slots, saved for your student login in this browser on this device. Clearing browser data removes these saves.</p></div></div>
+        <div id="saveCards" class="card-grid save-grid"></div>
+        <div class="transfer-card"><div><h3>Moving to another device?</h3><p class="muted">Copy a game code here, then paste it into chess on the other device.</p></div><div class="button-row"><button id="copyGameBtn" type="button">Copy current game</button><button id="importGameBtn" type="button">Paste a game code</button></div></div>
+      </section>
     </main>
+
     <footer>Learn at your pace. Play a friend. Find your next move. <span>Chess rules: chess.js · BSD-2-Clause</span></footer>
   </div>
 
@@ -70,15 +145,64 @@
       <button id="startGameBtn" class="primary wide" type="submit">Start game</button>
     </form>
   </dialog>
-  <dialog id="settingsDialog" aria-labelledby="settingsTitle">
-    <div class="dialog-heading"><h2 id="settingsTitle">Make it your board</h2><button type="button" data-close="settingsDialog" class="icon-close" aria-label="Close board settings">×</button></div>
-    <label for="themeSelect">Board colors</label><select id="themeSelect"><option value="forest">Forest</option><option value="classic">Classic walnut</option><option value="ocean">Ocean</option><option value="contrast">High contrast</option></select>
-    <label for="piecesSelect">Piece style</label><select id="piecesSelect"><option value="classic">Classic pieces</option><option value="modern">Modern pieces</option><option value="labeled">Pieces with names</option><option value="letters">Letter pieces</option></select>
-    <label class="check-label"><input type="checkbox" id="legalToggle" checked> Show legal moves when I select a piece</label>
-    <label class="check-label"><input type="checkbox" id="rotateToggle"> Turn the board after each move in two-player games</label>
-    <p class="muted">Flip board also works whenever you need it. Settings are saved with your student login on this device.</p>
+
+  <dialog id="settingsDialog" class="hd-settings-drawer" aria-labelledby="settingsTitle">
+    <div class="dialog-heading hd-drawer-heading">
+      <div><p class="eyebrow">Customize</p><h2 id="settingsTitle">Board &amp; pieces</h2><p class="muted">Choose the look that helps you see the game clearly.</p></div>
+      <button type="button" data-close="settingsDialog" class="icon-close" aria-label="Close board settings">×</button>
+    </div>
+
+    <section class="hd-setting-section" aria-labelledby="hdBoardThemeTitle">
+      <h3 id="hdBoardThemeTitle">Board theme</h3>
+      <div class="hd-theme-grid">
+        <button type="button" class="hd-theme-card" data-hd-theme-option="canyon-classic"><span class="hd-theme-preview hd-preview-canyon" aria-hidden="true"></span><span>Canyon Classic</span></button>
+        <button type="button" class="hd-theme-card" data-hd-theme-option="desert-stone"><span class="hd-theme-preview hd-preview-desert" aria-hidden="true"></span><span>Desert Stone</span></button>
+        <button type="button" class="hd-theme-card" data-hd-theme-option="tournament"><span class="hd-theme-preview hd-preview-tournament" aria-hidden="true"></span><span>Tournament</span></button>
+        <button type="button" class="hd-theme-card" data-hd-theme-option="modern-slate"><span class="hd-theme-preview hd-preview-slate" aria-hidden="true"></span><span>Modern Slate</span></button>
+        <button type="button" class="hd-theme-card" data-hd-theme-option="high-contrast"><span class="hd-theme-preview hd-preview-contrast" aria-hidden="true"></span><span>High Contrast</span></button>
+      </div>
+    </section>
+
+    <section class="hd-setting-section" aria-labelledby="hdPieceSetTitle">
+      <h3 id="hdPieceSetTitle">Piece set</h3>
+      <div class="hd-piece-grid">
+        <button type="button" class="hd-piece-card" data-hd-piece-option="staunton"><span class="hd-piece-preview" data-hd-piece-preview="staunton" aria-hidden="true"></span><span>Classic Staunton</span></button>
+        <button type="button" class="hd-piece-card" data-hd-piece-option="modern"><span class="hd-piece-preview" data-hd-piece-preview="modern" aria-hidden="true"></span><span>Modern</span></button>
+        <button type="button" class="hd-piece-card" data-hd-piece-option="minimal"><span class="hd-piece-preview" data-hd-piece-preview="minimal" aria-hidden="true"></span><span>Minimal</span></button>
+        <button type="button" class="hd-piece-card" data-hd-piece-option="circle"><span class="hd-piece-preview" data-hd-piece-preview="circle" aria-hidden="true"></span><span>Circle</span></button>
+        <button type="button" class="hd-piece-card" data-hd-piece-option="academic"><span class="hd-piece-preview" data-hd-piece-preview="academic" aria-hidden="true"></span><span>Academic</span></button>
+      </div>
+    </section>
+
+    <section class="hd-setting-section" aria-labelledby="hdDisplayOptionsTitle">
+      <h3 id="hdDisplayOptionsTitle">Display options</h3>
+      <div class="hd-switch-list">
+        <label class="hd-switch-row" for="coordsToggle"><span>Show coordinates <small>(a–h, 1–8)</small></span><input type="checkbox" id="coordsToggle" checked></label>
+        <label class="hd-switch-row" for="legalToggle"><span>Show legal moves</span><input type="checkbox" id="legalToggle" checked></label>
+        <label class="hd-switch-row" for="pieceNamesToggle"><span>Show piece names <small>(instructional)</small></span><input type="checkbox" id="pieceNamesToggle"></label>
+        <label class="hd-switch-row" for="animateToggle"><span>Animate pieces</span><input type="checkbox" id="animateToggle" checked></label>
+        <label class="hd-switch-row" for="reducedToggle"><span>Reduced motion</span><input type="checkbox" id="reducedToggle"></label>
+        <label class="hd-switch-row" for="rotateToggle"><span>Auto-turn after each move <small>(two-player)</small></span><input type="checkbox" id="rotateToggle"></label>
+      </div>
+    </section>
+
+    <section class="hd-setting-section" aria-labelledby="hdOrientationTitle">
+      <h3 id="hdOrientationTitle">Board orientation</h3>
+      <div class="hd-orientation-row">
+        <button type="button" data-hd-orientation="white">♔ White at bottom</button>
+        <button type="button" data-hd-orientation="black">♚ Black at bottom</button>
+      </div>
+    </section>
+
+    <div class="hd-legacy-controls" aria-hidden="true">
+      <label for="themeSelect">Legacy board colors</label><select id="themeSelect" tabindex="-1"><option value="forest">Forest</option><option value="classic">Classic walnut</option><option value="ocean">Ocean</option><option value="contrast">High contrast</option></select>
+      <label for="piecesSelect">Legacy piece style</label><select id="piecesSelect" tabindex="-1"><option value="classic">Classic pieces</option><option value="modern">Modern pieces</option><option value="labeled">Pieces with names</option><option value="letters">Letter pieces</option></select>
+    </div>
+
+    <p class="muted hd-settings-note">Appearance choices stay in this browser for this student login. They do not change grades, assignments, or saved chess moves.</p>
     <button type="button" data-close="settingsDialog" class="primary wide">Done</button>
   </dialog>
+
   <dialog id="promotionDialog" aria-labelledby="promotionTitle"><h2 id="promotionTitle">Choose your new piece</h2><p>Your pawn reached the farthest row.</p><div class="promotion-options"><button type="button" data-promote="q">Queen</button><button type="button" data-promote="r">Rook</button><button type="button" data-promote="b">Bishop</button><button type="button" data-promote="n">Knight</button></div><button type="button" data-close="promotionDialog" class="quiet wide">Cancel move</button></dialog>
   <dialog id="transferDialog" aria-labelledby="transferTitle"><div class="dialog-heading"><h2 id="transferTitle">Game code</h2><button type="button" data-close="transferDialog" class="icon-close" aria-label="Close game code">×</button></div><p id="transferHelp" class="muted"></p><label for="gameCode">Game code</label><textarea id="gameCode" rows="7" spellcheck="false" maxlength="90000"></textarea><p id="transferError" class="error-text" role="status"></p><button id="transferAction" class="primary wide" type="button">Copy code</button></dialog>
   <dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">Delete saved game?</h2><p id="confirmText"></p><div class="button-row"><button type="button" data-close="confirmDialog">Keep game</button><button id="confirmAction" class="danger" type="button">Delete game</button></div></dialog>
