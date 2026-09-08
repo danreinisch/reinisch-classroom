@@ -7,6 +7,7 @@ on:
       - 'site/index.html'
       - 'site/assets/css/home-canyonpath.css'
       - 'site/assets/css/public-canyonpath.css'
+      - 'site/assets/css/public-navigation.css'
       - 'site/assets/bg/home-arizona.svg'
       - 'site/assets/bg/moonlit-canyon*'
       - 'site/web/sidebar-init.js'
@@ -16,6 +17,7 @@ on:
       - 'site/assets/css/rc-theme.css'
       - 'tests/home-canyonpath*'
       - 'tests/public-canyonpath*'
+      - 'tests/public-navigation.spec.js'
       - '.github/workflows/homepage-canyonpath.yml'
 
 permissions:
@@ -38,7 +40,7 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Test public browsing with local and synthetic data only
-        run: npx playwright test tests/home-canyonpath.spec.js tests/public-canyonpath.spec.js
+        run: npx playwright test tests/home-canyonpath.spec.js tests/public-canyonpath.spec.js tests/public-navigation.spec.js
       - name: Retain public visual review screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -47,5 +49,6 @@ jobs:
           path: |
             test-results/**/home-*.png
             test-results/**/public-*.png
+            test-results/**/navigation-*.png
           if-no-files-found: warn
           retention-days: 7

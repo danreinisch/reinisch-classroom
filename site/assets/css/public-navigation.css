@@ -1,0 +1,25 @@
+/* Public browsing only. sidebar-init.js opts in Home and the existing public
+   allowlist; Teacher Center, Student Portal, viewers, and lessons stay out.
+   Native document navigation is preserved. No click interception or router. */
+html.rc-public-navigation { background: #031714; }
+html.rc-public-navigation[data-theme='light'] { background: #f5f8f6; }
+
+/* Keep the common frame separate from the content crossfade. */
+html.rc-public-navigation .tc-topbar { view-transition-name: rc-public-topbar; }
+html.rc-public-navigation .tc-sidebar { view-transition-name: rc-public-sidebar; }
+
+/* Progressive enhancement: unsupported browsers use normal navigation.
+   Short enough not to hold the user up; no zoom, slide, or background blur. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  html.rc-public-navigation::view-transition-group(*),
+  html.rc-public-navigation::view-transition-old(*),
+  html.rc-public-navigation::view-transition-new(*) {
+    animation-duration: 140ms;
+    animation-timing-function: ease-out;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+  html.rc-public-navigation .tc-sidebar { transition: none; }
+}
