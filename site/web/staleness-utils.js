@@ -11,6 +11,7 @@
  */
 
 import './tc-students-objective-hydration.js';
+import './tc-students-objective-evidence-polish.js';
 
 "use strict";
 
