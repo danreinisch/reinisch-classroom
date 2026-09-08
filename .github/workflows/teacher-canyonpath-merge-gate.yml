@@ -1,0 +1,82 @@
+name: Teacher CanyonPath baseline audit
+
+on:
+  push:
+    branches: ['feat/teacher-substitute-canyonpath-20260908']
+    paths: ['.github/workflows/teacher-canyonpath-merge-gate.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  compare-source:
+    name: Baseline audit (${{ matrix.source }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [main-baseline, reviewed-head]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: '1bd6ec53c24c79c9d9380747ee49c06d39f2bcf9'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.source == 'main-baseline' && '5265eb7419559928806e88877a317a51856fd0d9' || '1bd6ec53c24c79c9d9380747ee49c06d39f2bcf9' }}
+          path: baseline-audit
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Run identical synthetic tests on both source versions
+        working-directory: baseline-audit
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+          cp ../tests/teacher-canyonpath-workspaces.spec.js tests/teacher-canyonpath-workspaces.spec.js
+          cat >> tests/teacher-canyonpath-workspaces.spec.js <<'JS'
+          test.beforeEach(async ({ page }) => {
+            page.on('pageerror', err => console.log('SYNTHETIC_PAGE_ERROR', err.message));
+          });
+          test.afterEach(async ({ page }, info) => {
+            if (info.title.startsWith('Reporting mobile')) console.log('REPORTING_OVERFLOW', await page.evaluate(() => ({
+              viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth,
+              elements: [...document.querySelectorAll('main *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1).slice(0, 25).map(el => {
+                const r = el.getBoundingClientRect(), c = getComputedStyle(el);
+                return {tag: el.tagName, id: el.id, className: String(el.className), left: r.left, width: r.width, right: r.right, display: c.display, minWidth: c.minWidth, flexWrap: c.flexWrap};
+              })
+            })));
+          });
+          JS
+          mkdir -p audit-results
+          git rev-parse HEAD > audit-results/source-sha.txt
+          set +e
+          PLAYWRIGHT_JSON_OUTPUT_NAME=audit-results/results.json npx playwright test tests/observation-center-card-deck-ui.spec.js tests/observation-center-student-first-ui.spec.js tests/teacher-canyonpath-workspaces.spec.js --grep 'three-goal student|capture cards carry|deck arrows|historical three-card|defaults to Student mode|student search filters|selecting a student|historical Student mode|Reporting mobile|AI Builder Create|Work form and|Media utility rejects' --project=chromium --workers=2 --retries=0 --reporter=list,json > audit-results/browser.log 2>&1
+          result=$?
+          set -e
+          echo "$result" > audit-results/exit-code.txt
+          # This is a diagnostic audit, not a passing-regression claim. Reports
+          # must contain the exact tests; failures remain visible for comparison.
+          node --input-type=commonjs <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('audit-results/results.json', 'utf8'));
+          const tests = [];
+          function walk(suite) {
+            for (const spec of suite.specs || []) for (const test of spec.tests || []) tests.push({file:spec.file,title:spec.title,status:test.status,errors:test.results.flatMap(r=>r.errors||[]).map(e=>e.message)});
+            for (const child of suite.suites || []) walk(child);
+          }
+          walk(report);
+          if (tests.length !== 12) throw new Error('Expected exactly twelve outstanding checks, got ' + tests.length);
+          fs.writeFileSync('audit-results/summary.json', JSON.stringify(tests,null,2));
+          console.log(JSON.stringify(tests.map(({file,title,status})=>({file,title,status})),null,2));
+          NODE
+      - name: Upload source-pinned synthetic audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teacher-canyonpath-baseline-${{ matrix.source }}
+          path: |
+            baseline-audit/audit-results/
+            baseline-audit/test-results/
+          retention-days: 7
