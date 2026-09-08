@@ -1,0 +1,269 @@
+/* CanyonPath public browsing theme. Loaded only by the explicit public-page
+   allowlist in sidebar-init.js. No Teacher Center, Portal, viewer, or lesson skin.
+   Uses the approved standalone scene at its recorded native source dimensions. */
+html.rc-public-canyonpath body {
+  --cp-bg: #031714;
+  --cp-panel: rgba(5, 48, 40, 0.95);
+  --cp-inner: #0a3a31;
+  --cp-ink: #f4fbf8;
+  --cp-muted: #bdd6cd;
+  --cp-accent: #8be6c8;
+  --cp-border: rgba(139, 230, 200, 0.35);
+  --cp-focus: #b6f3de;
+  --rc-ink: var(--cp-ink);
+  --rc-ink-dim: var(--cp-muted);
+  --rc-muted: var(--cp-muted);
+  --rc-brand: var(--cp-accent);
+  --tc-text: var(--cp-ink);
+  --tc-muted: var(--cp-muted);
+  color: var(--cp-ink);
+  background: var(--cp-bg);
+}
+html.rc-public-canyonpath body *,
+html.rc-public-canyonpath body *::before,
+html.rc-public-canyonpath body *::after { box-sizing: border-box; }
+html.rc-public-canyonpath body .tc-app { background: var(--cp-bg); }
+html.rc-public-canyonpath body .tc-topbar {
+  background: #05251f;
+  color: var(--cp-ink);
+  border-bottom-color: var(--cp-border);
+  margin-bottom: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.rc-public-canyonpath body .tc-topbar .tc-title {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+html.rc-public-canyonpath body .tc-sidebar {
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #062b24, #031c18);
+  border-right-color: var(--cp-border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.rc-public-canyonpath body .tc-nav a {
+  min-height: 46px;
+  color: var(--cp-muted);
+  opacity: 1;
+  transform: none;
+}
+html.rc-public-canyonpath body .tc-nav a:hover {
+  color: var(--cp-ink);
+  background: rgba(87, 175, 145, 0.16);
+  transform: none;
+}
+html.rc-public-canyonpath body .tc-nav a[aria-current='page'] {
+  color: var(--cp-ink);
+  background: rgba(38, 126, 99, 0.25);
+  border-left-color: var(--cp-accent);
+}
+html.rc-public-canyonpath body .tc-icon { color: var(--cp-accent); }
+html.rc-public-canyonpath.tc-collapsed body .tc-nav a {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  justify-content: center;
+}
+html.rc-public-canyonpath body:not(.rc-home-canyonpath) .tc-main {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  min-height: calc(100vh - var(--tc-topbar-h, 56px));
+  margin: 0;
+  padding: clamp(22px, 3.2vw, 48px);
+  border: 0;
+  border-radius: 0;
+  background: var(--cp-bg);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.rc-public-canyonpath body .cp-public-landscape {
+  position: absolute;
+  inset: 0 0 auto;
+  height: max(850px, calc(100vh - var(--tc-topbar-h, 56px)));
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+html.rc-public-canyonpath body .cp-public-landscape img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 60% top;
+  filter: none;
+}
+html.rc-public-canyonpath body .cp-public-landscape::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(3, 23, 20, 0.66), rgba(3, 23, 20, 0.30) 42%, rgba(3, 23, 20, 0.04)),
+    linear-gradient(180deg, rgba(3, 23, 20, 0.04) 15%, transparent 75%, var(--cp-bg) 100%);
+}
+html.rc-public-canyonpath body:not(.rc-home-canyonpath) .tc-main > :is(.content-wrapper, .wrap) {
+  position: relative;
+  width: 100%;
+  max-width: 1680px;
+  padding: 0;
+  margin-inline: auto;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html.rc-public-canyonpath body:not(.rc-home-canyonpath) .tc-main h1 {
+  max-width: 24ch;
+  margin: 24px 0 12px;
+  color: var(--cp-ink);
+  font-size: clamp(2rem, 3.6vw, 3.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+  text-shadow: 0 2px 15px rgba(0, 12, 10, 0.5);
+}
+html.rc-public-canyonpath body .tc-main :is(.content-wrapper > p, .unit-subtitle) {
+  color: #e0eee7;
+  font-size: 1.04rem;
+  line-height: 1.65;
+  margin-bottom: 24px;
+  max-width: 76ch;
+}
+html.rc-public-canyonpath body .tc-context-nav { margin: 0 0 20px; }
+html.rc-public-canyonpath body .tc-context-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--cp-border);
+  border-radius: 11px;
+  background: var(--cp-panel);
+  color: var(--cp-ink);
+  text-decoration: none;
+  font-weight: 650;
+}
+html.rc-public-canyonpath body .tc-main :is(.resource-grid, .book-grid, .toolkit-grid, .toolkits-grid, .rc-grid, .unit-grid, .grid) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 18px;
+  margin-top: 30px;
+}
+html.rc-public-canyonpath body .tc-main .resource-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+html.rc-public-canyonpath body .tc-main :is(.resource-card, .book-card, .unit-card, .toolkit-card, .rc-card, .unit-tile, .tool-card, .grid > .card) {
+  min-width: 0;
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background: var(--cp-panel);
+  color: var(--cp-ink);
+  box-shadow: 0 12px 30px rgba(0, 12, 10, 0.2), inset 0 1px rgba(246, 255, 251, 0.045);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  text-decoration: none;
+  transform: none;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+html.rc-public-canyonpath body .tc-main :is(.resource-card, .book-card) {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 142px;
+  padding: 22px;
+}
+html.rc-public-canyonpath body .tc-main :is(.resource-card, .book-card) > * { min-width: 0; }
+html.rc-public-canyonpath body .tc-main :is(.resource-card, .book-card, .unit-card, .toolkit-card, .rc-card, .unit-tile, .tool-card, .grid > .card):hover {
+  background: var(--cp-inner);
+  border-color: var(--cp-accent);
+  transform: none;
+}
+html.rc-public-canyonpath body .tc-main :is(.resource-icon, .book-icon) {
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid var(--cp-border);
+  background: rgba(75, 153, 123, 0.12);
+  color: var(--cp-accent);
+}
+html.rc-public-canyonpath body .tc-main :is(.resource-icon, .book-icon) svg { width: 27px; height: 27px; }
+html.rc-public-canyonpath body .tc-main :is(.resource-title, .book-title, .unit-title, .card .t) {
+  color: var(--cp-ink);
+  font-size: 1.06rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+html.rc-public-canyonpath body .tc-main :is(.resource-meta, .book-desc, .unit-desc, .unit-meta, .card .s) {
+  color: var(--cp-muted);
+  line-height: 1.55;
+  font-size: 0.88rem;
+}
+html.rc-public-canyonpath body .tc-main :is(input, select, textarea) {
+  max-width: 100%;
+  color: var(--cp-ink);
+  background-color: var(--cp-inner);
+  border-color: var(--cp-border);
+}
+html.rc-public-canyonpath body :is(a, button, summary, input, select, textarea):focus-visible {
+  outline: 3px solid var(--cp-focus);
+  outline-offset: 4px;
+}
+@media (max-width: 1100px) {
+  html.rc-public-canyonpath body .tc-main .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 768px) {
+  html.rc-public-canyonpath body { --tc-topbar-h: 100px; }
+  html.rc-public-canyonpath body .tc-topbar {
+    height: var(--tc-topbar-h);
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 2px 8px;
+    padding: 6px 12px;
+  }
+  html.rc-public-canyonpath body .tc-topbar .tc-btn { flex: 0 0 44px; min-height: 44px; }
+  html.rc-public-canyonpath body .tc-topbar .tc-title { flex: 1 1 0; min-width: 0; font-size: 0.94rem; }
+  html.rc-public-canyonpath body .tc-topbar .tc-clock {
+    flex: 0 0 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    white-space: normal;
+    gap: 2px 5px;
+  }
+  html.rc-public-canyonpath body .tc-main :is(.resource-grid, .book-grid) { grid-template-columns: 1fr; }
+  html.rc-public-canyonpath body .tc-main :is(.resource-card, .book-card) { min-height: 116px; padding: 18px; }
+  html.rc-public-canyonpath body .cp-public-landscape img { object-position: 58% top; }
+}
+@media (min-width: 1920px) {
+  html.rc-public-canyonpath body .tc-main :is(.resource-card, .book-card) { min-height: 160px; padding: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.rc-public-canyonpath body .tc-main :is(.resource-card, .book-card, .unit-card, .toolkit-card, .rc-card, .unit-tile, .tool-card, .grid > .card),
+  html.rc-public-canyonpath body .tc-nav a,
+  html.rc-public-canyonpath body .tc-sidebar { transition: none; animation: none; }
+}
+html.rc-public-canyonpath[data-theme='light'] body {
+  --cp-bg: #f5f8f6;
+  --cp-panel: rgba(255, 255, 255, 0.98);
+  --cp-inner: #edf5f0;
+  --cp-ink: #172f27;
+  --cp-muted: #3f6458;
+  --cp-accent: #0b6f5c;
+  --cp-focus: #0b6f5c;
+  --cp-border: rgba(11, 89, 75, 0.25);
+}
+html.rc-public-canyonpath[data-theme='light'] body :is(.tc-topbar, .tc-sidebar) { background: #f0f6f2; }
+html.rc-public-canyonpath[data-theme='light'] body .cp-public-landscape { display: none; }
+html.rc-public-canyonpath[data-theme='light'] body:not(.rc-home-canyonpath) .tc-main h1 { text-shadow: none; }
+html.rc-public-canyonpath[data-theme='light'] body .tc-main :is(.content-wrapper > p, .unit-subtitle) { color: var(--cp-muted); }
+@media print {
+  html.rc-public-canyonpath body .cp-public-landscape { display: none; }
+}

@@ -1,0 +1,51 @@
+name: Homepage CanyonPath visual checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'site/index.html'
+      - 'site/assets/css/home-canyonpath.css'
+      - 'site/assets/css/public-canyonpath.css'
+      - 'site/assets/bg/home-arizona.svg'
+      - 'site/assets/bg/moonlit-canyon*'
+      - 'site/web/sidebar-init.js'
+      - 'site/web/home-dashboard.js'
+      - 'site/web/public-shell.js'
+      - 'site/web/teacher-shell.css'
+      - 'site/assets/css/rc-theme.css'
+      - 'tests/home-canyonpath*'
+      - 'tests/public-canyonpath*'
+      - '.github/workflows/homepage-canyonpath.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  homepage-visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install test dependencies
+        run: npm ci --ignore-scripts
+      - name: Check homepage and public presentation boundaries
+        run: node tests/home-canyonpath.test.cjs && node tests/public-canyonpath.test.cjs && node tests/transitional-skills-rename-boundary.test.cjs
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test public browsing with local and synthetic data only
+        run: npx playwright test tests/home-canyonpath.spec.js tests/public-canyonpath.spec.js
+      - name: Retain public visual review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: homepage-canyonpath-visual-review
+          path: |
+            test-results/**/home-*.png
+            test-results/**/public-*.png
+          if-no-files-found: warn
+          retention-days: 7

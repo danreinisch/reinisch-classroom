@@ -327,11 +327,8 @@ const homepage = read(
   'site/index.html'
 );
 
-assert(
-  homepage.includes(
-    'TRANSITIONAL SKILLS'
-  )
-);
+// The announcement card is retired; the retained pathway keeps the visible course name.
+assert.match(homepage, /<strong>Transitional Skills<\/strong>/);
 
 assert(
   homepage.includes(
