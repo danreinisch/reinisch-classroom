@@ -290,3 +290,59 @@ test('Missing shared scene leaves public content usable', async ({ page }, testI
   await page.emulateMedia({ media: 'print' });
   await expect(page.locator('.cp-public-landscape')).toBeHidden();
 });
+
+test('Home and public scenery stay pinned while the document scrolls', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const result = await localOnly(page);
+
+  await page.goto('/');
+  const homeScene = page.locator('.home-landscape');
+  await expect(homeScene).toHaveCSS('position', 'fixed');
+
+  await page.evaluate(() => {
+    const filler = document.createElement('div');
+    filler.dataset.viewportPinTest = 'true';
+    filler.style.height = '1800px';
+    document.querySelector('.home-frame')?.appendChild(filler);
+  });
+
+  const homeTopBefore = await homeScene.evaluate(
+    element => element.getBoundingClientRect().top
+  );
+  await page.evaluate(() => window.scrollTo(0, 900));
+  await page.waitForTimeout(50);
+  const homeTopAfter = await homeScene.evaluate(
+    element => element.getBoundingClientRect().top
+  );
+  expect(Math.abs(homeTopAfter - homeTopBefore)).toBeLessThan(1);
+
+  await page.goto('/language-arts/');
+  const publicScene = page.locator('.cp-public-landscape');
+  await expect(publicScene).toHaveCSS('position', 'fixed');
+
+  await page.evaluate(() => {
+    const filler = document.createElement('div');
+    filler.dataset.viewportPinTest = 'true';
+    filler.style.height = '1800px';
+    document.querySelector('.content-wrapper, .wrap')?.appendChild(filler);
+  });
+
+  const publicTopBefore = await publicScene.evaluate(
+    element => element.getBoundingClientRect().top
+  );
+  await page.evaluate(() => window.scrollTo(0, 900));
+  await page.waitForTimeout(50);
+  const publicTopAfter = await publicScene.evaluate(
+    element => element.getBoundingClientRect().top
+  );
+  expect(Math.abs(publicTopAfter - publicTopBefore)).toBeLessThan(1);
+
+  await page.goto('/substitute/');
+  await expect(page.locator('.tc-main')).toHaveCSS(
+    'background-attachment',
+    'fixed, fixed, fixed'
+  );
+
+  expect(result.writes).toEqual([]);
+  expect(result.errors).toEqual([]);
+});
