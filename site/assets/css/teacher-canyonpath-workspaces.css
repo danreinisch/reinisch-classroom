@@ -1,0 +1,98 @@
+/* Native Teacher Center workspaces. Explicit neutral surfaces only: never
+   restyle score cells, semantic badges, hidden views, auth gates or chart data.
+   Existing module layouts, sticky positioning and print exports stay in charge. */
+@media screen {
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.work-card,.gb-card,.rv-response-card,.st-kpi-card,.st-detail-panel,.st-quick-entry-panel,.rp-kpi-card,.rp-report-card,.rp-summary-card,.rp-ev-profile-card,.rp-ev-stats-card,.aib-card,.aib-stat-card,.aib-history-card,.sub-card,.ar-card,.share-card,.cy-card,.assignment-card,.ev-card,.obs-center-panel,.obs-center-capture-card) {
+    background: var(--tcp-panel);
+    border-color: var(--tcp-border);
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(0,12,10,.12), inset 0 1px rgba(246,255,251,.035);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.work-card,.gb-card,.aib-card,.sub-card,.ar-card,.share-card,.cy-card,.assignment-card):hover { background: var(--tcp-panel); }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.work-tablewrap,.gb-tablewrap,.st-table-container,.spr-table-wrap,.sub-tablewrap,.sched-tablewrap,.tc-table-wrap,.rp-filters) {
+    background: #073128;
+    border-color: var(--tcp-border);
+  }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.tc-table,.gb-table,.work-table,.st-table,.spr-table,.sched-table,.sub-table,.share-table) th {
+    background: #0b3b31;
+    color: var(--tcp-muted);
+    opacity: 1;
+    border-color: var(--tcp-border);
+    backdrop-filter: none;
+  }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) table.gb-table :is(th.gb-student-col,td.gb-student-cell) { background: #0b3b31; }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) table.gb-table tbody tr:nth-child(even) td.gb-student-cell { background: #104336; }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.work-dialog,.st-modal,.cse-modal,.sp-panel) {
+    background: #073128;
+    color: var(--tcp-ink);
+    border-color: var(--tcp-border);
+    box-shadow: 0 22px 80px rgba(0,10,8,.6);
+  }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.work-field,.st-form-group,.share-form-group,.settings-form-group) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),select,textarea),
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.rp-select,.rp-status-select,.rv-select,.rv-search-input,.st-form-input,.st-form-select,.gb-sort-select,.gb-focus-select,.gb-copy-title-input,.obs-center-period-select,.obs-center-date-input,.obs-center-student-rail-search,.sub-template-select,.share-select,.ar-search-input,.dt-search-input) {
+    color-scheme: dark;
+    color: var(--tcp-ink);
+    background: #082d25;
+    border-color: var(--tcp-border);
+    max-width: 100%;
+  }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.work-field,.st-form-group,.share-form-group,.settings-form-group) :is(input,textarea)::placeholder,
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.rv-search-input,.ar-search-input,.dt-search-input)::placeholder { color: #9fbeb2; opacity: 1; }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.rp-tabs,.aib-tabs,.st-tabs,.rv-status-tabs) {
+    flex-wrap: wrap;
+    gap: 5px;
+    border-color: var(--tcp-border);
+  }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.rp-tab,.aib-tab-btn,.st-tab,.rv-status-tab) {
+    min-height: 42px;
+    color: var(--tcp-muted);
+    opacity: 1;
+    border-radius: 9px;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.rp-tab,.aib-tab-btn,.st-tab,.rv-status-tab).active,
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.rp-tab,.aib-tab-btn)[aria-selected="true"],
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) .work-btn[data-pv-tab].active {
+    background: #14523f;
+    border-color: var(--tcp-accent);
+    color: var(--tcp-ink);
+    box-shadow: inset 0 -2px var(--tcp-accent);
+  }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.gb-btn,.work-btn,.rv-filter-btn,.gb-filter-btn):not(.danger):not(.active):not(.primary) {
+    background: #103d32;
+    border-color: var(--tcp-border);
+  }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.gb-btn,.work-btn).primary {
+    background: #14523f;
+    border-color: var(--tcp-accent);
+  }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.gb-empty,.work-empty,.rp-empty,.ar-empty,.obs-center-helper,.obs-center-hint) { color: var(--tcp-muted); }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) .mini-cal-day { aspect-ratio: auto; min-height: 40px; }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) .mini-cal-day.other-month { opacity: .62; }
+  /* Media utility has an independent admin gate and no shared navigation.
+     Match its static upload controls, without revealing #app or changing #gate. */
+  body:has(#objectPath):has(#videoFile) {
+    color: #f4fbf8;
+    background: #031714 url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1') top right / auto 660px no-repeat;
+  }
+  body:has(#objectPath):has(#videoFile) .wrap {
+    background: rgba(5,48,40,.97);
+    border-color: rgba(158,226,206,.27);
+    box-shadow: 0 12px 40px rgba(0,12,10,.25);
+  }
+  body:has(#objectPath):has(#videoFile) :is(a,button,input):focus-visible { outline: 3px solid #b6f3de; outline-offset: 3px; }
+}
+@media screen and (max-width: 768px) {
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.work-grid,.aib-grid) { grid-template-columns: minmax(0,1fr); }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.rv-header,.spr-toolbar) { flex-wrap: wrap; gap: 10px; }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.rp-filter-group,.rv-search-input) { min-width: 0; max-width: 100%; }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) .rp-tab { padding-inline: 12px; }
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) .work-dialog { max-width: calc(100vw - 24px); }
+  body:has(#objectPath):has(#videoFile) .wrap { margin: 12px; padding: 16px; }
+  body:has(#objectPath):has(#videoFile) .bar { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.rp-tab,.aib-tab-btn,.st-tab,.rv-status-tab,.work-btn,.rv-filter-btn) { transition: none; }
+}
