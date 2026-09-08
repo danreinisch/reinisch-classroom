@@ -4,21 +4,24 @@ import process from 'node:process';
 const baseline = process.env.TC_NAV_BASELINE === '1';
 const routes = baseline ? ['', 'observations'] : ['', 'work', 'ai-builder', 'library', 'review', 'gradebook', 'students', 'observations', 'calendar', 'schedule', 'substitute', 'archive', 'admin', 'reporting', 'district-export', 'share', 'settings', 'close-year', 'students/spreadsheet'];
 
-async function isolate(page, { state = 'collapsed', session = 200, denyStorage = false } = {}) {
+async function isolate(page, { state = 'collapsed', session = 200, denyStorage = false, role = 'teacher' } = {}) {
   await page.addInitScript(({ state, denyStorage }) => {
-    localStorage.clear(); sessionStorage.clear();
-    if (state !== null) localStorage.setItem('rc_tc_sidebar', state);
-    // Deliberately disagree: Teacher geometry must not inherit public state.
-    localStorage.setItem('rc_public_sidebar', state === 'expanded' ? 'collapsed' : 'expanded');
+    if (!sessionStorage.getItem('tc_nav_synthetic_seeded')) {
+      localStorage.clear(); sessionStorage.clear();
+      sessionStorage.setItem('tc_nav_synthetic_seeded', '1');
+      if (state !== null) localStorage.setItem('rc_tc_sidebar', state);
+      // Deliberately disagree: Teacher geometry must not inherit public state.
+      localStorage.setItem('rc_public_sidebar', state === 'expanded' ? 'collapsed' : 'expanded');
+    }
     if (denyStorage) Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('Synthetic denied storage', 'SecurityError'); } });
   }, { state, denyStorage });
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
     if (url.origin !== 'http://localhost:8888') return route.abort();
     if (url.pathname.startsWith('/.netlify/functions/')) {
-      if (url.pathname.endsWith('/teacher-session')) return route.fulfill({ status: session, json: session === 200 ? { ok: true, role: 'teacher', session: { code: 'synthetic-teacher', role: 'teacher' } } : { ok: false, error: 'Synthetic unavailable session' } });
+      if (url.pathname.endsWith('/teacher-session')) return route.fulfill({ status: session, json: session === 200 ? { ok: true, role, raw_role: role, session: { code: 'synthetic-teacher', role } } : { ok: false, error: 'Synthetic unavailable session' } });
       if (url.pathname.endsWith('/browser-supabase-config')) return route.fulfill({ status: 503, json: { ok: false } });
-      if (url.pathname.endsWith('/teacher-refresh')) return route.fulfill({ json: { ok: true, role: 'teacher', session: { role: 'teacher' } } });
+      if (url.pathname.endsWith('/teacher-refresh')) return route.fulfill({ json: { ok: true, role, session: { role } } });
       return route.fulfill({ json: { ok: true, count: 0, students: [], goals: [], classes: [], assignments: [], instances: [], submissions: [], entries: [], rows: [], events: [], items: [], plans: [], templates: [] } });
     }
     if (url.pathname.startsWith('/assets/data/') && url.pathname.endsWith('.json')) return route.fulfill({ json: {} });
@@ -42,7 +45,7 @@ test.afterEach(async ({ page }, info) => {
 for (const route of routes) {
   test(`slow shell ${route || 'overview'}: sidebar is stable at first paint`, async ({ page }, info) => {
     await page.setViewportSize({ width: 1366, height: 768 });
-    await isolate(page);
+    await isolate(page, { role: route === 'admin' ? 'admin' : 'teacher' });
     let release;
     const held = new Promise(resolve => { release = resolve; });
     await page.route('**/web/teacher-shell.js*', async route => {
@@ -51,7 +54,8 @@ for (const route of routes) {
       await route.fulfill({ response });
     });
     try {
-      await page.goto(`/teacher/${route ? route + '/' : ''}`, { waitUntil: 'commit' });
+      const target = `/teacher/${route ? route + '/' : ''}`;
+      await page.goto(target, { waitUntil: 'commit' });
       await expect(page.locator('.tc-main')).toBeVisible();
       const before = await geometry(page);
       await shot(page, info, 'before-shell-runtime');
@@ -63,6 +67,7 @@ for (const route of routes) {
       }
       release();
       await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
+      await expect(page).toHaveURL('http://localhost:8888' + target);
       await expect(page.locator('.tc-sidebar')).toHaveCSS('width', '64px');
       const after = await geometry(page);
       console.log(JSON.stringify({ source: baseline ? 'main-diagnostic' : 'candidate', route, before, after }));
@@ -145,7 +150,7 @@ if (!baseline) {
       await page.goto('/teacher/', { waitUntil: 'domcontentloaded' });
       await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
       await expect(page.locator('body')).toBeVisible();
-      await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+      await page.getByRole('button', { name: 'Sign out', exact: true }).click({ noWaitAfter: true });
       await expect(page).toHaveURL(/\/teacher\/login\/$/);
       await expect(page.locator('#loginForm')).toBeVisible();
       await expect(page.locator('html')).not.toHaveClass(/rc-teacher-navigation/);
