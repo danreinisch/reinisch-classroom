@@ -49,6 +49,9 @@
     background-size: 100% 100%, 100% 100%, max(100%, 1197px) auto;
     background-position: top right;
     background-repeat: no-repeat;
+    /* The shell may be much taller than the viewport. Keep all scenic layers
+       registered to the viewport while the Teacher content scrolls over them. */
+    background-attachment: fixed, fixed, fixed;
   }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-topbar {
     background: #05251f;
@@ -189,4 +192,47 @@
 @media (forced-colors: active) {
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell { background-image: none; }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) :is(.tc-main,.rc-card,.tc-card) { border: 1px solid CanvasText; }
+}
+
+/* Shared CanyonPath viewport pin.
+   The Student Portal already uses a fixed pseudo-layer. These remaining scenic
+   owners now follow the same rule: content scrolls, scenery does not. */
+body.rc-home-canyonpath {
+  --rc-cp-viewport-left: var(--tc-side-w, 260px);
+}
+html.tc-collapsed body.rc-home-canyonpath {
+  --rc-cp-viewport-left: var(--tc-rail-w, 64px);
+}
+body.rc-home-canyonpath .home-landscape {
+  position: fixed !important;
+  inset: var(--tc-topbar-h, 56px) 0 0 var(--rc-cp-viewport-left) !important;
+  height: auto !important;
+}
+
+html.rc-public-canyonpath body {
+  --rc-cp-viewport-left: var(--tc-side-w, 260px);
+}
+html.rc-public-canyonpath.tc-collapsed body {
+  --rc-cp-viewport-left: var(--tc-rail-w, 64px);
+}
+html.rc-public-canyonpath body .cp-public-landscape {
+  position: fixed !important;
+  inset: var(--tc-topbar-h, 56px) 0 0 var(--rc-cp-viewport-left) !important;
+  height: auto !important;
+}
+
+@media screen {
+  body.rc-teacher-login .tc-main {
+    background-attachment: fixed, fixed !important;
+  }
+  body.rc-substitute-canyonpath .tc-main {
+    background-attachment: fixed, fixed, fixed !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  body.rc-home-canyonpath,
+  html.rc-public-canyonpath body {
+    --rc-cp-viewport-left: 0px;
+  }
 }
