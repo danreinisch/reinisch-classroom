@@ -122,3 +122,77 @@ test('Student mobile login retains collapsed off-canvas navigation', async ({ pa
   expect(rail.right).toBeLessThanOrEqual(1);
   expect(rail.transform).not.toBe('none');
 });
+
+
+test('Student compact desktop keeps the sidebar physically on canvas', async ({ page }) => {
+  await prepare(page, 720, 844);
+
+  await expect(page.locator('#loginView')).toBeVisible();
+  await expect(page.locator('html')).toHaveClass(/tc-collapsed/);
+
+  const sidebar = page.locator('.tc-sidebar');
+
+  await expect.poll(
+    () => sidebar.evaluate(el => {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+
+      return (
+        rect.left >= -1 &&
+        rect.right > 60 &&
+        rect.width >= 63 &&
+        style.transform === 'none' &&
+        style.position === 'sticky'
+      );
+    }),
+    {
+      message: 'collapsed compact-desktop Student rail should settle fully on canvas',
+      timeout: 2000,
+    }
+  ).toBe(true);
+
+  await page.evaluate(() => {
+    document.querySelector('#loginView')?.classList.add('hidden');
+    document.querySelector('#studentDashboardView')?.classList.remove('hidden');
+  });
+
+  await expect(page.locator('#studentDashboardView')).toBeVisible();
+
+  await expect.poll(
+    () => sidebar.evaluate(el => {
+      const rect = el.getBoundingClientRect();
+
+      return (
+        rect.left >= -1 &&
+        rect.right > 60 &&
+        rect.width >= 63 &&
+        getComputedStyle(el).transform === 'none'
+      );
+    }),
+    {
+      message: 'authenticated compact-desktop Student rail should remain fully on canvas',
+      timeout: 2000,
+    }
+  ).toBe(true);
+
+  await page.locator('#tcSidebarToggle').click();
+
+  await expect(page.locator('html')).not.toHaveClass(/tc-collapsed/);
+  await expect(sidebar).toHaveCSS('width', '260px');
+
+  await expect.poll(
+    async () => {
+      const expanded = await sidebar.boundingBox();
+
+      return Boolean(
+        expanded &&
+        expanded.x >= -1 &&
+        expanded.width >= 259
+      );
+    },
+    {
+      message: 'expanded compact-desktop Student sidebar should settle on canvas at full width',
+      timeout: 2000,
+    }
+  ).toBe(true);
+});
