@@ -57,6 +57,22 @@ try {
 })();
 // END TEACHER FIRST PAINT
 
+// Teacher Students boot hydration. The large students runtime intentionally
+// defers optional objective reads during first-load alert expansion. Load a
+// tiny one-shot companion only on this route so already-expanded goal cards
+// re-enter the existing signed Goals render boundary after first paint.
+(function () {
+  var path = window.location.pathname.replace(/\/index\.html$/i, '/').replace(/\/+$/, '') || '/';
+  if (path !== '/teacher/students') return;
+  if (document.querySelector('script[data-teacher-students-objective-hydration]')) return;
+
+  var script = document.createElement('script');
+  script.src = '/web/tc-students-objective-hydration.js?v=20260908-hydration1';
+  script.async = false;
+  script.setAttribute('data-teacher-students-objective-hydration', 'true');
+  document.head.appendChild(script);
+})();
+
 // Student Portal presentation layers are intentionally scoped to /student/.
 // Loading them here avoids coupling presentation work to the large portal runtime
 // and leaves Teacher Center / public pages untouched.
