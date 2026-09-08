@@ -90,6 +90,42 @@ test('decorative markup stays outside accessibility-critical content', () => {
   assert.match(bootstrap, /image\.alt = ''/);
 });
 
+test('scenic layers stay registered to the viewport while content scrolls', () => {
+  const sharedShell = fs.readFileSync(
+    'site/assets/css/teacher-canyonpath-shell.css',
+    'utf8'
+  );
+  const student = fs.readFileSync(
+    'site/assets/css/student-canyonpath-reference-match.css',
+    'utf8'
+  );
+
+  assert.match(
+    sharedShell,
+    /\.tc-shell\s*\{[\s\S]*?background-attachment:\s*fixed,\s*fixed,\s*fixed;/
+  );
+  assert.match(
+    sharedShell,
+    /\.home-landscape\s*\{[\s\S]*?position:\s*fixed\s*!important;/
+  );
+  assert.match(
+    sharedShell,
+    /\.cp-public-landscape\s*\{[\s\S]*?position:\s*fixed\s*!important;/
+  );
+  assert.match(
+    sharedShell,
+    /body\.rc-teacher-login \.tc-main\s*\{[\s\S]*?background-attachment:\s*fixed,\s*fixed\s*!important;/
+  );
+  assert.match(
+    sharedShell,
+    /body\.rc-substitute-canyonpath \.tc-main\s*\{[\s\S]*?background-attachment:\s*fixed,\s*fixed,\s*fixed\s*!important;/
+  );
+  assert.match(
+    student,
+    /\.tc-main::before\s*\{[\s\S]*?position:\s*fixed;/
+  );
+});
+
 test('substitute opt-in is presentation-only and screen-scoped', () => {
   const html = fs.readFileSync('site/substitute/index.html', 'utf8');
   const css = fs.readFileSync(
