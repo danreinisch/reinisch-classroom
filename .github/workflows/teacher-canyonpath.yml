@@ -1,0 +1,82 @@
+name: Teacher CanyonPath presentation
+
+on:
+  push:
+    branches: ['feat/teacher-substitute-canyonpath-20260908']
+  pull_request:
+    paths:
+      - 'site/teacher/**'
+      - 'site/substitute/**'
+      - 'site/web/teacher-shell.*'
+      - 'site/assets/css/teacher-canyonpath*.css'
+      - 'site/assets/css/substitute-canyonpath.css'
+      - 'tests/teacher-canyonpath*'
+      - '.github/workflows/teacher-canyonpath.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teacher-canyonpath-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  browser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Protected presentation and existing authentication and Observation contracts
+        run: npx playwright test tests/teacher-canyonpath*.spec.js tests/teacher-center-auth-redirect.spec.js tests/observation-center-ui.spec.js tests/observation-center-card-deck-ui.spec.js tests/observation-center-goal-quick-capture-ui.spec.js tests/observation-center-student-first-ui.spec.js tests/observation-center-student-rail-ui.spec.js --project=chromium --workers=2 --retries=0 --reporter=list,html
+      - name: Preserve synthetic screenshots and browser report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teacher-canyonpath-browser-review
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+  approved-surface-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Existing presentation, gradebook, deadline and evidence unit contracts
+        run: |
+          node tests/home-canyonpath.test.cjs
+          node tests/public-canyonpath.test.cjs
+          node tests/student-canyonpath-shell.test.cjs
+          node tests/tc-gradebook-helpers.test.cjs
+          node tests/teacher-assignment-due-date-semantics.test.cjs
+          node tests/teacher-gradebook-save-score-browser-boundary.test.cjs
+          node tests/observation-center-period-persistence.test.cjs
+          node tests/observation-disposition-behavior.test.cjs
+          node tests/observation-disposition-persistence.test.cjs
+      - run: npx playwright install --with-deps chromium
+      - name: Already-approved homepage and public navigation
+        run: npx playwright test tests/home-canyonpath.spec.js tests/public-canyonpath.spec.js tests/public-navigation.spec.js tests/student-portal-no-supabase.spec.js --project=chromium --workers=2 --retries=0 --reporter=list,html
+      - name: Preserve synthetic approved-surface report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teacher-canyonpath-approved-surface-regression
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

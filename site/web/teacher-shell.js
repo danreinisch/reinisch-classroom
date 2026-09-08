@@ -16,6 +16,10 @@
     }catch(_){ return true; }
   }
 
+  // Restore only presentation state before the session request. Never wait for
+  // authentication latency to settle sidebar geometry; auth below is unchanged.
+  document.documentElement.classList.toggle('tc-collapsed', getCollapsed());
+
   async function gateTeacher(){
     const currentPath = location.pathname;
     

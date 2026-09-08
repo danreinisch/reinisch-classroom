@@ -1,3 +1,6 @@
+@import url("/assets/css/teacher-canyonpath-shell.css?v=20260908-tc-scene2");
+@import url("/assets/css/teacher-canyonpath-workspaces.css?v=20260908-tc2");
+
 /* Teacher Shell uses rc-theme.css as base — aliases for backward compat */
 :root{
   --tc-topbar-h:56px;
