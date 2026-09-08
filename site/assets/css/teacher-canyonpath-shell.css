@@ -41,7 +41,8 @@
       linear-gradient(180deg, transparent 460px, #031714 820px),
       linear-gradient(90deg, rgba(3,23,20,.55), rgba(3,23,20,.04) 65%),
       url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
-    background-size: 100% 820px, 100% 820px, auto 760px;
+    /* Fill the canvas without distorting the image or leaving a hard left edge. */
+    background-size: 100% 820px, 100% 820px, max(100%, 1197px) auto;
     background-position: top right;
     background-repeat: no-repeat;
   }
@@ -101,6 +102,9 @@
      removal, extra DOM, or added vertical space in the dense workspaces. */
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-main:has(#ovKpis) > div:first-child {
     min-height: 150px;
+    /* Override this heading row's existing inline alignment, not its hooks. */
+    align-items: flex-end !important;
+    padding-bottom: 12px;
   }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-main h1 {
     font-size: clamp(1.65rem, 2.6vw, 2.15rem);
@@ -162,7 +166,7 @@
 @media screen and (max-width: 768px) {
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell {
     background-size: 100% 820px, 100% 820px, auto 600px;
-    background-position: top center;
+    background-position: 66% top;
   }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-main {
     margin: 10px;
