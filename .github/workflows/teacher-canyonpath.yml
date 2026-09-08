@@ -1,0 +1,70 @@
+name: Teacher CanyonPath presentation
+
+on:
+  push:
+    branches: ['feat/teacher-substitute-canyonpath-20260908']
+  pull_request:
+    paths:
+      - 'site/teacher/**'
+      - 'site/substitute/**'
+      - 'site/web/teacher-shell.*'
+      - 'site/assets/css/teacher-canyonpath*.css'
+      - 'site/assets/css/substitute-canyonpath.css'
+      - 'tests/teacher-canyonpath*'
+      - '.github/workflows/teacher-canyonpath.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teacher-canyonpath-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inventory static routes and presentation dependencies only
+        run: |
+          mkdir -p presentation-audit
+          node --input-type=commonjs <<'NODE' > presentation-audit/inventory.txt
+          const fs = require('node:fs');
+          const path = require('node:path');
+          function walk(root) {
+            if (!fs.existsSync(root)) return [];
+            return fs.readdirSync(root, {withFileTypes:true}).flatMap(e => {
+              const p = path.join(root,e.name);
+              return e.isDirectory() ? walk(p) : [p];
+            });
+          }
+          for (const file of [...walk('site/teacher'), ...walk('site/substitute')].filter(p => p.endsWith('.html'))) {
+            const html = fs.readFileSync(file,'utf8');
+            const scripts = [...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi)].map(m=>m[1]);
+            const styles = [...html.matchAll(/<link\b[^>]*\bhref=["']([^"']+\.css[^"']*)["']/gi)].map(m=>m[1]);
+            const tabs = [...html.matchAll(/(?:data-tab|data-pane|aria-controls)=["']([^"']+)["']/gi)].map(m=>m[1]);
+            console.log(JSON.stringify({file,scripts,styles,tabs:[...new Set(tabs)]}));
+          }
+          NODE
+          # Source-code-only capsule for isolated inspection; no classroom records,
+          # environment files, credentials, database exports, or runtime sessions.
+          python3 - <<'PY'
+          import pathlib, tarfile
+          roots = ['site/teacher', 'site/substitute', 'site/web', 'site/assets/css', 'tests']
+          suffixes = {'.html', '.js', '.mjs', '.cjs', '.css'}
+          files = {p for root in roots for p in pathlib.Path(root).rglob('*') if p.is_file() and p.suffix in suffixes}
+          for name in ['package.json', 'package-lock.json', 'playwright.config.js', '.eslintrc.json', 'site/index.html', 'site/assets/bg/moonlit-canyon.webp', 'site/assets/bg/moonlit-canyon.meta.json', '.github/workflows/ci.yml', '.github/workflows/teacher-canyonpath.yml']:
+              p = pathlib.Path(name)
+              if p.is_file(): files.add(p)
+          with tarfile.open('presentation-audit/source-code.tar.gz','w:gz') as tar:
+              for p in sorted(files): tar.add(p,arcname=str(p))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teacher-canyonpath-source-audit
+          path: presentation-audit/
+          retention-days: 3
