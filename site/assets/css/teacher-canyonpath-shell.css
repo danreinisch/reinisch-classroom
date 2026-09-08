@@ -41,8 +41,10 @@
       linear-gradient(180deg, transparent 460px, #031714 820px),
       linear-gradient(90deg, rgba(3,23,20,.55), rgba(3,23,20,.04) 65%),
       url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
-    /* Fill the canvas without distorting the image or leaving a hard left edge. */
-    background-size: 100% 820px, 100% 820px, max(100%, 1197px) auto;
+    /* Fill the canvas without distorting the image or leaving a hard edge.
+       Gradients cover the full page so larger artwork cannot reappear below
+       the fade's last color stop on a long dashboard. */
+    background-size: 100% 100%, 100% 100%, max(100%, 1197px) auto;
     background-position: top right;
     background-repeat: no-repeat;
   }
@@ -165,7 +167,7 @@
 }
 @media screen and (max-width: 768px) {
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell {
-    background-size: 100% 820px, 100% 820px, auto 600px;
+    background-size: 100% 100%, 100% 100%, auto 600px;
     background-position: 66% top;
   }
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-main {
