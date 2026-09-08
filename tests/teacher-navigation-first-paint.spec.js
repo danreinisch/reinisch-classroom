@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import process from 'node:process';
 
 const baseline = process.env.TC_NAV_BASELINE === '1';
 const routes = baseline ? ['', 'observations'] : ['', 'work', 'ai-builder', 'library', 'review', 'gradebook', 'students', 'observations', 'calendar', 'schedule', 'substitute', 'archive', 'admin', 'reporting', 'district-export', 'share', 'settings', 'close-year', 'students/spreadsheet'];
