@@ -12,6 +12,8 @@
     --tcp-accent: #8be6c8;
     --tcp-border: rgba(158, 226, 206, .27);
     --tcp-focus: #b6f3de;
+    --tcp-scene-fade-start: 460px;
+    --tcp-scene-fade-end: 760px;
     --rc-base: var(--tcp-bg);
     --rc-panel: #073128;
     --rc-panel-2: var(--tcp-inner);
@@ -38,7 +40,7 @@
      Native 912 x 579 artwork is reused unchanged; this is not a high-res master. */
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell {
     background-image:
-      linear-gradient(180deg, transparent 460px, #031714 820px),
+      linear-gradient(180deg, transparent var(--tcp-scene-fade-start), #031714 var(--tcp-scene-fade-end)),
       linear-gradient(90deg, rgba(3,23,20,.55), rgba(3,23,20,.04) 65%),
       url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
     /* Fill the canvas without distorting the image or leaving a hard edge.
@@ -157,7 +159,7 @@
   html[data-theme="light"] body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell {
     background-color: #e7f1eb;
     background-image:
-      linear-gradient(180deg, transparent 460px, #e7f1eb 820px),
+      linear-gradient(180deg, transparent var(--tcp-scene-fade-start), #e7f1eb var(--tcp-scene-fade-end)),
       linear-gradient(90deg, rgba(3,23,20,.55), rgba(3,23,20,.04) 65%),
       url('/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1');
   }
@@ -167,6 +169,8 @@
 }
 @media screen and (max-width: 768px) {
   body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-shell {
+    --tcp-scene-fade-start: 340px;
+    --tcp-scene-fade-end: 600px;
     background-size: 100% 100%, 100% 100%, auto 600px;
     background-position: 66% top;
   }
