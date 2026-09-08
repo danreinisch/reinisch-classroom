@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { JSDOM } = require('jsdom');
 
 const root = path.resolve(__dirname, '..');
 const sourcePath = path.join(root, 'site/web/tc-students.js');
@@ -10,9 +11,19 @@ const htmlPath = path.join(
   root,
   'site/teacher/students/index.html'
 );
+const hydrationPath = path.join(
+  root,
+  'site/web/tc-students-objective-hydration.js'
+);
+const sidebarInitPath = path.join(
+  root,
+  'site/web/sidebar-init.js'
+);
 
 const source = fs.readFileSync(sourcePath, 'utf8');
 const html = fs.readFileSync(htmlPath, 'utf8');
+const hydration = fs.readFileSync(hydrationPath, 'utf8');
+const sidebarInit = fs.readFileSync(sidebarInitPath, 'utf8');
 
 function extractNamedFunction(text, name) {
   const marker = `function ${name}(`;
@@ -175,6 +186,204 @@ assert.ok(
   'the previous standalone cache URL must not remain'
 );
 
+/* ========================================================================== */
+/* Deferred child-objective control hydration                                  */
+/* ========================================================================== */
+
+assert.ok(
+  sidebarInit.includes(
+    "if (path !== '/teacher/students') return;"
+  ),
+  'objective hydration loader must be scoped to Teacher Students only'
+);
+
+assert.ok(
+  sidebarInit.includes(
+    '/web/tc-students-objective-hydration.js?v=20260908-hydration1'
+  ),
+  'Teacher Students must load the dedicated boot-hydration companion'
+);
+
+for (
+  const marker
+  of [
+    'IEP Objective Progress',
+    '.st-tab.active[data-tab="goals"]',
+    '.st-objective-manual-entry',
+    'data-objective-hydration-requested',
+    'MutationObserver',
+    'activeGoalsTab.click()',
+    'BOOT_WINDOW_MS',
+  ]
+) {
+  assert.ok(
+    hydration.includes(marker),
+    `objective hydration companion must include ${marker}`
+  );
+}
+
+for (
+  const forbidden
+  of [
+    'saveManualObjectiveEvidence',
+    'objective_data_points',
+    'teacher-manual-objective-evidence',
+    'fetch(',
+    'localStorage',
+  ]
+) {
+  assert.ok(
+    !hydration.includes(forbidden),
+    `boot hydration must not create a second evidence or eligibility path: ${forbidden}`
+  );
+}
+
+function deferredMarkup({
+  manualEntry = false,
+} = {}) {
+  return `<!doctype html>
+    <html>
+      <body>
+        <table>
+          <tbody id="stStudentTableBody">
+            <tr class="st-expanded-row">
+              <td>
+                <div class="st-expanded-content" id="stExpandedDetail-S999">
+                  <div class="st-tabs">
+                    <button class="st-tab active" data-tab="goals">Goals</button>
+                    <button class="st-tab" data-tab="progress">Progress</button>
+                  </div>
+                  <section>
+                    <div>IEP Objective Progress</div>
+                    <div>No Data</div>
+                    ${manualEntry ? '<div class="st-objective-manual-entry"><button>Record Evidence</button></div>' : ''}
+                  </section>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </body>
+    </html>`;
+}
+
+async function exerciseHydration({
+  manualEntry = false,
+  url = 'https://reinischclassroom.com/teacher/students/',
+} = {}) {
+  const dom = new JSDOM(
+    deferredMarkup({ manualEntry }),
+    {
+      url,
+      runScripts: 'outside-only',
+    }
+  );
+
+  const container =
+    dom.window.document.querySelector(
+      '.st-expanded-content'
+    );
+
+  const goalsTab =
+    container.querySelector(
+      '.st-tab.active[data-tab="goals"]'
+    );
+
+  let clicks = 0;
+
+  goalsTab.addEventListener(
+    'click',
+    () => {
+      clicks += 1;
+    }
+  );
+
+  dom.window.eval(hydration);
+
+  if (
+    dom.window.document.readyState ===
+    'loading'
+  ) {
+    dom.window.document.dispatchEvent(
+      new dom.window.Event(
+        'DOMContentLoaded',
+        { bubbles: true }
+      )
+    );
+  }
+
+  await new Promise(resolve =>
+    dom.window.setTimeout(resolve, 25)
+  );
+
+  // Simulate another boot-render mutation. The marker must make hydration
+  // idempotent rather than creating a click/re-render loop.
+  const mutation =
+    dom.window.document.createElement('span');
+  mutation.textContent = 'later mutation';
+  container.appendChild(mutation);
+
+  await new Promise(resolve =>
+    dom.window.setTimeout(resolve, 25)
+  );
+
+  const marker =
+    container.getAttribute(
+      'data-objective-hydration-requested'
+    );
+
+  dom.window.close();
+
+  return {
+    clicks,
+    marker,
+  };
+}
+
+async function runHydrationBehavior() {
+  const deferred =
+    await exerciseHydration();
+
+  assert.strictEqual(
+    deferred.clicks,
+    1,
+    'deferred objective markup must re-enter the normal Goals render exactly once'
+  );
+
+  assert.strictEqual(
+    deferred.marker,
+    'true',
+    'deferred objective markup must be marked before re-render to prevent loops'
+  );
+
+  const alreadyHydrated =
+    await exerciseHydration({
+      manualEntry: true,
+    });
+
+  assert.strictEqual(
+    alreadyHydrated.clicks,
+    0,
+    'existing Record Evidence controls must never be re-hydrated'
+  );
+
+  const wrongRoute =
+    await exerciseHydration({
+      url:
+        'https://reinischclassroom.com/teacher/review/',
+    });
+
+  assert.strictEqual(
+    wrongRoute.clicks,
+    0,
+    'hydration companion must be inert outside Teacher Students'
+  );
+
+  console.log(
+    '✓ Deferred child-objective controls hydrate once through the existing Goals render boundary'
+  );
+}
+
 console.log(
   '✓ Initial alert students remain visibly auto-expanded'
 );
@@ -196,3 +405,8 @@ console.log(
 console.log(
   '✓ RC-PERF-02 cache marker is registered'
 );
+
+runHydrationBehavior().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
