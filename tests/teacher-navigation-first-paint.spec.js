@@ -67,6 +67,9 @@ for (const route of routes) {
       const target = `/teacher/${route ? route + '/' : ''}`;
       await page.goto(target, { waitUntil: 'commit' });
       await expect(page.locator('.tc-main')).toBeVisible();
+      // DOM visibility alone can precede render-blocking CSS. Measure the
+      // styled frame, while the shell script is still withheld on both builds.
+      await expect(page.locator('.tc-shell')).toHaveCSS('display', 'flex');
       const before = await geometry(page);
       await shot(page, info, 'before-shell-runtime');
       expect(before.collapsed).toBe(!baseline);
