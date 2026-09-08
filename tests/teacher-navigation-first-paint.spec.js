@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import process from 'node:process';
+import { writeFileSync } from 'node:fs';
+import { Buffer } from 'node:buffer';
 
 const baseline = process.env.TC_NAV_BASELINE === '1';
 const routes = baseline ? ['', 'observations'] : ['', 'work', 'ai-builder', 'library', 'review', 'gradebook', 'students', 'observations', 'calendar', 'schedule', 'substitute', 'archive', 'admin', 'reporting', 'district-export', 'share', 'settings', 'close-year', 'students/spreadsheet'];
@@ -29,7 +31,15 @@ async function isolate(page, { state = 'collapsed', session = 200, denyStorage =
   });
 }
 async function shot(page, info, name) {
-  await page.screenshot({ path: info.outputPath(name + '.png'), fullPage: false });
+  // These tests deliberately hold parser-blocking JS before load. Playwright's
+  // normal screenshot waits for document.fonts.ready, which cannot settle yet.
+  // Capture the real Chromium compositor frame; never remove or hide a gate.
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    writeFileSync(info.outputPath(name + '.png'), Buffer.from(data, 'base64'));
+  } finally { await cdp.detach(); }
 }
 async function geometry(page) {
   return page.evaluate(() => {
