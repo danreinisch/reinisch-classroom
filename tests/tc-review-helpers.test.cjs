@@ -22,7 +22,7 @@ function escapeHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/\"/g, '&quot;')
+    .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
 
@@ -287,7 +287,7 @@ function deduplicateSubmissions(rawSubmissions) {
     { id: 'empty_shell', instance_id: 'inst-s002', answers: {}, submitted_at: '2026-03-10T00:00:00Z' },
   ];
   const result = deduplicateSubmissions(subs);
-  assert.strictEqual(result.length, 1, 'S002: should reduce to 1 submission per instance');
+  assert.strictEqual(result.length, 1, 'S002: should reduce to 1 submission');
   assert.strictEqual(result[0].id, 'resubmission', 'S002: should select the resubmission (67%), not the empty shell');
   console.log('✓ S002 scenario: resubmission selected over empty shell');
 }
