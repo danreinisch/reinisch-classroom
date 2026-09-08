@@ -626,25 +626,50 @@
   }
 
   /**
-   * Returns true if an item should be treated as auto-scored —
-   * either it is an objective MCQ/boolean/multi item, or it is a
-   * fill-in-blank constructed item that the server already scored
-   * (earned_points != null in submission_answers).
-   *
-   * Note: With partial credit, earned_points may be 0 (zero keywords found)
-   * which is still "auto-scored". The check `earned_points != null` correctly
-   * handles this since 0 != null is true.
-   *
-   * @param {Object} item    - Assignment item from assignmentItemsCache
-   * @param {Array}  answers - submission_answers rows for this submission
+   * True when a constructed item has an explicit keyword scoring contract.
+   * This mirrors the student-submit server behavior for meta.scoring.keywords
+   * and legacy array-valued meta.correct keyword lists.
+   */
+  function isKeywordAutoScoredConstructed(item) {
+    if (item.answer_type !== 'constructed') return false;
+    const scoringKeywords = item.meta?.scoring?.keywords;
+    const correctKeywords = item.meta?.correct;
+    return (
+      (Array.isArray(scoringKeywords) && scoringKeywords.length > 0) ||
+      (Array.isArray(correctKeywords) && correctKeywords.length > 0)
+    );
+  }
+
+  function findItemAnswer(item, answers) {
+    return (answers || []).find(
+      answer =>
+        String(answer?.item_id ?? answer?.assignment_item_id ?? '') ===
+        String(item?.id ?? '')
+    );
+  }
+
+  function hasScoredAnswer(item, answers) {
+    const answer = findItemAnswer(item, answers);
+    return answer != null && answer.earned_points != null;
+  }
+
+  /**
+   * Returns true only when an item belongs to the automatic-scoring bucket.
+   * A numeric earned_points value is not, by itself, proof that a written
+   * response was auto-scored: teacher- and AI-reviewed writing remains manual.
    */
   function isAutoScoredItem(item, answers) {
     if (item.answer_type === 'mcq' || item.answer_type === 'boolean' || item.answer_type === 'multi') {
       return true;
     }
-    if (item.answer_type === 'constructed' || item.answer_type === 'written_response') {
-      const answer = answers.find(a => a.item_id === item.id);
-      return answer != null && answer.earned_points != null;
+    if (
+      item.answer_type === 'constructed' &&
+      (
+        isFillInBlankConstructed(item) ||
+        isKeywordAutoScoredConstructed(item)
+      )
+    ) {
+      return hasScoredAnswer(item, answers);
     }
     return false;
   }
@@ -670,6 +695,12 @@
   function isManualGradeItem(item) {
     if (item.answer_type === 'written_response') return true;
     return item.answer_type === 'constructed' && !isFillInBlankConstructed(item);
+  }
+
+  // Academic score completeness is separate from auto/manual provenance.
+  function isScoredItem(item, answers) {
+    if (isAutoScoredItem(item, answers)) return true;
+    return isManualGradeItem(item) && hasScoredAnswer(item, answers);
   }
 
 
@@ -732,7 +763,7 @@
   }
 
   function isReviewCompleteItem(item, answers) {
-    if (!isAutoScoredItem(item, answers)) {
+    if (!isScoredItem(item, answers)) {
       return false;
     }
 
@@ -921,8 +952,6 @@
       const constructedItems = items.filter(item => isManualGradeItem(item));
       if (constructedItems.length === 0) continue; // MCQ-only or fill-in-blank-only handled by autoFinalize
       const answers = submissionAnswersCache[submission.id] || [];
-      // A constructed item counts as scored if it is auto-scored (earned_points != null),
-      // whether by the keyword engine or by a teacher rubric.
       const allScored = constructedItems.every(item => isReviewCompleteItem(item, answers));
       if (allScored) finalizableCount++;
     }
@@ -936,7 +965,7 @@
       const constructedItems = items.filter(item => isManualGradeItem(item));
       if (constructedItems.length === 0) continue;
       const answers = submissionAnswersCache[submission.id] || [];
-      const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
+      const hasUnscored = constructedItems.some(item => !isScoredItem(item, answers));
       if (hasUnscored) autoGradeCount++;
     }
 
@@ -1141,7 +1170,7 @@
       const totalMax = items.reduce((sum, i) => sum + (i.points || 0), 0);
       if (totalMax > 0) {
         const constructedItems = items.filter(i => isManualGradeItem(i));
-        const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
+        const hasUnscored = constructedItems.some(item => !isScoredItem(item, answers));
         if (hasUnscored) {
           scorePreview = `<span class="rv-score-preview" style="font-size:13px;font-family:monospace;opacity:0.75;">___/${totalMax} — ___%</span>`;
         } else {
@@ -2088,7 +2117,6 @@
       const constructedItems = items.filter(item => isManualGradeItem(item));
       if (constructedItems.length === 0) continue;
       const answers = submissionAnswersCache[submission.id] || [];
-      // A constructed item counts as scored if keyword-auto-scored or teacher-scored
       const allScored = constructedItems.every(item => isReviewCompleteItem(item, answers));
       if (allScored) finalizable.push(submission);
     }
@@ -2410,7 +2438,7 @@
       const constructedItems = items.filter(item => item.answer_type === 'constructed' || item.answer_type === 'written_response');
       if (constructedItems.length === 0) continue;
       const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
-      const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
+      const hasUnscored = constructedItems.some(item => !isScoredItem(item, answers));
       if (hasUnscored) toAutoGrade.push(submission);
     }
 
@@ -2445,7 +2473,7 @@
           const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
           const assignmentTitle = instance?.settings?.title || '';
           for (const item of constructedItems) {
-            if (isAutoScoredItem(item, answers)) continue; // already scored
+            if (isScoredItem(item, answers)) continue; // already scored
 
             const answer = answers.find(a => a.item_id === item.id);
             const rawAnswer = answer?.raw_answer;
@@ -4596,7 +4624,7 @@
     const gradedBy = localStorage.getItem('rc_teacher_name') || '';
 
     // Compute score_manual from per-item constructed-response answers.
-    // Keyword-auto-scored fill-in-blank items (earned_points already set) count toward scoreAuto.
+    // Keyword-auto-scored fill-in-blank items count toward scoreAuto.
     const submission = submissionsData.find(s => s.id === submissionId);
     if (!submission) return;
     const items = assignmentItemsCache[resolveAssignmentId(submission)] || [];
@@ -4667,8 +4695,6 @@
       }
 
       // Trigger goal progress updates when all items have been scored.
-      // isAutoScoredItem covers both keyword-auto-scored fill-in-blank and
-      // teacher-scored writing prompts (earned_points != null).
       if (allConstructedScored) {
         try {
           await triggerGoalProgressUpdates(submission, items, answers);
