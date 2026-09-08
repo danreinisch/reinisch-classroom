@@ -40,6 +40,9 @@ async function assertDecodedScene(page) {
   }, SCENE);
   expect(dimensions).toEqual([912, 579]);
   await expect(page.locator('.tc-shell')).toHaveCSS('background-image', /moonlit-canyon\.webp/);
+  // The fade must continue below its last color stop: a fixed-height gradient
+  // exposes the larger image again at the bottom of a long or wide dashboard.
+  await expect(page.locator('.tc-shell')).toHaveCSS('background-size', /^100% 100%, 100% 100%,/);
 }
 
 for (const size of [
@@ -56,6 +59,7 @@ for (const size of [
     // The previous 82%-opaque page-sized scrim hid an otherwise loaded image.
     await expect(page.locator('.tc-main')).toHaveCSS('background-color', 'rgba(3, 29, 24, 0.24)');
     await expect(page.locator('.tc-main > div').first()).toHaveCSS('min-height', '150px');
+    await expect(page.locator('.tc-main > div').first()).toHaveCSS('align-items', 'flex-end');
     await expect(page.locator('#ovKpis .rc-card').first()).toHaveCSS('background-color', 'rgba(5, 48, 40, 0.96)');
     await expect(page.locator('#ovChecklistCard')).toBeVisible();
     await expect(page.locator('#ovFeedCard')).toBeVisible();
