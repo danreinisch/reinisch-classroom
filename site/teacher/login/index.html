@@ -110,8 +110,10 @@
       display: block;
     }
   </style>
+  <link rel="preload" as="image" href="/assets/bg/moonlit-canyon.webp?v=20260907-moonlit1" />
+  <link rel="stylesheet" href="/assets/css/teacher-canyonpath-login.css?v=20260908-login1" />
 </head>
-<body>
+<body class="rc-teacher-login">
   <div class="tc-app">
     <header class="tc-topbar">
       <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">
@@ -133,21 +135,21 @@
     <div class="tc-shell">
       <aside class="tc-sidebar" aria-label="Navigation">
         <nav class="tc-nav">
-          <a href="/"><span class="tc-icon">
+          <a href="/" aria-label="Home"><span class="tc-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
               <polyline points="9 22 9 12 15 12 15 22"></polyline>
             </svg>
           </span><span class="tc-label">Home</span></a>
-          <a href="/student/"><span class="tc-icon">
+          <a href="/student/" aria-label="Student Portal"><span class="tc-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="7" r="4"></circle>
               <path d="M5.5 21v-2a7.5 7.5 0 0 1 13 0v2"></path>
             </svg>
           </span><span class="tc-label">Student Portal</span></a>
-          <a href="/teacher/"><span class="tc-icon">
+          <a href="/teacher/" aria-label="Teacher Center"><span class="tc-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <path d="M14 2H6a2 2 0 0 1-2 2v16a2 2 0 0 1 2 2h12a2 2 0 0 1 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
               <line x1="16" y1="13" x2="8" y2="13"></line>
               <line x1="16" y1="17" x2="8" y2="17"></line>
