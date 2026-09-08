@@ -71,7 +71,7 @@ test('public browsing routes and index aliases opt in without touching data', ()
     assert.equal(h.children.length, 1);
     assert.equal(h.children[0].attributes['aria-hidden'], 'true');
     assert.equal(h.children[0].children[0].alt, '');
-    assert.match(h.children[0].children[0].src, /^\/assets\/bg\/rc-annotated-canyon\.svg\?v=20260908-annotated1$/);
+    assert.match(h.children[0].children[0].src, /^\/assets\/bg\/rc-annotated-canyon-approved\.webp\?v=20260908-annotated4$/);
   }
 });
 
@@ -140,9 +140,9 @@ test('public reading surfaces retain text contrast even without background blur'
 });
 
 test('public pages use the same standalone scene with accurate native dimensions', () => {
-  assert.match(bootstrap, /image.width = 912/);
-  assert.match(bootstrap, /image.height = 579/);
-  assert.match(bootstrap, /rc-annotated-canyon\.svg\?v=20260908-annotated1/);
+  assert.match(bootstrap, /image.width = 1672/);
+  assert.match(bootstrap, /image.height = 941/);
+  assert.match(bootstrap, /rc-annotated-canyon-approved\.webp\?v=20260908-annotated4/);
   assert.match(bootstrap, /public-canyonpath\.css\?v=20260907-moonlit1/);
   assert.doesNotMatch(bootstrap, /https?:|data:image|home-arizona\.svg/);
   assert.match(css, /approved standalone scene/);
@@ -171,7 +171,7 @@ test('Critical public CSS is render-blocking before insertion; scenery is preloa
   const preloads = h.extraLinks.filter((link) => link.rel === 'preload');
   assert.equal(preloads.length, 1);
   assert.equal(preloads[0].as, 'image');
-  assert.equal(preloads[0].href, '/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1');
+  assert.equal(preloads[0].href, '/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4');
   assert.equal(h.children.length, 0, 'preload happens before DOM readiness');
   h.callbacks.forEach((fn) => fn());
   assert.equal(h.children.length, 1);
@@ -215,8 +215,8 @@ test('Original sidebar and Student Portal bootstrap prefix is unchanged', () => 
   // digest so unrelated bootstrap edits, duplicate blocks or moved code fail.
   const teacherBlock = prefix.match(/\/\/ BEGIN TEACHER FIRST PAINT\n[\s\S]*?\/\/ END TEACHER FIRST PAINT\n\n/);
   if (teacherBlock) {
-    assert.equal(createHash('sha256').update(teacherBlock[0]).digest('hex'), '4ae0715ef78c5ff1f19e25fb410c6f8f678d2698cd402bdc8aedfbe4ac1eb55e', 'Only the reviewed Teacher-only block may be excluded');
+    assert.equal(createHash('sha256').update(teacherBlock[0]).digest('hex'), 'b96bc9fc985f679ab2d23e64d360dc3ba5ae298e5724194b2469a6c0e690d689', 'Only the reviewed Teacher-only block may be excluded');
   }
   const originalPrefix = teacherBlock ? prefix.replace(teacherBlock[0], '') : prefix;
-  assert.equal(createHash('sha256').update(originalPrefix).digest('hex'), '46701ec2a0a97da8d49a4884b8ec8a597c3e4159f413069764636e568e69718e');
+  assert.equal(createHash('sha256').update(originalPrefix).digest('hex'), '113fdc19bfff470fcb87f4df19cae88a16e23db7da5c2a0fb85a9dd972e24d61');
 });

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const SCENE = '/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1';
+const SCENE = '/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4';
 
 async function screenshot(page, testInfo, name, fullPage = true) {
   const path = testInfo.outputPath(`${name}.png`);
@@ -106,7 +106,7 @@ test('Student dashboard and long Grades surface share the annotated scene', asyn
     '::before'
   );
 
-  expect(dashboardScene).toContain('rc-annotated-canyon.svg');
+  expect(dashboardScene).toContain('rc-annotated-canyon-approved.webp');
   expect(
     await page.evaluate(() =>
       document.documentElement.scrollWidth <= innerWidth + 1
@@ -164,7 +164,7 @@ test('Student dashboard and long Grades surface share the annotated scene', asyn
     '::before'
   );
 
-  expect(gradesScene).toContain('rc-annotated-canyon.svg');
+  expect(gradesScene).toContain('rc-annotated-canyon-approved.webp');
 
   await screenshot(page, testInfo, 'student-grades-long');
 
@@ -189,7 +189,7 @@ test('Student mobile login keeps scenery and controls readable', async ({ page }
     '::before'
   );
 
-  expect(scene).toContain('rc-annotated-canyon.svg');
+  expect(scene).toContain('rc-annotated-canyon-approved.webp');
 
   expect(
     await page.evaluate(() =>
@@ -213,7 +213,7 @@ test('Substitute login and dashboard use the shared scene and print cleanly', as
   await expect(page.locator('#loginView')).toBeVisible();
 
   const loginScene = await sceneBackground(page, '.tc-main');
-  expect(loginScene).toContain('rc-annotated-canyon.svg');
+  expect(loginScene).toContain('rc-annotated-canyon-approved.webp');
 
   await screenshot(page, testInfo, 'substitute-login');
 
@@ -248,7 +248,7 @@ test('Substitute login and dashboard use the shared scene and print cleanly', as
   await expect(page.locator('[data-annotated-visual-test]')).toBeVisible();
 
   const dashboardScene = await sceneBackground(page, '.tc-main');
-  expect(dashboardScene).toContain('rc-annotated-canyon.svg');
+  expect(dashboardScene).toContain('rc-annotated-canyon-approved.webp');
 
   await screenshot(page, testInfo, 'substitute-dashboard');
 
@@ -265,7 +265,7 @@ test('Substitute login and dashboard use the shared scene and print cleanly', as
 test('Missing shared scene leaves public content usable', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
 
-  await page.route('**/assets/bg/rc-annotated-canyon.svg*', route =>
+  await page.route('**/assets/bg/rc-annotated-canyon-approved.webp*', route =>
     route.abort()
   );
 

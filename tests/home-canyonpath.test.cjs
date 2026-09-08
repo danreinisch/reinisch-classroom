@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const html = fs.readFileSync('site/index.html', 'utf8');
 const css = fs.readFileSync('site/assets/css/home-canyonpath.css', 'utf8');
-const scene = fs.readFileSync('site/assets/bg/rc-annotated-canyon.svg', 'utf8');
-const asset = JSON.parse(fs.readFileSync('site/assets/bg/rc-annotated-canyon.meta.json', 'utf8'));
+const scene = fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.webp');
+const asset = JSON.parse(fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.meta.json', 'utf8'));
 const { createHash } = require('node:crypto');
 const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
 
@@ -68,30 +68,19 @@ test('Homepage CSS is scoped and does not introduce data access or external depe
   assert.doesNotMatch(css, /@import|https?:|fetch\(|localStorage|sessionStorage|supabase|!important/);
 });
 
-test('Approved annotated scenery is local, decorative, and self-contained', () => {
-  assert.match(scene, /^<svg\b/);
-  assert.match(scene, /viewBox="0 0 912 579"/);
-  assert.match(scene, /href="data:image\/webp;base64,/);
-  assert.doesNotMatch(scene, /<script\b/i);
-  assert.doesNotMatch(
-    scene,
-    /\b(?:href|xlink:href)=["']https?:\/\//i
-  );
-  assert.doesNotMatch(
-    scene,
-    /url\(\s*["']?https?:\/\//i
-  );
-
-  assert.equal(asset.file, 'rc-annotated-canyon.svg');
-  assert.equal(asset.format, 'svg');
-  assert.equal(asset.viewBox, '0 0 912 579');
+test('Approved annotated scenery is local, decorative, and exact', () => {
+  assert.equal(asset.file, 'rc-annotated-canyon-approved.webp');
+  assert.equal(asset.format, 'webp');
+  assert.equal(asset.width, 1672);
+  assert.equal(asset.height, 941);
   assert.equal(
     asset.sha256,
-    createHash('sha256').update(Buffer.from(scene, 'utf8')).digest('hex')
+    createHash('sha256').update(scene).digest('hex')
   );
+  assert.equal(asset.sha256, 'e5a9850c93073d0fe450b5ee7627ff541a33414323bc6237ba05c370cfb90d14');
   assert.ok(
-    Buffer.byteLength(scene, 'utf8') < 120000,
-    'Keep shared decorative scenery lightweight'
+    scene.length < 600000,
+    'Keep shared decorative scenery reasonably lightweight'
   );
 
   for (const label of [
@@ -102,16 +91,24 @@ test('Approved annotated scenery is local, decorative, and self-contained', () =
     'Carnegiea gigantea',
     'Pug',
     'Canis lupus familiaris',
+    'Scale bar',
+    'Compass',
   ]) {
-    assert.ok(scene.includes(label), label);
+    assert.ok(asset.labels.includes(label), label);
   }
 
   assert.match(
     html,
-    /<img[^>]*rc-annotated-canyon\.svg\?v=20260908-annotated1[^>]*alt=""[^>]*width="912"[^>]*height="579"[^>]*fetchpriority="high"/
+    /<img[^>]*rc-annotated-canyon-approved\.webp\?v=20260908-annotated4[^>]*alt=""[^>]*width="1672"[^>]*height="941"[^>]*fetchpriority="high"/
   );
+
   assert.doesNotMatch(html, /home-arizona\.svg/);
-  assert.match(html, /home-canyonpath\.css\?v=20260907-moonlit1/);
+
+  assert.match(
+    html,
+    /home-canyonpath\.css\?v=20260907-moonlit1/
+  );
+
   assert.match(
     html,
     /href="\/life-skills\/" aria-label="Open Transitional Skills"/

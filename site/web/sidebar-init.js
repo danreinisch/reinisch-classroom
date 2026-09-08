@@ -50,7 +50,7 @@ try {
     var preload = document.createElement('link');
     preload.rel = 'preload';
     preload.as = 'image';
-    preload.href = '/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1';
+    preload.href = '/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4';
     preload.setAttribute('data-teacher-scene-preload', 'true');
     document.head.appendChild(preload);
   }
@@ -88,7 +88,7 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
     // every exploratory pass so the approved Dashboard / Goals / Login images
     // define the effective presentation standard.
     addStudentStylesheetOnce('/assets/css/student-canyonpath-final.css?v=20260907-2a6', 'data-student-canyonpath-final');
-    addStudentStylesheetOnce('/assets/css/student-canyonpath-reference-match.css?v=20260908-annotated1', 'data-student-canyonpath-reference-match');
+    addStudentStylesheetOnce('/assets/css/student-canyonpath-reference-match.css?v=20260908-annotated4', 'data-student-canyonpath-reference-match');
   };
 
   // Append after the page's inline styles so the scoped polish layers are the
@@ -159,7 +159,7 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
 
   // Start the same small, cacheable decorative asset during head parsing,
   // rather than first discovering it in the DOMContentLoaded scenery callback.
-  var scene = '/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1';
+  var scene = '/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4';
   if (!document.querySelector('link[data-canyon-scene-preload]')) {
     var preload = document.createElement('link');
     preload.rel = 'preload';
@@ -184,8 +184,8 @@ if (window.location.pathname === '/student/' || window.location.pathname.startsW
     var image = document.createElement('img');
     image.src = scene;
     image.alt = '';
-    image.width = 912;
-    image.height = 579;
+    image.width = 1672;
+    image.height = 941;
     image.decoding = 'async';
     landscape.appendChild(image);
     main.insertBefore(landscape, main.firstChild);

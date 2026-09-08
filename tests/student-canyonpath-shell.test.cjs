@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const { createHash } = require('node:crypto');
 
 const css = fs.readFileSync('site/assets/css/student-canyonpath.css', 'utf8');
 const refineCss = fs.readFileSync('site/assets/css/student-canyonpath-refine.css', 'utf8');
@@ -9,7 +10,8 @@ const cinematicCss = fs.readFileSync('site/assets/css/student-canyonpath-cinemat
 const premiumCss = fs.readFileSync('site/assets/css/student-canyonpath-premium.css', 'utf8');
 const finalCss = fs.readFileSync('site/assets/css/student-canyonpath-final.css', 'utf8');
 const referenceCss = fs.readFileSync('site/assets/css/student-canyonpath-reference-match.css', 'utf8');
-const sceneSvg = fs.readFileSync('site/assets/bg/rc-annotated-canyon.svg', 'utf8');
+const sceneBytes = fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.webp');
+const sceneMeta = JSON.parse(fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.meta.json', 'utf8'));
 const js = fs.readFileSync('site/web/student-canyonpath.js', 'utf8');
 const refineJs = fs.readFileSync('site/web/student-canyonpath-refine.js', 'utf8');
 const sidebar = fs.readFileSync('site/web/sidebar-init.js', 'utf8');
@@ -113,12 +115,15 @@ test('Phase 2A legacy scenery is overridden at the main canvas without changing 
   assert.match(finalCss, /\.stcp-page-hero[\s\S]*background:\s*transparent/);
 });
 
-test('Phase 2A scenery uses the shared annotated landscape rather than portrait JPEG tiles', () => {
-  const tokens = declarationsFor(referenceCss, 'body.rc-student-canyonpath');
+test('Phase 2A scenery uses the shared approved field-guide landscape', () => {
+  const tokens = declarationsFor(
+    referenceCss,
+    'body.rc-student-canyonpath'
+  );
 
   assert.equal(
     tokens['--stcpl-scene-image'],
-    "url('/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1')"
+    "url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4')"
   );
 
   assert.doesNotMatch(
@@ -131,29 +136,19 @@ test('Phase 2A scenery uses the shared annotated landscape rather than portrait 
     1
   );
 
-  const viewBox = sceneSvg.match(
-    /viewBox=["']0 0 (\d+) (\d+)["']/
+  assert.equal(sceneMeta.file, 'rc-annotated-canyon-approved.webp');
+  assert.equal(sceneMeta.format, 'webp');
+  assert.equal(sceneMeta.width, 1672);
+  assert.equal(sceneMeta.height, 941);
+
+  assert.equal(
+    sceneMeta.sha256,
+    createHash('sha256').update(sceneBytes).digest('hex')
   );
 
-  assert.ok(viewBox, 'Shared scene must have an explicit landscape viewBox');
-  assert.ok(Number(viewBox[1]) >= 900);
-  assert.ok(Number(viewBox[1]) > Number(viewBox[2]));
-
-  assert.match(sceneSvg, /data:image\/webp;base64,/);
-  assert.doesNotMatch(
-    sceneSvg,
-    /<script\b/i,
-    'Shared scene must not contain scripts'
-  );
-  assert.doesNotMatch(
-    sceneSvg,
-    /\b(?:href|xlink:href)=["']https?:\/\//i,
-    'Shared scene must not load external href resources'
-  );
-  assert.doesNotMatch(
-    sceneSvg,
-    /url\(\s*["']?https?:\/\//i,
-    'Shared scene must not load external CSS resources'
+  assert.equal(
+    sceneMeta.sha256,
+    'e5a9850c93073d0fe450b5ee7627ff541a33414323bc6237ba05c370cfb90d14'
   );
 
   for (const label of [
@@ -162,8 +157,10 @@ test('Phase 2A scenery uses the shared annotated landscape rather than portrait 
     'Colorado River',
     'Saguaro Cactus',
     'Pug',
+    'Scale bar',
+    'Compass',
   ]) {
-    assert.ok(sceneSvg.includes(label), label);
+    assert.ok(sceneMeta.labels.includes(label), label);
   }
 });
 
@@ -298,7 +295,7 @@ test('Student route loads CanyonPath foundation and approved-reference layers la
   assert.match(sidebar, /student-canyonpath-cinematic\.css\?v=20260907-2a4/);
   assert.match(sidebar, /student-canyonpath-premium\.css\?v=20260907-2a5/);
   assert.match(sidebar, /student-canyonpath-final\.css\?v=20260907-2a6/);
-  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260908-annotated1/);
+  assert.match(sidebar, /student-canyonpath-reference-match\.css\?v=20260908-annotated4/);
   assert.match(sidebar, /student-canyonpath\.js\?v=20260907-2a3/);
   assert.match(sidebar, /student-canyonpath-refine\.js\?v=20260907-2a4/);
   assert.ok(sidebar.indexOf('student-canyonpath-reference-match.css') > sidebar.indexOf('student-canyonpath-final.css'));

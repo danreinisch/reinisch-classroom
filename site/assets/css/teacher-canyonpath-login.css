@@ -74,7 +74,7 @@
     background-color: var(--login-bg);
     background-image:
       linear-gradient(180deg, rgba(3, 23, 20, .08) 55%, rgba(3, 23, 20, .68)),
-      url('/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1');
+      url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4');
     background-size: cover;
     background-position: 66% center;
     background-repeat: no-repeat;

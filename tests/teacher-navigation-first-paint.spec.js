@@ -76,7 +76,7 @@ for (const route of routes) {
       if (!baseline) {
         expect(before.sidebar).toBe(64);
         expect(before.canvas).toBe('rgb(3, 23, 20)');
-        await expect(page.locator('link[data-teacher-scene-preload]')).toHaveAttribute('href', '/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1');
+        await expect(page.locator('link[data-teacher-scene-preload]')).toHaveAttribute('href', '/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4');
       }
       release();
       await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
@@ -158,7 +158,7 @@ if (!baseline) {
     await isolate(page);
     let release;
     const held = new Promise(resolve => { release = resolve; });
-    await page.route('**/assets/bg/rc-annotated-canyon.svg*', async route => { await held; await route.abort(); });
+    await page.route('**/assets/bg/rc-annotated-canyon-approved.webp*', async route => { await held; await route.abort(); });
     try {
       await page.goto('/teacher/', { waitUntil: 'domcontentloaded' });
       await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();

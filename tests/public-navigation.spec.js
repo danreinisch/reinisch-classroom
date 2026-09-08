@@ -57,9 +57,9 @@ for (const view of [
     await page.setViewportSize({ width: view.width, height: 900 });
     const result = await isolatedPublic(page, { saved: view.saved });
     await page.goto('/');
-    await expect(page.locator('.home-pathway strong')).toHaveText(['Language Arts', 'Transitional Skills', 'Student Portal']);
-    await expect(page.locator('.home-pathway').nth(2)).toHaveAttribute('href', '/student/');
-    await expect(page.locator('.home-pathway').nth(2)).toHaveAccessibleName('Open Student Portal');
+    await expect(page.locator('.home-pathway:visible strong')).toHaveText(['Language Arts', 'Transitional Skills']);
+    await expect(page.locator('.home-student-cta')).toHaveAttribute('href', '/student/');
+    await expect(page.locator('.home-student-cta')).toHaveAccessibleName('Student Portal');
     await expect(page.locator('.home-teacher-cta')).toHaveAttribute('href', '/teacher/');
     await expect.poll(() => page.evaluate(() => window.__publicNavigationFrames.length)).toBeGreaterThanOrEqual(8);
     expect(await page.evaluate(() => window.__publicNavigationFrames)).toEqual(expect.arrayContaining([view.collapsed]));
@@ -87,7 +87,7 @@ test('navigation delayed CSS: first content paint waits for the public theme', a
   const timing = await page.evaluate(() => ({
     paint: performance.getEntriesByName('first-contentful-paint')[0].startTime,
     stylesheet: performance.getEntriesByType('resource').find((r) => r.name.includes('/public-canyonpath.css')).responseEnd,
-    sceneStart: performance.getEntriesByType('resource').find((r) => r.name.includes('/rc-annotated-canyon.svg')).startTime,
+    sceneStart: performance.getEntriesByType('resource').find((r) => r.name.includes('/rc-annotated-canyon-approved.webp')).startTime,
     ready: performance.getEntriesByType('navigation')[0].domContentLoadedEventStart,
   }));
   expect(timing.stylesheet).toBeGreaterThan(0);
@@ -112,7 +112,7 @@ for (const reducedMotion of ['no-preference', 'reduce']) {
     await expect.poll(() => page.evaluate(() => window.__publicNavigationReveal)).toBe(reducedMotion === 'no-preference');
     await page.goBack();
     await expect(page).toHaveURL('http://localhost:8888/');
-    await expect(page.locator('.home-pathway').nth(2)).toHaveAttribute('href', '/student/');
+    await expect(page.locator('.home-student-cta')).toHaveAttribute('href', '/student/');
     await page.goForward();
     await expect(page).toHaveURL(/\/classroom-resources\/$/);
     await page.locator('.tc-nav a[data-href="/language-arts/"]').click();
@@ -142,9 +142,9 @@ test('navigation sidebar choice persists across documents and keyboard links rem
 test('navigation failed enhancement or scenery never leaves content hidden or links blocked', async ({ page }) => {
   const result = await isolatedPublic(page);
   await page.route('**/assets/css/public-navigation.css*', (route) => route.abort());
-  await page.route('**/assets/bg/rc-annotated-canyon.svg*', (route) => route.abort());
+  await page.route('**/assets/bg/rc-annotated-canyon-approved.webp*', (route) => route.abort());
   await page.goto('/');
-  await expect(page.locator('.home-pathway').nth(2)).toBeVisible();
+  await expect(page.locator('.home-student-cta')).toBeVisible();
   await page.locator('.home-pathway[href="/language-arts/"]').click();
   await expect(page).toHaveURL(/\/language-arts\/$/);
   await expect(page.getByRole('heading', { name: 'Language Arts', exact: true })).toBeVisible();

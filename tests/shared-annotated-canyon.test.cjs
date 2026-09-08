@@ -3,38 +3,34 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { createHash } = require('node:crypto');
 
-const scenePath = 'site/assets/bg/rc-annotated-canyon.svg';
-const metaPath = 'site/assets/bg/rc-annotated-canyon.meta.json';
-const sceneUrl =
-  '/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1';
+const scenePath = 'site/assets/bg/rc-annotated-canyon-approved.webp';
+const metaPath =
+  'site/assets/bg/rc-annotated-canyon-approved.meta.json';
+const sceneUrl = '/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4';
 
-const scene = fs.readFileSync(scenePath, 'utf8');
+const scene = fs.readFileSync(scenePath);
 const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
 
-test('shared annotated canyon is self-contained decorative artwork', () => {
-  assert.match(scene, /^<svg\b/);
-  assert.match(scene, /viewBox="0 0 912 579"/);
-  assert.match(scene, /aria-hidden="true"/);
-  assert.match(scene, /data:image\/webp;base64,/);
-  assert.doesNotMatch(scene, /<script\b/i);
-  assert.doesNotMatch(
-    scene,
-    /\b(?:href|xlink:href)=["']https?:\/\//i
-  );
-  assert.doesNotMatch(
-    scene,
-    /url\(\s*["']?https?:\/\//i
-  );
+test('shared approved canyon is the exact reviewed decorative artwork', () => {
+  assert.equal(meta.file, 'rc-annotated-canyon-approved.webp');
+  assert.equal(meta.format, 'webp');
+  assert.equal(meta.width, 1672);
+  assert.equal(meta.height, 941);
 
-  assert.equal(meta.file, 'rc-annotated-canyon.svg');
-  assert.equal(meta.format, 'svg');
   assert.equal(
     meta.sha256,
     createHash('sha256').update(scene).digest('hex')
   );
+
+  assert.equal(
+    meta.sha256,
+    'e5a9850c93073d0fe450b5ee7627ff541a33414323bc6237ba05c370cfb90d14'
+  );
+
+  assert.ok(scene.length < 600000);
 });
 
-test('approved field-guide annotations are present', () => {
+test('approved field-guide annotation contract is recorded beside the artwork', () => {
   for (const label of [
     'Lunar Illumination',
     'Stratified Canyon Walls',
@@ -44,8 +40,10 @@ test('approved field-guide annotations are present', () => {
     'Pug',
     'Canis lupus familiaris',
     'Grand Canyon Region',
+    'Scale bar',
+    'Compass',
   ]) {
-    assert.ok(scene.includes(label), label);
+    assert.ok(meta.labels.includes(label), label);
   }
 });
 
@@ -63,6 +61,7 @@ test('production presentation owners converge on one shared scene', () => {
 
   for (const [file, count] of expected) {
     const source = fs.readFileSync(file, 'utf8');
+
     assert.equal(
       source.split(sceneUrl).length - 1,
       count,
@@ -72,22 +71,31 @@ test('production presentation owners converge on one shared scene', () => {
 });
 
 test('decorative markup stays outside accessibility-critical content', () => {
-  const home = fs.readFileSync('site/index.html', 'utf8');
-  const bootstrap = fs.readFileSync('site/web/sidebar-init.js', 'utf8');
+  const home =
+    fs.readFileSync('site/index.html', 'utf8');
+
+  const bootstrap =
+    fs.readFileSync('site/web/sidebar-init.js', 'utf8');
 
   assert.match(
     home,
     /class="home-landscape" aria-hidden="true"/
   );
+
   assert.match(
     home,
-    /rc-annotated-canyon\.svg[^>]*alt=""/
+    /rc-annotated-canyon-approved\.webp[^>]*alt=""/
   );
+
   assert.match(
     bootstrap,
     /landscape\.setAttribute\('aria-hidden', 'true'\)/
   );
-  assert.match(bootstrap, /image\.alt = ''/);
+
+  assert.match(
+    bootstrap,
+    /image\.alt = ''/
+  );
 });
 
 test('scenic layers stay registered to the viewport while content scrolls', () => {
@@ -95,6 +103,7 @@ test('scenic layers stay registered to the viewport while content scrolls', () =
     'site/assets/css/teacher-canyonpath-shell.css',
     'utf8'
   );
+
   const student = fs.readFileSync(
     'site/assets/css/student-canyonpath-reference-match.css',
     'utf8'
@@ -104,22 +113,27 @@ test('scenic layers stay registered to the viewport while content scrolls', () =
     sharedShell,
     /\.tc-shell\s*\{[\s\S]*?background-attachment:\s*fixed,\s*fixed,\s*fixed;/
   );
+
   assert.match(
     sharedShell,
     /\.home-landscape\s*\{[\s\S]*?position:\s*fixed\s*!important;/
   );
+
   assert.match(
     sharedShell,
     /\.cp-public-landscape\s*\{[\s\S]*?position:\s*fixed\s*!important;/
   );
+
   assert.match(
     sharedShell,
     /body\.rc-teacher-login \.tc-main\s*\{[\s\S]*?background-attachment:\s*fixed,\s*fixed\s*!important;/
   );
+
   assert.match(
     sharedShell,
     /body\.rc-substitute-canyonpath \.tc-main\s*\{[\s\S]*?background-attachment:\s*fixed,\s*fixed,\s*fixed\s*!important;/
   );
+
   assert.match(
     student,
     /\.tc-main::before\s*\{[\s\S]*?position:\s*fixed;/
@@ -127,7 +141,9 @@ test('scenic layers stay registered to the viewport while content scrolls', () =
 });
 
 test('substitute opt-in is presentation-only and screen-scoped', () => {
-  const html = fs.readFileSync('site/substitute/index.html', 'utf8');
+  const html =
+    fs.readFileSync('site/substitute/index.html', 'utf8');
+
   const css = fs.readFileSync(
     'site/assets/css/substitute-canyonpath.css',
     'utf8'
@@ -135,13 +151,19 @@ test('substitute opt-in is presentation-only and screen-scoped', () => {
 
   assert.match(
     html,
-    /substitute-canyonpath\.css\?v=20260908-annotated1/
+    /substitute-canyonpath\.css\?v=20260908-annotated4/
   );
+
   assert.match(
     html,
     /<body class="rc-substitute-canyonpath">/
   );
-  assert.match(css, /@media screen/);
+
+  assert.match(
+    css,
+    /@media screen/
+  );
+
   assert.doesNotMatch(
     css,
     /fetch\(|supabase|localStorage|sessionStorage|@import|https?:/

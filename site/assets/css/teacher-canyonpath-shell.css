@@ -42,7 +42,7 @@
     background-image:
       linear-gradient(180deg, transparent var(--tcp-scene-fade-start), #031714 var(--tcp-scene-fade-end)),
       linear-gradient(90deg, rgba(3,23,20,.55), rgba(3,23,20,.04) 65%),
-      url('/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1');
+      url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4');
     /* Fill the canvas without distorting the image or leaving a hard edge.
        Gradients cover the full page so larger artwork cannot reappear below
        the fade's last color stop on a long dashboard. */
@@ -164,7 +164,7 @@
     background-image:
       linear-gradient(180deg, transparent var(--tcp-scene-fade-start), #e7f1eb var(--tcp-scene-fade-end)),
       linear-gradient(90deg, rgba(3,23,20,.55), rgba(3,23,20,.04) 65%),
-      url('/assets/bg/rc-annotated-canyon.svg?v=20260908-annotated1');
+      url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4');
   }
   html[data-theme="light"] body:has(.tc-sidebar[aria-label="Teacher navigation"]) .tc-main {
     background: linear-gradient(180deg, rgba(3,29,24,.24) 240px, #073128 700px);
