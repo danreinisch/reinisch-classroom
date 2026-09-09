@@ -1,8 +1,5 @@
-/* global module */
 (function (root, factory) {
-  var api = factory();
-  if (typeof module === 'object' && module.exports) module.exports = api;
-  else root.RCClassroomMessage = api;
+  root.RCClassroomMessage = factory();
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
