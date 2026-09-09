@@ -2,6 +2,7 @@
   'use strict';
 
   const ENDPOINT = '/.netlify/functions/teacher-week2-day4-trim';
+  const DIAGNOSTIC_ENDPOINT = '/.netlify/functions/teacher-week2-day4-diagnostic';
   const APPLY_CONFIRMATION = 'TRIM_WEEK2_DAY4_2026-09-11';
   const PRODUCTION_HOSTS = new Set([
     'reinischclassroom.com',
@@ -57,6 +58,65 @@
     }
 
     return data;
+  }
+
+  async function callDiagnostic() {
+    const response = await fetch(DIAGNOSTIC_ENDPOINT, {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    const data = await response.json().catch(() => ({
+      ok: false,
+      error: `Unexpected diagnostic response (${response.status})`,
+    }));
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || `Diagnostic failed (${response.status})`);
+    }
+
+    return data;
+  }
+
+  function compactCounts(obj) {
+    const entries = Object.entries(obj || {});
+    if (entries.length === 0) return '(none)';
+    return entries
+      .slice(0, 6)
+      .map(([key, count]) => `${key} ×${count}`)
+      .join('; ');
+  }
+
+  function renderDiagnostic(data) {
+    addPlanLine('— Read-only identity diagnostic —');
+
+    const classes = Array.isArray(data.classes) ? data.classes : [];
+    for (const cls of classes) {
+      const identity = cls.week2_identity || {};
+      const allIdentity = cls.all_class_identity || {};
+
+      addPlanLine(
+        `DIAGNOSTIC — ${cls.class_name}: ` +
+        `${cls.week2_like_assignments || 0} Week-2-like / ` +
+        `${cls.total_assignments_in_class || 0} total assignment(s)`
+      );
+      addPlanLine(`  titles: ${compactCounts(identity.title_patterns)}`);
+      addPlanLine(`  Week-2 school_year: ${compactCounts(identity.school_years)}`);
+      addPlanLine(`  Week-2 source_file: ${compactCounts(identity.source_files)}`);
+      addPlanLine(`  Week-2 meta.class_name: ${compactCounts(identity.meta_class_names)}`);
+      addPlanLine(`  Week-2 day shape: ${compactCounts(identity.day_shapes)}`);
+      addPlanLine(`  Week-2 due dates: ${compactCounts(identity.due_dates)}`);
+      addPlanLine(`  all assignment years: ${compactCounts(allIdentity.school_years)}`);
+      addPlanLine(`  all source files: ${compactCounts(allIdentity.source_files)}`);
+    }
+
+    const missingClasses = Array.isArray(data.missing_classes)
+      ? data.missing_classes
+      : [];
+    for (const name of missingClasses) {
+      addPlanLine(`DIAGNOSTIC — missing class: ${name}`);
+    }
   }
 
   function renderPreview(data) {
@@ -119,6 +179,23 @@
     try {
       const data = await callEndpoint({ mode: 'preview' });
       renderPreview(data);
+
+      const missing = Array.isArray(data.missing_targets)
+        ? data.missing_targets
+        : [];
+      const needsIdentityDiagnostic =
+        Number(data.matched_assignments || 0) === 0 ||
+        missing.length > 0;
+
+      if (needsIdentityDiagnostic) {
+        addPlanLine('Identity lock did not match. Running read-only diagnostic…');
+        try {
+          const diagnostic = await callDiagnostic();
+          renderDiagnostic(diagnostic);
+        } catch (diagErr) {
+          addPlanLine(`DIAGNOSTIC FAILED — ${diagErr.message}`);
+        }
+      }
     } catch (err) {
       const data = err.data || {};
       previewToken = null;
