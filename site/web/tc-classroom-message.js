@@ -64,8 +64,11 @@
   }
 
   function buildCard() {
-    if ($('classroomMessageSettings')) return;
     addStyles();
+    if ($('classroomMessageSettings')) {
+      removeLegacyHomepageCards();
+      return;
+    }
 
     var existingCards = oldHomepageCards();
     var anchor = existingCards[0] || null;
@@ -246,8 +249,6 @@
       homeConfig = {};
     }
     populate(utils.normalize(homeConfig));
-    var retirementStyle = $('rc-classroom-message-retirement-style');
-    if (retirementStyle) retirementStyle.remove();
   }
 
   init();
