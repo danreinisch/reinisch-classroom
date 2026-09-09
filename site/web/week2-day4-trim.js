@@ -15,6 +15,7 @@
   const planList = document.getElementById('trimPlanList');
 
   let previewToken = null;
+  let previewSummary = null;
 
   function setStatus(kind, text) {
     statusEl.classList.remove('ok', 'warn', 'err');
@@ -122,6 +123,7 @@
   function renderPreview(data) {
     clearPlans();
     previewToken = data.preview_token || null;
+    previewSummary = data;
 
     const missing = Array.isArray(data.missing_targets)
       ? data.missing_targets
@@ -130,16 +132,14 @@
 
     for (const plan of plans) {
       const state = plan.preserved
-        ? 'PRESERVE: completed Day 4 work/evidence — no change'
+        ? 'PRESERVE: Day 4 student work detected — no change'
         : plan.blocked
           ? `BLOCKED: ${plan.blocked_reasons.join(', ')}`
           : plan.needs_mutation
             ? `trim ${plan.day4_items} Day-4 item(s); ${plan.removed_points} point(s) removed`
             : 'already three-day — no change';
 
-      addPlanLine(
-        `${plan.class_name} — ${plan.title}: ${state}`
-      );
+      addPlanLine(`${plan.class_name} — ${plan.title}: ${state}`);
     }
 
     for (const missingTarget of missing) {
@@ -150,30 +150,36 @@
     const needsTrim = Number(data.assignments_needing_trim || 0) > 0;
     const applyReady = data.apply_ready === true;
     const completedState = data.completed_state === true;
+    const preserved = Number(data.preserved_day4_assignments || 0);
+    const trims = Number(data.assignments_needing_trim || 0);
+    const tsThreeDay = Number(data.transitional_skills_three_day || 0);
 
     const lines = [
       `Matched assignments: ${data.matched_assignments || 0}`,
-      `Safe Day 4 trims: ${data.assignments_needing_trim || 0}`,
-      `Preserve completed Day 4: ${data.preserved_day4_assignments || 0}`,
-      `Already three-day: ${data.already_three_day || 0}`,
+      `Safe Day 4 trims: ${trims}`,
+      `Preserve Day 4 work: ${preserved}`,
+      `Transitional Skills already three-day: ${tsThreeDay}`,
       `Unexpected blockers: ${unexpectedBlocked}`,
     ];
 
     if (applyReady) {
-      lines.push('Safety contract: READY — 46 trim / 11 three-day / S023 preserved.');
+      lines.push(
+        `Safety contract: READY — ${trims} trim / ${preserved} preserve / ${tsThreeDay} TS three-day.`
+      );
     } else if (completedState) {
-      lines.push('Completed state confirmed — S023 remains preserved.');
+      lines.push(
+        `Completed state confirmed — ${preserved} Day 4 assignment(s) preserved.`
+      );
     }
 
     if (!isProductionHost()) {
       lines.push('Deploy preview: read-only by design. Apply is disabled here.');
     }
 
-    const statusKind =
-      applyReady || completedState
-        ? 'ok'
-        : (unexpectedBlocked > 0 || missing.length > 0 ? 'warn' : 'warn');
-    setStatus(statusKind, lines.join('\n'));
+    setStatus(
+      applyReady || completedState ? 'ok' : 'warn',
+      lines.join('\n')
+    );
 
     applyBtn.disabled =
       !applyReady ||
@@ -186,6 +192,7 @@
     previewBtn.disabled = true;
     applyBtn.disabled = true;
     previewToken = null;
+    previewSummary = null;
     clearPlans();
     setStatus('', 'Running read-only Day 4 safety checks…');
 
@@ -212,6 +219,7 @@
     } catch (err) {
       const data = err.data || {};
       previewToken = null;
+      previewSummary = null;
       applyBtn.disabled = true;
       setStatus('err', data.error || err.message);
       if (Array.isArray(data.plans)) {
@@ -224,11 +232,14 @@
   }
 
   async function runApply() {
-    if (!previewToken || !isProductionHost()) return;
+    if (!previewToken || !isProductionHost() || !previewSummary) return;
+
+    const trims = Number(previewSummary.assignments_needing_trim || 0);
+    const preserved = Number(previewSummary.preserved_day4_assignments || 0);
 
     const confirmed = window.confirm(
-      'Remove Week 2 Day 4 from the 46 safe Language Arts assignments?\n\n' +
-      'S023 will be preserved exactly as-is because completed Day 4 work/evidence exists.\n' +
+      `Remove Week 2 Day 4 from ${trims} untouched Language Arts assignment(s)?\n\n` +
+      `${preserved} assignment(s) with existing Day 4 student work will be preserved exactly as-is.\n` +
       'Transitional Skills and Days 1–3 will not be rewritten.'
     );
 
@@ -250,15 +261,17 @@
         `Applied safely.\n` +
         `Assignments changed: ${data.changed_assignments || 0}\n` +
         `Day 4 items removed: ${data.removed_day4_items || 0}\n` +
-        `Completed Day 4 assignments preserved: ${data.preserved_assignments || 0}\n` +
+        `Day 4 assignments preserved: ${data.preserved_assignments || 0}\n` +
         `Student assignment instances updated: ${data.student_assignment_instances_updated || 0}`
       );
 
       previewToken = null;
+      previewSummary = null;
       await runPreview();
     } catch (err) {
       const data = err.data || {};
       previewToken = null;
+      previewSummary = null;
       applyBtn.disabled = true;
       setStatus(
         'err',
