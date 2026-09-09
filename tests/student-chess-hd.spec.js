@@ -283,6 +283,73 @@ test('premium SVG sets are genuinely distinct and Board depth stays optional, pe
   await expect(page.locator('#boardDepthToggle')).toBeChecked();
 });
 
+test('HD Tabletop, bounded zoom, and Forged Metal persist without changing the game', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await setupLocalGame(page);
+  await move(page, 'e2', 'e4');
+  await move(page, 'e7', 'e5');
+  const before = await page.evaluate(k => JSON.parse(localStorage.getItem(k)).game.moves, key(0));
+
+  await expect(page.locator('#hdCameraToolbar')).toBeVisible();
+  await expect(page.locator('#hdTopDownBtn')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#hdZoomValue')).toHaveText('100%');
+  await page.locator('#hdTabletopBtn').click();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-view', 'tabletop');
+  const boardTransform = await page.locator('#board').evaluate(el => getComputedStyle(el).transform);
+  expect(boardTransform).not.toBe('none');
+
+  await page.locator('#hdZoomInBtn').click();
+  await page.locator('#hdZoomInBtn').click();
+  await expect(page.locator('#hdZoomValue')).toHaveText('110%');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-zoom', 'custom');
+  await expectNoHorizontalOverflow(page);
+
+  await page.locator('#settingsBtn').click();
+  await expect(page.locator('[data-hd-metal-option]')).toHaveCount(1);
+  await page.locator('[data-hd-metal-option]').click();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-metal', 'on');
+  await expect(page.locator('[data-hd-metal-option]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#board svg[data-hd-metal="true"]')).toHaveCount(32);
+  await expect(page.locator('#board linearGradient')).toHaveCount(64);
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+
+  const after = await page.evaluate(k => JSON.parse(localStorage.getItem(k)).game.moves, key(0));
+  expect(after).toEqual(before);
+  const meta = await page.evaluate(() => JSON.parse(localStorage.getItem(`rc_chess_v1:${sessionStorage.getItem('rc_user_code')}:meta`)));
+  expect(meta.hdView).toBe('tabletop');
+  expect(meta.hdZoom).toBe(110);
+  expect(meta.hdMetalPieces).toBe(true);
+
+  await page.reload();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-view', 'tabletop');
+  await expect(page.locator('#hdZoomValue')).toHaveText('110%');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-metal', 'on');
+  await expect(page.locator('#board svg[data-hd-metal="true"]')).toHaveCount(32);
+  await expect(page.locator('#moveList')).toContainText('e4');
+  await expect(page.locator('#moveList')).toContainText('e5');
+
+  await page.locator('#hdZoomFitBtn').click();
+  await expect(page.locator('#hdZoomValue')).toHaveText('100%');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-zoom', 'fit');
+});
+
+test('Forged Metal yields to High Contrast and Tabletop respects reduced motion', async ({ page }) => {
+  await setupLocalGame(page);
+  await page.locator('#hdTabletopBtn').click();
+  await page.locator('#settingsBtn').click();
+  await page.locator('[data-hd-metal-option]').click();
+  await page.locator('[data-hd-theme-option="high-contrast"]').click();
+  const fill = await page.locator('[data-square="b1"] .hd-piece-body').first().evaluate(el => getComputedStyle(el).fill);
+  expect(fill).not.toContain('url(');
+  const filter = await page.locator('[data-square="b1"] svg.hd-premium-piece').evaluate(el => getComputedStyle(el).filter);
+  expect(filter).toBe('none');
+  await page.locator('#reducedToggle').check();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  const boardTransition = await page.locator('#board').evaluate(el => getComputedStyle(el).transitionDuration);
+  expect(boardTransition.split(',').every(value => parseFloat(value) <= 0.001)).toBe(true);
+  await expectNoHorizontalOverflow(page);
+});
+
 test('Focus Board meaningfully enlarges the desktop board without resetting selection, moves, controls, or scroll position', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await setupLocalGame(page);
