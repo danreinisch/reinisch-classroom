@@ -48,9 +48,14 @@
         or update student assignment instances. Days 1–3 answers and autosaves are outside
         the write path.
       </p>
+      <p>
+        The verified contract is <strong>46 safe Language Arts trims</strong>,
+        <strong>11 Transitional Skills assignments already three-day</strong>, and
+        <strong>S023 preserved exactly as-is</strong> because completed Day 4 work,
+        review, and goal evidence already exist.
+      </p>
       <p style="margin-bottom:0;">
-        Transitional Skills is expected to already be three-day; if so, it will be reported
-        as a no-op.
+        Any additional blocked assignment causes Apply to refuse rather than delete student work.
       </p>
     </section>
 
@@ -58,8 +63,9 @@
       <h2 style="margin-top:0;">1. Preview</h2>
       <p class="trim-muted">
         Preview performs read-only safety checks against the current live assignment state.
-        If any Day 4 autosave, submission answer, goal evidence, objective evidence, or teacher
-        review state exists, Apply stays blocked.
+        S023 is the single verified preservation exception. Any additional Day 4 autosave,
+        submission answer, goal evidence, objective evidence, or teacher review state keeps
+        Apply blocked.
       </p>
       <div class="trim-actions">
         <button class="trim-btn primary" id="trimPreviewBtn" type="button">Preview Day 4 trim</button>
@@ -74,9 +80,11 @@
       <ul>
         <li>Day 1–3 assignment metadata is preserved.</li>
         <li><code>assignment_instances</code> are read for safety only and never written.</li>
+        <li>S023 keeps its existing Day 4 response, grade/review state, and evidence.</li>
         <li>Apply is disabled on deploy-preview hosts.</li>
         <li>Apply re-runs the full Day-4 safety scan immediately before mutation.</li>
-        <li>If Day-4 item deletion fails, assignment metadata is rolled back.</li>
+        <li>After Day 4 metadata is hidden, Apply scans again before deleting any Day-4 scoring items.</li>
+        <li>If the post-hide scan changes or Day-4 item deletion fails, assignment metadata is rolled back.</li>
       </ul>
     </section>
   </main>
