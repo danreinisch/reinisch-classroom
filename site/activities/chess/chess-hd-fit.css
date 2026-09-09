@@ -1,0 +1,84 @@
+/* Classroom Chess HD viewport-fit and legacy-appearance compatibility.
+ * Kept separate from the main HD visual layer so this remains a narrow,
+ * regression-driven correction for Viewer/Chromebook sizing. */
+
+.hd-workspace {
+  grid-template-columns:
+    minmax(380px, min(640px, calc(100dvh - 285px)))
+    minmax(300px, 420px);
+  justify-content: center;
+}
+
+/* The old selects are hidden compatibility hooks only. Keeping their palette
+ * functional prevents older persisted preferences and the pre-HD regression
+ * harness from producing a visually undefined board. */
+body:not([data-hd-theme])[data-theme='forest'] {
+  --hd-light: #e4e7cf;
+  --hd-dark: #608376;
+}
+body:not([data-hd-theme])[data-theme='classic'] {
+  --hd-light: #f0d9b5;
+  --hd-dark: #ad805b;
+}
+body:not([data-hd-theme])[data-theme='ocean'] {
+  --hd-light: #dce9ed;
+  --hd-dark: #608498;
+}
+body:not([data-hd-theme])[data-theme='contrast'] {
+  --hd-light: #ffffff;
+  --hd-dark: #414e5c;
+}
+
+@media (max-height: 820px) and (min-width: 761px) {
+  .chess-hd-app {
+    padding-top: 10px;
+  }
+
+  .hd-view-nav {
+    margin-top: 10px;
+  }
+
+  .storage-status {
+    min-height: 14px;
+    margin: 3px 3px 6px;
+  }
+
+  .hd-workspace {
+    grid-template-columns:
+      minmax(370px, min(540px, calc(100dvh - 300px)))
+      minmax(290px, 400px);
+    gap: 16px;
+  }
+
+  .hd-board-card {
+    padding: 10px;
+  }
+
+  .hd-board-heading {
+    min-height: 32px;
+    margin-bottom: 6px;
+  }
+
+  .hd-board-frame {
+    padding: 8px;
+  }
+
+  .hd-board-footer .position-status {
+    margin-top: 8px;
+    margin-bottom: 3px;
+  }
+}
+
+@media (max-width: 1080px) {
+  .hd-workspace {
+    grid-template-columns:
+      minmax(330px, min(560px, calc(100dvh - 280px)))
+      minmax(270px, 350px);
+  }
+}
+
+@media (max-width: 760px) {
+  .hd-workspace {
+    grid-template-columns: 1fr;
+  }
+}

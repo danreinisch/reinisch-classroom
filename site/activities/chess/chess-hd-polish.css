@@ -1,0 +1,325 @@
+/* Classroom Chess HD teacher-verification polish.
+ * Presentation only: premium board finish, premium vector pieces, Focus Board,
+ * and paint/overflow hardening. The chess controller and rules stay untouched. */
+
+html,
+body {
+  background-color: var(--hd-bg, #071b17);
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.chess-hd-app,
+#mainContent {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Fixed multi-layer backgrounds are unnecessary inside Viewer and can create
+ * browser compositor seams. Keep the same art while painting it in the iframe. */
+body.hd-embedded-view {
+  background-attachment: scroll, scroll, scroll;
+}
+
+/* The save strip belongs to Play. Do not leave HD-only chrome behind when the
+ * legacy controller swaps to Learn, Challenges, or My games. */
+#workspace[hidden] + #hdSaveStrip {
+  display: none !important;
+}
+
+/* ---- Premium board material ------------------------------------------------ */
+body[data-hd-theme='canyon-classic'] {
+  --hd-board-bezel-hi: rgba(231, 205, 151, .28);
+  --hd-board-bezel-lo: rgba(22, 50, 42, .86);
+  --hd-square-light-grain: rgba(109, 74, 42, .07);
+  --hd-square-dark-grain: rgba(235, 222, 183, .055);
+}
+body[data-hd-theme='desert-stone'] {
+  --hd-board-bezel-hi: rgba(255, 224, 170, .3);
+  --hd-board-bezel-lo: rgba(79, 48, 32, .86);
+  --hd-square-light-grain: rgba(121, 79, 47, .065);
+  --hd-square-dark-grain: rgba(255, 235, 199, .055);
+}
+body[data-hd-theme='tournament'] {
+  --hd-board-bezel-hi: rgba(240, 238, 207, .26);
+  --hd-board-bezel-lo: rgba(28, 72, 56, .86);
+  --hd-square-light-grain: rgba(73, 95, 67, .055);
+  --hd-square-dark-grain: rgba(240, 244, 217, .05);
+}
+body[data-hd-theme='modern-slate'] {
+  --hd-board-bezel-hi: rgba(245, 247, 239, .2);
+  --hd-board-bezel-lo: rgba(31, 39, 44, .9);
+  --hd-square-light-grain: rgba(55, 65, 70, .05);
+  --hd-square-dark-grain: rgba(255, 255, 255, .045);
+}
+
+.hd-board-card {
+  border-color: rgba(224, 238, 218, .14);
+  box-shadow: 0 20px 54px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+.hd-board-frame {
+  position: relative;
+  border: 1px solid rgba(234, 226, 188, .16);
+  background:
+    linear-gradient(145deg, var(--hd-board-bezel-hi, rgba(230, 210, 165, .24)), transparent 32%),
+    linear-gradient(315deg, var(--hd-board-bezel-lo, rgba(19, 45, 38, .9)), rgba(13, 31, 27, .92));
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .16),
+    inset 0 -2px 0 rgba(0, 0, 0, .2),
+    inset 0 0 0 5px rgba(5, 22, 18, .25);
+}
+
+.hd-board-frame::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.square:not(.dark),
+.square.dark {
+  background-repeat: no-repeat, repeat;
+  background-size: 100% 100%, 11px 11px;
+}
+.square:not(.dark) {
+  background-color: var(--hd-light) !important;
+  background-image:
+    linear-gradient(145deg, rgba(255, 255, 255, .13), transparent 43%, rgba(0, 0, 0, .045)),
+    radial-gradient(circle at 25% 25%, var(--hd-square-light-grain, rgba(80, 55, 35, .06)) 0 1px, transparent 1.2px) !important;
+}
+.square.dark {
+  background-color: var(--hd-dark) !important;
+  background-image:
+    linear-gradient(145deg, rgba(255, 255, 255, .065), transparent 45%, rgba(0, 0, 0, .09)),
+    radial-gradient(circle at 72% 28%, var(--hd-square-dark-grain, rgba(255, 255, 255, .045)) 0 1px, transparent 1.2px) !important;
+}
+.square:hover:not(:disabled) {
+  filter: brightness(1.06) saturate(1.02);
+}
+.square:not(.dark):hover:not(:disabled) {
+  background-color: var(--hd-light) !important;
+}
+.square.dark:hover:not(:disabled) {
+  background-color: var(--hd-dark) !important;
+}
+.square.last::before {
+  background: rgba(234, 193, 92, .27);
+  box-shadow: inset 0 0 0 2px rgba(255, 228, 149, .34), inset 0 0 16px rgba(112, 78, 25, .15);
+}
+.square.selected {
+  box-shadow:
+    inset 0 0 0 4px #80efa5,
+    inset 0 0 0 7px rgba(7, 35, 27, .38),
+    inset 0 0 22px rgba(100, 244, 149, .26),
+    0 0 14px rgba(68, 220, 120, .34) !important;
+}
+.square.legal::after {
+  background: rgba(65, 194, 124, .82);
+  box-shadow: 0 0 0 3px rgba(231, 255, 237, .22), 0 2px 5px rgba(0, 0, 0, .24);
+}
+.square.legal.occupied::after {
+  border-color: rgba(75, 211, 139, .84);
+  box-shadow: inset 0 0 0 2px rgba(238, 255, 242, .15), inset 0 0 14px rgba(57, 197, 121, .2);
+}
+.square:focus-visible {
+  outline-width: 4px;
+  outline-offset: -6px;
+  box-shadow: inset 0 0 0 2px rgba(7, 29, 23, .9), 0 0 0 2px rgba(255, 255, 255, .15);
+}
+.coord {
+  padding: 1px 3px;
+  border-radius: 4px;
+  background: rgba(5, 28, 23, .13);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, .24), 0 -1px 1px rgba(0, 0, 0, .18);
+}
+
+/* ---- Five genuinely distinct vector piece sets ----------------------------- */
+svg.hd-premium-piece {
+  width: 90%;
+  height: 90%;
+  overflow: visible;
+  transform-origin: 50% 82%;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, .26)) drop-shadow(0 6px 6px rgba(0, 0, 0, .18));
+}
+.hd-premium-piece.hd-piece-white {
+  --piece-fill: #f3ead8;
+  --piece-base: #e2d5bd;
+  --piece-stroke: #32423c;
+  --piece-detail: #8a7962;
+  --piece-highlight: rgba(255, 255, 255, .72);
+}
+.hd-premium-piece.hd-piece-black {
+  --piece-fill: #26332f;
+  --piece-base: #18241f;
+  --piece-stroke: #d2c6a6;
+  --piece-detail: #9eaf9f;
+  --piece-highlight: rgba(224, 233, 224, .33);
+}
+.hd-premium-piece .hd-piece-body,
+.hd-premium-piece .hd-piece-base {
+  vector-effect: non-scaling-stroke;
+  stroke: var(--piece-stroke);
+  stroke-width: 1.35;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.hd-premium-piece .hd-piece-body { fill: var(--piece-fill); }
+.hd-premium-piece .hd-piece-base { fill: var(--piece-base); }
+.hd-premium-piece .hd-piece-highlight,
+.hd-premium-piece .hd-piece-ridge,
+.hd-premium-piece .hd-piece-line,
+.hd-premium-piece .hd-piece-carve,
+.hd-premium-piece .hd-piece-academic,
+.hd-premium-piece .hd-piece-cut {
+  fill: none;
+  stroke: var(--piece-detail);
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.hd-premium-piece .hd-piece-highlight { stroke: var(--piece-highlight); stroke-width: 1.1; }
+.hd-premium-piece .hd-piece-cut { stroke-width: 2; }
+.hd-premium-piece .hd-piece-eye,
+.hd-premium-piece .hd-piece-academic-dot {
+  fill: var(--piece-stroke);
+  stroke: none;
+}
+.hd-premium-piece .hd-piece-contact {
+  fill: #020b09;
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+body[data-hd-board-depth='on'] .hd-premium-piece {
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, .3)) drop-shadow(0 8px 7px rgba(0, 0, 0, .24));
+}
+body[data-hd-board-depth='on'] .hd-premium-piece .hd-piece-contact { opacity: .24; }
+
+/* Carved pieces get broader bases and visible engraved cuts without becoming
+ * novelty pieces. They remain normal chess silhouettes first. */
+.hd-piece-set-circle .hd-piece-carve { stroke-width: 1.2; stroke-dasharray: 2.2 1.1; }
+.hd-piece-set-circle .hd-piece-body { stroke-width: 1.55; }
+.hd-piece-set-modern .hd-piece-body { stroke-width: 1.2; }
+.hd-piece-set-minimal .hd-piece-body { stroke-width: 1.55; }
+.hd-piece-set-minimal .hd-piece-base { stroke-width: 1.7; }
+.hd-piece-set-academic .hd-piece-body { stroke-width: 1.7; }
+.hd-piece-set-academic .hd-piece-academic { stroke-width: 1.7; }
+
+.hd-piece-preview svg.hd-premium-piece { width: 45%; height: 45%; filter: drop-shadow(0 2px 2px rgba(0,0,0,.28)); }
+.hd-captured-list svg.hd-premium-piece { width: 25px; height: 25px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.24)); }
+
+/* ---- Focus Board ------------------------------------------------------------ */
+.hd-board-heading {
+  gap: 8px;
+}
+.hd-board-heading > #boardCaption {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.hd-focus-button {
+  white-space: nowrap;
+}
+.hd-focus-button[aria-pressed='true'] {
+  border-color: rgba(140, 232, 164, .52);
+  background: rgba(27, 88, 65, .72);
+  color: #f1fff4;
+}
+
+@media (min-width: 900px) {
+  body[data-hd-layout='focus'] .hd-workspace {
+    grid-template-columns:
+      minmax(430px, min(720px, calc(100dvh - 190px), calc(100vw - 355px)))
+      minmax(245px, 305px);
+    gap: 14px;
+    align-items: start;
+    justify-content: center;
+  }
+  body[data-hd-layout='focus'] .hd-board-card { padding: 10px; }
+  body[data-hd-layout='focus'] .hd-board-frame { padding: 8px; }
+  body[data-hd-layout='focus'] .hd-side-card { padding: 12px; }
+  body[data-hd-layout='focus'] .hd-player-strip { grid-template-columns: 1fr; gap: 6px; margin-bottom: 8px; }
+  body[data-hd-layout='focus'] .hd-player { padding: 7px 8px; min-height: 44px; }
+  body[data-hd-layout='focus'] .hd-player-icon { width: 27px; height: 27px; font-size: 16px; }
+  body[data-hd-layout='focus'] .hd-game-summary { gap: 8px; margin-bottom: 8px; }
+  body[data-hd-layout='focus'] .hd-game-summary h2 { font-size: clamp(17px, 1.5vw, 22px); }
+  body[data-hd-layout='focus'] .hd-action-row { gap: 6px; }
+  body[data-hd-layout='focus'] .hd-action-row button { padding: 8px 7px; }
+  body[data-hd-layout='focus'] .hd-coach,
+  body[data-hd-layout='focus'] .rules-note { display: none; }
+  body[data-hd-layout='focus'] .hd-moves-panel,
+  body[data-hd-layout='focus'] .hd-captured-panel { margin-top: 9px; padding: 9px; }
+  body[data-hd-layout='focus'] .move-list { max-height: 160px; overflow: auto; }
+}
+
+@media (max-width: 899px) {
+  body[data-hd-layout='focus'] .hd-workspace { grid-template-columns: 1fr; }
+}
+
+/* ---- Accessibility and high-contrast guarantees ---------------------------- */
+body[data-hd-theme='high-contrast'] .hd-board-frame {
+  border: 3px solid #fff;
+  background: #101010;
+  box-shadow: none;
+}
+body[data-hd-theme='high-contrast'] .hd-board-frame::before { display: none; }
+body[data-hd-theme='high-contrast'] .square:not(.dark),
+body[data-hd-theme='high-contrast'] .square.dark {
+  background-image: none !important;
+}
+body[data-hd-theme='high-contrast'] .coord {
+  background: transparent;
+  text-shadow: none;
+}
+body[data-hd-theme='high-contrast'] .hd-premium-piece,
+body[data-hd-theme='high-contrast'][data-hd-board-depth='on'] .hd-premium-piece {
+  filter: none;
+}
+body[data-hd-theme='high-contrast'] .hd-premium-piece.hd-piece-white {
+  --piece-fill: #fff;
+  --piece-base: #fff;
+  --piece-stroke: #000;
+  --piece-detail: #000;
+  --piece-highlight: #000;
+}
+body[data-hd-theme='high-contrast'] .hd-premium-piece.hd-piece-black {
+  --piece-fill: #000;
+  --piece-base: #000;
+  --piece-stroke: #fff;
+  --piece-detail: #fff;
+  --piece-highlight: #fff;
+}
+body[data-hd-theme='high-contrast'] .hd-premium-piece .hd-piece-contact {
+  opacity: 0 !important;
+  transition: none !important;
+}
+body[data-hd-theme='high-contrast'] .square.selected {
+  box-shadow: inset 0 0 0 5px #ffda45 !important;
+}
+body[data-hd-theme='high-contrast'] .square.legal::after {
+  background: #00b96b;
+  box-shadow: 0 0 0 3px #fff;
+}
+
+body.hd-reduced-motion .hd-premium-piece,
+body.hd-reduced-motion .hd-premium-piece .hd-piece-contact {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hd-premium-piece,
+  .hd-premium-piece .hd-piece-contact {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .hd-board-heading { align-items: stretch; flex-wrap: wrap; }
+  .hd-board-heading > #boardCaption { flex-basis: 100%; }
+  .hd-focus-button, #flipBtn { flex: 1 1 135px; }
+}
