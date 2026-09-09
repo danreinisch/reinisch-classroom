@@ -15,9 +15,14 @@ const {
   lookupActiveTeacherId,
 } = require('./_lib/supa');
 const {
+  EXPECTED_PRESERVED_ASSIGNMENTS,
+  EXPECTED_SAFE_TRIM_ASSIGNMENTS,
+  EXPECTED_TOTAL_ASSIGNMENTS,
   TARGETS,
   TARGET_SCHOOL_YEAR,
   buildAssignmentPlan,
+  classifyTrimPlans,
+  isExpectedPreservedPlan,
   matchesTargetAssignment,
   trimDay4Meta,
 } = require('./_lib/week2-day4-trim');
@@ -120,6 +125,7 @@ function buildPreviewToken(plans, missingTargets) {
     plans: plans
       .map(plan => ({
         assignmentId: plan.assignmentId,
+        preserved: isExpectedPreservedPlan(plan),
         blocked: plan.blocked,
         blockedReasons: [...plan.blockedReasons].sort(),
         needsMutation: plan.needsMutation,
@@ -152,12 +158,52 @@ function publicPlan(plan) {
     title: plan.title,
     needs_mutation: plan.needsMutation,
     blocked: plan.blocked,
+    preserved: isExpectedPreservedPlan(plan),
     blocked_reasons: plan.blockedReasons,
     day4_meta_sections: plan.day4MetaCount,
     day4_items: plan.day4ItemCount,
     removed_points: plan.removedPoints,
     remaining_points: plan.remainingPoints,
     student_instances: plan.instanceCount,
+  };
+}
+
+function summarizeState(state) {
+  const classification = classifyTrimPlans(state.plans);
+  const missingTargets = Array.isArray(state.missingTargets)
+    ? state.missingTargets
+    : [];
+  const applyReady =
+    missingTargets.length === 0 &&
+    classification.applyReady;
+  const completedState = (
+    missingTargets.length === 0 &&
+    state.plans.length === EXPECTED_TOTAL_ASSIGNMENTS &&
+    classification.safeTrimPlans.length === 0 &&
+    classification.alreadyThreeDayPlans.length ===
+      EXPECTED_TOTAL_ASSIGNMENTS - EXPECTED_PRESERVED_ASSIGNMENTS &&
+    classification.preservedPlans.length === EXPECTED_PRESERVED_ASSIGNMENTS &&
+    classification.unexpectedBlockedPlans.length === 0
+  );
+
+  return {
+    classification,
+    summary: {
+      target_groups: TARGETS.length,
+      matched_assignments: state.plans.length,
+      total_day4_assignments:
+        classification.safeTrimPlans.length + classification.preservedPlans.length,
+      assignments_needing_trim: classification.safeTrimPlans.length,
+      preserved_day4_assignments: classification.preservedPlans.length,
+      already_three_day: classification.alreadyThreeDayPlans.length,
+      blocked_assignments: classification.blockedPlans.length,
+      unexpected_blocked_assignments: classification.unexpectedBlockedPlans.length,
+      apply_ready: applyReady,
+      completed_state: completedState,
+      missing_targets: missingTargets,
+      plans: state.plans.map(publicPlan),
+      preview_token: state.token,
+    },
   };
 }
 
@@ -413,18 +459,28 @@ async function rollbackMeta(patchedEntries) {
   return failures;
 }
 
-async function applyTrim(state) {
+async function applyTrim(state, teacherId) {
+  const classification = classifyTrimPlans(state.plans);
+  if (!classification.applyReady) {
+    throw new Error('Apply state is not the exact 46 trim / 11 three-day / 1 preserved contract');
+  }
+
   const actionable = state.entries.filter(
-    entry => entry.plan.needsMutation
+    entry => entry.plan.needsMutation && !entry.plan.blocked
   );
 
-  if (actionable.length === 0) {
-    return {
-      changed_assignments: 0,
-      removed_day4_items: 0,
-      already_trimmed: true,
-      rollback_failures: [],
-    };
+  if (actionable.length !== EXPECTED_SAFE_TRIM_ASSIGNMENTS) {
+    throw new Error(
+      `Expected ${EXPECTED_SAFE_TRIM_ASSIGNMENTS} safe assignments, found ${actionable.length}`
+    );
+  }
+
+  const preserved = state.entries.filter(
+    entry => isExpectedPreservedPlan(entry.plan)
+  );
+
+  if (preserved.length !== EXPECTED_PRESERVED_ASSIGNMENTS) {
+    throw new Error('Expected preserved S023 assignment was not resolved exactly once');
   }
 
   const patchedEntries = [];
@@ -432,14 +488,55 @@ async function applyTrim(state) {
   try {
     for (const entry of actionable) {
       const trimmed = trimDay4Meta(entry.assignment.meta);
-      if (!trimmed.changed) continue;
+      if (!trimmed.changed) {
+        throw new Error(
+          `Safe assignment ${entry.assignment.id} did not contain Day 4 metadata at apply time`
+        );
+      }
 
       await patchJson(
         `assignments?id=eq.${encodeURIComponent(entry.assignment.id)}`,
         { meta: trimmed.meta },
-        `Trim Day 4 metadata for assignment ${entry.assignment.id}`
+        `Hide Day 4 metadata for assignment ${entry.assignment.id}`
       );
       patchedEntries.push(entry);
+    }
+
+    // Students may have an already-loaded assignment page while this repair
+    // is running. After Day 4 is hidden from all 46 safe assignments, scan
+    // again BEFORE deleting any scoring items. If new Day-4 work appeared,
+    // restore the metadata and preserve the new work instead of deleting it.
+    const postHideState = await collectTrimState(teacherId);
+    const postHideById = new Map(
+      postHideState.plans.map(plan => [String(plan.assignmentId), plan])
+    );
+
+    const unsafeAfterHide = [];
+    for (const entry of actionable) {
+      const plan = postHideById.get(String(entry.plan.assignmentId));
+      if (!plan || plan.blocked || Number(plan.day4MetaCount) !== 0) {
+        unsafeAfterHide.push({
+          assignment_id: String(entry.plan.assignmentId),
+          blocked_reasons: plan ? plan.blockedReasons : ['assignment_missing_after_hide'],
+          day4_meta_sections: plan ? plan.day4MetaCount : null,
+        });
+      }
+    }
+
+    const postHideClassification = classifyTrimPlans(postHideState.plans);
+    if (
+      unsafeAfterHide.length > 0 ||
+      postHideState.missingTargets.length > 0 ||
+      !postHideClassification.applyReady
+    ) {
+      const rollbackFailures = await rollbackMeta(patchedEntries);
+      const error = new Error(
+        'Day 4 safety state changed after hiding metadata. Metadata was restored; no Day 4 items were deleted.'
+      );
+      error.rollbackFailures = rollbackFailures;
+      error.metaRolledBack = true;
+      error.unsafeAfterHide = unsafeAfterHide;
+      throw error;
     }
 
     const itemIds = actionable
@@ -449,19 +546,24 @@ async function applyTrim(state) {
     if (itemIds.length > 0) {
       await deleteRows(
         `assignment_items?id=in.(${inFilter(itemIds)})`,
-        'Delete Day 4 assignment items'
+        'Delete safe Day 4 assignment items'
       );
     }
 
     return {
       changed_assignments: actionable.length,
       removed_day4_items: itemIds.length,
+      preserved_assignments: preserved.length,
+      preserved_title: preserved[0].plan.title,
+      student_assignment_instances_updated: 0,
       already_trimmed: false,
       rollback_failures: [],
     };
   } catch (err) {
-    const rollbackFailures = await rollbackMeta(patchedEntries);
-    err.rollbackFailures = rollbackFailures;
+    if (!err.metaRolledBack) {
+      const rollbackFailures = await rollbackMeta(patchedEntries);
+      err.rollbackFailures = rollbackFailures;
+    }
     throw err;
   }
 }
@@ -555,19 +657,7 @@ exports.handler = async event => {
 
   try {
     const state = await collectTrimState(teacherId);
-    const blockedPlans = state.plans.filter(plan => plan.blocked);
-    const summary = {
-      target_groups: TARGETS.length,
-      matched_assignments: state.plans.length,
-      assignments_needing_trim:
-        state.plans.filter(plan => plan.needsMutation).length,
-      already_three_day:
-        state.plans.filter(plan => !plan.needsMutation).length,
-      blocked_assignments: blockedPlans.length,
-      missing_targets: state.missingTargets,
-      plans: state.plans.map(publicPlan),
-      preview_token: state.token,
-    };
+    const { summary } = summarizeState(state);
 
     if (mode === 'preview') {
       return jsonResponse(
@@ -624,17 +714,14 @@ exports.handler = async event => {
       );
     }
 
-    if (
-      state.missingTargets.length > 0 ||
-      blockedPlans.length > 0
-    ) {
+    if (!summary.apply_ready) {
       return jsonResponse(
         event,
         409,
         {
           ok: false,
           error:
-            'Safety preflight blocked the Day 4 trim. Nothing was changed.',
+            'Safety preflight is not the exact 46 trim / 11 three-day / S023 preserved contract. Nothing was changed.',
           ...summary,
         },
         { 'Cache-Control': 'no-store' },
@@ -646,11 +733,11 @@ exports.handler = async event => {
     // Day-4-only safety scan immediately before any mutation. Day 1–3
     // autosaves are intentionally ignored by the preview fingerprint.
     const freshState = await collectTrimState(teacherId);
+    const { summary: freshSummary } = summarizeState(freshState);
 
     if (
       freshState.token !== state.token ||
-      freshState.missingTargets.length > 0 ||
-      freshState.plans.some(plan => plan.blocked)
+      !freshSummary.apply_ready
     ) {
       return jsonResponse(
         event,
@@ -659,16 +746,14 @@ exports.handler = async event => {
           ok: false,
           error:
             'Day 4 safety state changed after preview. Nothing was changed.',
-          preview_token: freshState.token,
-          missing_targets: freshState.missingTargets,
-          plans: freshState.plans.map(publicPlan),
+          ...freshSummary,
         },
         { 'Cache-Control': 'no-store' },
         requestId
       );
     }
 
-    const applied = await applyTrim(freshState);
+    const applied = await applyTrim(freshState, teacherId);
 
     return jsonResponse(
       event,
@@ -678,7 +763,7 @@ exports.handler = async event => {
         mode: 'apply',
         ...applied,
         message:
-          'Week 2 Day 4 was removed without updating assignment instances.',
+          'Week 2 Day 4 was removed from 46 safe assignments; S023 was preserved with completed Day 4 work and student assignment instances were not updated.',
       },
       { 'Cache-Control': 'no-store' },
       requestId
@@ -696,6 +781,7 @@ exports.handler = async event => {
         ok: false,
         error: err.message || 'Day 4 trim failed',
         rollback_failures: err.rollbackFailures || [],
+        unsafe_after_hide: err.unsafeAfterHide || [],
       },
       { 'Cache-Control': 'no-store' },
       requestId
@@ -706,8 +792,10 @@ exports.handler = async event => {
 exports._test = {
   APPLY_CONFIRMATION,
   PRODUCTION_HOSTS,
+  applyTrim,
   buildPreviewToken,
-  requestHost,
   collectTrimState,
   publicPlan,
+  requestHost,
+  summarizeState,
 };
