@@ -1,12 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { JSDOM } from 'jsdom';
 import {
-  INFINITE_CAMPUS_ROSTER_ORDER,
-  sortStudentCodesForClass,
+  sortStudentsLikeInfiniteCampus,
   reorderGradebookRows,
 } from '../site/web/gradebook-roster-order.js';
 
-function makeGradebookDom(className, codes, { explicitSort = false } = {}) {
+function makeGradebookDom(className, students, { explicitSort = false } = {}) {
   const dom = new JSDOM(`
     <div id="classFilterBar">
       <button class="gb-filter-btn active"></button>
@@ -20,11 +19,12 @@ function makeGradebookDom(className, codes, { explicitSort = false } = {}) {
   document.querySelector('.gb-filter-btn.active').textContent = className;
   const body = document.querySelector('#gbTableBody');
 
-  for (const code of codes) {
+  for (const student of students) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
     cell.className = 'gb-student-cell';
-    cell.dataset.tooltip = JSON.stringify({ code });
+    cell.textContent = student.name || student.code;
+    cell.dataset.tooltip = JSON.stringify(student);
     row.appendChild(cell);
     body.appendChild(row);
   }
@@ -45,42 +45,72 @@ function renderedCodes(document) {
     .map((row) => JSON.parse(row.querySelector('.gb-student-cell').dataset.tooltip).code);
 }
 
-test('configured class rosters sort to the exact Infinite Campus order', () => {
-  for (const [className, expected] of Object.entries(INFINITE_CAMPUS_ROSTER_ORDER)) {
-    const scrambled = [...expected].reverse();
-    expect(sortStudentCodesForClass(scrambled, className)).toEqual(expected);
-  }
+test('students sort alphabetically by runtime display name like Infinite Campus', () => {
+  const students = [
+    { code: 'S903', name: 'Zimmer, Zoe' },
+    { code: 'S901', name: 'Baker, Bea' },
+    { code: 'S902', name: 'Miller, Max' },
+    { code: 'S900', name: 'Adams, Ava' },
+  ];
+
+  expect(sortStudentsLikeInfiniteCampus(students).map((student) => student.code))
+    .toEqual(['S900', 'S901', 'S902', 'S903']);
 });
 
-test('a future unconfigured student stays after configured students without being dropped', () => {
-  const sorted = sortStudentCodesForClass(
-    ['S999', 'S036', 'S057', 'S998', 'S019'],
-    'Language Arts 3 SC'
-  );
+test('new students automatically land in alphabetical position with no roster-map update', () => {
+  const students = [
+    { code: 'S901', name: 'Baker, Bea' },
+    { code: 'S999', name: 'Clark, Casey' },
+    { code: 'S902', name: 'Davis, Drew' },
+  ];
 
-  expect(sorted).toEqual(['S057', 'S019', 'S036', 'S999', 'S998']);
+  expect(sortStudentsLikeInfiniteCampus(students).map((student) => student.code))
+    .toEqual(['S901', 'S999', 'S902']);
 });
 
-test('unconfigured classes keep their existing order', () => {
-  const original = ['S003', 'S001', 'S002'];
-  expect(sortStudentCodesForClass(original, 'Consumer Math')).toEqual(original);
+test('students without a display name fall back to student code deterministically', () => {
+  const students = [
+    { code: 'S010', name: '' },
+    { code: 'S002', name: '' },
+  ];
+
+  expect(sortStudentsLikeInfiniteCampus(students).map((student) => student.code))
+    .toEqual(['S002', 'S010']);
 });
 
-test('rendered gradebook rows are reordered while the Class Average row remains last', () => {
-  const expected = INFINITE_CAMPUS_ROSTER_ORDER['Language Arts 4 SC'];
-  const document = makeGradebookDom('Language Arts 4 SC', [...expected].reverse());
+test('rendered class rows are reordered while the Class Average row remains last', () => {
+  const students = [
+    { code: 'S903', name: 'Zimmer, Zoe' },
+    { code: 'S901', name: 'Baker, Bea' },
+    { code: 'S902', name: 'Miller, Max' },
+    { code: 'S900', name: 'Adams, Ava' },
+  ];
+  const document = makeGradebookDom('Language Arts 3 SC', students);
 
   expect(reorderGradebookRows(document)).toBe(true);
-  expect(renderedCodes(document)).toEqual(expected);
+  expect(renderedCodes(document)).toEqual(['S900', 'S901', 'S902', 'S903']);
   expect(document.querySelector('#gbTableBody tr:last-child').classList.contains('gb-summary-row')).toBe(true);
   expect(document.querySelector('#gbTableBody tr:first-child').classList.contains('gb-highlighted')).toBe(true);
 });
 
-test('an explicit teacher column sort is not overridden', () => {
-  const expected = INFINITE_CAMPUS_ROSTER_ORDER['Language Arts 2 SC'];
-  const reversed = [...expected].reverse();
-  const document = makeGradebookDom('Language Arts 2 SC', reversed, { explicitSort: true });
+test('All Classes is left alone because one student can belong to multiple class rosters', () => {
+  const students = [
+    { code: 'S903', name: 'Zimmer, Zoe' },
+    { code: 'S900', name: 'Adams, Ava' },
+  ];
+  const document = makeGradebookDom('All Classes', students);
 
   expect(reorderGradebookRows(document)).toBe(false);
-  expect(renderedCodes(document)).toEqual(reversed);
+  expect(renderedCodes(document)).toEqual(['S903', 'S900']);
+});
+
+test('an explicit teacher column sort is not overridden', () => {
+  const students = [
+    { code: 'S903', name: 'Zimmer, Zoe' },
+    { code: 'S900', name: 'Adams, Ava' },
+  ];
+  const document = makeGradebookDom('Language Arts 2 SC', students, { explicitSort: true });
+
+  expect(reorderGradebookRows(document)).toBe(false);
+  expect(renderedCodes(document)).toEqual(['S903', 'S900']);
 });
