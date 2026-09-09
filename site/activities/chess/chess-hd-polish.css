@@ -293,7 +293,10 @@ body[data-hd-theme='high-contrast'] .hd-premium-piece.hd-piece-black {
   --piece-detail: #fff;
   --piece-highlight: #fff;
 }
-body[data-hd-theme='high-contrast'] .hd-premium-piece .hd-piece-contact { opacity: 0 !important; }
+body[data-hd-theme='high-contrast'] .hd-premium-piece .hd-piece-contact {
+  opacity: 0 !important;
+  transition: none !important;
+}
 body[data-hd-theme='high-contrast'] .square.selected {
   box-shadow: inset 0 0 0 5px #ffda45 !important;
 }
