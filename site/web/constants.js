@@ -39,8 +39,8 @@ export function getClassDisplayName(className) {
   return CLASS_DISPLAY[className] ?? className;
 }
 
-// Gradebook-only presentation bootstrap. The roster-order module uses student
-// codes only and reorders rendered gradebook rows to mirror Infinite Campus.
+// Gradebook-only presentation bootstrap. The helper reads the already-rendered
+// runtime student label and stores no roster names or other PII in source.
 // Other Teacher Center pages importing constants.js do not load it.
 if (
   typeof window !== "undefined" &&
