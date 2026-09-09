@@ -73,6 +73,28 @@ test('HD styling defines every approved board theme and accessibility motion fal
   assert.match(css, /rc-annotated-canyon-approved\.webp/);
 });
 
+test('Tabletop and Forged Metal stay additive, bounded, persistent, and presentation-only', () => {
+  const js = read('site/activities/chess/chess-hd-polish.js');
+  const css = read('site/activities/chess/chess-hd-tabletop.css');
+
+  assert.match(js, /chess-hd-tabletop\.css\?v=20260909-chess-tabletop-1/);
+  assert.match(js, /Forged Metal HD/);
+  assert.match(js, /ZOOM_MIN = 85/);
+  assert.match(js, /ZOOM_MAX = 125/);
+  assert.match(js, /hdView/);
+  assert.match(js, /hdZoom/);
+  assert.match(js, /hdMetalPieces/);
+  assert.match(js, /data-hd-board-view/);
+  assert.doesNotMatch(js, /from '\.\/engine\.js'|findMove\(|worker\.postMessage|new Worker\(/);
+
+  assert.match(css, /data-hd-view='tabletop'/);
+  assert.match(css, /rotateX\(13deg\)/);
+  assert.match(css, /--hd-board-zoom/);
+  assert.match(css, /data-hd-metal='on'/);
+  assert.match(css, /data-hd-theme='high-contrast'\]\[data-hd-metal='on'/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
+});
+
 test('existing browser-local metadata safely merges HD appearance fields with chess progress', async () => {
   const { ChessStore } = await import('../site/activities/chess/core.js');
   const store = new ChessStore(memoryStorage(), student());
@@ -85,6 +107,9 @@ test('existing browser-local metadata safely merges HD appearance fields with ch
     hdAnimate: false,
     hdReducedMotion: true,
     hdOrientation: 'black',
+    hdView: 'tabletop',
+    hdZoom: 115,
+    hdMetalPieces: true,
   });
   const meta = store.readMeta();
   assert.equal(meta.activeSlot, 2);
@@ -98,4 +123,7 @@ test('existing browser-local metadata safely merges HD appearance fields with ch
   assert.equal(meta.hdAnimate, false);
   assert.equal(meta.hdReducedMotion, true);
   assert.equal(meta.hdOrientation, 'black');
+  assert.equal(meta.hdView, 'tabletop');
+  assert.equal(meta.hdZoom, 115);
+  assert.equal(meta.hdMetalPieces, true);
 });
