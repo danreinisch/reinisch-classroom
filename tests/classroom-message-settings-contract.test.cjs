@@ -2,31 +2,41 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
-const shell = fs.readFileSync('site/web/teacher-shell.js', 'utf8');
+const settingsHtml = fs.readFileSync('site/teacher/settings/index.html', 'utf8');
 const settings = fs.readFileSync('site/web/tc-classroom-message.js', 'utf8');
 const home = fs.readFileSync('site/web/home-classroom-message.js', 'utf8');
 const homepage = fs.readFileSync('site/index.html', 'utf8');
 
-test('Teacher Settings retires the four obsolete homepage managers only on the settings route', () => {
-  assert.match(shell, /IS_CLASSROOM_MESSAGE_SETTINGS = location\.pathname\.startsWith\('\/teacher\/settings'\)/);
-  for (const marker of ['#laUnit', '#lsCurrentTitle', '#tickerDateFormat', '#countdownsBody']) {
-    assert.match(shell, new RegExp(marker.replace('#', '#')));
+test('Teacher Settings removes retired homepage managers and exposes one Classroom Message editor', () => {
+  for (const retired of [
+    'Language Arts — Weekly Focus',
+    'Life Skills — Weekly Focus',
+    'Ticker Configuration',
+    'Countdown Events',
+    'laUnit',
+    'lsCurrentTitle',
+    'tickerDateFormat',
+    'countdownsBody',
+  ]) {
+    assert.doesNotMatch(settingsHtml, new RegExp(retired));
   }
-  assert.match(shell, /classroom-message-utils\.js\?v=20260909-1/);
-  assert.match(shell, /tc-classroom-message\.js\?v=20260909-1/);
-  assert.match(settings, /removeLegacyHomepageCards/);
-  assert.doesNotMatch(settings, /delete\s+homeConfig\.(?:languageArts|lifeSkills|ticker|countdowns)|localStorage\.removeItem\('rc_home_config'/);
-});
 
-test('Classroom Message editor exposes teacher controls and preserves the full home_config object', () => {
   for (const id of [
     'classroomMessageSettings', 'classroomMessageEnabled', 'classroomMessageOverride',
     'classroomMessageMonday', 'classroomMessageTuesday', 'classroomMessageWednesday',
     'classroomMessageThursday', 'classroomMessageFriday', 'classroomMessageSpeed',
     'classroomMessagePreviewText', 'saveClassroomMessageBtn',
   ]) {
-    assert.match(settings, new RegExp(id));
+    assert.match(settingsHtml, new RegExp(id));
   }
+
+  assert.match(settingsHtml, /classroom-message-utils\.js\?v=20260909-1/);
+  assert.match(settingsHtml, /tc-classroom-message\.js\?v=20260909-1/);
+  assert.match(settings, /removeLegacyHomepageCards/);
+  assert.doesNotMatch(settings, /delete\s+homeConfig\.(?:languageArts|lifeSkills|ticker|countdowns)|localStorage\.removeItem\('rc_home_config'/);
+});
+
+test('Classroom Message editor preserves the full home_config object and syncs through the existing adapter', () => {
   assert.match(settings, /utils\.write\(homeConfig, readForm\(\)\)/);
   assert.match(settings, /localStorage\.setItem\('rc_home_config', JSON\.stringify\(homeConfig\)\)/);
   assert.match(settings, /db\.setAppConfig\('home_config', homeConfig\)/);
