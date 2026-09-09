@@ -6,6 +6,10 @@ const css = fs.readFileSync('site/assets/css/home-canyonpath.css', 'utf8');
 const tickerCss = fs.readFileSync('site/assets/css/home-scenic-ticker.css', 'utf8');
 const scene = fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.webp');
 const asset = JSON.parse(fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.meta.json', 'utf8'));
+const messageUtils = require('../site/web/classroom-message-utils.js');
+const teacherShell = fs.readFileSync('site/web/teacher-shell.js', 'utf8');
+const settingsMessage = fs.readFileSync('site/web/tc-classroom-message.js', 'utf8');
+const homeMessage = fs.readFileSync('site/web/home-classroom-message.js', 'utf8');
 const { createHash } = require('node:crypto');
 const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
 
@@ -86,6 +90,57 @@ test('Scenic ticker stays background-integrated and preserves the seamless-loop 
   assert.match(tickerCss, /ticker-content\[aria-hidden='true'\]/);
   assert.doesNotMatch(tickerCss, /@import|https?:|fetch\(|localStorage|sessionStorage|supabase|!important/);
   assert.doesNotMatch(tickerCss, /backdrop-filter/);
+});
+
+test('Classroom Message selection ignores retired academic ticker data and uses override before weekday text', () => {
+  const migrated = messageUtils.normalize({
+    ticker: {
+      speed: 90,
+      dateFormat: 'Day, Month DD, YYYY',
+      timeFormat: 'h:mm AM/PM',
+      items: [
+        { category: 'language-arts', text: 'Week 7: Verb Tenses' },
+        { category: 'life-skills', text: 'Your Rights & Responsibilities' },
+        { category: 'none', text: 'Mindful Monday humans, may your coffee kick in first.' },
+      ],
+    },
+  });
+  assert.equal(migrated.speed, 90);
+  assert.equal(migrated.weekdays.monday, 'Mindful Monday humans, may your coffee kick in first.');
+  assert.equal(JSON.stringify(migrated).includes('Verb Tenses'), false);
+  assert.equal(JSON.stringify(migrated).includes('Rights & Responsibilities'), false);
+
+  const explicit = {
+    enabled: true,
+    speed: 45,
+    override: 'SPECIAL OVERRIDE',
+    weekdays: { wednesday: 'WEDNESDAY MESSAGE' },
+  };
+  assert.equal(messageUtils.resolve(explicit, new Date('2026-09-09T08:00:00')).text, 'SPECIAL OVERRIDE');
+  explicit.override = '';
+  assert.equal(messageUtils.resolve(explicit, new Date('2026-09-09T08:00:00')).text, 'WEDNESDAY MESSAGE');
+});
+
+test('Teacher Settings enhancement is path-scoped, removes only obsolete homepage cards, and preserves home_config', () => {
+  assert.match(teacherShell, /IS_CLASSROOM_MESSAGE_SETTINGS = location\.pathname\.startsWith\('\/teacher\/settings'\)/);
+  for (const marker of ['#laUnit', '#lsCurrentTitle', '#tickerDateFormat', '#countdownsBody']) {
+    assert.match(teacherShell, new RegExp(marker.replace('#', '#')));
+  }
+  assert.match(teacherShell, /classroom-message-utils\.js\?v=20260909-1/);
+  assert.match(teacherShell, /tc-classroom-message\.js\?v=20260909-1/);
+  assert.match(settingsMessage, /removeLegacyHomepageCards/);
+  assert.match(settingsMessage, /utils\.write\(homeConfig, readForm\(\)\)/);
+  assert.match(settingsMessage, /localStorage\.setItem\('rc_home_config', JSON\.stringify\(homeConfig\)\)/);
+  assert.match(settingsMessage, /db\.setAppConfig\('home_config', homeConfig\)/);
+  assert.doesNotMatch(settingsMessage, /delete\s+homeConfig\.(?:languageArts|lifeSkills|ticker|countdowns)|localStorage\.removeItem\('rc_home_config'/);
+});
+
+test('Homepage classroom-message layer waits for the legacy renderer, then owns only the scenic message source', () => {
+  assert.match(homeMessage, /waitForLegacyTicker/);
+  assert.match(homeMessage, /utils\.normalize\(homeConfig\)/);
+  assert.match(homeMessage, /utils\.resolve\(config, new Date\(\)\)/);
+  assert.match(homeMessage, /animationDuration = config\.speed \+ 's'/);
+  assert.doesNotMatch(homeMessage, /ticker\.items|dateFormat|timeFormat|languageArts|lifeSkills|math-toolkit/);
 });
 
 test('Approved annotated scenery is local, decorative, and exact', () => {
