@@ -253,7 +253,10 @@ function setZoom(value, persist = true) {
 function syncMetalSelection() {
   document.body.dataset.hdMetal = state.metalPieces ? 'on' : 'off';
   const metalButton = document.querySelector('[data-hd-metal-option]');
-  if (metalButton) metalButton.setAttribute('aria-pressed', String(state.metalPieces));
+  const desiredMetalState = String(state.metalPieces);
+  if (metalButton && metalButton.getAttribute('aria-pressed') !== desiredMetalState) {
+    metalButton.setAttribute('aria-pressed', desiredMetalState);
+  }
   if (!state.metalPieces) return;
   for (const button of document.querySelectorAll('[data-hd-piece-option]')) {
     if (button.getAttribute('aria-pressed') !== 'false') button.setAttribute('aria-pressed', 'false');
