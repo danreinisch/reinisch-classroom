@@ -7,7 +7,7 @@ const {
   currentResidualEntries,
   currentResidualItemIds,
   residualSummary,
-} = require('../netlify/functions/_lib/teacher-week2-day4-residual-core');
+} = require('../netlify/functions/_lib/teacher-week2-day4-residual-core')._test;
 
 function donePlan(code) {
   return {
