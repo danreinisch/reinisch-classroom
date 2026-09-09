@@ -122,6 +122,8 @@ test('HD defaults use Canyon Classic, Staunton pieces, and the five approved ind
   await expect(page.locator('body')).toHaveAttribute('data-hd-piece-set', 'staunton');
   await expect(page.locator('#board svg.hd-piece')).toHaveCount(32);
   await expect(page.locator('#board svg[data-hd-premium-piece="true"]')).toHaveCount(32);
+  const lightSquareMaterial = await page.locator('[data-square="b1"]').evaluate(el => getComputedStyle(el).backgroundSize);
+  expect(lightSquareMaterial).toContain('11px 11px');
   await page.locator('#settingsBtn').click();
   await expect(page.locator('#settingsDialog')).toBeVisible();
   await expect(page.locator('[data-hd-theme-option]')).toHaveCount(5);
