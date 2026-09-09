@@ -6,6 +6,7 @@ on:
     paths:
       - 'netlify/functions/_lib/week2-day4-trim.js'
       - 'netlify/functions/teacher-week2-day4-trim.js'
+      - 'netlify/functions/teacher-week2-day4-trim-core.js'
       - 'netlify/functions/teacher-week2-day4-diagnostic.js'
       - 'site/teacher/week2-day4-trim/**'
       - 'site/web/week2-day4-trim.js'
@@ -33,6 +34,7 @@ jobs:
         run: |
           node --check netlify/functions/_lib/week2-day4-trim.js
           node --check netlify/functions/teacher-week2-day4-trim.js
+          node --check netlify/functions/teacher-week2-day4-trim-core.js
           node --check netlify/functions/teacher-week2-day4-diagnostic.js
           node --check site/web/week2-day4-trim.js
           node --check tests/week2-day4-production-safety.test.cjs
