@@ -295,6 +295,8 @@ const exactContractPlans = [
 
 let classification = classifyTrimPlans(exactContractPlans);
 assert.strictEqual(classification.applyReady, true);
+assert.strictEqual(classification.initialReady, true);
+assert.strictEqual(classification.postHideReady, false);
 assert.strictEqual(classification.safeTrimPlans.length, 46);
 assert.strictEqual(classification.alreadyThreeDayPlans.length, 11);
 assert.strictEqual(classification.preservedPlans.length, 1);
@@ -317,6 +319,60 @@ assert.strictEqual(
   1,
   'S023 remains preserved even when another assignment becomes unsafe'
 );
+
+// Post-hide transition: zero-item Language Arts assignments become fully
+// three-day as soon as metadata is hidden, while assignments with a Day-4
+// scoring item still need item deletion. That mixed state must be accepted by
+// the internal race-check, but the fully completed state must not be treated
+// as another apply-ready starting point.
+const postHideLanguageArtsPlans = Array.from(
+  { length: EXPECTED_SAFE_TRIM_ASSIGNMENTS },
+  (_, index) => {
+    const keepsItem = index < 30;
+    return {
+      ...safePlan,
+      assignmentId: `post-hide-${index + 1}`,
+      day4MetaCount: 0,
+      needsMutation: keepsItem,
+      day4ItemCount: keepsItem ? 1 : 0,
+      day4ItemIds: keepsItem ? [`item-${index + 1}`] : [],
+      day4ItemRefs: keepsItem ? ['WP_4'] : [],
+      removedPoints: keepsItem ? 5 : 0,
+    };
+  }
+);
+classification = classifyTrimPlans([
+  ...postHideLanguageArtsPlans,
+  ...Array.from({ length: EXPECTED_THREE_DAY_ASSIGNMENTS }, (_, index) => ({
+    ...threeDayPlan,
+    assignmentId: `post-hide-ts-${index + 1}`,
+  })),
+  preservedPlan,
+]);
+assert.strictEqual(classification.initialReady, false);
+assert.strictEqual(classification.postHideReady, true);
+assert.strictEqual(classification.applyReady, true);
+assert.strictEqual(classification.unexpectedBlockedPlans.length, 0);
+
+const fullyCompletedLanguageArtsPlans = postHideLanguageArtsPlans.map(planRow => ({
+  ...planRow,
+  needsMutation: false,
+  day4ItemCount: 0,
+  day4ItemIds: [],
+  day4ItemRefs: [],
+  removedPoints: 0,
+}));
+classification = classifyTrimPlans([
+  ...fullyCompletedLanguageArtsPlans,
+  ...Array.from({ length: EXPECTED_THREE_DAY_ASSIGNMENTS }, (_, index) => ({
+    ...threeDayPlan,
+    assignmentId: `completed-ts-${index + 1}`,
+  })),
+  preservedPlan,
+]);
+assert.strictEqual(classification.initialReady, false);
+assert.strictEqual(classification.postHideReady, false);
+assert.strictEqual(classification.applyReady, false);
 
 const endpointSource = fs.readFileSync(
   path.join(__dirname, '..', 'netlify', 'functions', 'teacher-week2-day4-trim.js'),
