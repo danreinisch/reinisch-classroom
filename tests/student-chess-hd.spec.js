@@ -264,8 +264,7 @@ test('premium SVG sets are genuinely distinct and Board depth stays optional, pe
 
   await page.locator('#boardDepthToggle').check();
   await expect(page.locator('body')).toHaveAttribute('data-hd-board-depth', 'on');
-  const contactOpacity = Number(await page.locator('[data-square="b1"] .hd-piece-contact').evaluate(el => getComputedStyle(el).opacity));
-  expect(contactOpacity).toBeGreaterThan(0.1);
+  await expect.poll(async () => Number(await page.locator('[data-square="b1"] .hd-piece-contact').evaluate(el => getComputedStyle(el).opacity))).toBeGreaterThan(0.1);
 
   await page.locator('[data-hd-theme-option="high-contrast"]').click();
   const filter = await page.locator('[data-square="b1"] svg.hd-premium-piece').evaluate(el => getComputedStyle(el).filter);
@@ -340,7 +339,9 @@ test('Standard and Focus layouts fit the required classroom/mobile viewports wit
     await expectNoHorizontalOverflow(page);
     await expect(page.locator('#board button')).toHaveCount(64);
   }
-  await page.locator('#focusBoardBtn').focus();
+  await page.locator('#flipBtn').focus();
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#focusBoardBtn')).toBeFocused();
   const outline = await page.locator('#focusBoardBtn').evaluate(el => getComputedStyle(el).outlineStyle);
   expect(outline).not.toBe('none');
 });
