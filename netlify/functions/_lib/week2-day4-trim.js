@@ -1,7 +1,7 @@
 'use strict';
 
 const TARGET_SCHOOL_YEAR = 2026;
-const TARGET_SOURCE_FILE = 'WEEK_02_UPLOAD.txt';
+const TARGET_SOURCE_FILE = 'WEEK_02_UPLOAD (1).txt';
 const TARGET_DAY_NUMBER = 4;
 
 const TARGETS = Object.freeze([
