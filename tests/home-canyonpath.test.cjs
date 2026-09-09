@@ -1,11 +1,18 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const vm = require('node:vm');
 const html = fs.readFileSync('site/index.html', 'utf8');
 const css = fs.readFileSync('site/assets/css/home-canyonpath.css', 'utf8');
 const tickerCss = fs.readFileSync('site/assets/css/home-scenic-ticker.css', 'utf8');
 const scene = fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.webp');
 const asset = JSON.parse(fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.meta.json', 'utf8'));
+const messageContext = {};
+vm.runInNewContext(fs.readFileSync('site/web/classroom-message-utils.js', 'utf8'), messageContext);
+const messageUtils = messageContext.RCClassroomMessage;
+const settingsHtml = fs.readFileSync('site/teacher/settings/index.html', 'utf8');
+const settingsMessage = fs.readFileSync('site/web/tc-classroom-message.js', 'utf8');
+const homeMessage = fs.readFileSync('site/web/home-classroom-message.js', 'utf8');
 const { createHash } = require('node:crypto');
 const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
 
@@ -42,8 +49,9 @@ test('Homepage restores the scenic ticker while keeping class-update cards remov
 test('Homepage keeps the exact existing runtime scripts without importing Portal behavior', () => {
   assert.deepEqual([...html.matchAll(/<script\b[^>]*src="([^"]+)"/g)].map((m) => m[1]), [
     '/web/public-nav.js', '/web/sidebar-init.js', '/web/supabase-config.js',
-    '/web/home-dashboard.js', '/assets/js/class-clock.js', '/web/class-mode.js',
-    '/assets/js/viewer-compat.js', '/web/public-shell.js',
+    '/web/home-dashboard.js', '/web/classroom-message-utils.js?v=20260909-1',
+    '/web/home-classroom-message.js?v=20260909-1', '/assets/js/class-clock.js',
+    '/web/class-mode.js', '/assets/js/viewer-compat.js', '/web/public-shell.js',
   ]);
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/);
   assert.doesNotMatch(html, /student-canyonpath\.(?:js|css)/);
@@ -74,6 +82,8 @@ test('Homepage CSS is scoped and does not introduce data access or external depe
 
 test('Scenic ticker stays background-integrated and preserves the seamless-loop contract', () => {
   assert.match(html, /home-scenic-ticker\.css\?v=20260909-1/);
+  assert.match(html, /classroom-message-utils\.js\?v=20260909-1/);
+  assert.match(html, /home-classroom-message\.js\?v=20260909-1/);
   assert.match(tickerCss, /background:\s*transparent/);
   assert.match(tickerCss, /mask-image:\s*linear-gradient/);
   assert.match(tickerCss, /animation:\s*home-scenic-ticker-scroll 45s linear infinite/);
@@ -83,6 +93,66 @@ test('Scenic ticker stays background-integrated and preserves the seamless-loop 
   assert.match(tickerCss, /ticker-content\[aria-hidden='true'\]/);
   assert.doesNotMatch(tickerCss, /@import|https?:|fetch\(|localStorage|sessionStorage|supabase|!important/);
   assert.doesNotMatch(tickerCss, /backdrop-filter/);
+});
+
+test('Classroom Message selection ignores retired academic ticker data and uses override before weekday text', () => {
+  const migrated = messageUtils.normalize({
+    ticker: {
+      speed: 90,
+      dateFormat: 'Day, Month DD, YYYY',
+      timeFormat: 'h:mm AM/PM',
+      items: [
+        { category: 'language-arts', text: 'Week 7: Verb Tenses' },
+        { category: 'life-skills', text: 'Your Rights & Responsibilities' },
+        { category: 'none', text: 'Mindful Monday humans, may your coffee kick in first.' },
+      ],
+    },
+  });
+  assert.equal(migrated.speed, 90);
+  assert.equal(migrated.weekdays.monday, 'Mindful Monday humans, may your coffee kick in first.');
+  assert.equal(JSON.stringify(migrated).includes('Verb Tenses'), false);
+  assert.equal(JSON.stringify(migrated).includes('Rights & Responsibilities'), false);
+
+  const explicit = {
+    enabled: true,
+    speed: 45,
+    override: 'SPECIAL OVERRIDE',
+    weekdays: { wednesday: 'WEDNESDAY MESSAGE' },
+  };
+  assert.equal(messageUtils.resolve(explicit, '2026-09-09T08:00:00').text, 'SPECIAL OVERRIDE');
+  explicit.override = '';
+  assert.equal(messageUtils.resolve(explicit, '2026-09-09T08:00:00').text, 'WEDNESDAY MESSAGE');
+});
+
+test('Teacher Settings removes obsolete homepage cards and preserves home_config through the new editor', () => {
+  for (const retired of [
+    'Language Arts — Weekly Focus', 'Life Skills — Weekly Focus', 'Ticker Configuration',
+    'Countdown Events', 'laUnit', 'lsCurrentTitle', 'tickerDateFormat', 'countdownsBody',
+  ]) {
+    assert.doesNotMatch(settingsHtml, new RegExp(retired));
+  }
+  for (const id of [
+    'classroomMessageSettings', 'classroomMessageEnabled', 'classroomMessageOverride',
+    'classroomMessageMonday', 'classroomMessageTuesday', 'classroomMessageWednesday',
+    'classroomMessageThursday', 'classroomMessageFriday', 'classroomMessageSpeed',
+    'classroomMessagePreviewText', 'saveClassroomMessageBtn',
+  ]) {
+    assert.match(settingsHtml, new RegExp(id));
+  }
+  assert.match(settingsHtml, /classroom-message-utils\.js\?v=20260909-1/);
+  assert.match(settingsHtml, /tc-classroom-message\.js\?v=20260909-1/);
+  assert.match(settingsMessage, /utils\.write\(homeConfig, readForm\(\)\)/);
+  assert.match(settingsMessage, /localStorage\.setItem\('rc_home_config', JSON\.stringify\(homeConfig\)\)/);
+  assert.match(settingsMessage, /db\.setAppConfig\('home_config', homeConfig\)/);
+  assert.doesNotMatch(settingsMessage, /delete\s+homeConfig\.(?:languageArts|lifeSkills|ticker|countdowns)|localStorage\.removeItem\('rc_home_config'/);
+});
+
+test('Homepage classroom-message layer waits for the legacy renderer, then owns only the scenic message source', () => {
+  assert.match(homeMessage, /waitForLegacyTicker/);
+  assert.match(homeMessage, /utils\.normalize\(homeConfig\)/);
+  assert.match(homeMessage, /utils\.resolve\(config, new Date\(\)\)/);
+  assert.match(homeMessage, /animationDuration = config\.speed \+ 's'/);
+  assert.doesNotMatch(homeMessage, /ticker\.items|dateFormat|timeFormat|languageArts|lifeSkills|math-toolkit/);
 });
 
 test('Approved annotated scenery is local, decorative, and exact', () => {
