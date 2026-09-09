@@ -1,9 +1,9 @@
 // Teacher Gradebook roster presentation order.
 //
-// Infinite Campus is stacking the class rosters alphabetically by student name.
-// Reinisch Classroom already has the display name at runtime, so this helper
-// sorts the rendered rows the same way instead of hard-coding a roster.
-// No student names or other PII are stored in source.
+// Infinite Campus stacks each class roster alphabetically by family name.
+// Reinisch Classroom already has the student display name at runtime, so this
+// helper derives the same family-name-first sort key instead of hard-coding a
+// roster. No student names or other PII are stored in source.
 // Explicit teacher column sorts still win; clearing a sort restores this order.
 
 const NAME_COLLATOR = new Intl.Collator("en-US", {
@@ -11,8 +11,17 @@ const NAME_COLLATOR = new Intl.Collator("en-US", {
   numeric: true,
 });
 
-function studentSortLabel(student) {
-  return String(student?.name || student?.code || "").trim();
+export function infiniteCampusSortLabel(student) {
+  const raw = String(student?.name || student?.code || "").trim();
+  if (!raw || raw.includes(",")) return raw;
+
+  const parts = raw.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return raw;
+
+  // Current roster names are stored given-name first. Everything after the
+  // given name is kept together so compound family names sort as one surname.
+  const [givenName, ...familyNameParts] = parts;
+  return `${familyNameParts.join(" ")}, ${givenName}`;
 }
 
 export function sortStudentsLikeInfiniteCampus(students) {
@@ -22,8 +31,8 @@ export function sortStudentsLikeInfiniteCampus(students) {
     .map((student, index) => ({ student, index }))
     .sort((a, b) => {
       const byName = NAME_COLLATOR.compare(
-        studentSortLabel(a.student),
-        studentSortLabel(b.student)
+        infiniteCampusSortLabel(a.student),
+        infiniteCampusSortLabel(b.student)
       );
       if (byName !== 0) return byName;
 
