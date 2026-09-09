@@ -37,6 +37,27 @@ const TARGETS = Object.freeze([
   },
 ]);
 
+const EXPECTED_TOTAL_ASSIGNMENTS = 58;
+const EXPECTED_SAFE_TRIM_ASSIGNMENTS = 46;
+const EXPECTED_THREE_DAY_ASSIGNMENTS = 11;
+const EXPECTED_PRESERVED_ASSIGNMENTS = 1;
+
+const EXPECTED_PRESERVED_ASSIGNMENT = Object.freeze({
+  className: 'Language Arts 3 SC',
+  title: 'WEEK 2 — 1984 — Truth, Language & Memory — S023',
+  studentCode: 'S023',
+  day4MetaCount: 1,
+  day4ItemCount: 1,
+  day4ItemRefs: Object.freeze(['WP_4']),
+  removedPoints: 5,
+  blockedReasons: Object.freeze([
+    'day4_autosave_exists',
+    'day4_submission_answer_exists',
+    'day4_goal_evidence_exists',
+    'manual_review_state_exists',
+  ]),
+});
+
 function cloneJson(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
@@ -345,18 +366,78 @@ function buildAssignmentPlan({
   };
 }
 
+function sameStringSet(actual, expected) {
+  const a = [...new Set(Array.isArray(actual) ? actual.map(String) : [])].sort();
+  const b = [...new Set(Array.isArray(expected) ? expected.map(String) : [])].sort();
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function isExpectedPreservedPlan(plan) {
+  if (!plan || plan.blocked !== true || plan.needsMutation !== true) return false;
+
+  return (
+    plan.className === EXPECTED_PRESERVED_ASSIGNMENT.className &&
+    plan.title === EXPECTED_PRESERVED_ASSIGNMENT.title &&
+    Number(plan.day4MetaCount) === EXPECTED_PRESERVED_ASSIGNMENT.day4MetaCount &&
+    Number(plan.day4ItemCount) === EXPECTED_PRESERVED_ASSIGNMENT.day4ItemCount &&
+    Number(plan.removedPoints) === EXPECTED_PRESERVED_ASSIGNMENT.removedPoints &&
+    sameStringSet(plan.day4ItemRefs, EXPECTED_PRESERVED_ASSIGNMENT.day4ItemRefs) &&
+    sameStringSet(plan.blockedReasons, EXPECTED_PRESERVED_ASSIGNMENT.blockedReasons)
+  );
+}
+
+function classifyTrimPlans(plans) {
+  const safePlans = Array.isArray(plans) ? plans : [];
+  const blockedPlans = safePlans.filter(plan => plan && plan.blocked === true);
+  const preservedPlans = blockedPlans.filter(isExpectedPreservedPlan);
+  const unexpectedBlockedPlans = blockedPlans.filter(
+    plan => !isExpectedPreservedPlan(plan)
+  );
+  const safeTrimPlans = safePlans.filter(
+    plan => plan && plan.needsMutation === true && plan.blocked !== true
+  );
+  const alreadyThreeDayPlans = safePlans.filter(
+    plan => plan && plan.needsMutation !== true && plan.blocked !== true
+  );
+
+  const applyReady = (
+    safePlans.length === EXPECTED_TOTAL_ASSIGNMENTS &&
+    safeTrimPlans.length === EXPECTED_SAFE_TRIM_ASSIGNMENTS &&
+    alreadyThreeDayPlans.length === EXPECTED_THREE_DAY_ASSIGNMENTS &&
+    preservedPlans.length === EXPECTED_PRESERVED_ASSIGNMENTS &&
+    unexpectedBlockedPlans.length === 0
+  );
+
+  return {
+    applyReady,
+    blockedPlans,
+    preservedPlans,
+    unexpectedBlockedPlans,
+    safeTrimPlans,
+    alreadyThreeDayPlans,
+  };
+}
+
 module.exports = {
+  EXPECTED_PRESERVED_ASSIGNMENT,
+  EXPECTED_PRESERVED_ASSIGNMENTS,
+  EXPECTED_SAFE_TRIM_ASSIGNMENTS,
+  EXPECTED_THREE_DAY_ASSIGNMENTS,
+  EXPECTED_TOTAL_ASSIGNMENTS,
   TARGET_DAY_NUMBER,
   TARGET_SCHOOL_YEAR,
   TARGET_SOURCE_FILE,
   TARGETS,
   buildAssignmentPlan,
+  classifyTrimPlans,
   day4ItemRefs,
   getDay4Days,
   hasDay4WorkInInstanceSettings,
   hasDay4WorkInSubmissionAnswers,
   isDay4Item,
+  isExpectedPreservedPlan,
   isNonBlank,
   matchesTargetAssignment,
+  sameStringSet,
   trimDay4Meta,
 };
