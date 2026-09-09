@@ -42,8 +42,9 @@ test('Homepage restores the scenic ticker while keeping class-update cards remov
 test('Homepage keeps the exact existing runtime scripts without importing Portal behavior', () => {
   assert.deepEqual([...html.matchAll(/<script\b[^>]*src="([^"]+)"/g)].map((m) => m[1]), [
     '/web/public-nav.js', '/web/sidebar-init.js', '/web/supabase-config.js',
-    '/web/home-dashboard.js', '/assets/js/class-clock.js', '/web/class-mode.js',
-    '/assets/js/viewer-compat.js', '/web/public-shell.js',
+    '/web/home-dashboard.js', '/web/classroom-message-utils.js?v=20260909-1',
+    '/web/home-classroom-message.js?v=20260909-1', '/assets/js/class-clock.js',
+    '/web/class-mode.js', '/assets/js/viewer-compat.js', '/web/public-shell.js',
   ]);
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/);
   assert.doesNotMatch(html, /student-canyonpath\.(?:js|css)/);
@@ -74,6 +75,8 @@ test('Homepage CSS is scoped and does not introduce data access or external depe
 
 test('Scenic ticker stays background-integrated and preserves the seamless-loop contract', () => {
   assert.match(html, /home-scenic-ticker\.css\?v=20260909-1/);
+  assert.match(html, /classroom-message-utils\.js\?v=20260909-1/);
+  assert.match(html, /home-classroom-message\.js\?v=20260909-1/);
   assert.match(tickerCss, /background:\s*transparent/);
   assert.match(tickerCss, /mask-image:\s*linear-gradient/);
   assert.match(tickerCss, /animation:\s*home-scenic-ticker-scroll 45s linear infinite/);
