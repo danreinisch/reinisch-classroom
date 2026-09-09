@@ -5,12 +5,18 @@ const fs = require('fs');
 const path = require('path');
 
 const {
+  EXPECTED_PRESERVED_ASSIGNMENT,
+  EXPECTED_SAFE_TRIM_ASSIGNMENTS,
+  EXPECTED_THREE_DAY_ASSIGNMENTS,
+  EXPECTED_TOTAL_ASSIGNMENTS,
   TARGET_SOURCE_FILE,
   TARGETS,
   buildAssignmentPlan,
+  classifyTrimPlans,
   getDay4Days,
   hasDay4WorkInInstanceSettings,
   isDay4Item,
+  isExpectedPreservedPlan,
   matchesTargetAssignment,
   trimDay4Meta,
 } = require('../netlify/functions/_lib/week2-day4-trim');
@@ -47,6 +53,10 @@ assert.strictEqual(
   'WEEK_02_UPLOAD (1).txt',
   'trim must stay locked to the source filename observed in the live Week 2 diagnostic'
 );
+assert.strictEqual(EXPECTED_TOTAL_ASSIGNMENTS, 58);
+assert.strictEqual(EXPECTED_SAFE_TRIM_ASSIGNMENTS, 46);
+assert.strictEqual(EXPECTED_THREE_DAY_ASSIGNMENTS, 11);
+assert.strictEqual(EXPECTED_PRESERVED_ASSIGNMENT.studentCode, 'S023');
 assert.strictEqual(TARGETS.length, 6, 'scope must stay locked to six intended class groups');
 assert.strictEqual(
   TARGETS.reduce((sum, target) => sum + target.expectedCount, 0),
@@ -113,7 +123,7 @@ assert.strictEqual(
   'saved Day 4 writing must block the trim'
 );
 
-let plan = buildAssignmentPlan({
+let safePlan = buildAssignmentPlan({
   assignment: assignment(),
   target: TARGETS[2],
   items,
@@ -133,14 +143,14 @@ let plan = buildAssignmentPlan({
   objectiveReviewDispositions: [],
 });
 
-assert.strictEqual(plan.eligible, true);
-assert.strictEqual(plan.needsMutation, true);
-assert.strictEqual(plan.blocked, false);
-assert.deepStrictEqual(plan.day4ItemRefs, ['WP_4']);
-assert.strictEqual(plan.removedPoints, 5);
-assert.strictEqual(plan.remainingPoints, 21);
+assert.strictEqual(safePlan.eligible, true);
+assert.strictEqual(safePlan.needsMutation, true);
+assert.strictEqual(safePlan.blocked, false);
+assert.deepStrictEqual(safePlan.day4ItemRefs, ['WP_4']);
+assert.strictEqual(safePlan.removedPoints, 5);
+assert.strictEqual(safePlan.remainingPoints, 21);
 
-plan = buildAssignmentPlan({
+let plan = buildAssignmentPlan({
   assignment: assignment(),
   target: TARGETS[2],
   items,
@@ -198,6 +208,52 @@ plan = buildAssignmentPlan({
 });
 assert.ok(plan.blockedReasons.includes('manual_review_state_exists'));
 
+const preservedPlan = buildAssignmentPlan({
+  assignment: assignment({
+    id: 923,
+    title: EXPECTED_PRESERVED_ASSIGNMENT.title,
+  }),
+  target: TARGETS[2],
+  items,
+  instances: [
+    {
+      id: 'inst-s023',
+      settings: {
+        answers: { '1_1': 'A', '2_1': 'B', '3_1': 'C' },
+        writing_response: 'Completed Friday response',
+      },
+    },
+  ],
+  submissions: [
+    {
+      review_status: 'finalized',
+      score_manual: null,
+      graded_at: '2026-09-09T15:00:00Z',
+      answers: { '1_1': 'A', '2_1': 'B', '3_1': 'C' },
+    },
+  ],
+  submissionAnswers: [{ assignment_item_id: 4 }],
+  goalDataPoints: [{ item_id: 4 }],
+  objectiveDataPoints: [],
+  objectiveReviewDispositions: [],
+});
+
+assert.strictEqual(preservedPlan.blocked, true);
+assert.strictEqual(isExpectedPreservedPlan(preservedPlan), true);
+assert.deepStrictEqual(
+  [...preservedPlan.blockedReasons].sort(),
+  [...EXPECTED_PRESERVED_ASSIGNMENT.blockedReasons].sort(),
+  'S023 preservation must remain locked to the exact observed evidence state'
+);
+assert.strictEqual(
+  isExpectedPreservedPlan({
+    ...preservedPlan,
+    blockedReasons: [...preservedPlan.blockedReasons, 'day4_objective_evidence_exists'],
+  }),
+  false,
+  'an additional S023 blocker must require a new preview/diagnosis rather than being silently accepted'
+);
+
 const tsTarget = TARGETS.find(t => t.className === 'Transitional Skills');
 const tsAssignment = {
   id: 902,
@@ -213,7 +269,7 @@ const tsAssignment = {
     ],
   },
 };
-plan = buildAssignmentPlan({
+const threeDayPlan = buildAssignmentPlan({
   assignment: tsAssignment,
   target: tsTarget,
   items: [
@@ -222,8 +278,45 @@ plan = buildAssignmentPlan({
     { id: 13, item_ref: '3_1', points: 1, meta: { day: 3 } },
   ],
 });
-assert.strictEqual(plan.blocked, false);
-assert.strictEqual(plan.needsMutation, false);
+assert.strictEqual(threeDayPlan.blocked, false);
+assert.strictEqual(threeDayPlan.needsMutation, false);
+
+const exactContractPlans = [
+  ...Array.from({ length: EXPECTED_SAFE_TRIM_ASSIGNMENTS }, (_, index) => ({
+    ...safePlan,
+    assignmentId: `safe-${index + 1}`,
+  })),
+  ...Array.from({ length: EXPECTED_THREE_DAY_ASSIGNMENTS }, (_, index) => ({
+    ...threeDayPlan,
+    assignmentId: `three-${index + 1}`,
+  })),
+  preservedPlan,
+];
+
+let classification = classifyTrimPlans(exactContractPlans);
+assert.strictEqual(classification.applyReady, true);
+assert.strictEqual(classification.safeTrimPlans.length, 46);
+assert.strictEqual(classification.alreadyThreeDayPlans.length, 11);
+assert.strictEqual(classification.preservedPlans.length, 1);
+assert.strictEqual(classification.unexpectedBlockedPlans.length, 0);
+
+const unexpectedBlockedPlan = {
+  ...safePlan,
+  assignmentId: 'safe-1',
+  blocked: true,
+  blockedReasons: ['day4_autosave_exists'],
+};
+classification = classifyTrimPlans([
+  unexpectedBlockedPlan,
+  ...exactContractPlans.slice(1),
+]);
+assert.strictEqual(classification.applyReady, false);
+assert.strictEqual(classification.unexpectedBlockedPlans.length, 1);
+assert.strictEqual(
+  classification.preservedPlans.length,
+  1,
+  'S023 remains preserved even when another assignment becomes unsafe'
+);
 
 const endpointSource = fs.readFileSync(
   path.join(__dirname, '..', 'netlify', 'functions', 'teacher-week2-day4-trim.js'),
@@ -231,7 +324,18 @@ const endpointSource = fs.readFileSync(
 );
 assert.match(endpointSource, /PRODUCTION_HOSTS/);
 assert.match(endpointSource, /freshState = await collectTrimState/);
+assert.match(endpointSource, /postHideState = await collectTrimState/);
 assert.match(endpointSource, /Day 1–3[\s\S]*autosaves are intentionally ignored/i);
+assert.match(
+  endpointSource,
+  /entry\.plan\.needsMutation && !entry\.plan\.blocked/,
+  'apply path must exclude every blocked assignment, including preserved S023'
+);
+assert.match(
+  endpointSource,
+  /Metadata was restored; no Day 4 items were deleted/,
+  'post-hide race guard must restore metadata before refusing deletion'
+);
 assert.doesNotMatch(
   endpointSource,
   /patchJson\(\s*`assignment_instances/i,
@@ -262,6 +366,8 @@ const uiSource = fs.readFileSync(
   'utf8'
 );
 assert.match(uiSource, /Deploy preview: read-only by design/);
-assert.match(uiSource, /Student assignment instances updated: 0/);
+assert.match(uiSource, /PRESERVE: completed Day 4 work\/evidence/);
+assert.match(uiSource, /46 safe Language Arts assignments/);
+assert.match(uiSource, /Student assignment instances updated/);
 
 console.log('week2-day4-trim regression tests passed');
