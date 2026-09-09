@@ -399,8 +399,20 @@ function classifyTrimPlans(plans) {
   const alreadyThreeDayPlans = safePlans.filter(
     plan => plan && plan.needsMutation !== true && plan.blocked !== true
   );
+  const safeLanguageArtsPlans = safePlans.filter(
+    plan =>
+      plan &&
+      plan.blocked !== true &&
+      plan.className !== 'Transitional Skills'
+  );
+  const transitionalSkillsPlans = safePlans.filter(
+    plan =>
+      plan &&
+      plan.blocked !== true &&
+      plan.className === 'Transitional Skills'
+  );
 
-  const applyReady = (
+  const initialReady = (
     safePlans.length === EXPECTED_TOTAL_ASSIGNMENTS &&
     safeTrimPlans.length === EXPECTED_SAFE_TRIM_ASSIGNMENTS &&
     alreadyThreeDayPlans.length === EXPECTED_THREE_DAY_ASSIGNMENTS &&
@@ -408,8 +420,27 @@ function classifyTrimPlans(plans) {
     unexpectedBlockedPlans.length === 0
   );
 
+  // During Apply, Day 4 metadata is hidden from all 46 safe Language Arts
+  // assignments before item deletion. Assignments that never had a Day-4
+  // scoring item immediately become three-day at that point, while others
+  // still report needsMutation because their Day-4 item remains. This exact
+  // transition shape is safe only while at least one Day-4 item still exists;
+  // the fully completed state therefore does not masquerade as apply-ready.
+  const postHideReady = (
+    safePlans.length === EXPECTED_TOTAL_ASSIGNMENTS &&
+    preservedPlans.length === EXPECTED_PRESERVED_ASSIGNMENTS &&
+    unexpectedBlockedPlans.length === 0 &&
+    safeLanguageArtsPlans.length === EXPECTED_SAFE_TRIM_ASSIGNMENTS &&
+    transitionalSkillsPlans.length === EXPECTED_THREE_DAY_ASSIGNMENTS &&
+    transitionalSkillsPlans.every(plan => plan.needsMutation !== true) &&
+    safeLanguageArtsPlans.every(plan => Number(plan.day4MetaCount) === 0) &&
+    safeLanguageArtsPlans.some(plan => plan.needsMutation === true)
+  );
+
   return {
-    applyReady,
+    applyReady: initialReady || postHideReady,
+    initialReady,
+    postHideReady,
     blockedPlans,
     preservedPlans,
     unexpectedBlockedPlans,
