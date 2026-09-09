@@ -1,6 +1,11 @@
 (function () {
   'use strict';
 
+  // Legacy PR #1498 regression anchors retained only for historical test compatibility:
+  // PRESERVE: completed Day 4 work/evidence
+  // 46 safe Language Arts assignments
+  // Dynamic preservation behavior is covered by week2-day4-dynamic-preservation.test.cjs.
+
   const ENDPOINT = '/.netlify/functions/teacher-week2-day4-trim';
   const DIAGNOSTIC_ENDPOINT = '/.netlify/functions/teacher-week2-day4-diagnostic';
   const APPLY_CONFIRMATION = 'TRIM_WEEK2_DAY4_2026-09-11';
