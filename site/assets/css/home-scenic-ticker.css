@@ -1,0 +1,139 @@
+/* Scenic homepage classroom message.
+   Reuses the existing teacher-managed ticker data/runtime without adding a panel surface. */
+body.rc-home-canyonpath .home-hero {
+  position: relative;
+}
+
+body.rc-home-canyonpath .home-scenic-ticker {
+  position: absolute;
+  top: clamp(44px, 4.5vw, 70px);
+  left: 47%;
+  right: clamp(8px, 2vw, 28px);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  height: 74px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: #ffe1a5;
+  transform: rotate(-1deg);
+  transform-origin: center;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%);
+}
+
+body.rc-home-canyonpath .home-scenic-ticker .ticker-track {
+  display: flex;
+  width: max-content;
+  white-space: nowrap;
+  animation: home-scenic-ticker-scroll 45s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+body.rc-home-canyonpath .home-scenic-ticker:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+body.rc-home-canyonpath .home-scenic-ticker .ticker-content {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.4rem;
+  padding: 0 clamp(1.4rem, 2.5vw, 2.4rem);
+  color: #ffe1a5;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(0.88rem, 1.05vw, 1.05rem);
+  font-style: italic;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: 0.015em;
+  text-shadow: 0 0 10px rgba(255, 222, 157, 0.24), 0 1px 2px rgba(0, 0, 0, 0.82);
+}
+
+body.rc-home-canyonpath .home-scenic-ticker .ticker-content::before,
+body.rc-home-canyonpath .home-scenic-ticker .ticker-content::after {
+  content: '· · · · ·';
+  color: rgba(255, 225, 165, 0.7);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.9em;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 8px rgba(255, 222, 157, 0.28);
+}
+
+body.rc-home-canyonpath .home-scenic-ticker .ticker-content svg {
+  flex: 0 0 auto;
+  color: currentColor;
+  opacity: 0.9;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes home-scenic-ticker-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(var(--ticker-offset, -50%), 0, 0); }
+}
+
+@media (max-width: 900px) {
+  body.rc-home-canyonpath .home-scenic-ticker {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    height: 58px;
+    margin-top: 22px;
+    transform: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  }
+}
+
+@media (max-width: 600px) {
+  body.rc-home-canyonpath .home-scenic-ticker {
+    height: 52px;
+    margin-top: 18px;
+  }
+
+  body.rc-home-canyonpath .home-scenic-ticker .ticker-content {
+    font-size: 0.8rem;
+    padding-inline: 1.2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.rc-home-canyonpath .home-scenic-ticker {
+    transform: none;
+  }
+
+  body.rc-home-canyonpath .home-scenic-ticker .ticker-track {
+    display: block;
+    width: 100%;
+    animation: none;
+    transform: none;
+  }
+
+  body.rc-home-canyonpath .home-scenic-ticker .ticker-content {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  body.rc-home-canyonpath .home-scenic-ticker .ticker-content[aria-hidden='true'] {
+    display: none;
+  }
+}
+
+html[data-theme='light'] body.rc-home-canyonpath .home-scenic-ticker,
+html[data-theme='light'] body.rc-home-canyonpath .home-scenic-ticker .ticker-content {
+  color: #5c4a18;
+  text-shadow: none;
+}
+
+html[data-theme='light'] body.rc-home-canyonpath .home-scenic-ticker .ticker-content::before,
+html[data-theme='light'] body.rc-home-canyonpath .home-scenic-ticker .ticker-content::after {
+  color: rgba(92, 74, 24, 0.62);
+  text-shadow: none;
+}
