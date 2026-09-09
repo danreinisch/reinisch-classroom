@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const html = fs.readFileSync('site/index.html', 'utf8');
 const css = fs.readFileSync('site/assets/css/home-canyonpath.css', 'utf8');
+const tickerCss = fs.readFileSync('site/assets/css/home-scenic-ticker.css', 'utf8');
 const scene = fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.webp');
 const asset = JSON.parse(fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.meta.json', 'utf8'));
 const { createHash } = require('node:crypto');
@@ -27,8 +28,11 @@ function contrast(a, b) {
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 }
 
-test('Homepage removes ticker and class-update surfaces, not the retained data hooks', () => {
-  assert.doesNotMatch(html, /class="[^"]*ticker-(?:bar|track|content)/);
+test('Homepage restores the scenic ticker while keeping class-update cards removed', () => {
+  assert.equal((html.match(/class="home-scenic-ticker ticker-bar"/g) || []).length, 1);
+  assert.equal((html.match(/class="ticker-track"/g) || []).length, 1);
+  assert.equal((html.match(/class="ticker-content"/g) || []).length, 2);
+  assert.match(html, /class="ticker-content" aria-hidden="true"/);
   assert.doesNotMatch(html, /id="focus-(?:la|life)"/);
   for (const id of ['tcSidebarToggle', 'home-greeting', 'home-focus-section', 'focus-standards', 'home-countdowns', 'daily-quote', 'home-stats']) {
     assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, id);
@@ -66,6 +70,19 @@ test('Homepage CSS is scoped and does not introduce data access or external depe
     assert.ok(selector.includes('body.rc-home-canyonpath'), selector);
   }
   assert.doesNotMatch(css, /@import|https?:|fetch\(|localStorage|sessionStorage|supabase|!important/);
+});
+
+test('Scenic ticker stays background-integrated and preserves the seamless-loop contract', () => {
+  assert.match(html, /home-scenic-ticker\.css\?v=20260909-1/);
+  assert.match(tickerCss, /background:\s*transparent/);
+  assert.match(tickerCss, /mask-image:\s*linear-gradient/);
+  assert.match(tickerCss, /animation:\s*home-scenic-ticker-scroll 45s linear infinite/);
+  assert.match(tickerCss, /@keyframes home-scenic-ticker-scroll/);
+  assert.match(tickerCss, /home-scenic-ticker:hover \.ticker-track/);
+  assert.match(tickerCss, /prefers-reduced-motion:\s*reduce/);
+  assert.match(tickerCss, /ticker-content\[aria-hidden='true'\]/);
+  assert.doesNotMatch(tickerCss, /@import|https?:|fetch\(|localStorage|sessionStorage|supabase|!important/);
+  assert.doesNotMatch(tickerCss, /backdrop-filter/);
 });
 
 test('Approved annotated scenery is local, decorative, and exact', () => {
