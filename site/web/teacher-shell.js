@@ -1,19 +1,6 @@
 (function(){
   const KEY = 'rc_tc_sidebar';
   const DEFAULT = 'collapsed';
-  const IS_CLASSROOM_MESSAGE_SETTINGS = location.pathname.startsWith('/teacher/settings');
-
-  if(IS_CLASSROOM_MESSAGE_SETTINGS){
-    const style = document.createElement('style');
-    style.id = 'rc-classroom-message-retirement-style';
-    style.textContent = [
-      '.tc-main .rc-card:has(#laUnit)',
-      '.tc-main .rc-card:has(#lsCurrentTitle)',
-      '.tc-main .rc-card:has(#tickerDateFormat)',
-      '.tc-main .rc-card:has(#countdownsBody)'
-    ].join(',') + '{display:none!important;}';
-    document.head.appendChild(style);
-  }
 
   function setCollapsed(isCollapsed){
     document.documentElement.classList.toggle('tc-collapsed', isCollapsed);
@@ -126,26 +113,6 @@
     });
   }
 
-  function loadClassroomMessageSettings(){
-    if(!IS_CLASSROOM_MESSAGE_SETTINGS) return;
-
-    const load = (src) => new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = true;
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('Failed to load ' + src));
-      document.head.appendChild(script);
-    });
-
-    load('/web/classroom-message-utils.js?v=20260909-1')
-      .then(() => load('/web/tc-classroom-message.js?v=20260909-1'))
-      .catch((err) => {
-        console.warn('[teacher-shell] Classroom Message settings failed:', err.message);
-        document.getElementById('rc-classroom-message-retirement-style')?.remove();
-      });
-  }
-
   async function init(){
     const ok = await gateTeacher();
     if(!ok) return;
@@ -186,7 +153,6 @@
     ensureObservationNav();
     wireNavActive();
     loadUngradedBadge();
-    loadClassroomMessageSettings();
   }
 
   async function loadUngradedBadge(){
