@@ -129,11 +129,13 @@
     const plans = Array.isArray(data.plans) ? data.plans : [];
 
     for (const plan of plans) {
-      const state = plan.blocked
-        ? `BLOCKED: ${plan.blocked_reasons.join(', ')}`
-        : plan.needs_mutation
-          ? `trim ${plan.day4_items} Day-4 item(s); ${plan.removed_points} point(s) removed`
-          : 'already three-day — no change';
+      const state = plan.preserved
+        ? 'PRESERVE: completed Day 4 work/evidence — no change'
+        : plan.blocked
+          ? `BLOCKED: ${plan.blocked_reasons.join(', ')}`
+          : plan.needs_mutation
+            ? `trim ${plan.day4_items} Day-4 item(s); ${plan.removed_points} point(s) removed`
+            : 'already three-day — no change';
 
       addPlanLine(
         `${plan.class_name} — ${plan.title}: ${state}`
@@ -144,26 +146,37 @@
       addPlanLine(`MISSING TARGET — ${missingTarget}`);
     }
 
-    const blocked =
-      Number(data.blocked_assignments || 0) > 0 ||
-      missing.length > 0;
+    const unexpectedBlocked = Number(data.unexpected_blocked_assignments || 0);
     const needsTrim = Number(data.assignments_needing_trim || 0) > 0;
+    const applyReady = data.apply_ready === true;
+    const completedState = data.completed_state === true;
 
     const lines = [
       `Matched assignments: ${data.matched_assignments || 0}`,
-      `Need Day 4 removed: ${data.assignments_needing_trim || 0}`,
+      `Safe Day 4 trims: ${data.assignments_needing_trim || 0}`,
+      `Preserve completed Day 4: ${data.preserved_day4_assignments || 0}`,
       `Already three-day: ${data.already_three_day || 0}`,
-      `Blocked assignments: ${data.blocked_assignments || 0}`,
+      `Unexpected blockers: ${unexpectedBlocked}`,
     ];
+
+    if (applyReady) {
+      lines.push('Safety contract: READY — 46 trim / 11 three-day / S023 preserved.');
+    } else if (completedState) {
+      lines.push('Completed state confirmed — S023 remains preserved.');
+    }
 
     if (!isProductionHost()) {
       lines.push('Deploy preview: read-only by design. Apply is disabled here.');
     }
 
-    setStatus(blocked ? 'warn' : 'ok', lines.join('\n'));
+    const statusKind =
+      applyReady || completedState
+        ? 'ok'
+        : (unexpectedBlocked > 0 || missing.length > 0 ? 'warn' : 'warn');
+    setStatus(statusKind, lines.join('\n'));
 
     applyBtn.disabled =
-      blocked ||
+      !applyReady ||
       !needsTrim ||
       !previewToken ||
       !isProductionHost();
@@ -214,8 +227,9 @@
     if (!previewToken || !isProductionHost()) return;
 
     const confirmed = window.confirm(
-      'Remove Week 2 Day 4 from the current targeted assignments?\n\n' +
-      'Days 1–3 and student assignment instances will not be rewritten.'
+      'Remove Week 2 Day 4 from the 46 safe Language Arts assignments?\n\n' +
+      'S023 will be preserved exactly as-is because completed Day 4 work/evidence exists.\n' +
+      'Transitional Skills and Days 1–3 will not be rewritten.'
     );
 
     if (!confirmed) return;
@@ -236,7 +250,8 @@
         `Applied safely.\n` +
         `Assignments changed: ${data.changed_assignments || 0}\n` +
         `Day 4 items removed: ${data.removed_day4_items || 0}\n` +
-        `Student assignment instances updated: 0`
+        `Completed Day 4 assignments preserved: ${data.preserved_assignments || 0}\n` +
+        `Student assignment instances updated: ${data.student_assignment_instances_updated || 0}`
       );
 
       previewToken = null;
