@@ -32,6 +32,14 @@ const internalDynamicCorePath = path.join(
   '_lib',
   'teacher-week2-day4-dynamic-core.js'
 );
+const internalResidualCorePath = path.join(
+  __dirname,
+  '..',
+  'netlify',
+  'functions',
+  '_lib',
+  'teacher-week2-day4-residual-core.js'
+);
 const publicVerifiedCorePath = path.join(
   __dirname,
   '..',
@@ -46,10 +54,18 @@ const publicDynamicCorePath = path.join(
   'functions',
   'teacher-week2-day4-dynamic-core.js'
 );
+const publicResidualCorePath = path.join(
+  __dirname,
+  '..',
+  'netlify',
+  'functions',
+  'teacher-week2-day4-residual-core.js'
+);
 
 const endpointSource = fs.readFileSync(endpointPath, 'utf8');
 const verifiedCoreSource = fs.readFileSync(internalVerifiedCorePath, 'utf8');
 const dynamicCoreSource = fs.readFileSync(internalDynamicCorePath, 'utf8');
+const residualCoreSource = fs.readFileSync(internalResidualCorePath, 'utf8');
 
 function gitBlobSha(text) {
   const bytes = Buffer.from(text, 'utf8');
@@ -96,8 +112,8 @@ assert.match(
 
 assert.match(
   endpointSource,
-  /require\('\.\/_lib\/teacher-week2-day4-dynamic-core'\)/,
-  'public Day 4 endpoint must delegate only to the internal dynamic core'
+  /require\('\.\/_lib\/teacher-week2-day4-residual-core'\)/,
+  'public Day 4 endpoint must delegate only to the internal residual cleanup gate'
 );
 
 assert.strictEqual(
@@ -111,6 +127,11 @@ assert.strictEqual(
   'dynamic Day 4 core must not exist as a top-level Netlify function'
 );
 assert.strictEqual(
+  fs.existsSync(publicResidualCorePath),
+  false,
+  'residual Day 4 cleanup core must not exist as a top-level Netlify function'
+);
+assert.strictEqual(
   fs.existsSync(internalVerifiedCorePath),
   true,
   'verified Day 4 core must remain under the internal Netlify library'
@@ -118,13 +139,23 @@ assert.strictEqual(
 assert.strictEqual(
   fs.existsSync(internalDynamicCorePath),
   true,
-  'dynamic Day 4 core must live under the internal Netlify library'
+  'dynamic Day 4 core must remain under the internal Netlify library'
+);
+assert.strictEqual(
+  fs.existsSync(internalResidualCorePath),
+  true,
+  'residual Day 4 cleanup core must live under the internal Netlify library'
 );
 
 assert.strictEqual(
   gitBlobSha(verifiedCoreSource),
   '4aa8fcb6f68d0b6c33d3b1470d7f16f5399ac64f',
   'teacher-verified PR #1498 core must remain byte-identical and read-only to this patch'
+);
+assert.strictEqual(
+  gitBlobSha(dynamicCoreSource),
+  '6d013539667dbb851505ed3fe1616aafa13d2bf8',
+  'teacher-verified PR #1500 dynamic core must remain byte-identical during residual cleanup'
 );
 
 assert.match(
@@ -141,6 +172,27 @@ assert.doesNotMatch(
   dynamicCoreSource,
   /lookupActiveTeacherId/,
   'dynamic core must require the signed teacherId and never use the deprecated fallback'
+);
+
+assert.match(
+  residualCoreSource,
+  /dynamicCore\._test\.collectDynamicState\(teacherId\)/,
+  'residual cleanup must reuse the already-verified dynamic state collector'
+);
+assert.match(
+  residualCoreSource,
+  /currentResidualItemIds\(preDeleteState\)/,
+  'residual deletion must use item IDs from the fresh pre-delete scan'
+);
+assert.doesNotMatch(
+  residualCoreSource,
+  /patchJson\(/,
+  'residual cleanup must never rewrite assignment metadata'
+);
+assert.doesNotMatch(
+  residualCoreSource,
+  /assignment_instances.*(?:PATCH|DELETE)/i,
+  'residual cleanup must never mutate assignment instances'
 );
 
 assert.doesNotMatch(
