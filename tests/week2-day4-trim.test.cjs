@@ -375,7 +375,7 @@ assert.strictEqual(classification.postHideReady, false);
 assert.strictEqual(classification.applyReady, false);
 
 const endpointSource = fs.readFileSync(
-  path.join(__dirname, '..', 'netlify', 'functions', 'teacher-week2-day4-trim-core.js'),
+  path.join(__dirname, '..', 'netlify', 'functions', '_lib', 'teacher-week2-day4-trim-core.js'),
   'utf8'
 );
 assert.match(endpointSource, /PRODUCTION_HOSTS/);
