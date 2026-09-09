@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { JSDOM } from 'jsdom';
 import {
+  infiniteCampusSortLabel,
   sortStudentsLikeInfiniteCampus,
   reorderGradebookRows,
 } from '../site/web/gradebook-roster-order.js';
@@ -45,23 +46,32 @@ function renderedCodes(document) {
     .map((row) => JSON.parse(row.querySelector('.gb-student-cell').dataset.tooltip).code);
 }
 
-test('students sort alphabetically by runtime display name like Infinite Campus', () => {
+test('family-name sort key converts given-name-first roster names', () => {
+  expect(infiniteCampusSortLabel({ code: 'S900', name: 'Zoe Adams' }))
+    .toBe('Adams, Zoe');
+  expect(infiniteCampusSortLabel({ code: 'S901', name: 'Casey De Marco' }))
+    .toBe('De Marco, Casey');
+  expect(infiniteCampusSortLabel({ code: 'S902', name: 'Baker, Bea' }))
+    .toBe('Baker, Bea');
+});
+
+test('students sort by family name like Infinite Campus, not by given name', () => {
   const students = [
-    { code: 'S903', name: 'Zimmer, Zoe' },
-    { code: 'S901', name: 'Baker, Bea' },
-    { code: 'S902', name: 'Miller, Max' },
-    { code: 'S900', name: 'Adams, Ava' },
+    { code: 'S903', name: 'Aaron Zimmer' },
+    { code: 'S901', name: 'Yara Baker' },
+    { code: 'S902', name: 'Max Miller' },
+    { code: 'S900', name: 'Zoe Adams' },
   ];
 
   expect(sortStudentsLikeInfiniteCampus(students).map((student) => student.code))
     .toEqual(['S900', 'S901', 'S902', 'S903']);
 });
 
-test('new students automatically land in alphabetical position with no roster-map update', () => {
+test('new students automatically land in family-name position with no roster-map update', () => {
   const students = [
-    { code: 'S901', name: 'Baker, Bea' },
-    { code: 'S999', name: 'Clark, Casey' },
-    { code: 'S902', name: 'Davis, Drew' },
+    { code: 'S901', name: 'Bea Baker' },
+    { code: 'S999', name: 'Casey Clark' },
+    { code: 'S902', name: 'Drew Davis' },
   ];
 
   expect(sortStudentsLikeInfiniteCampus(students).map((student) => student.code))
@@ -80,10 +90,10 @@ test('students without a display name fall back to student code deterministicall
 
 test('rendered class rows are reordered while the Class Average row remains last', () => {
   const students = [
-    { code: 'S903', name: 'Zimmer, Zoe' },
-    { code: 'S901', name: 'Baker, Bea' },
-    { code: 'S902', name: 'Miller, Max' },
-    { code: 'S900', name: 'Adams, Ava' },
+    { code: 'S903', name: 'Aaron Zimmer' },
+    { code: 'S901', name: 'Yara Baker' },
+    { code: 'S902', name: 'Max Miller' },
+    { code: 'S900', name: 'Zoe Adams' },
   ];
   const document = makeGradebookDom('Language Arts 3 SC', students);
 
@@ -95,8 +105,8 @@ test('rendered class rows are reordered while the Class Average row remains last
 
 test('All Classes is left alone because one student can belong to multiple class rosters', () => {
   const students = [
-    { code: 'S903', name: 'Zimmer, Zoe' },
-    { code: 'S900', name: 'Adams, Ava' },
+    { code: 'S903', name: 'Aaron Zimmer' },
+    { code: 'S900', name: 'Zoe Adams' },
   ];
   const document = makeGradebookDom('All Classes', students);
 
@@ -106,8 +116,8 @@ test('All Classes is left alone because one student can belong to multiple class
 
 test('an explicit teacher column sort is not overridden', () => {
   const students = [
-    { code: 'S903', name: 'Zimmer, Zoe' },
-    { code: 'S900', name: 'Adams, Ava' },
+    { code: 'S903', name: 'Aaron Zimmer' },
+    { code: 'S900', name: 'Zoe Adams' },
   ];
   const document = makeGradebookDom('Language Arts 2 SC', students, { explicitSort: true });
 
