@@ -11,6 +11,7 @@ on:
       - 'site/web/week2-day4-trim.js'
       - 'tests/week2-day4-trim.test.cjs'
       - 'tests/week2-day4-diagnostic.test.cjs'
+      - 'tests/week2-day4-production-safety.test.cjs'
       - '.github/workflows/week2-day4-trim.yml'
 
 jobs:
@@ -34,8 +35,10 @@ jobs:
           node --check netlify/functions/teacher-week2-day4-trim.js
           node --check netlify/functions/teacher-week2-day4-diagnostic.js
           node --check site/web/week2-day4-trim.js
+          node --check tests/week2-day4-production-safety.test.cjs
 
       - name: Run Week 2 Day 4 trim regression
         run: |
           node tests/week2-day4-trim.test.cjs
           node tests/week2-day4-diagnostic.test.cjs
+          node tests/week2-day4-production-safety.test.cjs
