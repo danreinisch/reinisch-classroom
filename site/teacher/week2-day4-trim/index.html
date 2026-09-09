@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Week 2 Day 4 Trim — Teacher Center</title>
+  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
+  <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <style>
+    body { min-height:100vh; }
+    .trim-shell { max-width: 980px; margin: 0 auto; padding: 28px 20px 48px; }
+    .trim-top { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .trim-card { margin-top:18px; padding:20px; border:1px solid var(--rc-glass-border); border-radius:16px; background:rgba(255,255,255,.04); backdrop-filter:blur(10px); }
+    .trim-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+    .trim-btn { border:1px solid var(--rc-border-strong); border-radius:10px; padding:10px 14px; background:rgba(255,255,255,.08); color:inherit; cursor:pointer; }
+    .trim-btn.primary { background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.4); }
+    .trim-btn.danger { background:rgba(239,68,68,.14); border-color:rgba(239,68,68,.42); }
+    .trim-btn:disabled { opacity:.45; cursor:not-allowed; }
+    .trim-status { margin-top:16px; padding:12px 14px; border-radius:12px; border:1px solid var(--rc-glass-border); background:rgba(0,0,0,.18); white-space:pre-wrap; }
+    .trim-status.ok { border-color:rgba(34,197,94,.45); }
+    .trim-status.warn { border-color:rgba(245,158,11,.5); }
+    .trim-status.err { border-color:rgba(239,68,68,.5); }
+    .trim-list { margin:12px 0 0; padding-left:20px; }
+    .trim-muted { opacity:.75; }
+    .trim-warning { border-color:rgba(245,158,11,.42); background:rgba(245,158,11,.08); }
+    code { font-size:.9em; }
+  </style>
+</head>
+<body>
+  <main class="trim-shell">
+    <div class="trim-top">
+      <div>
+        <div class="trim-muted">Teacher Center · One-time classroom repair</div>
+        <h1 style="margin:.25rem 0 0;">Week 2 — Remove Day 4</h1>
+      </div>
+      <a class="trim-btn" href="/teacher/work/">Back to Work</a>
+    </div>
+
+    <section class="trim-card trim-warning">
+      <strong>Scope lock</strong>
+      <p>
+        This tool targets only the 2026–27 Week 2 assignments created from
+        <code>WEEK_02_UPLOAD.txt</code> for Language Arts 1–4, Life Skills Language Arts,
+        and Transitional Skills.
+      </p>
+      <p>
+        It does <strong>not</strong> recall assignments, reissue assignments, reset status,
+        or update student assignment instances. Days 1–3 answers and autosaves are outside
+        the write path.
+      </p>
+      <p style="margin-bottom:0;">
+        Transitional Skills is expected to already be three-day; if so, it will be reported
+        as a no-op.
+      </p>
+    </section>
+
+    <section class="trim-card">
+      <h2 style="margin-top:0;">1. Preview</h2>
+      <p class="trim-muted">
+        Preview performs read-only safety checks against the current live assignment state.
+        If any Day 4 autosave, submission answer, goal evidence, objective evidence, or teacher
+        review state exists, Apply stays blocked.
+      </p>
+      <div class="trim-actions">
+        <button class="trim-btn primary" id="trimPreviewBtn" type="button">Preview Day 4 trim</button>
+        <button class="trim-btn danger" id="trimApplyBtn" type="button" disabled>Apply Day 4 trim</button>
+      </div>
+      <div id="trimStatus" class="trim-status" aria-live="polite">No preview has been run yet.</div>
+      <ul id="trimPlanList" class="trim-list"></ul>
+    </section>
+
+    <section class="trim-card">
+      <h2 style="margin-top:0;">Safety behavior</h2>
+      <ul>
+        <li>Day 1–3 assignment metadata is preserved.</li>
+        <li><code>assignment_instances</code> are read for safety only and never written.</li>
+        <li>Apply is disabled on deploy-preview hosts.</li>
+        <li>Apply re-runs the full Day-4 safety scan immediately before mutation.</li>
+        <li>If Day-4 item deletion fails, assignment metadata is rolled back.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="/web/week2-day4-trim.js"></script>
+</body>
+</html>
