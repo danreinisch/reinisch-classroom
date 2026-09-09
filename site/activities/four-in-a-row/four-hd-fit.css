@@ -1,0 +1,14 @@
+/* Four In a Row HD compatibility fixes discovered by focused browser verification. */
+
+/* Keep the visible switch decoration from intercepting input clicks/taps. */
+.hd-switch i {
+  pointer-events: none;
+}
+
+/* Preserve the legacy square-cell fallback when CSS aspect-ratio is unavailable. */
+.hd-board .cell::before {
+  content: '';
+  grid-area: 1 / 1;
+  display: block;
+  padding-top: 100%;
+}

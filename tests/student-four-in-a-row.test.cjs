@@ -250,8 +250,8 @@ test('the activity has one Viewer card, a return path, and local versioned asset
   const portal = fs.readFileSync(path.join(root,'site/student/index.html'),'utf8');
   assert.equal((portal.match(/title=Four%20in%20a%20Row/g) || []).length,1);
   assert.match(portal,/src=%2Factivities%2Ffour-in-a-row%2F&amp;return=%2Fstudent%2F%3Ftab%3Dactivities/);
-  for (const file of ['index.html','app.js','game.css','worker.js','core.js','engine.js','exercises.js']) assert.ok(fs.existsSync(path.join(root,'site/activities/four-in-a-row',file)));
+  for (const file of ['index.html','app.js','game.css','four-hd.css','worker.js','core.js','engine.js','exercises.js']) assert.ok(fs.existsSync(path.join(root,'site/activities/four-in-a-row',file)));
   const html = fs.readFileSync(path.join(root,'site/activities/four-in-a-row/index.html'),'utf8');
-  assert.match(html,/app\.js\?v=20260906-four-/);
+  assert.match(html,/app\.js\?v=20260908-four-hd-/);
   assert.doesNotMatch(html,/<script[^>]*src=["']https?:/i);
 });

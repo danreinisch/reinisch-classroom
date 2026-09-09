@@ -2,53 +2,64 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <base href="/activities/four-in-a-row/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Four in a Row · Reinisch Classroom</title>
+  <title>Four In a Row HD · Reinisch Classroom</title>
   <link rel="stylesheet" href="./game.css?v=20260906-four-2">
-  <script type="module" src="./app.js?v=20260906-four-2"></script>
+  <link rel="stylesheet" href="./four-hd.css?v=20260908-four-hd-1">
+  <link rel="stylesheet" href="./four-hd-fit.css?v=20260908-four-hd-fit-1">
+  <script type="module" src="./app.js?v=20260908-four-hd-1"></script>
 </head>
-<body data-theme="midnight" data-pieces="symbols">
-  <div class="game-app">
-    <header class="app-header">
-      <div class="brand"><div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><p class="eyebrow">Reinisch Classroom</p><h1>Four in a Row</h1></div></div>
-      <div class="header-actions"><a id="backLink" href="/student/?tab=activities">← Activities</a><button id="settingsBtn" class="quiet" type="button">Board &amp; pieces</button></div>
+<body data-theme="canyon-classic" data-board-theme="canyon-classic" data-pieces="marble" data-piece-set="marble" data-animate-drops="true" data-reduced-motion="false" data-focus-board="false">
+  <div class="game-app four-hd-app">
+    <header class="app-header hd-app-header">
+      <div class="brand hd-brand">
+        <div class="hd-brand-mark" aria-hidden="true"><svg viewBox="0 0 64 44" role="img"><path d="M4 38 21 13l8 12L39 7l21 31"/><path d="m13 38 10-14 7 11 9-14 12 17"/></svg></div>
+        <div><p class="eyebrow">CanyonPath Classroom</p><h1>Four In a Row <span class="hd-title-tag">HD</span></h1><p class="hd-tagline">Same classic. A brighter way to play.</p></div>
+      </div>
+      <div class="header-actions hd-header-actions"><a id="backLink" href="/student/?tab=activities">← Activities</a><button id="settingsBtn" class="quiet hd-settings-button" type="button">Board &amp; Pieces</button></div>
     </header>
-    <nav class="view-nav" aria-label="Four in a Row activities"><button data-view="play" aria-current="page" type="button">Play</button><button data-view="learn" type="button">Learn</button><button data-view="challenges" type="button">Challenges</button></nav>
+
+    <nav class="view-nav hd-view-nav" aria-label="Four in a Row activities"><button data-view="play" aria-current="page" type="button">Play</button><button data-view="learn" type="button">Learn</button><button data-view="challenges" type="button">Challenges</button></nav>
     <p id="storageStatus" class="storage-status" role="status">Opening your game…</p>
     <div id="sessionNotice" class="notice error" role="alert" hidden>Your student session changed. <a href="/student/?tab=activities">Return to Activities</a> and reopen Four in a Row.</div>
+
     <main id="mainContent">
-      <section id="workspace" class="workspace" aria-label="Four in a Row game">
-        <div class="board-card">
-          <div class="board-heading"><p id="boardCaption">One good move can change the game.</p><span class="board-badge">7 × 6</span></div>
-          <div class="player-key" aria-label="Player pieces"><span><i class="key-disc p1" aria-hidden="true">★</i> Player 1</span><span><i class="key-disc p2" aria-hidden="true">◆</i> Player 2</span></div>
-          <div id="board" class="board" role="group" aria-label="Choose a column to drop a piece" aria-describedby="boardHelp"></div>
+      <section id="workspace" class="workspace hd-workspace" aria-label="Four in a Row game">
+        <div class="board-card hd-board-card">
+          <div class="board-heading hd-board-heading"><p id="boardCaption">One good move can change the game.</p><button id="focusBoardBtn" class="hd-focus-button" type="button" aria-pressed="false">Focus board</button></div>
+          <div class="player-key hd-player-key" aria-label="Player pieces"><span><i class="key-disc p1" aria-hidden="true"></i><span>Player 1</span></span><span><i class="key-disc p2" aria-hidden="true"></i><span>Player 2</span></span></div>
+          <div class="hd-board-frame">
+            <div class="hd-board-crown" aria-hidden="true"><svg viewBox="0 0 64 44"><path d="M4 38 21 13l8 12L39 7l21 31"/><path d="m13 38 10-14 7 11 9-14 12 17"/></svg></div>
+            <div id="board" class="board hd-board" role="group" aria-label="Choose a column to drop a piece" aria-describedby="boardHelp"></div>
+            <div class="hd-board-footer" aria-hidden="true"><span class="hd-mountain-line"><svg viewBox="0 0 80 32"><path d="M2 29 23 8l10 12L45 4l33 25"/><path d="m19 29 8-10 7 7 10-12 14 15"/></svg></span><span class="hd-board-motto">PLAY&nbsp;&nbsp;·&nbsp;&nbsp;THINK&nbsp;&nbsp;·&nbsp;&nbsp;GROW</span></div>
+          </div>
           <p id="positionStatus" class="position-status" role="status" aria-live="polite"></p>
           <p id="boardHelp" class="board-help">Choose a column. Pieces fall to the bottom. Keyboard: ← → to choose; Enter or Space to drop. You can also press 1–7 on the board.</p>
         </div>
-        <aside class="side-card">
+
+        <aside class="side-card hd-side-card">
           <div id="playPanel">
-            <p id="modeLabel" class="eyebrow">Play the computer</p><h2 id="gameTitle">Find your four.</h2><p id="gameDetails" class="muted"></p>
-            <button id="newGameBtn" class="primary wide" type="button">New game</button>
-            <div class="button-row"><button id="hintBtn" type="button">Show a hint</button><button id="undoBtn" type="button">Undo turn</button></div>
-            <button id="retryBtn" class="wide" type="button" hidden>Retry computer move</button>
-            <label class="check-label"><input id="coachToggle" type="checkbox" checked> Coach mode · explain hints</label>
-            <div class="coach-box"><p class="eyebrow" id="coachLabel">A moment to think</p><p id="playFeedback" role="status" aria-live="polite">Look for your own four, then check the other player’s next move.</p></div>
-            <div class="moves-heading"><h3>Moves</h3><span id="moveCount" class="muted">New game</span></div><ol id="moveList" class="move-list" aria-label="Move history"></ol>
+            <div class="hd-panel-title"><p class="eyebrow">CanyonPath Strategy</p><h2>Four In a Row <span class="hd-title-tag">HD</span></h2></div>
+            <div id="turnCard" class="hd-turn-card"><i id="statusDisc" class="key-disc status-disc p1" aria-hidden="true"></i><div class="hd-turn-copy"><h3 id="turnHeadline">Your Turn</h3><p id="turnDetail">Make your move</p></div><span id="thinkingDots" class="thinking-dots" aria-hidden="true" hidden><i></i><i></i><i></i></span></div>
+            <div class="hd-mode-card"><span class="hd-mode-icon" aria-hidden="true">▣</span><div><span class="hd-mode-label">Mode</span><strong id="modeLabel">You vs Computer</strong><p id="gameDetails" class="muted"></p></div></div>
+            <h2 id="gameTitle" class="sr-only">Find your four.</h2>
+            <button id="newGameBtn" class="primary wide hd-new-game" type="button">New Game</button>
+            <button id="undoBtn" class="wide hd-main-action" type="button">Undo turn</button>
+            <button id="settingsShortcutBtn" class="wide hd-main-action" type="button">Board &amp; Pieces</button>
+            <div class="hd-secondary-tools"><div class="button-row"><button id="hintBtn" type="button">Show a hint</button><button id="retryBtn" type="button" hidden>Retry computer move</button></div><label class="check-label"><input id="coachToggle" type="checkbox" checked> Coach mode · explain hints</label><div class="coach-box"><p class="eyebrow" id="coachLabel">A moment to think</p><p id="playFeedback" role="status" aria-live="polite">Look for your own four, then check the other player’s next move.</p></div></div>
+            <div class="hd-recent-moves"><div class="moves-heading"><h3>Recent Moves</h3><span id="moveCount" class="muted">New game</span></div><ol id="moveList" class="move-list" aria-label="Move history"></ol></div>
             <details class="rules-note"><summary>Rules &amp; game codes</summary><p>Take turns dropping one piece into an open column. Connect four horizontally, vertically, or diagonally to win. A full board with no four is a draw.</p><p>Your current game saves in this browser on this device. Clearing browser data removes the save. Game codes let you copy a game to another device.</p><div class="button-row"><button id="copyBtn" type="button">Copy game</button><button id="pasteBtn" type="button">Paste game</button></div></details>
           </div>
-          <div id="exercisePanel" hidden>
-            <button id="allExercisesBtn" class="text-button" type="button">← All challenges</button><p id="exerciseTag" class="eyebrow"></p><h2 id="exerciseTitle"></h2><p id="exercisePrompt" class="exercise-prompt"></p>
-            <div class="button-row"><button id="exerciseHintBtn" type="button">Give me a hint</button><button id="resetExerciseBtn" type="button">Try again</button></div>
-            <div class="coach-box"><p id="exerciseFeedback" role="status" aria-live="polite">Take your time. Your saved game is kept.</p></div>
-            <div id="exerciseSuccess" class="success-box" hidden><p class="eyebrow">You found it!</p><p id="exerciseExplanation"></p><button id="nextExerciseBtn" class="primary wide" type="button">Next challenge →</button></div>
-          </div>
+          <div id="exercisePanel" hidden><button id="allExercisesBtn" class="text-button" type="button">← All challenges</button><p id="exerciseTag" class="eyebrow"></p><h2 id="exerciseTitle"></h2><p id="exercisePrompt" class="exercise-prompt"></p><div class="button-row"><button id="exerciseHintBtn" type="button">Give me a hint</button><button id="resetExerciseBtn" type="button">Try again</button></div><div class="coach-box"><p id="exerciseFeedback" role="status" aria-live="polite">Take your time. Your saved game is kept.</p></div><div id="exerciseSuccess" class="success-box" hidden><p class="eyebrow">You found it!</p><p id="exerciseExplanation"></p><button id="nextExerciseBtn" class="primary wide" type="button">Next challenge →</button></div></div>
         </aside>
       </section>
       <section id="catalog" hidden aria-labelledby="catalogTitle"><div class="section-heading"><div><p class="eyebrow" id="catalogEyebrow"></p><h2 id="catalogTitle"></h2><p id="catalogDescription" class="muted"></p></div><p id="catalogProgress" class="progress-pill"></p></div><div id="exerciseCards" class="card-grid"></div></section>
     </main>
-    <footer><span>Take a turn. Spot a pattern. Find your four.</span><span>No timer. Room to think.</span></footer>
+    <footer class="hd-footer"><span>A brighter classroom goes further.</span><span>Play · Think · Grow</span></footer>
   </div>
+
   <dialog id="newGameDialog" aria-labelledby="newGameTitle"><form id="newGameForm">
     <div class="dialog-heading"><h2 id="newGameTitle">Set up your game</h2><button type="button" data-close="newGameDialog" class="icon-close" aria-label="Close game setup">×</button></div>
     <label for="modeSelect">Who is playing?</label><select id="modeSelect"><option value="computer">Play the computer</option><option value="local">Two players · same device</option></select>
@@ -56,11 +67,33 @@
     <p class="muted">Learning spots immediate wins and blocks. Friendly looks a few moves ahead. Challenge searches further. Undo and hints are always available during practice.</p>
     <p id="replaceWarning" class="notice" hidden></p><p id="newGameError" class="error-text" role="alert"></p><button id="startGameBtn" class="primary wide" type="submit">Start game</button>
   </form></dialog>
-  <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-heading"><h2 id="settingsTitle">Make it your game</h2><button type="button" data-close="settingsDialog" class="icon-close" aria-label="Close board settings">×</button></div>
-    <label for="themeSelect">Board style</label><select id="themeSelect"><option value="midnight">Midnight</option><option value="forest">Forest</option><option value="ocean">Ocean</option><option value="contrast">High contrast</option></select>
-    <label for="piecesSelect">Piece style</label><select id="piecesSelect"><option value="symbols">Stars &amp; diamonds</option><option value="numbers">Numbers</option><option value="rings">Rings</option><option value="patterns">Stripes &amp; dots</option></select>
-    <p class="muted">Each player has a different mark as well as a color. Your choices are saved with your student login on this device.</p><button type="button" data-close="settingsDialog" class="primary wide">Done</button>
+
+  <dialog id="settingsDialog" class="hd-settings-dialog" aria-labelledby="settingsTitle"><div class="dialog-heading"><div><p class="eyebrow">Customize your game</p><h2 id="settingsTitle">Board &amp; Pieces</h2></div><button type="button" data-close="settingsDialog" class="icon-close" aria-label="Close board settings">×</button></div>
+    <section class="hd-settings-section" aria-labelledby="pieceSetTitle"><h3 id="pieceSetTitle">Piece Set</h3><div class="hd-choice-grid hd-piece-choices">
+      <button type="button" class="hd-visual-choice piece-choice" data-piece-choice="marble" aria-pressed="true"><span class="hd-piece-preview"><i class="preview-disc p1"></i><i class="preview-disc p2"></i></span><strong>Marble</strong></button>
+      <button type="button" class="hd-visual-choice piece-choice" data-piece-choice="wood" aria-pressed="false"><span class="hd-piece-preview"><i class="preview-disc p1"></i><i class="preview-disc p2"></i></span><strong>Wood</strong></button>
+      <button type="button" class="hd-visual-choice piece-choice" data-piece-choice="metal" aria-pressed="false"><span class="hd-piece-preview"><i class="preview-disc p1"></i><i class="preview-disc p2"></i></span><strong>Silver &amp; Gold</strong></button>
+      <button type="button" class="hd-visual-choice piece-choice" data-piece-choice="canyon-stone" aria-pressed="false"><span class="hd-piece-preview"><i class="preview-disc p1"></i><i class="preview-disc p2"></i></span><strong>Canyon Stone</strong></button>
+      <button type="button" class="hd-visual-choice piece-choice" data-piece-choice="high-contrast" aria-pressed="false"><span class="hd-piece-preview"><i class="preview-disc p1"></i><i class="preview-disc p2"></i></span><strong>High Contrast</strong></button>
+    </div><label class="sr-only" for="piecesSelect">Piece Set</label><select id="piecesSelect" class="compat-select" tabindex="-1" aria-hidden="true"><option value="marble">Marble</option><option value="wood">Wood</option><option value="metal">Silver &amp; Gold</option><option value="canyon-stone">Canyon Stone</option><option value="high-contrast">High Contrast</option></select></section>
+
+    <section class="hd-settings-section" aria-labelledby="boardThemeTitle"><h3 id="boardThemeTitle">Board Theme</h3><div class="hd-choice-grid hd-board-choices">
+      <button type="button" class="hd-visual-choice board-choice" data-theme-choice="wood" aria-pressed="false"><span class="hd-board-preview"><i></i><i></i><i></i><i></i></span><strong>Wood Board</strong></button>
+      <button type="button" class="hd-visual-choice board-choice" data-theme-choice="canyon-classic" aria-pressed="true"><span class="hd-board-preview"><i></i><i></i><i></i><i></i></span><strong>Canyon Classic</strong></button>
+      <button type="button" class="hd-visual-choice board-choice" data-theme-choice="modern-slate" aria-pressed="false"><span class="hd-board-preview"><i></i><i></i><i></i><i></i></span><strong>Modern Slate</strong></button>
+      <button type="button" class="hd-visual-choice board-choice" data-theme-choice="tournament-blue" aria-pressed="false"><span class="hd-board-preview"><i></i><i></i><i></i><i></i></span><strong>Tournament Blue</strong></button>
+      <button type="button" class="hd-visual-choice board-choice" data-theme-choice="high-contrast" aria-pressed="false"><span class="hd-board-preview"><i></i><i></i><i></i><i></i></span><strong>High Contrast</strong></button>
+    </div><label class="sr-only" for="themeSelect">Board Theme</label><select id="themeSelect" class="compat-select" tabindex="-1" aria-hidden="true"><option value="wood">Wood Board</option><option value="canyon-classic">Canyon Classic</option><option value="modern-slate">Modern Slate</option><option value="tournament-blue">Tournament Blue</option><option value="high-contrast">High Contrast</option></select></section>
+
+    <section class="hd-toggle-list" aria-label="Visual and motion preferences">
+      <label class="hd-toggle-row" for="animateDropsToggle"><span><strong>Animate piece drops</strong><small>Show pieces falling into the selected column.</small></span><span class="hd-switch"><input id="animateDropsToggle" type="checkbox" checked><i aria-hidden="true"></i></span></label>
+      <label class="hd-toggle-row" for="thinkingPauseToggle"><span><strong>Computer thinking pause</strong><small>Keep a brief, natural thinking state before the computer moves.</small></span><span class="hd-switch"><input id="thinkingPauseToggle" type="checkbox" checked><i aria-hidden="true"></i></span></label>
+      <label class="hd-toggle-row" for="reducedMotionToggle"><span><strong>Reduced motion</strong><small>Remove pulsing and shorten or skip motion effects.</small></span><span class="hd-switch"><input id="reducedMotionToggle" type="checkbox"><i aria-hidden="true"></i></span></label>
+      <label class="hd-toggle-row" for="focusBoardToggle"><span><strong>Focus board</strong><small>Give the board more room while keeping essential game controls available.</small></span><span class="hd-switch"><input id="focusBoardToggle" type="checkbox"><i aria-hidden="true"></i></span></label>
+    </section>
+    <button type="button" data-close="settingsDialog" class="primary wide hd-done-button">Done</button>
   </dialog>
+
   <dialog id="transferDialog" aria-labelledby="transferTitle"><div class="dialog-heading"><h2 id="transferTitle">Game code</h2><button type="button" data-close="transferDialog" class="icon-close" aria-label="Close game code">×</button></div><p id="transferHelp" class="muted"></p><label for="gameCode">Game code</label><textarea id="gameCode" rows="6" maxlength="3000" spellcheck="false"></textarea><p id="transferError" class="error-text" role="status"></p><button id="transferAction" class="primary wide" type="button">Copy code</button></dialog>
   <noscript><p>Four in a Row needs JavaScript. Enable it and reload this page.</p></noscript>
 </body>
