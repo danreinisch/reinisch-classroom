@@ -7,7 +7,7 @@ const tickerCss = fs.readFileSync('site/assets/css/home-scenic-ticker.css', 'utf
 const scene = fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.webp');
 const asset = JSON.parse(fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.meta.json', 'utf8'));
 const messageUtils = require('../site/web/classroom-message-utils.js');
-const teacherShell = fs.readFileSync('site/web/teacher-shell.js', 'utf8');
+const settingsHtml = fs.readFileSync('site/teacher/settings/index.html', 'utf8');
 const settingsMessage = fs.readFileSync('site/web/tc-classroom-message.js', 'utf8');
 const homeMessage = fs.readFileSync('site/web/home-classroom-message.js', 'utf8');
 const { createHash } = require('node:crypto');
@@ -121,14 +121,23 @@ test('Classroom Message selection ignores retired academic ticker data and uses 
   assert.equal(messageUtils.resolve(explicit, new Date('2026-09-09T08:00:00')).text, 'WEDNESDAY MESSAGE');
 });
 
-test('Teacher Settings enhancement is path-scoped, removes only obsolete homepage cards, and preserves home_config', () => {
-  assert.match(teacherShell, /IS_CLASSROOM_MESSAGE_SETTINGS = location\.pathname\.startsWith\('\/teacher\/settings'\)/);
-  for (const marker of ['#laUnit', '#lsCurrentTitle', '#tickerDateFormat', '#countdownsBody']) {
-    assert.match(teacherShell, new RegExp(marker.replace('#', '#')));
+test('Teacher Settings removes obsolete homepage cards and preserves home_config through the new editor', () => {
+  for (const retired of [
+    'Language Arts — Weekly Focus', 'Life Skills — Weekly Focus', 'Ticker Configuration',
+    'Countdown Events', 'laUnit', 'lsCurrentTitle', 'tickerDateFormat', 'countdownsBody',
+  ]) {
+    assert.doesNotMatch(settingsHtml, new RegExp(retired));
   }
-  assert.match(teacherShell, /classroom-message-utils\.js\?v=20260909-1/);
-  assert.match(teacherShell, /tc-classroom-message\.js\?v=20260909-1/);
-  assert.match(settingsMessage, /removeLegacyHomepageCards/);
+  for (const id of [
+    'classroomMessageSettings', 'classroomMessageEnabled', 'classroomMessageOverride',
+    'classroomMessageMonday', 'classroomMessageTuesday', 'classroomMessageWednesday',
+    'classroomMessageThursday', 'classroomMessageFriday', 'classroomMessageSpeed',
+    'classroomMessagePreviewText', 'saveClassroomMessageBtn',
+  ]) {
+    assert.match(settingsHtml, new RegExp(id));
+  }
+  assert.match(settingsHtml, /classroom-message-utils\.js\?v=20260909-1/);
+  assert.match(settingsHtml, /tc-classroom-message\.js\?v=20260909-1/);
   assert.match(settingsMessage, /utils\.write\(homeConfig, readForm\(\)\)/);
   assert.match(settingsMessage, /localStorage\.setItem\('rc_home_config', JSON\.stringify\(homeConfig\)\)/);
   assert.match(settingsMessage, /db\.setAppConfig\('home_config', homeConfig\)/);
