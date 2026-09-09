@@ -98,20 +98,28 @@ for (const view of [
   });
 }
 
-test('homepage scenic ticker honors the teacher-managed home-config override', async ({ page }) => {
+test('homepage scenic ticker honors the new teacher-managed Classroom Message config', async ({ page }) => {
   const result = await openHome(page, {
     homeOverride: {
-      ticker: {
-        dateFormat: 'none',
-        timeFormat: 'none',
+      classroomMessage: {
+        version: 1,
+        enabled: true,
         speed: 120,
-        items: [{ category: 'none', text: 'TEACHER SETTINGS OVERRIDE' }],
+        override: 'TEACHER SETTINGS OVERRIDE',
+        weekdays: {
+          monday: 'MONDAY MESSAGE',
+          tuesday: 'TUESDAY MESSAGE',
+          wednesday: 'WEDNESDAY MESSAGE',
+          thursday: 'THURSDAY MESSAGE',
+          friday: 'FRIDAY MESSAGE',
+        },
       },
     },
   });
   await expect(page.locator('.ticker-content').first()).toContainText('TEACHER SETTINGS OVERRIDE');
   await expect(page.locator('.ticker-content').first()).not.toContainText('MOCK TICKER ANNOUNCEMENT');
   await expect(page.locator('.ticker-track')).toHaveCSS('animation-duration', '120s');
+  await expect(page.locator('.home-scenic-ticker')).toHaveAttribute('data-message-source', 'override');
   expect(result.errors).toEqual([]);
   expect(result.writes).toEqual([]);
 });
