@@ -49,13 +49,14 @@
         the write path.
       </p>
       <p>
-        The verified contract is <strong>46 safe Language Arts trims</strong>,
-        <strong>11 Transitional Skills assignments already three-day</strong>, and
-        <strong>S023 preserved exactly as-is</strong> because completed Day 4 work,
-        review, and goal evidence already exist.
+        The verified class population is <strong>47 Language Arts assignments</strong> plus
+        <strong>11 Transitional Skills assignments already three-day</strong>. Within those
+        47 Language Arts assignments, Preview decides the split dynamically: untouched Day 4
+        is trimmed, while any assignment with genuine Day 4 student work is preserved exactly as-is.
       </p>
       <p style="margin-bottom:0;">
-        Any additional blocked assignment causes Apply to refuse rather than delete student work.
+        A manual-review flag by itself does not qualify as Day 4 student work. Any blocker that
+        cannot be explained by Day 4 work keeps Apply disabled.
       </p>
     </section>
 
@@ -63,9 +64,8 @@
       <h2 style="margin-top:0;">1. Preview</h2>
       <p class="trim-muted">
         Preview performs read-only safety checks against the current live assignment state.
-        S023 is the single verified preservation exception. Any additional Day 4 autosave,
-        submission answer, goal evidence, objective evidence, or teacher review state keeps
-        Apply blocked.
+        Day 4 autosaves, submitted answers, normalized answer rows, or Day 4 goal/objective
+        evidence cause that individual assignment to be preserved rather than deleted.
       </p>
       <div class="trim-actions">
         <button class="trim-btn primary" id="trimPreviewBtn" type="button">Preview Day 4 trim</button>
@@ -80,7 +80,8 @@
       <ul>
         <li>Day 1–3 assignment metadata is preserved.</li>
         <li><code>assignment_instances</code> are read for safety only and never written.</li>
-        <li>S023 keeps its existing Day 4 response, grade/review state, and evidence.</li>
+        <li>Any assignment with genuine Day 4 student work is preserved exactly as-is.</li>
+        <li>Transitional Skills remains untouched at three days.</li>
         <li>Apply is disabled on deploy-preview hosts.</li>
         <li>Apply re-runs the full Day-4 safety scan immediately before mutation.</li>
         <li>After Day 4 metadata is hidden, Apply scans again before deleting any Day-4 scoring items.</li>
@@ -89,6 +90,6 @@
     </section>
   </main>
 
-  <script src="/web/week2-day4-trim.js"></script>
+  <script src="/web/week2-day4-trim.js?v=20260909-dynamic-preserve"></script>
 </body>
 </html>

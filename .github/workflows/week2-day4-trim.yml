@@ -5,7 +5,9 @@ on:
     branches: [ main ]
     paths:
       - 'netlify/functions/_lib/week2-day4-trim.js'
+      - 'netlify/functions/_lib/week2-day4-dynamic-preservation.js'
       - 'netlify/functions/_lib/teacher-week2-day4-trim-core.js'
+      - 'netlify/functions/_lib/teacher-week2-day4-dynamic-core.js'
       - 'netlify/functions/_lib/_lib/**'
       - 'netlify/functions/teacher-week2-day4-trim.js'
       - 'netlify/functions/teacher-week2-day4-diagnostic.js'
@@ -14,6 +16,7 @@ on:
       - 'tests/week2-day4-trim.test.cjs'
       - 'tests/week2-day4-diagnostic.test.cjs'
       - 'tests/week2-day4-production-safety.test.cjs'
+      - 'tests/week2-day4-dynamic-preservation.test.cjs'
       - '.github/workflows/week2-day4-trim.yml'
 
 jobs:
@@ -34,7 +37,9 @@ jobs:
       - name: Syntax check
         run: |
           node --check netlify/functions/_lib/week2-day4-trim.js
+          node --check netlify/functions/_lib/week2-day4-dynamic-preservation.js
           node --check netlify/functions/_lib/teacher-week2-day4-trim-core.js
+          node --check netlify/functions/_lib/teacher-week2-day4-dynamic-core.js
           node --check netlify/functions/_lib/_lib/http.js
           node --check netlify/functions/_lib/_lib/auth.js
           node --check netlify/functions/_lib/_lib/supa.js
@@ -43,9 +48,11 @@ jobs:
           node --check netlify/functions/teacher-week2-day4-diagnostic.js
           node --check site/web/week2-day4-trim.js
           node --check tests/week2-day4-production-safety.test.cjs
+          node --check tests/week2-day4-dynamic-preservation.test.cjs
 
       - name: Run Week 2 Day 4 trim regression
         run: |
           node tests/week2-day4-trim.test.cjs
           node tests/week2-day4-diagnostic.test.cjs
           node tests/week2-day4-production-safety.test.cjs
+          node tests/week2-day4-dynamic-preservation.test.cjs

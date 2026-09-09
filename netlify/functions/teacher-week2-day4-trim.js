@@ -6,7 +6,7 @@ const {
   jsonResponse,
 } = require('./_lib/http');
 const { requireTeacher } = require('./_lib/auth');
-const core = require('./_lib/teacher-week2-day4-trim-core');
+const core = require('./_lib/teacher-week2-day4-dynamic-core');
 
 const { SESSION_SECRET } = process.env;
 
