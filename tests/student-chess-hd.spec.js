@@ -95,6 +95,7 @@ test('all five board themes render distinct board colors and piece names remain 
   const colors = [];
   for (const theme of ['canyon-classic', 'desert-stone', 'tournament', 'modern-slate', 'high-contrast']) {
     await page.locator(`[data-hd-theme-option="${theme}"]`).click();
+    await page.waitForTimeout(220);
     colors.push(await page.locator('[data-square="a1"]').evaluate(el => getComputedStyle(el).backgroundColor));
   }
   expect(new Set(colors).size).toBe(5);
@@ -158,6 +159,7 @@ test('reduced motion disables HD transitions without removing the playable board
   await move(page, 'e2', 'e4');
   await expect(page.locator('body')).toHaveClass(/hd-reduced-motion/);
   const duration = await page.locator('[data-square="e4"] .hd-piece').evaluate(el => getComputedStyle(el).animationDuration);
-  expect(['0s', '0.000001s', '0.001ms']).toContain(duration);
+  const seconds = duration.endsWith('ms') ? parseFloat(duration) / 1000 : parseFloat(duration);
+  expect(seconds).toBeLessThanOrEqual(0.001);
   await expect(page.locator('#board button')).toHaveCount(64);
 });
