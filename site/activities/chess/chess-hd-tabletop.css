@@ -1,0 +1,234 @@
+/* Classroom Chess HD tabletop extension.
+ * Presentation only: camera perspective, bounded zoom controls, and Forged Metal
+ * material treatment. Game rules/controller/state remain owned by the existing app. */
+
+.hd-camera-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 0 10px;
+  padding: 8px 9px;
+  border: 1px solid rgba(226, 239, 218, .14);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(8, 38, 31, .76), rgba(14, 54, 42, .64));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+.hd-camera-group,
+.hd-zoom-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.hd-camera-label,
+.hd-zoom-label {
+  color: rgba(237, 247, 238, .74);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .025em;
+  white-space: nowrap;
+}
+.hd-camera-toolbar button {
+  min-height: 36px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+.hd-view-choice[aria-pressed='true'] {
+  border-color: rgba(151, 232, 171, .58);
+  background: rgba(38, 105, 76, .86);
+  color: #f4fff6;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .09);
+}
+.hd-zoom-group input[type='range'] {
+  width: clamp(90px, 11vw, 145px);
+  min-width: 90px;
+  accent-color: #8fdfa6;
+}
+.hd-zoom-step {
+  width: 36px;
+  min-width: 36px;
+  padding-inline: 0 !important;
+  font-size: 1rem;
+  font-weight: 800;
+}
+#hdZoomValue {
+  min-width: 42px;
+  color: #eef8ef;
+  font-variant-numeric: tabular-nums;
+  font-size: .75rem;
+  font-weight: 800;
+  text-align: center;
+}
+#hdZoomFitBtn { min-width: 44px; }
+
+.hd-board-frame {
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(141, 175, 156, .62) transparent;
+}
+#board {
+  width: var(--hd-board-zoom, 100%) !important;
+  max-width: none !important;
+  margin-inline: auto;
+  transform-origin: 50% 72%;
+  transition: transform .24s ease, filter .24s ease;
+}
+
+/* Tabletop is intentionally restrained: enough angle to reveal board thickness
+ * and piece height without turning chess into a cinematic camera demo. */
+body[data-hd-view='tabletop'] .hd-board-frame {
+  position: relative;
+  padding: 18px 18px 34px;
+  perspective: 1250px;
+  background:
+    radial-gradient(ellipse at 50% 5%, rgba(255, 244, 211, .12), transparent 50%),
+    linear-gradient(145deg, rgba(112, 78, 45, .28), rgba(22, 39, 31, .78) 48%, rgba(4, 18, 15, .9));
+  box-shadow:
+    0 22px 46px rgba(0, 0, 0, .35),
+    inset 0 1px 0 rgba(255, 255, 255, .15),
+    inset 0 -9px 18px rgba(0, 0, 0, .18);
+}
+body[data-hd-view='tabletop'] .hd-board-frame::after {
+  content: '';
+  position: absolute;
+  z-index: 4;
+  left: 24px;
+  right: 24px;
+  bottom: 9px;
+  height: 17px;
+  border: 1px solid rgba(7, 17, 13, .42);
+  border-radius: 2px 2px 7px 7px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, .08), transparent 20%, rgba(255, 255, 255, .04) 55%, transparent),
+    linear-gradient(#60462f, #2f251d 66%, #181511);
+  box-shadow: 0 11px 13px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .12);
+  transform: perspective(520px) rotateX(-49deg);
+  transform-origin: 50% 0;
+  pointer-events: none;
+}
+body[data-hd-view='tabletop'] #board {
+  position: relative;
+  z-index: 2;
+  transform: perspective(1200px) rotateX(13deg) translateY(-3px);
+  transform-style: preserve-3d;
+  box-shadow:
+    0 28px 24px -18px rgba(0, 0, 0, .58),
+    0 8px 18px rgba(0, 0, 0, .26);
+}
+body[data-hd-view='tabletop'] #board svg.hd-premium-piece {
+  transform-box: fill-box;
+  transform-origin: 50% 88%;
+  transform: rotateX(-13deg) translateY(-5%) scaleY(1.09);
+  filter:
+    drop-shadow(0 2px 1px rgba(0, 0, 0, .34))
+    drop-shadow(0 8px 6px rgba(0, 0, 0, .27));
+}
+body[data-hd-view='tabletop'] #board .hd-premium-piece .hd-piece-contact {
+  opacity: .18;
+}
+body[data-hd-view='tabletop'][data-hd-board-depth='on'] #board .hd-premium-piece .hd-piece-contact {
+  opacity: .3;
+}
+
+/* Forged Metal HD: Staunton geometry with a photographed satin-metal material.
+ * Actual gradient paint is injected into each SVG so highlights remain crisp at
+ * any board size; these rules provide the contour, shadow and finish response. */
+.hd-metal-card .hd-piece-preview {
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255, 255, 255, .2), transparent 32%),
+    linear-gradient(145deg, rgba(122, 132, 134, .32), rgba(26, 31, 32, .68));
+}
+.hd-metal-card[aria-pressed='true'] {
+  border-color: rgba(205, 223, 224, .56);
+  background: linear-gradient(145deg, rgba(82, 99, 96, .62), rgba(18, 54, 43, .84));
+}
+body[data-hd-metal='on'] .hd-premium-piece {
+  --piece-stroke: #273033;
+  --piece-detail: #697477;
+  --piece-highlight: rgba(255, 255, 255, .82);
+  filter:
+    drop-shadow(0 2px 1px rgba(0, 0, 0, .4))
+    drop-shadow(0 8px 7px rgba(0, 0, 0, .29));
+}
+body[data-hd-metal='on'] .hd-premium-piece.hd-piece-black {
+  --piece-stroke: #0b0e0f;
+  --piece-detail: #a3adb0;
+  --piece-highlight: rgba(235, 241, 242, .42);
+}
+body[data-hd-metal='on'] .hd-premium-piece .hd-piece-ridge,
+body[data-hd-metal='on'] .hd-premium-piece .hd-piece-highlight,
+body[data-hd-metal='on'] .hd-premium-piece .hd-piece-cut {
+  stroke-width: 1.15;
+}
+body[data-hd-metal='on'] #board .hd-premium-piece .hd-piece-contact {
+  fill: #050708;
+  opacity: .23;
+}
+body[data-hd-metal='on'][data-hd-view='tabletop'] #board .hd-premium-piece {
+  filter:
+    drop-shadow(0 2px 1px rgba(0, 0, 0, .42))
+    drop-shadow(0 10px 8px rgba(0, 0, 0, .32));
+}
+
+/* High Contrast remains an accessibility mode, not a metallic art direction. */
+body[data-hd-theme='high-contrast'][data-hd-metal='on'] .hd-premium-piece .hd-piece-body,
+body[data-hd-theme='high-contrast'][data-hd-metal='on'] .hd-premium-piece .hd-piece-base {
+  fill: var(--piece-fill) !important;
+}
+body[data-hd-theme='high-contrast'][data-hd-metal='on'] .hd-premium-piece {
+  filter: none !important;
+}
+body[data-hd-theme='high-contrast'][data-hd-view='tabletop'] #board .hd-premium-piece .hd-piece-contact {
+  opacity: 0 !important;
+}
+
+.hd-camera-toolbar button:focus-visible,
+.hd-camera-toolbar input[type='range']:focus-visible,
+.hd-metal-card:focus-visible {
+  outline: 3px solid #b8ffca;
+  outline-offset: 2px;
+}
+
+body.hd-reduced-motion #board,
+body.hd-reduced-motion #board svg.hd-premium-piece,
+body.hd-reduced-motion .hd-board-frame {
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+body[data-hd-view='tabletop'].hd-motion:not(.hd-reduced-motion):not(.hd-no-animation) .square.last .hd-piece {
+  animation-name: hd-tabletop-piece-settle;
+}
+@keyframes hd-tabletop-piece-settle {
+  from { transform: rotateX(-13deg) translateY(-10%) scale(.96) scaleY(1.09); opacity: .74; }
+  to { transform: rotateX(-13deg) translateY(-5%) scale(1) scaleY(1.09); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #board,
+  #board svg.hd-premium-piece,
+  .hd-board-frame {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .hd-camera-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .hd-camera-group,
+  .hd-zoom-group {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .hd-camera-label,
+  .hd-zoom-label { min-width: 46px; }
+  .hd-zoom-group input[type='range'] { flex: 1 1 110px; width: auto; }
+  body[data-hd-view='tabletop'] .hd-board-frame { padding: 12px 12px 26px; }
+  body[data-hd-view='tabletop'] .hd-board-frame::after { left: 17px; right: 17px; bottom: 6px; height: 13px; }
+  body[data-hd-view='tabletop'] #board { transform: perspective(1050px) rotateX(10deg) translateY(-2px); }
+  body[data-hd-view='tabletop'] #board svg.hd-premium-piece { transform: rotateX(-10deg) translateY(-4%) scaleY(1.06); }
+}
