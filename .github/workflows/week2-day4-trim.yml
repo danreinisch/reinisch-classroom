@@ -6,9 +6,11 @@ on:
     paths:
       - 'netlify/functions/_lib/week2-day4-trim.js'
       - 'netlify/functions/teacher-week2-day4-trim.js'
+      - 'netlify/functions/teacher-week2-day4-diagnostic.js'
       - 'site/teacher/week2-day4-trim/**'
       - 'site/web/week2-day4-trim.js'
       - 'tests/week2-day4-trim.test.cjs'
+      - 'tests/week2-day4-diagnostic.test.cjs'
       - '.github/workflows/week2-day4-trim.yml'
 
 jobs:
@@ -30,7 +32,10 @@ jobs:
         run: |
           node --check netlify/functions/_lib/week2-day4-trim.js
           node --check netlify/functions/teacher-week2-day4-trim.js
+          node --check netlify/functions/teacher-week2-day4-diagnostic.js
           node --check site/web/week2-day4-trim.js
 
       - name: Run Week 2 Day 4 trim regression
-        run: node tests/week2-day4-trim.test.cjs
+        run: |
+          node tests/week2-day4-trim.test.cjs
+          node tests/week2-day4-diagnostic.test.cjs
