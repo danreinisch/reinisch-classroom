@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const {
+  TARGET_SOURCE_FILE,
   TARGETS,
   buildAssignmentPlan,
   getDay4Days,
@@ -20,7 +21,7 @@ function assignment(overrides = {}) {
     title: `${TARGETS[2].title} — S001`,
     school_year: 2026,
     meta: {
-      source_file: 'WEEK_02_UPLOAD.txt',
+      source_file: 'WEEK_02_UPLOAD (1).txt',
       class_name: TARGETS[2].className,
       days: [
         { day_number: 1, type: 'questions', questions: [{ number: 1 }] },
@@ -41,6 +42,11 @@ const items = [
   { id: 4, item_ref: 'WP_4', points: 5, meta: { day: 4, type: 'writing_prompt' } },
 ];
 
+assert.strictEqual(
+  TARGET_SOURCE_FILE,
+  'WEEK_02_UPLOAD (1).txt',
+  'trim must stay locked to the source filename observed in the live Week 2 diagnostic'
+);
 assert.strictEqual(TARGETS.length, 6, 'scope must stay locked to six intended class groups');
 assert.strictEqual(
   TARGETS.reduce((sum, target) => sum + target.expectedCount, 0),
@@ -53,6 +59,15 @@ assert.strictEqual(matchesTargetAssignment(
   assignment({ title: 'WEEK 3 — nope' }),
   TARGETS[2]
 ), false);
+assert.strictEqual(matchesTargetAssignment(
+  assignment({
+    meta: {
+      ...assignment().meta,
+      source_file: 'WEEK_02_UPLOAD.txt',
+    },
+  }),
+  TARGETS[2]
+), false, 'similar Week 2 filename without the observed (1) suffix must not match');
 assert.strictEqual(matchesTargetAssignment(
   assignment({
     meta: {
@@ -189,7 +204,7 @@ const tsAssignment = {
   title: tsTarget.title,
   school_year: 2026,
   meta: {
-    source_file: 'WEEK_02_UPLOAD.txt',
+    source_file: 'WEEK_02_UPLOAD (1).txt',
     class_name: 'Transitional Skills',
     days: [
       { day_number: 1, type: 'questions' },
@@ -231,6 +246,16 @@ assert.match(endpointSource, /goal_data_points\?select=id,item_id/);
 assert.match(endpointSource, /objective_data_points\?select=id,item_id/);
 assert.match(endpointSource, /objective_review_dispositions\?select=id,item_id/);
 assert.match(endpointSource, /submission_answers\?select=id,submission_id,assignment_item_id/);
+
+const diagnosticSource = fs.readFileSync(
+  path.join(__dirname, '..', 'netlify', 'functions', 'teacher-week2-day4-diagnostic.js'),
+  'utf8'
+);
+assert.doesNotMatch(
+  diagnosticSource,
+  /method:\s*['"](?:PATCH|POST|DELETE)['"]/i,
+  'diagnostic endpoint must remain read-only'
+);
 
 const uiSource = fs.readFileSync(
   path.join(__dirname, '..', 'site', 'web', 'week2-day4-trim.js'),
