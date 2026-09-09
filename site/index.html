@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="/web/teacher-shell.css" />
     <link rel="stylesheet" href="/assets/css/class-clock.css" />
     <link rel="stylesheet" href="/assets/css/class-mode.css" />
-    <link rel="stylesheet" href="/assets/css/home-canyonpath.css?v=20260907-moonlit1" />
+    <link rel="stylesheet" href="/assets/css/home-canyonpath.css?v=20260909-scenic-ticker1" />
     <script src="/web/public-nav.js"></script>
     <script src="/web/sidebar-init.js"></script>
     <script src="/web/supabase-config.js"></script>
@@ -53,6 +53,12 @@
                 <a class="home-teacher-cta" href="/teacher/"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>Teacher Center</span></a>
               </div>
               <p class="home-hero-note">Small steps. Big possibilities.</p>
+              <div class="home-scenic-ticker ticker-bar" aria-label="Classroom message">
+                <div class="ticker-track">
+                  <span class="ticker-content">Loading classroom message…</span>
+                  <span class="ticker-content" aria-hidden="true">Loading classroom message…</span>
+                </div>
+              </div>
             </section>
             <section class="home-pathways" aria-labelledby="home-pathways-title">
               <div class="home-section-heading">
@@ -78,8 +84,8 @@
               </div>
             </section>
             <!-- Existing countdowns and teacher-only standards hooks are preserved.
-                 Weekly class updates and the scrolling ticker no longer have a
-                 homepage surface. Their stored configuration is not modified. -->
+                 Weekly class-update cards remain off the homepage. The existing
+                 teacher-managed ticker config is surfaced above as scenic text. -->
             <section class="home-focus" id="home-focus-section" style="display:none" aria-label="Upcoming dates and standards">
               <div class="home-focus-card home-focus-countdowns">
                 <div class="focus-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> UPCOMING</div>
