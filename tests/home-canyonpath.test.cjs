@@ -1,12 +1,15 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const vm = require('node:vm');
 const html = fs.readFileSync('site/index.html', 'utf8');
 const css = fs.readFileSync('site/assets/css/home-canyonpath.css', 'utf8');
 const tickerCss = fs.readFileSync('site/assets/css/home-scenic-ticker.css', 'utf8');
 const scene = fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.webp');
 const asset = JSON.parse(fs.readFileSync('site/assets/bg/rc-annotated-canyon-approved.meta.json', 'utf8'));
-const messageUtils = require('../site/web/classroom-message-utils.js');
+const messageContext = {};
+vm.runInNewContext(fs.readFileSync('site/web/classroom-message-utils.js', 'utf8'), messageContext);
+const messageUtils = messageContext.RCClassroomMessage;
 const settingsHtml = fs.readFileSync('site/teacher/settings/index.html', 'utf8');
 const settingsMessage = fs.readFileSync('site/web/tc-classroom-message.js', 'utf8');
 const homeMessage = fs.readFileSync('site/web/home-classroom-message.js', 'utf8');
@@ -116,9 +119,9 @@ test('Classroom Message selection ignores retired academic ticker data and uses 
     override: 'SPECIAL OVERRIDE',
     weekdays: { wednesday: 'WEDNESDAY MESSAGE' },
   };
-  assert.equal(messageUtils.resolve(explicit, new Date('2026-09-09T08:00:00')).text, 'SPECIAL OVERRIDE');
+  assert.equal(messageUtils.resolve(explicit, '2026-09-09T08:00:00').text, 'SPECIAL OVERRIDE');
   explicit.override = '';
-  assert.equal(messageUtils.resolve(explicit, new Date('2026-09-09T08:00:00')).text, 'WEDNESDAY MESSAGE');
+  assert.equal(messageUtils.resolve(explicit, '2026-09-09T08:00:00').text, 'WEDNESDAY MESSAGE');
 });
 
 test('Teacher Settings removes obsolete homepage cards and preserves home_config through the new editor', () => {
