@@ -1,6 +1,50 @@
 export const ROWS = 6;
 export const COLS = 7;
-export const LEVELS = { learning: 'Learning', friendly: 'Friendly', challenge: 'Challenge' };
+
+export const COMPUTER_LEVELS = Object.freeze([
+  Object.freeze({ key: 'first-drops', label: 'First Drops' }),
+  Object.freeze({ key: 'rookie', label: 'Rookie' }),
+  Object.freeze({ key: 'learning', label: 'Learning' }),
+  Object.freeze({ key: 'casual', label: 'Casual' }),
+  Object.freeze({ key: 'developing', label: 'Developing' }),
+  Object.freeze({ key: 'club', label: 'Club' }),
+  Object.freeze({ key: 'skilled', label: 'Skilled' }),
+  Object.freeze({ key: 'advanced', label: 'Advanced' }),
+  Object.freeze({ key: 'expert', label: 'Expert' }),
+  Object.freeze({ key: 'master', label: 'Master' }),
+  Object.freeze({ key: 'ruthless', label: 'Ruthless' }),
+  Object.freeze({ key: 'canyon-boss', label: 'Canyon Boss' }),
+]);
+
+const CURRENT_LEVEL_KEYS = new Set(COMPUTER_LEVELS.map(level => level.key));
+export const LEGACY_LEVEL_ALIASES = Object.freeze({
+  friendly: 'casual',
+  challenge: 'skilled',
+});
+
+// Keep the legacy keys readable so existing browser saves survive the ladder upgrade.
+export const LEVELS = Object.freeze({
+  'first-drops': 'First Drops',
+  rookie: 'Rookie',
+  learning: 'Learning',
+  casual: 'Casual',
+  developing: 'Developing',
+  club: 'Club',
+  skilled: 'Skilled',
+  advanced: 'Advanced',
+  expert: 'Expert',
+  master: 'Master',
+  ruthless: 'Ruthless',
+  'canyon-boss': 'Canyon Boss',
+  friendly: 'Casual',
+  challenge: 'Skilled',
+});
+
+export function normalizeLevel(level) {
+  if (CURRENT_LEVEL_KEYS.has(level)) return level;
+  return LEGACY_LEVEL_ALIASES[level] || null;
+}
+
 export const other = player => 3 - player;
 export const playerName = player => `Player ${player}`;
 
@@ -85,13 +129,14 @@ export function hintFor(game) {
 }
 
 export function snapshot(game, options) {
-  return { version: 1, moves: game.moves.slice(), mode: options.mode, level: options.level, human: options.human };
+  return { version: 1, moves: game.moves.slice(), mode: options.mode, level: normalizeLevel(options.level) || options.level, human: options.human };
 }
 
 export function restore(value) {
+  const level = normalizeLevel(value?.level);
   if (!value || value.version !== 1 || !['local', 'computer'].includes(value.mode) ||
-      !Object.prototype.hasOwnProperty.call(LEVELS, value.level) || ![1, 2].includes(value.human)) throw new Error('This is not a supported Four in a Row game.');
-  return { game: replay(value.moves), options: { mode: value.mode, level: value.level, human: value.human } };
+      !level || ![1, 2].includes(value.human)) throw new Error('This is not a supported Four in a Row game.');
+  return { game: replay(value.moves), options: { mode: value.mode, level, human: value.human } };
 }
 
 export function parseGameCode(text) {
