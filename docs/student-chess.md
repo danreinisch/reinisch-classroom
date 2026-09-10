@@ -7,9 +7,12 @@ and Exit Activity control. Existing portal and Viewer JavaScript is unchanged.
 ## Student features
 
 - Play the computer as White or Black, or play two people on one device.
-- Three selectable computer levels: Learning (random legal moves), Friendly
-  (up to depth 2), and Challenge (up to depth 3). Search has a short time budget
-  and runs in a Web Worker. These are casual practice levels, without Elo ratings.
+- Twelve selectable computer levels run from First Steps through Canyon Boss.
+  Early levels deliberately vary among legal choices; stronger levels progressively
+  tighten candidate selection, search deeper, and receive larger bounded thinking
+  budgets in the existing Web Worker. These are classroom practice levels without
+  Elo ratings. Legacy Learning/Friendly/Challenge saves remain readable and migrate
+  to the nearest current difficulty profile.
 - Twelve interactive lessons covering all pieces, check, castling, promotion,
   en passant, and checkmate. Eight challenges cover captures, forks, defense,
   promotion, and several mating patterns. Equivalent correct solutions count.
