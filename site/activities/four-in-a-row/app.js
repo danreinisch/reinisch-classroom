@@ -1,4 +1,4 @@
-import { ROWS, COLS, LEVELS, emptyGame, drop, replay, legalColumns, hintFor, snapshot, parseGameCode, GameStore, playerName } from './core.js?v=20260908-four-hd-1';
+import { ROWS, COLS, LEVELS, emptyGame, drop, replay, legalColumns, hintFor, snapshot, parseGameCode, GameStore, playerName } from './core.js?v=20260909-four-hd-2';
 import { EXERCISES, exerciseSolved, solutions } from './exercises.js?v=20260908-four-hd-1';
 
 const $ = id => document.getElementById(id);
@@ -39,7 +39,7 @@ const preferences = {
   focusBoard: pickBoolean('focusBoard', false),
 };
 const completed = new Set(Array.isArray(meta.completed) ? meta.completed.filter(x => typeof x === 'string') : []);
-let play = { game: emptyGame(), options: { mode: 'computer', level: 'friendly', human: 1 } };
+let play = { game: emptyGame(), options: { mode: 'computer', level: 'casual', human: 1 } };
 let revision = null, canSave = Boolean(store.owner), warning = '', locked = false;
 let view = 'play', exercise = null, practice = null, solved = false, hintsUsed = 0;
 let focusColumn = 3, hintColumn = null;
@@ -324,7 +324,7 @@ function maybeComputer() {
     renderBoard(); renderPlayPanel();
   };
   try {
-    worker = new Worker(new URL('./worker.js?v=20260908-four-hd-1', import.meta.url));
+    worker = new Worker(new URL('./worker.js?v=20260909-four-hd-2', import.meta.url));
     thinking = true; thinkingStartedAt = Date.now(); computerPaused = false; thinkingColumn = null;
     worker.onerror = fail;
     worker.onmessage = event => {
@@ -345,7 +345,7 @@ function maybeComputer() {
       }, wait);
     };
     workerTimer = setTimeout(fail, 4500);
-    worker.postMessage({ id, moves: play.game.moves, level: play.options.level, budgetMs: play.options.level === 'challenge' ? 850 : 350 });
+    worker.postMessage({ id, moves: play.game.moves, level: play.options.level });
     renderBoard(); renderPlayPanel();
   } catch { fail(); }
 }
