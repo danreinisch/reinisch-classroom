@@ -57,6 +57,7 @@ test('HD Board makes the real computer level visible and delegates changes to ex
 
   await page.locator('#hdImmersiveDifficultyBtn').click();
   await page.locator('#levelSelect').selectOption('challenge');
+  await page.locator('#slotSelect').selectOption('0');
   await page.locator('#startGameBtn').click();
   await expect(page.locator('#hdImmersiveDifficultyValue')).toHaveText('Challenge');
   await expect(page.locator('#gameDetails')).toContainText('Challenge level');
@@ -106,11 +107,13 @@ test('HD Board removes the bottom stage artifact, clears toolbar overlap, and ke
       const collapsed = await page.locator('#hdImmersivePanel').boundingBox();
       expect(collapsed.width).toBeLessThanOrEqual(50);
       await page.locator('#hdImmersivePanelToggle').click();
+      await expect(page.locator('#hdImmersiveShell')).toHaveAttribute('data-panel', 'expanded');
+      await expect.poll(async () => (await page.locator('#hdImmersivePanel').boundingBox())?.width || 0).toBeGreaterThan(220);
       const expanded = await page.locator('#hdImmersivePanel').boundingBox();
-      expect(expanded.width).toBeGreaterThan(220);
       expect(expanded.width).toBeLessThanOrEqual(viewport.width - 12);
       await expect(page.locator('#hdImmersiveDifficultyBtn')).toBeVisible();
       await page.locator('#hdImmersivePanelToggle').click();
+      await expect(page.locator('#hdImmersiveShell')).toHaveAttribute('data-panel', 'collapsed');
     }
   }
 });
