@@ -9,7 +9,8 @@
   <link rel="stylesheet" href="./game.css?v=20260906-four-2">
   <link rel="stylesheet" href="./four-hd.css?v=20260908-four-hd-1">
   <link rel="stylesheet" href="./four-hd-fit.css?v=20260908-four-hd-fit-1">
-  <script type="module" src="./app.js?v=20260908-four-hd-1"></script>
+  <script type="module" src="./app.js?v=20260909-four-hd-2"></script>
+  <script type="module" src="./four-hd-immersive.js?v=20260909-four-immersive-1"></script>
 </head>
 <body data-theme="canyon-classic" data-board-theme="canyon-classic" data-pieces="marble" data-piece-set="marble" data-animate-drops="true" data-reduced-motion="false" data-focus-board="false">
   <div class="game-app four-hd-app">
@@ -63,8 +64,8 @@
   <dialog id="newGameDialog" aria-labelledby="newGameTitle"><form id="newGameForm">
     <div class="dialog-heading"><h2 id="newGameTitle">Set up your game</h2><button type="button" data-close="newGameDialog" class="icon-close" aria-label="Close game setup">×</button></div>
     <label for="modeSelect">Who is playing?</label><select id="modeSelect"><option value="computer">Play the computer</option><option value="local">Two players · same device</option></select>
-    <div id="computerOptions" class="form-grid"><div><label for="levelSelect">Computer level</label><select id="levelSelect"><option value="learning">Learning</option><option value="friendly" selected>Friendly</option><option value="challenge">Challenge</option></select></div><div><label for="humanSelect">Who goes first?</label><select id="humanSelect"><option value="1">I go first · Player 1</option><option value="2">Computer goes first</option></select></div></div>
-    <p class="muted">Learning spots immediate wins and blocks. Friendly looks a few moves ahead. Challenge searches further. Undo and hints are always available during practice.</p>
+    <div id="computerOptions" class="form-grid"><div><label for="levelSelect">Computer level</label><select id="levelSelect"><option value="first-drops">1 · First Drops</option><option value="rookie">2 · Rookie</option><option value="learning">3 · Learning</option><option value="casual" selected>4 · Casual</option><option value="developing">5 · Developing</option><option value="club">6 · Club</option><option value="skilled">7 · Skilled</option><option value="advanced">8 · Advanced</option><option value="expert">9 · Expert</option><option value="master">10 · Master</option><option value="ruthless">11 · Ruthless</option><option value="canyon-boss">12 · Canyon Boss</option></select></div><div><label for="humanSelect">Who goes first?</label><select id="humanSelect"><option value="1">I go first · Player 1</option><option value="2">Computer goes first</option></select></div></div>
+    <p class="muted">Levels 1–3 are deliberately forgiving. Levels 4–7 deepen tactical search. Levels 8–12 raise bounded search and node budgets. Every level still takes an immediate win and blocks a single immediate loss. Undo and hints remain available during practice.</p>
     <p id="replaceWarning" class="notice" hidden></p><p id="newGameError" class="error-text" role="alert"></p><button id="startGameBtn" class="primary wide" type="submit">Start game</button>
   </form></dialog>
 
