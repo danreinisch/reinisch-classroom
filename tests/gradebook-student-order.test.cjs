@@ -4,6 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const { JSDOM } = require('jsdom');
 
 class MemoryStorage {
   constructor() {
@@ -20,6 +21,55 @@ class MemoryStorage {
   }
 }
 
+function makeGradebookDom(className, codes) {
+  const dom = new JSDOM(`
+    <!doctype html>
+    <html>
+      <head></head>
+      <body>
+        <input id="gbStudentSearch" value="" />
+        <div id="classFilterBar">
+          <button class="gb-filter-btn active"></button>
+        </div>
+        <div id="gbA11yStatus"></div>
+        <table>
+          <thead id="gbTableHead"><tr><th aria-sort="ascending">Student</th></tr></thead>
+          <tbody id="gbTableBody"></tbody>
+        </table>
+      </body>
+    </html>
+  `, { url: 'https://gradebook.test/teacher/gradebook/' });
+
+  const { document } = dom.window;
+  document.querySelector('.gb-filter-btn.active').textContent = className;
+  const body = document.querySelector('#gbTableBody');
+
+  for (const code of codes) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.className = 'gb-student-cell';
+    cell.dataset.tooltip = JSON.stringify({ code, name: code });
+    cell.textContent = code;
+    row.appendChild(cell);
+    body.appendChild(row);
+  }
+
+  const summary = document.createElement('tr');
+  summary.className = 'gb-summary-row';
+  summary.innerHTML = '<td>Class Average</td>';
+  body.appendChild(summary);
+
+  return dom;
+}
+
+function renderedCodes(document) {
+  return Array.from(
+    document.querySelectorAll('#gbTableBody tr:not(.gb-summary-row)')
+  ).map(row => JSON.parse(
+    row.querySelector('.gb-student-cell').dataset.tooltip
+  ).code);
+}
+
 async function main() {
   const repoRoot = path.join(__dirname, '..');
   const helperPath = path.join(repoRoot, 'site', 'web', 'gradebook-roster-order.js');
@@ -32,6 +82,7 @@ async function main() {
     saveStudentOrder,
     resetStudentOrder,
     sortStudentsForGradebookClass,
+    installGradebookStudentOrderControls,
   } = helper;
 
   console.log('--- Gradebook editable student order ---');
@@ -104,6 +155,80 @@ async function main() {
   );
   console.log('✓ malformed browser storage fails safely');
 
+  const uiStorage = new MemoryStorage();
+  const dom = makeGradebookDom(
+    className,
+    ['S069', 'S075', 'S057', 'S019']
+  );
+  const { document } = dom.window;
+  installGradebookStudentOrderControls(document, uiStorage);
+
+  const orderButton = document.querySelector('#gbStudentOrderButton');
+  assert.ok(orderButton, 'individual class must expose Student Order button');
+  assert.strictEqual(
+    document.querySelector('#gbStudentOrderControls').hidden,
+    false,
+    'Student Order controls must be visible for an individual class'
+  );
+  orderButton.click();
+
+  const editor = document.querySelector('#gbStudentOrderBackdrop');
+  assert.ok(editor, 'Student Order button must open the order editor');
+  assert.deepStrictEqual(
+    Array.from(editor.querySelectorAll('.gb-student-order-item'))
+      .map(item => item.dataset.code),
+    ['S057', 'S019', 'S069', 'S075'],
+    'editor must begin in current Infinite Campus default order with new student last'
+  );
+  assert.strictEqual(
+    editor.querySelector('[data-code="S075"] .gb-student-order-new')?.textContent,
+    'New',
+    'unmapped student must be clearly marked New'
+  );
+
+  editor
+    .querySelector('[data-code="S057"] [data-order-action="down"]')
+    .click();
+  editor.querySelector('[data-order-dialog-action="save"]').click();
+
+  assert.deepStrictEqual(
+    getSavedStudentOrder(className, uiStorage),
+    ['S019', 'S057', 'S069', 'S075'],
+    'arrow move + Save Order must persist the exact visible sequence'
+  );
+  assert.deepStrictEqual(
+    renderedCodes(document),
+    ['S019', 'S057', 'S069', 'S075'],
+    'saved custom order must immediately reorder the Gradebook grid'
+  );
+  console.log('✓ editor arrow controls save and immediately apply the custom stack');
+
+  orderButton.click();
+  document
+    .querySelector('[data-order-dialog-action="reset"]')
+    .click();
+  assert.strictEqual(getSavedStudentOrder(className, uiStorage), null);
+  assert.deepStrictEqual(
+    renderedCodes(document),
+    ['S057', 'S019', 'S069', 'S075'],
+    'Reset to Infinite Campus Default must restore the shipped default subset'
+  );
+  console.log('✓ reset control restores the verified Infinite Campus stack');
+
+  document.querySelector('#gbStudentSearch').value = 'S019';
+  orderButton.click();
+  assert.strictEqual(
+    document.querySelector('#gbStudentOrderBackdrop'),
+    null,
+    'filtered roster must not open the order editor'
+  );
+  assert.match(
+    document.querySelector('.gb-student-order-status').textContent,
+    /Clear the student search/i,
+    'filtered roster must explain why editing is blocked'
+  );
+  console.log('✓ filtered student list cannot accidentally become the saved class order');
+
   const source = fs.readFileSync(helperPath, 'utf8');
   for (const marker of [
     '↕ Student Order',
@@ -119,6 +244,7 @@ async function main() {
   }
   console.log('✓ Gradebook editor exposes drag, arrow, save, reset, and new-student affordances');
 
+  dom.window.close();
   console.log('\nGRADEBOOK EDITABLE STUDENT ORDER: PASS');
 }
 
