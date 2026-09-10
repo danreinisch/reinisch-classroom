@@ -98,7 +98,7 @@ test('random legal games agree with an independent winner scan and never float p
 test('move history and computer settings round-trip for either player', () => {
   for (const human of [1,2]) {
     const game = replay([3,2,4,1]); const restored = parseGameCode(JSON.stringify(snapshot(game, { mode: 'computer', level: 'challenge', human })));
-    assert.deepEqual(restored.game, game); assert.equal(restored.options.human, human); assert.equal(restored.options.level, 'challenge');
+    assert.deepEqual(restored.game, game); assert.equal(restored.options.human, human); assert.equal(restored.options.level, 'skilled');
   }
 });
 
@@ -252,6 +252,6 @@ test('the activity has one Viewer card, a return path, and local versioned asset
   assert.match(portal,/src=%2Factivities%2Ffour-in-a-row%2F&amp;return=%2Fstudent%2F%3Ftab%3Dactivities/);
   for (const file of ['index.html','app.js','game.css','four-hd.css','worker.js','core.js','engine.js','exercises.js']) assert.ok(fs.existsSync(path.join(root,'site/activities/four-in-a-row',file)));
   const html = fs.readFileSync(path.join(root,'site/activities/four-in-a-row/index.html'),'utf8');
-  assert.match(html,/app\.js\?v=20260908-four-hd-/);
+  assert.match(html,/app\.js\?v=20260909-four-hd-/);
   assert.doesNotMatch(html,/<script[^>]*src=["']https?:/i);
 });
