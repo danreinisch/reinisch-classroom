@@ -518,6 +518,7 @@ body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-board-frame::aft
 
 body[data-hd-theme='high-contrast'][data-hd-immersive='on'] #board .hd-premium-piece {
   filter: none !important;
+  transition: none !important;
 }
 
 body[data-hd-theme='high-contrast'][data-hd-immersive='on'] #board .hd-premium-piece .hd-piece-contact {
