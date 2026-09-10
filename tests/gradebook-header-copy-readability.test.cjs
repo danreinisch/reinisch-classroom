@@ -9,17 +9,28 @@ const read = (relativePath) =>
   fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
 
 const gradebookHtml = read('site/teacher/gradebook/index.html');
+const constantsSource = read('site/web/constants.js');
 const headerTools = read('site/web/tc-gradebook-header-tools.js');
 const packageJson = JSON.parse(read('package.json'));
 
 console.log('--- Gradebook header copy/readability contract ---');
 
 assert.match(
-  gradebookHtml,
-  /<script\s+defer\s+src="\/web\/tc-gradebook-header-tools\.js\?v=20260910-header-copy-readability"><\/script>/,
-  'Gradebook page must load the page-scoped header enhancement with a cache key'
+  constantsSource,
+  /window\.location\.pathname\.startsWith\("\/teacher\/gradebook"\)/,
+  'Existing Gradebook-only constants bootstrap must remain route-scoped'
 );
-console.log('✓ Gradebook page loads the cache-busted header enhancement');
+assert.match(
+  constantsSource,
+  /import\("\/web\/tc-gradebook-header-tools\.js\?v=20260910-header-copy-readability"\)/,
+  'Existing Gradebook module bootstrap must load the cache-busted header enhancement'
+);
+assert.doesNotMatch(
+  gradebookHtml,
+  /tc-gradebook-header-tools\.js/,
+  'Header enhancement must not change the protected Teacher page body wiring'
+);
+console.log('✓ header enhancement reuses the existing Gradebook-only module bootstrap');
 
 assert.match(
   headerTools,
