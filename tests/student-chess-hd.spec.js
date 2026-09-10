@@ -563,3 +563,74 @@ test('immersive HD Board fits Chromebook, laptop, tablet, mobile, and Viewer wit
   await expect(frame.locator('body')).toHaveAttribute('data-hd-immersive', 'on');
   expect(await frame.locator('html').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
 });
+
+test('subtle piece reflection is HD-only, satin-surface-only, state-safe, High Contrast safe, and Reduced Motion safe', async ({ page }) => {
+  await page.setViewportSize({ width: 1365, height: 900 });
+  await setupLocalGame(page);
+
+  await expect(page.locator('#hdReflectionToggle')).toHaveCount(1);
+  expect(await page.locator('#hdReflectionRow').evaluate(el => el.hidden)).toBe(true);
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(0);
+
+  await page.locator('#hdTabletopBtn').click();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-immersive', 'on');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-reflective-surface', 'on');
+  expect(await page.locator('#hdReflectionRow').evaluate(el => el.hidden)).toBe(false);
+
+  await page.locator('#settingsBtn').click();
+  await expect(page.locator('#hdReflectionToggle')).toBeEnabled();
+  await expect(page.locator('#hdReflectionHint')).toContainText('Satin HD finish');
+  await page.locator('[data-hd-metal-option]').click();
+  await expect(page.locator('#board svg.hd-forged-metal-piece[data-hd-physical-enhanced="true"]')).toHaveCount(32);
+  await expect(page.locator('#board .hd-metal-foot')).toHaveCount(32);
+  await expect(page.locator('#board filter[id^="rc-hd-metal-depth-"]')).toHaveCount(32);
+  await page.locator('#hdReflectionToggle').check();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+
+  await expect(page.locator('body')).toHaveAttribute('data-hd-piece-reflection', 'on');
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(32);
+  await move(page, 'e2', 'e4');
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(32);
+  const savedAfterMove = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), key(0));
+  expect(savedAfterMove.game.moves).toHaveLength(1);
+  expect(savedAfterMove.game.moves[0].to).toBe('e4');
+
+  await page.locator('#settingsBtn').click();
+  await page.locator('[data-hd-theme-option="desert-stone"]').click();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-reflective-surface', 'off');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-piece-reflection', 'off');
+  await expect(page.locator('#hdReflectionToggle')).toBeDisabled();
+  await expect(page.locator('#hdReflectionHint')).toContainText('matte finish');
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(0);
+
+  await page.locator('[data-hd-theme-option="tournament"]').click();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-reflective-surface', 'on');
+  await expect(page.locator('#hdReflectionToggle')).toBeEnabled();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-piece-reflection', 'on');
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(32);
+
+  await page.locator('[data-hd-theme-option="high-contrast"]').click();
+  await expect(page.locator('#hdReflectionToggle')).toBeDisabled();
+  await expect(page.locator('#hdReflectionHint')).toContainText('High Contrast');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-piece-reflection', 'off');
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(0);
+  const physicalFilter = await page.locator('[data-square="b1"] .hd-piece-body').first().evaluate(el => getComputedStyle(el).filter);
+  expect(physicalFilter).toBe('none');
+
+  await page.locator('[data-hd-theme-option="tournament"]').click();
+  await page.locator('#reducedToggle').check();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(page.locator('body')).toHaveClass(/hd-reduced-motion/);
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(32);
+  const reflectionTransition = await page.locator('#board > .square > svg.hd-piece-reflection').first().evaluate(el => getComputedStyle(el).transitionDuration);
+  const reflectionAnimation = await page.locator('#board > .square > svg.hd-piece-reflection').first().evaluate(el => getComputedStyle(el).animationName);
+  expect(reflectionTransition.split(',').every(value => parseFloat(value) <= 0.001)).toBe(true);
+  expect(reflectionAnimation).toBe('none');
+  await expectNoHorizontalOverflow(page);
+
+  await page.locator('#hdBackBtn').click();
+  expect(await page.locator('#hdReflectionRow').evaluate(el => el.hidden)).toBe(true);
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(0);
+  const savedAfterExit = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), key(0));
+  expect(savedAfterExit.game.moves).toEqual(savedAfterMove.game.moves);
+});
