@@ -211,12 +211,12 @@ test('HD Board camera and bounded zoom stay inside the immersive board stage', a
   await expect(page.locator('#fourHdImmersiveShell')).toHaveAttribute('data-camera', 'perspective');
   await expect(page.locator('#fourHdZoomValue')).toHaveText('100%');
 
-  for (let i = 0; i < 8; i++) await page.locator('#fourHdZoomInBtn').click();
+  for (let i = 0; i < 5; i++) await page.locator('#fourHdZoomInBtn').click();
   await expect(page.locator('#fourHdZoomValue')).toHaveText('125%');
   await expect(page.locator('#fourHdZoomInBtn')).toBeDisabled();
   await expectPageContained(page);
 
-  for (let i = 0; i < 10; i++) await page.locator('#fourHdZoomOutBtn').click();
+  for (let i = 0; i < 8; i++) await page.locator('#fourHdZoomOutBtn').click();
   await expect(page.locator('#fourHdZoomValue')).toHaveText('85%');
   await expect(page.locator('#fourHdZoomOutBtn')).toBeDisabled();
   await page.locator('#fourHdFitBtn').click();
