@@ -1,0 +1,381 @@
+/* Classroom Chess HD immersive layout refinement.
+ * Presentation only: this stylesheet loads after the physical-set layer so the
+ * existing live board/controller can breathe without changing game behavior. */
+
+.hd-immersive-shell {
+  --hd-immersive-panel-width: clamp(248px, 20vw, 292px);
+  --hd-immersive-toolbar-clearance: 62px;
+  display: block;
+}
+
+/* Float the camera controls above the scene instead of consuming a row that
+ * crowds the photographed-board illusion. */
+.hd-immersive-topbar {
+  position: absolute;
+  top: 10px;
+  left: clamp(10px, 1.8vw, 24px);
+  right: calc(var(--hd-immersive-panel-width) + 46px);
+  z-index: 12;
+  width: auto;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 5px 7px;
+  border-color: rgba(177, 231, 197, .18);
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(4, 48, 35, .82), rgba(7, 60, 43, .67));
+  box-shadow: 0 10px 26px rgba(0, 15, 11, .25), inset 0 1px 0 rgba(255, 255, 255, .055);
+}
+
+.hd-immersive-shell[data-panel='collapsed'] .hd-immersive-topbar {
+  right: 80px;
+}
+
+.hd-immersive-layout {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--hd-immersive-panel-width);
+  gap: clamp(12px, 1.2vw, 18px);
+  padding: var(--hd-immersive-toolbar-clearance) clamp(12px, 1.8vw, 24px) 14px;
+}
+
+/* Keep overflow behavior for zoom/panning but remove the browser scrollbar
+ * track that presented as a gray box beneath the board. */
+.hd-immersive-board-stage {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hd-immersive-board-stage::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.hd-immersive-board-mount {
+  padding: 0 clamp(6px, 1vw, 12px) 20px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+body[data-hd-immersive='on'] .hd-immersive-shell .hd-board-card {
+  width: min(100%, 980px, calc(100dvh - var(--hd-immersive-toolbar-clearance) - 38px));
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Instrument panel: compact cockpit, not a second hero card. */
+.hd-immersive-panel {
+  align-self: center;
+  width: var(--hd-immersive-panel-width);
+  max-height: calc(100dvh - var(--hd-immersive-toolbar-clearance) - 20px);
+  padding: 9px;
+  border-color: rgba(166, 225, 194, .2);
+  border-radius: 15px;
+  background: linear-gradient(155deg, rgba(3, 48, 35, .82), rgba(3, 39, 31, .7));
+  box-shadow: 0 16px 38px rgba(0, 14, 10, .29), inset 0 1px 0 rgba(255, 255, 255, .045);
+}
+
+.hd-immersive-panel-toggle {
+  position: absolute;
+  top: 50%;
+  left: -14px;
+  z-index: 8;
+  width: 28px;
+  height: 48px;
+  margin: 0;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: rgba(8, 61, 45, .94);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .24);
+}
+
+.hd-immersive-shell[data-panel='collapsed'] .hd-immersive-panel {
+  width: 42px;
+  padding: 5px;
+  border-radius: 13px;
+}
+
+.hd-immersive-shell[data-panel='collapsed'] .hd-immersive-panel-toggle {
+  position: static;
+  width: 30px;
+  height: 38px;
+  margin: 0 auto;
+  transform: none;
+}
+
+.hd-immersive-shell[data-panel='collapsed'] .hd-immersive-layout {
+  grid-template-columns: minmax(0, 1fr) 42px;
+}
+
+.hd-immersive-shell .hd-side-card {
+  padding: 2px;
+}
+
+.hd-immersive-shell .hd-player-strip {
+  gap: 5px;
+  margin-bottom: 7px;
+}
+
+.hd-immersive-shell .hd-player {
+  min-height: 40px;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+/* Restore just enough live-game context to make difficulty discoverable while
+ * keeping the board visually dominant. */
+.hd-immersive-shell .hd-game-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 7px;
+  padding: 7px 8px;
+  border: 1px solid rgba(173, 221, 196, .13);
+  border-radius: 10px;
+  background: rgba(4, 43, 34, .34);
+}
+
+.hd-immersive-shell .hd-game-summary > div {
+  display: block;
+  min-width: 0;
+}
+
+.hd-immersive-shell .hd-game-summary #gameTitle {
+  display: none;
+}
+
+.hd-immersive-shell .hd-game-summary #modeLabel {
+  margin: 0 0 2px;
+  font-size: .64rem;
+  line-height: 1.1;
+}
+
+.hd-immersive-shell .hd-game-summary #gameDetails {
+  margin: 0;
+  overflow: hidden;
+  color: rgba(235, 247, 237, .78);
+  font-size: .72rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hd-immersive-shell .hd-new-game {
+  width: auto;
+  min-width: 84px;
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: .72rem;
+}
+
+.hd-difficulty-shortcut {
+  display: none;
+}
+
+.hd-immersive-shell .hd-difficulty-shortcut {
+  display: block;
+  margin: 0 0 7px;
+}
+
+.hd-immersive-shell .hd-difficulty-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid rgba(173, 221, 196, .17);
+  border-radius: 10px;
+  background: rgba(7, 58, 43, .5);
+  color: #eef8ef;
+  text-align: left;
+}
+
+.hd-immersive-shell .hd-difficulty-button:hover,
+.hd-immersive-shell .hd-difficulty-button:focus-visible {
+  border-color: rgba(165, 242, 184, .5);
+  background: rgba(11, 75, 54, .66);
+}
+
+.hd-immersive-shell .hd-difficulty-label {
+  min-width: 0;
+  color: rgba(226, 241, 229, .68);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.hd-immersive-shell .hd-difficulty-value {
+  font-size: .75rem;
+  white-space: nowrap;
+}
+
+.hd-immersive-shell .hd-difficulty-action {
+  padding-left: 7px;
+  border-left: 1px solid rgba(193, 229, 204, .16);
+  color: #bdebc8;
+  font-size: .68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.hd-immersive-shell .hd-action-row {
+  gap: 5px;
+}
+
+.hd-immersive-shell .hd-action-row button {
+  min-height: 36px;
+  padding: 6px;
+  font-size: .72rem;
+}
+
+.hd-immersive-shell .hd-moves-panel,
+.hd-immersive-shell .hd-captured-panel {
+  margin-top: 7px;
+  padding: 8px;
+  border-radius: 10px;
+  border-color: rgba(173, 221, 196, .12);
+  background: rgba(4, 43, 34, .34);
+}
+
+.hd-immersive-shell .move-list {
+  max-height: 150px;
+}
+
+.hd-immersive-shell .rules-note {
+  margin-top: 7px;
+}
+
+/* Accessibility modes remain authoritative over visual polish. */
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-immersive-topbar,
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-immersive-panel,
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-game-summary,
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-difficulty-button {
+  border: 2px solid #fff;
+  background: #000;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-difficulty-label,
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-game-summary #gameDetails,
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-difficulty-action {
+  color: #fff;
+}
+
+body.hd-reduced-motion[data-hd-immersive='on'] .hd-immersive-panel-toggle,
+body.hd-reduced-motion[data-hd-immersive='on'] .hd-difficulty-button {
+  transition: none !important;
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hd-immersive-panel-toggle,
+  .hd-immersive-shell .hd-difficulty-button {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media (max-height: 820px) and (min-width: 900px) {
+  .hd-immersive-shell {
+    --hd-immersive-toolbar-clearance: 56px;
+  }
+
+  body[data-hd-immersive='on'] .hd-immersive-shell .hd-board-card {
+    width: min(100%, 920px, calc(100dvh - var(--hd-immersive-toolbar-clearance) - 32px));
+  }
+
+  .hd-immersive-panel {
+    max-height: calc(100dvh - var(--hd-immersive-toolbar-clearance) - 14px);
+  }
+}
+
+@media (max-width: 899px) {
+  .hd-immersive-shell {
+    --hd-immersive-panel-width: min(310px, calc(100vw - 24px));
+    --hd-immersive-toolbar-clearance: 58px;
+  }
+
+  .hd-immersive-topbar,
+  .hd-immersive-shell[data-panel='collapsed'] .hd-immersive-topbar {
+    left: 6px;
+    right: 6px;
+    max-width: none;
+  }
+
+  .hd-immersive-layout,
+  .hd-immersive-shell[data-panel='collapsed'] .hd-immersive-layout {
+    display: block;
+    padding: var(--hd-immersive-toolbar-clearance) 7px 9px;
+  }
+
+  .hd-immersive-board-stage {
+    width: 100%;
+    height: 100%;
+  }
+
+  body[data-hd-immersive='on'] .hd-immersive-shell .hd-board-card {
+    width: min(94vw, 760px, calc(100dvh - var(--hd-immersive-toolbar-clearance) - 34px));
+  }
+
+  .hd-immersive-panel {
+    top: calc(var(--hd-immersive-toolbar-clearance) + 6px);
+    right: 8px;
+    bottom: 8px;
+    width: var(--hd-immersive-panel-width);
+    max-height: none;
+  }
+
+  .hd-immersive-shell[data-panel='collapsed'] .hd-immersive-panel {
+    width: 42px;
+    height: 46px;
+    padding: 4px;
+  }
+
+  .hd-immersive-shell[data-panel='collapsed'] .hd-immersive-panel-toggle {
+    width: 32px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 760px) {
+  .hd-immersive-shell {
+    --hd-immersive-toolbar-clearance: 54px;
+  }
+
+  .hd-immersive-topbar {
+    top: 6px;
+  }
+
+  .hd-immersive-board-mount {
+    padding: 0 5px 16px !important;
+  }
+
+  body[data-hd-immersive='on'] .hd-immersive-shell .hd-board-card {
+    width: min(95vw, calc(100dvh - var(--hd-immersive-toolbar-clearance) - 28px));
+  }
+}
+
+@media (max-width: 480px) {
+  .hd-immersive-shell {
+    --hd-immersive-toolbar-clearance: 52px;
+  }
+
+  body[data-hd-immersive='on'] .hd-immersive-shell .hd-board-card {
+    width: min(96vw, calc(100dvh - var(--hd-immersive-toolbar-clearance) - 24px));
+  }
+}
