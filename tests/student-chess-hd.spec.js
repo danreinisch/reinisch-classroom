@@ -452,3 +452,114 @@ test('Viewer route keeps the polished board inside its iframe without lower ligh
   const iframeImage = await page.locator('#contentIframe').screenshot({ type: 'png' });
   expect(lowerLightPixelRatio(iframeImage)).toBeLessThan(0.4);
 });
+
+test('immersive HD Board opens over the existing game, uses the same controller, flips, and closes back to Standard', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await setupLocalGame(page);
+  await move(page, 'e2', 'e4');
+  await move(page, 'e7', 'e5');
+  const before = await page.evaluate(k => JSON.parse(localStorage.getItem(k)).game.moves, key(0));
+
+  await expect(page.locator('#hdTabletopBtn')).toHaveText('HD Board');
+  await page.locator('#hdTabletopBtn').click();
+
+  await expect(page.locator('#hdImmersiveShell')).toBeVisible();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-immersive', 'on');
+  await expect(page.locator('#hdImmersiveBoardMount .hd-board-card')).toHaveCount(1);
+  await expect(page.locator('#hdImmersivePanelMount .hd-side-card')).toHaveCount(1);
+  await expect(page.locator('#hdImmersiveToolbarMount #hdCameraToolbar')).toHaveCount(1);
+  await expect(page.locator('#board')).toHaveCount(1);
+  await expect(page.locator('#newGameBtn')).toBeVisible();
+
+  await move(page, 'g1', 'f3');
+  const afterMove = await page.evaluate(k => JSON.parse(localStorage.getItem(k)).game.moves, key(0));
+  expect(afterMove).toHaveLength(before.length + 1);
+  expect(afterMove.at(-1).to).toBe('f3');
+
+  const firstBeforeFlip = await page.locator('#board button').first().getAttribute('data-square');
+  await page.locator('#hdImmersiveFlipBtn').click();
+  const firstAfterFlip = await page.locator('#board button').first().getAttribute('data-square');
+  expect(firstAfterFlip).not.toBe(firstBeforeFlip);
+
+  await page.locator('#hdBackBtn').click();
+  await expect(page.locator('#hdImmersiveShell')).toBeHidden();
+  await expect(page.locator('body')).not.toHaveAttribute('data-hd-immersive', 'on');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-view', 'top-down');
+  await expect(page.locator('#workspace > .hd-board-card')).toHaveCount(1);
+  await expect(page.locator('#workspace > .hd-side-card')).toHaveCount(1);
+  await expect(page.locator('#moveList')).toContainText('Nf3');
+
+  await page.locator('#hdTabletopBtn').click();
+  await expect(page.locator('#hdImmersiveShell')).toBeVisible();
+  await expect(page.locator('#moveList')).toContainText('Nf3');
+});
+
+test('immersive HD Board keeps bounded zoom, Forged Metal, keyboard play, High Contrast, and Reduced Motion functional', async ({ page }) => {
+  await page.setViewportSize({ width: 1365, height: 900 });
+  await setupLocalGame(page);
+  await page.locator('#hdTabletopBtn').click();
+  await expect(page.locator('#hdImmersiveShell')).toBeVisible();
+
+  await page.locator('#hdZoomRange').fill('125');
+  await expect(page.locator('#hdZoomValue')).toHaveText('125%');
+  await expect(page.locator('#hdZoomInBtn')).toBeDisabled();
+  await page.locator('#hdZoomRange').fill('85');
+  await expect(page.locator('#hdZoomValue')).toHaveText('85%');
+  await expect(page.locator('#hdZoomOutBtn')).toBeDisabled();
+  await page.locator('#hdZoomFitBtn').click();
+  await expect(page.locator('#hdZoomValue')).toHaveText('100%');
+
+  await page.locator('#settingsBtn').click();
+  await page.locator('[data-hd-metal-option]').click();
+  await expect(page.locator('#board svg[data-hd-metal="true"]')).toHaveCount(32);
+  await page.locator('[data-hd-theme-option="high-contrast"]').click();
+  await page.locator('#reducedToggle').check();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+
+  await expect(page.locator('body')).toHaveClass(/hd-reduced-motion/);
+  const metalFilter = await page.locator('[data-square="b1"] svg.hd-premium-piece').evaluate(el => getComputedStyle(el).filter);
+  expect(metalFilter).toBe('none');
+  const frameTransition = await page.locator('.hd-immersive-shell .hd-board-frame').evaluate(el => getComputedStyle(el).transitionDuration);
+  expect(frameTransition.split(',').every(value => parseFloat(value) <= 0.001)).toBe(true);
+
+  await page.locator('[data-square="e2"]').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.square.legal')).toHaveCount(2);
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Enter');
+  const saved = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), key(0));
+  expect(saved.game.moves[0].to).toBe('e4');
+  await expectNoHorizontalOverflow(page);
+});
+
+test('immersive HD Board fits Chromebook, laptop, tablet, mobile, and Viewer without horizontal overflow', async ({ page }) => {
+  await setupLocalGame(page);
+  for (const viewport of [
+    { width: 1366, height: 768 },
+    { width: 1365, height: 900 },
+    { width: 768, height: 1024 },
+    { width: 390, height: 844 },
+  ]) {
+    if (!(await page.locator('#hdImmersiveShell').isHidden())) await page.locator('#hdBackBtn').click();
+    await page.setViewportSize(viewport);
+    await page.locator('#hdTabletopBtn').click();
+    await expect(page.locator('#hdImmersiveShell')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expect(page.locator('#board button')).toHaveCount(64);
+    const board = await page.locator('#board').boundingBox();
+    expect(board.width).toBeGreaterThan(260);
+    expect(board.width).toBeLessThanOrEqual(viewport.width + 1);
+    if (viewport.width < 900) {
+      await expect(page.locator('#hdImmersiveShell')).toHaveAttribute('data-panel', 'collapsed');
+    }
+  }
+
+  await page.goto('/viewer/?src=%2Factivities%2Fchess%2F&title=Classroom%20Chess');
+  const frame = page.frameLocator('#contentIframe');
+  await expect(frame.locator('#hdTabletopBtn')).toHaveText('HD Board');
+  await frame.locator('#hdTabletopBtn').click();
+  await expect(frame.locator('#hdImmersiveShell')).toBeVisible();
+  await expect(frame.locator('body')).toHaveAttribute('data-hd-immersive', 'on');
+  expect(await frame.locator('html').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+});

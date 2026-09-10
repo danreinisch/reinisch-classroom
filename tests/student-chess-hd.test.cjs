@@ -95,6 +95,34 @@ test('Tabletop and Forged Metal stay additive, bounded, persistent, and presenta
   assert.match(css, /prefers-reduced-motion: reduce/);
 });
 
+test('Immersive HD Board is an isolated presentation layer over the existing board and controls', () => {
+  const html = read('site/activities/chess/index.html');
+  const js = read('site/activities/chess/chess-hd-immersive.js');
+  const css = read('site/activities/chess/chess-hd-immersive.css');
+
+  assert.match(html, /chess-hd-immersive\.js\?v=20260909-chess-immersive-1/);
+  for (const hook of [
+    'hdImmersiveShell', 'hdImmersiveBoardMount', 'hdImmersivePanelMount',
+    'hdImmersiveToolbarMount', 'hdBackBtn', 'hdImmersiveFlipBtn', 'hdImmersivePanelToggle',
+  ]) assert.match(js, new RegExp(hook), hook);
+
+  assert.match(js, /append\(boardCard\)/);
+  assert.match(js, /append\(sideCard\)/);
+  assert.match(js, /append\(toolbar\)/);
+  assert.match(js, /append\(settings\)/);
+  assert.match(js, /hdTopDownBtn/);
+  assert.match(js, /hdTabletopBtn/);
+  assert.doesNotMatch(js, /from '\.\/engine\.js'|findMove\(|new Chess\(|new Worker\(|worker\.postMessage|localStorage\.clear\(/);
+
+  assert.match(css, /data-hd-immersive='on'/);
+  assert.match(css, /rc-annotated-canyon-approved\.webp/);
+  assert.match(css, /rotateX\(13deg\)/);
+  assert.match(css, /translateZ\(18px\) rotateX\(-13deg\)/);
+  assert.match(css, /data-hd-theme='high-contrast'\]\[data-hd-immersive='on'/);
+  assert.match(css, /hd-reduced-motion\[data-hd-immersive='on'/);
+  assert.doesNotMatch(css, /#(?:[0-9a-f]{3,8})\s*\/\*/);
+});
+
 test('existing browser-local metadata safely merges HD appearance fields with chess progress', async () => {
   const { ChessStore } = await import('../site/activities/chess/core.js');
   const store = new ChessStore(memoryStorage(), student());
