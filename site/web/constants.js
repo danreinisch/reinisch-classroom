@@ -46,6 +46,9 @@ if (
   typeof window !== "undefined" &&
   window.location.pathname.startsWith("/teacher/gradebook")
 ) {
+  import("/web/gradebook-student-order-safety.js?v=20260910-partial-roster-guard").catch((error) => {
+    console.warn("[gradebook] Could not load student-order safety guard:", error);
+  });
   import("/web/gradebook-roster-order.js?v=20260910-editable-student-order").catch((error) => {
     console.warn("[gradebook] Could not load roster-order helper:", error);
   });
