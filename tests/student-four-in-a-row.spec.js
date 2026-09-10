@@ -112,7 +112,7 @@ test('the computer plays either side and undo returns to the human turn', async 
   await page.locator('#undoBtn').click();
   expect((await saved(page)).game.moves).toHaveLength(0);
 
-  await setup(page,'computer',2,'challenge');
+  await setup(page,'computer',2,'skilled');
   await expect(page.locator('#moveCount')).toHaveText('1 of 42 spaces');
   await expect(page.locator('#undoBtn')).toBeDisabled();
   await drop(page,0);
