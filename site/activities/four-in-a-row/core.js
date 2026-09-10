@@ -42,7 +42,7 @@ export const LEVELS = Object.freeze({
 
 export function normalizeLevel(level) {
   if (CURRENT_LEVEL_KEYS.has(level)) return level;
-  return LEGACY_LEVEL_ALIASES[level] || null;
+  return Object.prototype.hasOwnProperty.call(LEGACY_LEVEL_ALIASES, level) ? LEGACY_LEVEL_ALIASES[level] : null;
 }
 
 export const other = player => 3 - player;
