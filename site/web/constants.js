@@ -39,14 +39,17 @@ export function getClassDisplayName(className) {
   return CLASS_DISPLAY[className] ?? className;
 }
 
-// Gradebook-only presentation bootstrap. The helper reads the already-rendered
-// runtime student label and stores no roster names or other PII in source.
-// Other Teacher Center pages importing constants.js do not load it.
+// Gradebook-only presentation bootstrap. The helpers read only data already
+// rendered by tc-gradebook.js. Other Teacher Center pages importing constants.js
+// do not load these presentation-only modules.
 if (
   typeof window !== "undefined" &&
   window.location.pathname.startsWith("/teacher/gradebook")
 ) {
   import("/web/gradebook-roster-order.js?v=20260909-ic-order").catch((error) => {
     console.warn("[gradebook] Could not load roster-order helper:", error);
+  });
+  import("/web/tc-gradebook-header-tools.js?v=20260910-header-copy-readability").catch((error) => {
+    console.warn("[gradebook] Could not load header-copy helper:", error);
   });
 }
