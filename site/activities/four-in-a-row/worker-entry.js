@@ -1,5 +1,5 @@
-import { replay } from './core.js?v=20260906-four-2';
-import { chooseMove } from './engine.js?v=20260906-four-2';
+import { replay } from './core.js?v=20260909-four-hd-2';
+import { chooseMove } from './engine.js?v=20260909-four-hd-2';
 
 self.onmessage = event => {
   let id = null;
