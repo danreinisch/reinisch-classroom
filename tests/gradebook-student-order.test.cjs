@@ -21,7 +21,7 @@ class MemoryStorage {
   }
 }
 
-function makeGradebookDom(className, codes) {
+function makeGradebookDom(className, codes, { explicitSort = true } = {}) {
   const dom = new JSDOM(`
     <!doctype html>
     <html>
@@ -33,7 +33,7 @@ function makeGradebookDom(className, codes) {
         </div>
         <div id="gbA11yStatus"></div>
         <table>
-          <thead id="gbTableHead"><tr><th aria-sort="ascending">Student</th></tr></thead>
+          <thead id="gbTableHead"><tr><th aria-sort="${explicitSort ? 'ascending' : 'none'}">Student</th></tr></thead>
           <tbody id="gbTableBody"></tbody>
         </table>
       </body>
@@ -70,10 +70,34 @@ function renderedCodes(document) {
   ).code);
 }
 
+function dispatchInput(dom, element) {
+  element.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+}
+
+function addMissingWorkFilter(dom, checked = true) {
+  const { document } = dom.window;
+  const label = document.createElement('label');
+  label.className = 'gb-missing-filter-label';
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = checked;
+  label.appendChild(checkbox);
+  label.appendChild(document.createTextNode('Show only students with missing work'));
+  document.body.appendChild(label);
+  return { label, checkbox };
+}
+
+async function wait(ms) {
+  await new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function main() {
   const repoRoot = path.join(__dirname, '..');
   const helperPath = path.join(repoRoot, 'site', 'web', 'gradebook-roster-order.js');
+  const safetyPath = path.join(repoRoot, 'site', 'web', 'gradebook-student-order-safety.js');
+  const constantsPath = path.join(repoRoot, 'site', 'web', 'constants.js');
   const helper = await import(pathToFileURL(helperPath).href);
+  const safety = await import(pathToFileURL(safetyPath).href);
 
   const {
     LOCKED_IC_ROSTER_ORDER,
@@ -84,6 +108,10 @@ async function main() {
     sortStudentsForGradebookClass,
     installGradebookStudentOrderControls,
   } = helper;
+  const {
+    getStudentOrderUnsafeReason,
+    installGradebookStudentOrderSafety,
+  } = safety;
 
   console.log('--- Gradebook editable student order ---');
 
@@ -161,6 +189,7 @@ async function main() {
     ['S069', 'S075', 'S057', 'S019']
   );
   const { document } = dom.window;
+  const safetyInstall = installGradebookStudentOrderSafety(document);
   installGradebookStudentOrderControls(document, uiStorage);
 
   const orderButton = document.querySelector('#gbStudentOrderButton');
@@ -171,8 +200,9 @@ async function main() {
     'Student Order controls must be visible for an individual class'
   );
   orderButton.click();
+  await wait(0);
 
-  const editor = document.querySelector('#gbStudentOrderBackdrop');
+  let editor = document.querySelector('#gbStudentOrderBackdrop');
   assert.ok(editor, 'Student Order button must open the order editor');
   assert.deepStrictEqual(
     Array.from(editor.querySelectorAll('.gb-student-order-item'))
@@ -215,21 +245,124 @@ async function main() {
   );
   console.log('✓ reset control restores the verified Infinite Campus stack');
 
-  document.querySelector('#gbStudentSearch').value = 'S019';
+  const search = document.querySelector('#gbStudentSearch');
+  search.value = 'S019';
+  dispatchInput(dom, search);
   orderButton.click();
   assert.strictEqual(
     document.querySelector('#gbStudentOrderBackdrop'),
     null,
-    'filtered roster must not open the order editor'
+    'nonempty search must not open the order editor'
   );
   assert.match(
     document.querySelector('.gb-student-order-status').textContent,
     /Clear the student search/i,
-    'filtered roster must explain why editing is blocked'
+    'nonempty search must explain why editing is blocked'
   );
-  console.log('✓ filtered student list cannot accidentally become the saved class order');
 
-  const source = fs.readFileSync(helperPath, 'utf8');
+  search.value = '';
+  dispatchInput(dom, search);
+  orderButton.click();
+  assert.strictEqual(
+    document.querySelector('#gbStudentOrderBackdrop'),
+    null,
+    'cleared search must still be blocked while the Gradebook debounce can leave partial rows rendered'
+  );
+  assert.match(
+    document.querySelector('.gb-student-order-status').textContent,
+    /restoring the full roster/i,
+    'search debounce guard must explain that the full roster is still restoring'
+  );
+  await wait(330);
+  assert.strictEqual(getStudentOrderUnsafeReason(document), '');
+  console.log('✓ search debounce race cannot save a partial roster');
+
+  const missing = addMissingWorkFilter(dom, true);
+  orderButton.click();
+  assert.strictEqual(
+    document.querySelector('#gbStudentOrderBackdrop'),
+    null,
+    'missing-work subset must not open the order editor'
+  );
+  assert.match(
+    document.querySelector('.gb-student-order-status').textContent,
+    /Show only students with missing work/i,
+    'missing-work guard must explain which filter to turn off'
+  );
+  console.log('✓ Missing Work subset cannot become the saved class order');
+
+  missing.checkbox.checked = false;
+  orderButton.click();
+  await wait(0);
+  editor = document.querySelector('#gbStudentOrderBackdrop');
+  assert.ok(editor, 'editor must open after partial-roster filters are cleared');
+
+  const dialog = editor.querySelector('.gb-student-order-dialog');
+  const focusable = Array.from(
+    dialog.querySelectorAll('button:not([disabled])')
+  );
+  const firstFocusable = focusable[0];
+  const lastFocusable = focusable[focusable.length - 1];
+  lastFocusable.focus();
+  dialog.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
+    key: 'Tab',
+    bubbles: true,
+    cancelable: true,
+  }));
+  assert.strictEqual(
+    document.activeElement,
+    firstFocusable,
+    'Tab from the last control must wrap inside the modal'
+  );
+  console.log('✓ Student Order modal traps keyboard focus');
+
+  editor
+    .querySelector('[data-code="S057"] [data-order-action="down"]')
+    .click();
+  missing.checkbox.checked = true;
+  editor.querySelector('[data-order-dialog-action="save"]').click();
+  assert.strictEqual(
+    getSavedStudentOrder(className, uiStorage),
+    null,
+    'Save must be blocked if a partial-roster filter becomes active while the editor is open'
+  );
+  assert.ok(
+    document.querySelector('#gbStudentOrderBackdrop'),
+    'blocked Save must keep the editor open for correction/cancel'
+  );
+  missing.checkbox.checked = false;
+  document.querySelector('[data-order-dialog-action="cancel"]').click();
+  console.log('✓ Save rechecks partial-roster safety before persistence');
+
+  const unlockedStorage = new MemoryStorage();
+  saveStudentOrder('Consumer Math', ['S902', 'S901'], unlockedStorage);
+  const unlockedDom = makeGradebookDom(
+    'Consumer Math',
+    ['S902', 'S901'],
+    { explicitSort: true }
+  );
+  const unlockedDocument = unlockedDom.window.document;
+  const unlockedSafety = installGradebookStudentOrderSafety(unlockedDocument);
+  installGradebookStudentOrderControls(unlockedDocument, unlockedStorage);
+  unlockedDocument.querySelector('#gbStudentOrderButton').click();
+  await wait(0);
+  unlockedDocument
+    .querySelector('[data-order-dialog-action="reset"]')
+    .click();
+  assert.deepStrictEqual(
+    getSavedStudentOrder('Consumer Math', unlockedStorage),
+    ['S902', 'S901'],
+    'Reset to Default must not silently delete a custom order while an explicit column sort owns the visible stack'
+  );
+  assert.match(
+    unlockedDocument.querySelector('.gb-student-order-status').textContent,
+    /Clear the active Gradebook column sort/i
+  );
+  console.log('✓ unlocked-class reset cannot leave saved state and visible sorted state disagreeing');
+
+  const helperSource = fs.readFileSync(helperPath, 'utf8');
+  const safetySource = fs.readFileSync(safetyPath, 'utf8');
+  const constantsSource = fs.readFileSync(constantsPath, 'utf8');
   for (const marker of [
     '↕ Student Order',
     'Save Order',
@@ -240,11 +373,22 @@ async function main() {
     'New students appear at the bottom',
     'saved only in this browser',
   ]) {
-    assert.ok(source.includes(marker), `missing Student Order UI contract marker: ${marker}`);
+    assert.ok(helperSource.includes(marker), `missing Student Order UI contract marker: ${marker}`);
   }
-  console.log('✓ Gradebook editor exposes drag, arrow, save, reset, and new-student affordances');
+  assert.ok(
+    safetySource.includes('.gb-missing-filter-label input[type="checkbox"]:checked'),
+    'safety guard must detect the existing Missing Work subset checkbox'
+  );
+  assert.ok(
+    constantsSource.includes('/web/gradebook-student-order-safety.js?v=20260910-partial-roster-guard'),
+    'Gradebook bootstrap must load the cache-busted Student Order safety guard'
+  );
+  console.log('✓ Gradebook bootstrap loads the partial-roster safety guard');
 
+  safetyInstall?.dispose();
+  unlockedSafety?.dispose();
   dom.window.close();
+  unlockedDom.window.close();
   console.log('\nGRADEBOOK EDITABLE STUDENT ORDER: PASS');
 }
 
