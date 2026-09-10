@@ -1,0 +1,106 @@
+/* Immersive Four in a Row HD layer. The existing board/controller is moved here,
+   never cloned; game rules, saves, worker state, and keyboard behavior remain owned by app.js. */
+.four-hd-view-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.four-hd-launch{min-height:32px;padding:5px 12px;border-radius:999px;font-size:.7rem;white-space:nowrap}
+
+html[data-four-hd-immersive='on'],body.four-hd-immersive-open{overflow:hidden!important}
+.four-hd-immersive-shell[hidden]{display:none!important}
+.four-hd-immersive-shell{
+  --four-panel-width:clamp(250px,20vw,290px);
+  position:fixed;inset:0;z-index:1200;min-width:0;overflow:hidden;color:var(--hd-ink);
+  background-color:#031713;
+  background-image:linear-gradient(90deg,rgba(2,20,16,.94),rgba(2,20,16,.66) 46%,rgba(2,20,16,.9)),linear-gradient(180deg,rgba(2,21,17,.25),rgba(2,18,15,.83) 76%,#02130f),url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4');
+  background-size:100% 100%,100% 100%,cover;background-position:center top;background-repeat:no-repeat;
+}
+.four-hd-immersive-shell:before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 48% 40%,transparent 0 28%,#00120e38 72%,#00100ddd);z-index:0}
+.four-hd-immersive-topbar{
+  position:absolute;z-index:20;top:10px;left:10px;right:10px;min-height:50px;display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 8px;border:1px solid #b7d9ca36;border-radius:14px;background:linear-gradient(180deg,rgba(4,39,31,.87),rgba(3,27,23,.9));box-shadow:0 10px 28px #0006;backdrop-filter:blur(10px)
+}
+.four-hd-immersive-topbar button{min-height:34px;padding:6px 10px;border-radius:9px;font-size:.72rem;white-space:nowrap}
+.four-hd-back{margin-right:auto}
+.four-hd-camera,.four-hd-zoom{display:flex;align-items:center;gap:4px;padding:3px;border:1px solid #b6d9c82b;border-radius:10px;background:#031c17ad}
+.four-hd-camera button[aria-pressed='true']{border-color:var(--hd-gold2);color:#fff8e7;background:linear-gradient(180deg,#356951,#174535);box-shadow:inset 0 -2px var(--hd-gold)}
+.four-hd-zoom output{min-width:46px;text-align:center;color:#f0d497;font:700 .72rem/1 Georgia,'Times New Roman',serif;font-variant-numeric:tabular-nums}
+.four-hd-settings-mount{margin-left:auto;display:flex;align-items:center}
+.four-hd-immersive-shell #settingsBtn{min-width:0;min-height:34px;padding:6px 10px;border-radius:9px;font-size:.7rem}
+
+.four-hd-immersive-layout{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) var(--four-panel-width);gap:10px;width:100%;height:100%;min-width:0;padding:70px 10px 10px}
+.four-hd-board-stage{min-width:0;min-height:0;overflow:auto;scrollbar-width:none;overscroll-behavior:contain;display:block;padding:10px 8px 24px;background:transparent!important}
+.four-hd-board-stage::-webkit-scrollbar{width:0;height:0}
+.four-hd-board-mount{width:min(760px,calc(100% - 24px),calc((100dvh - 104px) * 1.06));min-width:290px;margin:0 auto;padding:14px 0 20px;background:transparent!important}
+.four-hd-board-mount>.hd-board-card{margin:0 auto;max-width:none;border:0;background:transparent;box-shadow:none;padding:7px;overflow:visible}
+.four-hd-immersive-shell .hd-board-heading{display:none}
+.four-hd-immersive-shell .hd-board-frame{
+  transform-origin:50% 92%;transform:perspective(1180px) rotateX(2.2deg) rotateY(-5.2deg) rotateZ(-.35deg);
+  transition:transform .22s ease,box-shadow .22s ease;box-shadow:18px 25px 42px #0009,-8px 11px 24px #0005,inset 0 0 0 4px #1230268c,inset 0 1px #fff5
+}
+.four-hd-immersive-shell[data-camera='straight'] .hd-board-frame{transform:none;box-shadow:0 24px 42px #0009,0 10px 20px #0005,inset 0 0 0 4px #1230268c,inset 0 1px #fff5}
+.four-hd-immersive-shell .hd-board-frame:after{content:'';position:absolute;z-index:-1;left:1.4%;right:-1.9%;bottom:-13px;height:22px;border-radius:0 0 18px 18px;background:linear-gradient(180deg,#4d3825,#1b1c18 56%,#090c0a);box-shadow:10px 12px 18px #0008;transform:skewX(-5deg);pointer-events:none}
+body[data-board-theme='wood'] .four-hd-immersive-shell .hd-board-frame:after{background:linear-gradient(180deg,#70411f,#3a2115 58%,#160d08)}
+body[data-board-theme='modern-slate'] .four-hd-immersive-shell .hd-board-frame:after{background:linear-gradient(180deg,#50595e,#252c30 58%,#0c1114)}
+body[data-board-theme='tournament-blue'] .four-hd-immersive-shell .hd-board-frame:after{background:linear-gradient(180deg,#365f7b,#183850 58%,#071a28)}
+.four-hd-immersive-shell .hd-board{box-shadow:inset 0 9px 18px #fff1,inset 0 -18px 27px #0006,0 7px 0 #0005}
+.four-hd-immersive-shell .hd-board .cell{border-width:clamp(2px,.22vw,3px);box-shadow:inset 0 8px 11px #000c,inset 0 -2px 4px #fff1,0 1px #ffffff20,0 2px 4px #0007}
+.four-hd-immersive-shell .hd-board .cell:before{content:'';display:block!important;position:absolute;z-index:1;left:17%;right:17%;bottom:9%;height:12%;border-radius:50%;background:#000;opacity:.55;filter:blur(4px);pointer-events:none}
+.four-hd-immersive-shell .hd-board .cell>.piece-surface{isolation:isolate;box-shadow:var(--piece-shadow,none),inset 0 1px 1px #fff3,0 4px 8px #0008;filter:saturate(1.04)}
+.four-hd-immersive-shell .hd-board .cell>.piece-surface:before{content:'';position:absolute;z-index:-1;left:3%;right:3%;top:5%;bottom:-8%;border-radius:50%;background:linear-gradient(180deg,#ffffff2b 0 68%,#271b10 69% 100%);box-shadow:0 2px 2px #0007;pointer-events:none}
+body[data-piece-set='wood'] .four-hd-immersive-shell .hd-board .cell>.piece-surface:before{background:linear-gradient(180deg,#ffffff14 0 68%,#4b2714 69% 100%)}
+body[data-piece-set='metal'] .four-hd-immersive-shell .hd-board .cell>.piece-surface:before{background:linear-gradient(180deg,#ffffff3d 0 67%,#3b4143 68% 100%)}
+body[data-piece-set='canyon-stone'] .four-hd-immersive-shell .hd-board .cell>.piece-surface:before{background:linear-gradient(180deg,#ffffff16 0 68%,#44362b 69% 100%)}
+body[data-piece-set='high-contrast'] .four-hd-immersive-shell .hd-board .cell>.piece-surface:before{background:linear-gradient(180deg,#fff 0 68%,#111 69% 100%)}
+body[data-four-hd-reflection='on'] .four-hd-immersive-shell .hd-board .cell.p1:after,body[data-four-hd-reflection='on'] .four-hd-immersive-shell .hd-board .cell.p2:after{content:'';position:absolute;z-index:1;left:25%;right:25%;bottom:-4%;height:13%;border-radius:50%;background:var(--piece-fill);opacity:.13;filter:blur(3px) saturate(.8);transform:scaleY(.48);pointer-events:none}
+
+.four-hd-panel{position:relative;min-width:0;min-height:0;width:100%;height:100%;padding-left:8px;transition:width .18s ease}
+.four-hd-panel-mount{height:100%;min-width:0;overflow:auto;scrollbar-width:thin}
+.four-hd-panel .hd-side-card{width:100%;max-width:100%;min-height:0;max-height:calc(100dvh - 80px);overflow:auto;padding:14px;border-radius:15px;background:linear-gradient(180deg,rgba(4,35,29,.91),rgba(2,24,20,.95));box-shadow:0 18px 36px #0007;backdrop-filter:blur(9px)}
+.four-hd-panel-toggle{position:absolute;z-index:5;left:-11px;top:50%;transform:translateY(-50%);width:30px;height:58px;min-width:30px;padding:0;border-radius:12px 0 0 12px;border-color:#d3b57470;background:#073329;color:#f1d18d;font-size:1.15rem;box-shadow:-5px 8px 16px #0006}
+.four-hd-immersive-shell[data-panel='collapsed']{grid-template-columns:1fr}
+.four-hd-immersive-shell[data-panel='collapsed'] .four-hd-immersive-layout{grid-template-columns:minmax(0,1fr) 42px}
+.four-hd-immersive-shell[data-panel='collapsed'] .four-hd-panel{width:42px;padding-left:0}
+.four-hd-immersive-shell[data-panel='collapsed'] .four-hd-panel-mount{display:none}
+.four-hd-immersive-shell[data-panel='collapsed'] .four-hd-panel-toggle{left:5px;border-radius:10px}
+.four-hd-difficulty-card{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 2px;padding:8px 9px;border:1px solid #b5d9c62b;border-radius:10px;background:#031d18b8}
+.four-hd-difficulty-card[hidden]{display:none!important}
+.four-hd-difficulty-copy{min-width:0}.four-hd-difficulty-copy small{display:block;color:#8fa49a;font-size:.6rem}.four-hd-difficulty-copy strong{display:block;margin-top:2px;color:#f1d08b;font:600 .8rem/1.15 Georgia,'Times New Roman',serif}.four-hd-difficulty-card button{min-height:30px;padding:5px 8px;font-size:.64rem}
+.four-hd-reflection-row[hidden]{display:none!important}
+
+body[data-focus-board='true'] .four-hd-immersive-shell .hd-side-card{padding:14px}
+body[data-focus-board='true'] .four-hd-immersive-shell .hd-panel-title .eyebrow{display:block}
+body[data-focus-board='true'] .four-hd-immersive-shell .hd-tagline{display:initial}
+body[data-focus-board='true'] .four-hd-immersive-shell .hd-secondary-tools,body[data-focus-board='true'] .four-hd-immersive-shell .hd-recent-moves,body[data-focus-board='true'] .four-hd-immersive-shell .rules-note{display:block}
+
+body[data-board-theme='high-contrast'] .four-hd-immersive-shell{background:#000;background-image:none;color:#fff}
+body[data-board-theme='high-contrast'] .four-hd-immersive-shell .hd-board-frame{transform:none!important;box-shadow:0 0 0 3px #fff,0 16px 28px #000}
+body[data-board-theme='high-contrast'] .four-hd-immersive-shell .hd-board-frame:after{background:#111;border:2px solid #fff}
+body[data-board-theme='high-contrast'] .four-hd-immersive-topbar,body[data-board-theme='high-contrast'] .four-hd-panel .hd-side-card{background:#000;border:2px solid #fff;backdrop-filter:none}
+body[data-board-theme='high-contrast'] .four-hd-immersive-shell button:focus-visible{outline:4px solid #fff;outline-offset:2px}
+
+body[data-reduced-motion='true'] .four-hd-immersive-shell *,body[data-reduced-motion='true'] .four-hd-immersive-shell *:before,body[data-reduced-motion='true'] .four-hd-immersive-shell *:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+@media (prefers-reduced-motion:reduce){.four-hd-immersive-shell *,.four-hd-immersive-shell *:before,.four-hd-immersive-shell *:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+
+@media (max-width:899px){
+  .four-hd-immersive-layout{display:block;padding-right:8px}
+  .four-hd-board-stage{width:100%;height:100%}
+  .four-hd-panel{position:absolute;z-index:15;top:70px;right:8px;bottom:8px;width:min(286px,calc(100vw - 16px));height:auto;padding-left:0;filter:drop-shadow(-12px 14px 24px #0008)}
+  .four-hd-panel .hd-side-card{max-height:100%;height:100%}
+  .four-hd-panel-toggle{left:-29px;top:46%;border-radius:11px 0 0 11px}
+  .four-hd-immersive-shell[data-panel='collapsed'] .four-hd-panel{width:42px;background:transparent;filter:none}
+  .four-hd-immersive-shell[data-panel='collapsed'] .four-hd-panel-toggle{left:5px;top:46%}
+}
+@media (max-width:600px){
+  .four-hd-immersive-topbar{top:6px;left:6px;right:6px;min-height:94px;align-content:center;justify-content:center;gap:4px;padding:5px;flex-wrap:wrap}
+  .four-hd-immersive-topbar button{min-height:31px;padding:5px 7px;font-size:.63rem}
+  .four-hd-back{margin-right:0}.four-hd-settings-mount{margin-left:0}
+  .four-hd-camera,.four-hd-zoom{gap:2px;padding:2px}.four-hd-zoom output{min-width:38px;font-size:.65rem}
+  .four-hd-immersive-shell #settingsBtn{min-height:31px;padding:5px 7px;font-size:.62rem}
+  .four-hd-immersive-layout{padding:106px 5px 5px}
+  .four-hd-panel{top:106px;right:5px;bottom:5px;width:min(280px,calc(100vw - 10px))}
+  .four-hd-board-stage{padding:8px 2px 22px}
+  .four-hd-board-mount{width:min(100%,calc((100dvh - 134px) * 1.08));min-width:280px;padding-top:10px}
+  .four-hd-immersive-shell .hd-board-card{padding:5px}
+  .four-hd-immersive-shell .hd-board-frame{transform:perspective(900px) rotateX(1.5deg) rotateY(-3.6deg) rotateZ(-.2deg)}
+}
+@media (max-width:390px){
+  .four-hd-camera button,.four-hd-zoom button{padding-left:6px;padding-right:6px}
+  .four-hd-board-mount{min-width:270px}
+}
