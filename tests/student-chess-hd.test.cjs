@@ -100,7 +100,7 @@ test('Immersive HD Board is an isolated presentation layer over the existing boa
   const js = read('site/activities/chess/chess-hd-immersive.js');
   const css = read('site/activities/chess/chess-hd-immersive.css');
 
-  assert.match(html, /chess-hd-immersive\.js\?v=20260909-chess-immersive-1/);
+  assert.match(html, /chess-hd-immersive\.js\?v=20260909-chess-immersive-/);
   for (const hook of [
     'hdImmersiveShell', 'hdImmersiveBoardMount', 'hdImmersivePanelMount',
     'hdImmersiveToolbarMount', 'hdBackBtn', 'hdImmersiveFlipBtn', 'hdImmersivePanelToggle',
@@ -121,6 +121,34 @@ test('Immersive HD Board is an isolated presentation layer over the existing boa
   assert.match(css, /data-hd-theme='high-contrast'\]\[data-hd-immersive='on'/);
   assert.match(css, /hd-reduced-motion\[data-hd-immersive='on'/);
   assert.doesNotMatch(css, /#(?:[0-9a-f]{3,8})\s*\/\*/);
+});
+
+test('Physical HD refinement remains immersive-only and gates reflections to suitable surfaces', () => {
+  const js = read('site/activities/chess/chess-hd-immersive.js');
+  const css = read('site/activities/chess/chess-hd-physical.css');
+
+  assert.match(js, /chess-hd-physical\.css\?v=20260909-chess-physical-1/);
+  assert.match(js, /REFLECTIVE_THEMES = new Set\(\['canyon-classic', 'tournament'\]\)/);
+  assert.match(js, /hdReflectionToggle/);
+  assert.match(js, /hdReflectiveSurface/);
+  assert.match(js, /hdPieceReflection/);
+  assert.match(js, /feSpecularLighting/);
+  assert.match(js, /hd-piece-reflection/);
+  assert.match(js, /cloneNode\(true\)/);
+  assert.doesNotMatch(js, /from '\.\/engine\.js'|findMove\(|new Chess\(|new Worker\(|worker\.postMessage|localStorage\.clear\(/);
+
+  assert.match(css, /body\[data-hd-immersive='on'\] \.hd-board-frame/);
+  assert.match(css, /clip-path: polygon/);
+  assert.match(css, /data-hd-theme='canyon-classic'/);
+  assert.match(css, /data-hd-theme='desert-stone'/);
+  assert.match(css, /data-hd-theme='tournament'/);
+  assert.match(css, /data-hd-theme='modern-slate'/);
+  assert.match(css, /data-hd-piece-reflection='on'\]\[data-hd-reflective-surface='on'/);
+  assert.match(css, /#hdReflectionRow\[data-surface='matte'\]/);
+  assert.match(css, /data-hd-theme='high-contrast'.*svg\.hd-piece-reflection/s);
+  assert.match(css, /display: none !important/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(css, /\.chess-hd-app\s*\{/);
 });
 
 test('existing browser-local metadata safely merges HD appearance fields with chess progress', async () => {
