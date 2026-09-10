@@ -46,12 +46,13 @@ if (
   typeof window !== "undefined" &&
   window.location.pathname.startsWith("/teacher/gradebook")
 ) {
-  import("/web/gradebook-student-order-safety.js?v=20260910-partial-roster-guard").catch((error) => {
-    console.warn("[gradebook] Could not load student-order safety guard:", error);
-  });
-  import("/web/gradebook-roster-order.js?v=20260910-editable-student-order").catch((error) => {
-    console.warn("[gradebook] Could not load roster-order helper:", error);
-  });
+  // Fail closed for editable roster order: install the partial-roster safety
+  // guard before the Student Order controls can become interactive.
+  import("/web/gradebook-student-order-safety.js?v=20260910-partial-roster-guard")
+    .then(() => import("/web/gradebook-roster-order.js?v=20260910-editable-student-order"))
+    .catch((error) => {
+      console.warn("[gradebook] Could not load safe roster-order tools:", error);
+    });
   import("/web/tc-gradebook-header-tools.js?v=20260910-header-copy-readability").catch((error) => {
     console.warn("[gradebook] Could not load header-copy helper:", error);
   });
