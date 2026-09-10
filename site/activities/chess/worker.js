@@ -1,4 +1,4 @@
-import { findMove, gameForEngine } from './engine.js';
+import { findMove, gameForEngine } from './engine.js?v=20260909-chess-levels-1';
 
 self.onmessage = event => {
   let id = null;

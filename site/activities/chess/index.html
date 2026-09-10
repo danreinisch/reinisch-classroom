@@ -10,8 +10,10 @@
   <link rel="stylesheet" href="./chess-hd.css?v=20260908-chess-hd-1">
   <link rel="stylesheet" href="./chess-hd-fit.css?v=20260908-chess-hd-fit-1">
   <link rel="stylesheet" href="./chess-hd-polish.css?v=20260908-chess-hd-polish-1">
-  <script type="module" src="./hd-ui.js?v=20260908-chess-hd-1"></script>
+  <script type="module" src="./hd-ui.js?v=20260909-chess-levels-1"></script>
   <script type="module" src="./chess-hd-polish.js?v=20260908-chess-hd-polish-1"></script>
+  <script type="module" src="./chess-hd-immersive.js?v=20260909-chess-immersive-2"></script>
+  <script type="module" src="./chess-hd-refinement.js?v=20260909-chess-refine-1"></script>
 </head>
 <body>
   <div class="chess-app chess-hd-app">
@@ -65,7 +67,7 @@
               </div>
               <div class="hd-player hd-player-opponent">
                 <span class="hd-player-icon" aria-hidden="true">▣</span>
-                <span><strong id="hdOpponentLabel">Computer — Black</strong><small id="hdOpponentStatus">Friendly game</small></span>
+                <span><strong id="hdOpponentLabel">Computer — Black</strong><small id="hdOpponentStatus">Casual game</small></span>
               </div>
             </div>
 
@@ -102,7 +104,7 @@
               </div>
             </section>
 
-            <details class="rules-note"><summary>Quick rules &amp; controls</summary><p>Checkmate ends the game; the king is never captured. Castling, en passant, and all four promotion choices are supported.</p><p>These are casual, untimed games. Three repetitions of a position or 50 moves by each side without a pawn move or capture automatically end in a draw. Tutorial and challenge positions are separate from your saved games.</p><p>Learning plays random legal moves. Friendly looks a little ahead. Challenge looks further, with a short thinking limit. These levels do not have chess ratings.</p></details>
+            <details class="rules-note"><summary>Quick rules &amp; controls</summary><p>Checkmate ends the game; the king is never captured. Castling, en passant, and all four promotion choices are supported.</p><p>These are casual, untimed games. Three repetitions of a position or 50 moves by each side without a pawn move or capture automatically end in a draw. Tutorial and challenge positions are separate from your saved games.</p><p>Twelve computer levels run from First Steps through Canyon Boss. Early levels deliberately vary among legal choices; stronger levels tighten move selection, search deeper, and receive larger bounded thinking budgets. These are classroom practice levels, not chess ratings.</p></details>
           </div>
 
           <div id="exercisePanel" hidden>
@@ -142,7 +144,7 @@
     <form id="newGameForm">
       <div class="dialog-heading"><h2 id="newGameTitle">Set up your game</h2><button type="button" data-close="newGameDialog" class="icon-close" aria-label="Close game setup">×</button></div>
       <label for="modeSelect">Who is playing?</label><select id="modeSelect"><option value="computer">Play the computer</option><option value="local">Two players · same device</option></select>
-      <div id="computerOptions" class="form-grid"><div><label for="levelSelect">Computer level</label><select id="levelSelect"><option value="starter">Learning</option><option value="friendly" selected>Friendly</option><option value="challenge">Challenge</option></select></div><div><label for="sideSelect">I play</label><select id="sideSelect"><option value="w">White · first move</option><option value="b">Black · second move</option></select></div></div>
+      <div id="computerOptions" class="form-grid"><div><label for="levelSelect">Computer level</label><select id="levelSelect" aria-describedby="levelHelp"><option value="first-steps">1 · First Steps</option><option value="beginner">2 · Beginner</option><option value="learning">3 · Learning</option><option value="casual" selected>4 · Casual</option><option value="developing">5 · Developing</option><option value="club">6 · Club</option><option value="skilled">7 · Skilled</option><option value="advanced">8 · Advanced</option><option value="expert">9 · Expert</option><option value="master">10 · Master</option><option value="ruthless">11 · Ruthless</option><option value="canyon-boss">12 · Canyon Boss</option><option value="starter" hidden>First Steps</option><option value="friendly" hidden>Casual</option><option value="challenge" hidden>Skilled</option></select><small id="levelHelp" class="muted">Level 1 is forgiving. Level 12 uses the deepest supported classroom search.</small></div><div><label for="sideSelect">I play</label><select id="sideSelect"><option value="w">White · first move</option><option value="b">Black · second move</option></select></div></div>
       <div id="slotField"><label for="slotSelect">Save in</label><select id="slotSelect"></select></div>
       <p id="replaceWarning" class="notice" hidden></p>
       <p id="newGameError" class="error-text" role="alert"></p>

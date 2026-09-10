@@ -1,0 +1,789 @@
+/* Classroom Chess HD immersive board extension.
+ * Presentation only: the existing board, controls, and side panel are moved
+ * intact into a temporary full-viewport shell. No game/controller state is cloned. */
+
+html[data-hd-immersive='on'],
+body[data-hd-immersive='on'] {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+.hd-immersive-shell[hidden] {
+  display: none !important;
+}
+
+.hd-immersive-shell {
+  --hd-immersive-panel-width: clamp(270px, 23vw, 326px);
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  color: var(--hd-ink, #f4f5ee);
+  overflow: hidden;
+  isolation: isolate;
+  background-color: #09251d;
+  background-image:
+    linear-gradient(90deg, rgba(4, 38, 29, .42) 0%, rgba(5, 49, 36, .18) 52%, rgba(3, 29, 23, .46) 100%),
+    linear-gradient(180deg, rgba(6, 49, 36, .12) 0%, rgba(4, 35, 27, .23) 60%, rgba(2, 20, 16, .48) 100%),
+    url('/assets/bg/rc-annotated-canyon-approved.webp?v=20260908-annotated4');
+  background-size: 100% 100%, 100% 100%, cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+
+.hd-immersive-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 62% 18%, rgba(226, 244, 190, .12), transparent 24%),
+    linear-gradient(115deg, rgba(16, 83, 59, .13), transparent 42%, rgba(5, 47, 35, .12));
+}
+
+.hd-immersive-topbar {
+  position: relative;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(calc(100% - 24px), 1120px);
+  min-width: 0;
+  margin: 10px auto 0;
+  padding: 6px;
+  border: 1px solid rgba(177, 231, 197, .22);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(4, 48, 35, .91), rgba(7, 60, 43, .79));
+  box-shadow: 0 14px 38px rgba(0, 15, 11, .28), inset 0 1px 0 rgba(255, 255, 255, .06);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+}
+
+.hd-immersive-toolbar-mount {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hd-immersive-shell .hd-camera-toolbar {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  flex-wrap: nowrap;
+}
+
+.hd-immersive-shell .hd-camera-group,
+.hd-immersive-shell .hd-zoom-group {
+  min-width: 0;
+}
+
+.hd-immersive-shell .hd-camera-label {
+  display: none;
+}
+
+.hd-immersive-shell .hd-zoom-label {
+  margin-left: 4px;
+}
+
+.hd-immersive-shell .hd-view-choice[aria-pressed='true'] {
+  border-color: rgba(165, 242, 184, .64);
+  background: linear-gradient(180deg, rgba(49, 132, 89, .92), rgba(28, 99, 69, .9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 0 0 1px rgba(111, 214, 144, .12);
+}
+
+.hd-immersive-shell .hd-camera-toolbar button,
+.hd-immersive-back,
+.hd-immersive-aux > button,
+.hd-immersive-settings-mount .hd-settings-button {
+  min-height: 34px;
+  border-color: rgba(179, 226, 202, .24);
+  background: rgba(6, 48, 37, .7);
+  color: #f2f8f2;
+}
+
+.hd-immersive-back {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.hd-immersive-aux {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+#hdImmersiveSettingsMount {
+  display: contents;
+}
+
+.hd-immersive-shell #settingsBtn {
+  min-width: 0;
+  width: auto;
+  padding-inline: 10px;
+  font-size: .74rem;
+}
+
+.hd-immersive-layout {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--hd-immersive-panel-width);
+  gap: clamp(10px, 1.4vw, 20px);
+  min-width: 0;
+  min-height: 0;
+  padding: 8px clamp(10px, 1.8vw, 24px) clamp(12px, 1.8vw, 20px);
+}
+
+.hd-immersive-board-stage {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(163, 205, 181, .48) transparent;
+  perspective: 1600px;
+  perspective-origin: 50% 42%;
+}
+
+.hd-immersive-board-mount {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 18px 24px 30px;
+}
+
+.hd-immersive-shell .hd-board-card {
+  width: min(100%, 920px, calc(100dvh - 145px));
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.hd-immersive-shell .hd-board-heading {
+  display: none !important;
+}
+
+.hd-immersive-shell .hd-board-footer {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+.hd-immersive-shell .hd-board-frame {
+  box-sizing: border-box;
+  position: relative;
+  width: var(--hd-board-zoom, 100%);
+  max-width: none;
+  margin: 0 auto;
+  padding: clamp(14px, 1.45vw, 24px);
+  overflow: visible;
+  perspective: none;
+  border: 1px solid rgba(45, 24, 13, .92);
+  border-radius: clamp(8px, 1vw, 14px);
+  background:
+    linear-gradient(90deg, rgba(255, 235, 193, .08), transparent 17%, rgba(0, 0, 0, .09) 48%, transparent 78%, rgba(255, 231, 184, .06)),
+    repeating-linear-gradient(94deg, rgba(255, 255, 255, .018) 0 2px, rgba(35, 20, 11, .025) 2px 5px, transparent 5px 12px),
+    linear-gradient(145deg, #5b3820 0%, #9a6738 23%, #724727 52%, #a56e3d 72%, #452a19 100%);
+  box-shadow:
+    0 44px 40px -24px rgba(0, 0, 0, .62),
+    0 22px 30px -18px rgba(0, 0, 0, .46),
+    inset 0 2px 0 rgba(255, 237, 200, .22),
+    inset 0 -4px 0 rgba(45, 24, 13, .42),
+    inset 0 0 0 3px rgba(42, 25, 15, .28);
+  transform-style: preserve-3d;
+  transform-origin: 50% 68%;
+  transition: transform .24s ease, width .18s ease, filter .24s ease;
+  isolation: isolate;
+}
+
+.hd-immersive-shell .hd-board-frame::before {
+  content: '';
+  position: absolute;
+  inset: clamp(7px, .72vw, 12px);
+  z-index: 1;
+  border: 1px solid rgba(245, 221, 173, .16);
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px rgba(30, 17, 10, .26),
+    0 0 0 1px rgba(43, 24, 13, .2);
+  pointer-events: none;
+}
+
+.hd-immersive-shell .hd-board-frame::after {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 1.2%;
+  right: 1.2%;
+  bottom: -18px;
+  z-index: -1;
+  height: 22px;
+  border: 1px solid rgba(34, 20, 12, .9);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  background:
+    repeating-linear-gradient(91deg, rgba(255, 255, 255, .015) 0 3px, rgba(0, 0, 0, .035) 3px 7px, transparent 7px 15px),
+    linear-gradient(180deg, #634023 0%, #442817 58%, #25170f 100%);
+  box-shadow: 0 15px 19px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 220, 166, .09);
+  transform: none;
+  pointer-events: none;
+}
+
+.hd-immersive-shell #board {
+  position: relative;
+  z-index: 3;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border: 1px solid rgba(18, 30, 22, .92);
+  box-shadow:
+    0 0 0 2px rgba(38, 23, 13, .34),
+    inset 0 0 0 1px rgba(255, 255, 255, .055),
+    inset 0 7px 18px rgba(255, 255, 255, .018);
+  transform: translateZ(2px);
+  transform-style: preserve-3d;
+  transition: transform .22s ease, filter .22s ease;
+}
+
+.hd-immersive-shell #board .square {
+  transform-style: preserve-3d;
+  overflow: visible;
+}
+
+body[data-hd-immersive='on'][data-hd-view='tabletop'] .hd-board-frame {
+  transform: rotateX(13deg);
+}
+
+body[data-hd-immersive='on'][data-hd-view='tabletop'] #board {
+  transform: translateZ(3px);
+}
+
+body[data-hd-immersive='on'][data-hd-view='tabletop'] #board svg.hd-premium-piece {
+  transform-box: fill-box;
+  transform-origin: 50% 88%;
+  transform: translateZ(18px) rotateX(-13deg) translateY(-7%) scaleY(1.12);
+  filter:
+    drop-shadow(0 2px 1px rgba(0, 0, 0, .42))
+    drop-shadow(0 10px 8px rgba(0, 0, 0, .31));
+  transition: transform .2s ease, filter .2s ease;
+}
+
+body[data-hd-immersive='on'][data-hd-view='tabletop'] #board .hd-premium-piece .hd-piece-contact {
+  opacity: .22;
+  transform: translateY(1px) scaleX(.94);
+  filter: blur(.25px);
+}
+
+body[data-hd-immersive='on'][data-hd-view='tabletop'][data-hd-board-depth='on'] #board .hd-premium-piece .hd-piece-contact {
+  opacity: .34;
+}
+
+body[data-hd-immersive='on'][data-hd-view='top-down'] .hd-board-frame {
+  transform: none;
+}
+
+body[data-hd-immersive='on'][data-hd-view='top-down'] #board svg.hd-premium-piece {
+  transform: none;
+}
+
+body[data-hd-immersive='on'][data-hd-metal='on'] #board .hd-premium-piece.hd-piece-white {
+  --piece-stroke: #31383a;
+  --piece-detail: #758083;
+  --piece-highlight: rgba(255, 255, 255, .86);
+}
+
+body[data-hd-immersive='on'][data-hd-metal='on'] #board .hd-premium-piece.hd-piece-black {
+  --piece-stroke: #080a0b;
+  --piece-detail: #a6b0b2;
+  --piece-highlight: rgba(239, 245, 246, .4);
+}
+
+body[data-hd-immersive='on'][data-hd-metal='on'][data-hd-view='tabletop'] #board .hd-premium-piece {
+  filter:
+    drop-shadow(0 2px 1px rgba(0, 0, 0, .46))
+    drop-shadow(0 11px 9px rgba(0, 0, 0, .34));
+}
+
+/* The old prototype can remain persisted in metadata, but Standard view must
+ * never reload into a tilted board trapped in its card. Tabletop perspective
+ * is now scoped to the immersive shell only. */
+body:not([data-hd-immersive='on'])[data-hd-view='tabletop'] .hd-board-frame {
+  padding: clamp(8px, 1vw, 13px);
+  perspective: none;
+  background:
+    linear-gradient(145deg, var(--hd-board-bezel-hi, rgba(230, 210, 165, .24)), transparent 32%),
+    linear-gradient(315deg, var(--hd-board-bezel-lo, rgba(19, 45, 38, .9)), rgba(13, 31, 27, .92));
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .16),
+    inset 0 -2px 0 rgba(0, 0, 0, .2),
+    inset 0 0 0 5px rgba(5, 22, 18, .25);
+}
+
+body:not([data-hd-immersive='on'])[data-hd-view='tabletop'] .hd-board-frame::after {
+  display: none;
+}
+
+body:not([data-hd-immersive='on'])[data-hd-view='tabletop'] #board {
+  transform: none !important;
+}
+
+body:not([data-hd-immersive='on'])[data-hd-view='tabletop'] #board svg.hd-premium-piece {
+  transform: none !important;
+  filter:
+    drop-shadow(0 2px 1px rgba(0, 0, 0, .26))
+    drop-shadow(0 6px 6px rgba(0, 0, 0, .18));
+}
+
+body:not([data-hd-immersive='on'])[data-hd-view='tabletop'] #board .hd-premium-piece .hd-piece-contact {
+  opacity: 0;
+}
+
+body:not([data-hd-immersive='on'])[data-hd-view='tabletop'][data-hd-board-depth='on'] #board .hd-premium-piece .hd-piece-contact {
+  opacity: .24;
+}
+
+.hd-immersive-panel {
+  position: relative;
+  align-self: center;
+  width: var(--hd-immersive-panel-width);
+  max-height: calc(100dvh - 92px);
+  min-height: 0;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid rgba(166, 225, 194, .28);
+  border-radius: 16px;
+  background: linear-gradient(155deg, rgba(3, 48, 35, .91), rgba(3, 39, 31, .82));
+  box-shadow: 0 22px 50px rgba(0, 14, 10, .34), inset 0 1px 0 rgba(255, 255, 255, .05);
+  -webkit-backdrop-filter: blur(13px) saturate(1.08);
+  backdrop-filter: blur(13px) saturate(1.08);
+  transition: width .2s ease, transform .2s ease, background .2s ease;
+}
+
+.hd-immersive-panel-toggle {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 34px;
+  margin: 0 0 4px auto;
+  padding: 0;
+  border: 1px solid rgba(176, 231, 199, .26);
+  border-radius: 8px;
+  background: rgba(10, 66, 48, .88);
+  color: #eaf8ed;
+  font-size: 1.18rem;
+  line-height: 1;
+}
+
+.hd-immersive-shell[data-panel='collapsed'] .hd-immersive-panel {
+  width: 48px;
+  padding: 7px;
+  overflow: hidden;
+}
+
+.hd-immersive-shell[data-panel='collapsed'] .hd-immersive-panel-mount {
+  display: none;
+}
+
+.hd-immersive-shell[data-panel='collapsed'] .hd-immersive-panel-toggle {
+  margin-inline: auto;
+}
+
+.hd-immersive-shell[data-panel='collapsed'] .hd-immersive-layout {
+  grid-template-columns: minmax(0, 1fr) 48px;
+}
+
+.hd-immersive-shell .hd-side-card {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.hd-immersive-shell .hd-player-strip {
+  grid-template-columns: 1fr;
+  gap: 5px;
+  margin-bottom: 9px;
+}
+
+.hd-immersive-shell .hd-player {
+  min-height: 44px;
+  padding: 7px 9px;
+}
+
+.hd-immersive-shell .hd-game-summary {
+  display: block;
+  margin-bottom: 9px;
+}
+
+.hd-immersive-shell .hd-game-summary > div {
+  display: none;
+}
+
+.hd-immersive-shell .hd-new-game {
+  width: 100%;
+}
+
+.hd-immersive-shell .hd-action-row {
+  gap: 6px;
+}
+
+.hd-immersive-shell .hd-action-row button {
+  min-height: 40px;
+  padding: 8px 7px;
+  font-size: .78rem;
+}
+
+.hd-immersive-shell .hd-coach {
+  display: none;
+}
+
+.hd-immersive-shell .hd-moves-panel,
+.hd-immersive-shell .hd-captured-panel {
+  margin-top: 10px;
+  padding: 9px;
+  border-color: rgba(173, 221, 196, .16);
+  background: rgba(4, 43, 34, .52);
+}
+
+.hd-immersive-shell .move-list {
+  max-height: 180px;
+  overflow: auto;
+}
+
+.hd-immersive-shell .rules-note {
+  margin-top: 9px;
+}
+
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-immersive-shell {
+  background-color: #000;
+  background-image: none;
+}
+
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-immersive-topbar,
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-immersive-panel {
+  border: 2px solid #fff;
+  background: #000;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-board-frame {
+  border: 3px solid #fff;
+  background: #111;
+  box-shadow: none;
+}
+
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] .hd-board-frame::after {
+  background: #000;
+  border-color: #fff;
+  box-shadow: none;
+}
+
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] #board .hd-premium-piece {
+  filter: none !important;
+  transition: none !important;
+}
+
+body[data-hd-theme='high-contrast'][data-hd-immersive='on'] #board .hd-premium-piece .hd-piece-contact {
+  opacity: 0 !important;
+}
+
+body.hd-reduced-motion[data-hd-immersive='on'] .hd-immersive-panel,
+body.hd-reduced-motion[data-hd-immersive='on'] .hd-board-frame,
+body.hd-reduced-motion[data-hd-immersive='on'] #board,
+body.hd-reduced-motion[data-hd-immersive='on'] #board svg.hd-premium-piece {
+  transition: none !important;
+  animation: none !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hd-immersive-panel,
+  .hd-immersive-shell .hd-board-frame,
+  .hd-immersive-shell #board,
+  .hd-immersive-shell #board svg.hd-premium-piece {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-height: 820px) and (min-width: 900px) {
+  .hd-immersive-topbar {
+    margin-top: 6px;
+    padding: 4px;
+  }
+
+  .hd-immersive-layout {
+    padding-top: 4px;
+    padding-bottom: 8px;
+  }
+
+  .hd-immersive-board-mount {
+    padding-top: 8px;
+    padding-bottom: 22px;
+  }
+
+  .hd-immersive-shell .hd-board-card {
+    width: min(100%, 870px, calc(100dvh - 108px));
+  }
+
+  .hd-immersive-panel {
+    max-height: calc(100dvh - 72px);
+  }
+
+  .hd-immersive-shell .hd-camera-toolbar button,
+  .hd-immersive-back,
+  .hd-immersive-aux > button,
+  .hd-immersive-shell #settingsBtn {
+    min-height: 30px;
+    padding-block: 3px;
+  }
+
+  .hd-immersive-shell .hd-player {
+    min-height: 40px;
+    padding-block: 5px;
+  }
+
+  .hd-immersive-shell .hd-moves-panel,
+  .hd-immersive-shell .hd-captured-panel {
+    margin-top: 7px;
+    padding: 7px;
+  }
+
+  .hd-immersive-shell .move-list {
+    max-height: 126px;
+  }
+}
+
+@media (max-width: 899px) {
+  .hd-immersive-shell {
+    --hd-immersive-panel-width: min(330px, calc(100vw - 28px));
+  }
+
+  .hd-immersive-layout {
+    display: block;
+    padding: 6px 8px 10px;
+  }
+
+  .hd-immersive-board-stage {
+    width: 100%;
+    height: 100%;
+  }
+
+  .hd-immersive-board-mount {
+    min-height: 100%;
+    padding: 14px 18px 28px;
+  }
+
+  .hd-immersive-shell .hd-board-card {
+    width: min(92vw, 760px, calc(100dvh - 132px));
+  }
+
+  .hd-immersive-panel {
+    position: absolute;
+    z-index: 9;
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    align-self: auto;
+    width: var(--hd-immersive-panel-width);
+    max-height: none;
+  }
+
+  .hd-immersive-shell[data-panel='collapsed'] .hd-immersive-panel {
+    width: 46px;
+    height: 48px;
+    bottom: auto;
+    padding: 6px;
+    background: rgba(4, 49, 36, .88);
+  }
+
+  .hd-immersive-shell[data-panel='collapsed'] .hd-immersive-panel-toggle {
+    width: 32px;
+    height: 34px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .hd-immersive-shell {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .hd-immersive-topbar {
+    width: calc(100% - 12px);
+    margin-top: 6px;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 11px;
+  }
+
+  .hd-immersive-back {
+    padding-inline: 7px;
+    font-size: .7rem;
+  }
+
+  .hd-immersive-shell .hd-camera-toolbar {
+    flex-direction: row;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .hd-immersive-shell .hd-camera-group,
+  .hd-immersive-shell .hd-zoom-group {
+    width: auto;
+    flex-wrap: nowrap;
+  }
+
+  .hd-immersive-shell .hd-camera-group {
+    flex: 0 0 auto;
+  }
+
+  .hd-immersive-shell .hd-zoom-group {
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    gap: 3px;
+  }
+
+  .hd-immersive-shell .hd-zoom-label {
+    display: none;
+  }
+
+  .hd-immersive-shell .hd-camera-toolbar button {
+    min-height: 29px;
+    padding: 3px 6px;
+    font-size: .68rem;
+  }
+
+  .hd-immersive-shell .hd-zoom-step {
+    width: 27px;
+    min-width: 27px;
+  }
+
+  .hd-immersive-shell .hd-zoom-group input[type='range'] {
+    flex: 1 1 58px;
+    width: 58px;
+    min-width: 44px;
+  }
+
+  .hd-immersive-shell #hdZoomValue {
+    min-width: 31px;
+    font-size: .64rem;
+  }
+
+  .hd-immersive-shell #hdZoomFitBtn {
+    min-width: 32px;
+  }
+
+  .hd-immersive-aux {
+    gap: 3px;
+  }
+
+  #hdImmersiveFlipBtn {
+    width: 31px;
+    min-width: 31px;
+    padding: 0;
+    overflow: hidden;
+    text-indent: -999px;
+  }
+
+  #hdImmersiveFlipBtn::after {
+    content: '↻';
+    display: block;
+    text-indent: 0;
+    font-size: 1rem;
+  }
+
+  .hd-immersive-shell #settingsBtn {
+    width: 31px;
+    min-width: 31px;
+    padding: 0;
+    overflow: hidden;
+    font-size: 0;
+  }
+
+  .hd-immersive-shell #settingsBtn span {
+    display: inline;
+    font-size: .95rem;
+  }
+
+  .hd-immersive-board-mount {
+    padding: 10px 10px 24px;
+  }
+
+  .hd-immersive-shell .hd-board-card {
+    width: min(94vw, calc(100dvh - 118px));
+  }
+
+  .hd-immersive-shell .hd-board-frame {
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .hd-immersive-shell .hd-board-frame::after {
+    bottom: -12px;
+    height: 15px;
+  }
+
+  body[data-hd-immersive='on'][data-hd-view='tabletop'] .hd-board-frame {
+    transform: rotateX(8deg);
+  }
+
+  body[data-hd-immersive='on'][data-hd-view='tabletop'] #board svg.hd-premium-piece {
+    transform: translateZ(11px) rotateX(-8deg) translateY(-5%) scaleY(1.07);
+  }
+}
+
+@media (max-width: 480px) {
+  .hd-immersive-shell .hd-view-choice {
+    max-width: 58px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hd-immersive-shell #hdZoomRange {
+    max-width: 58px;
+  }
+
+  .hd-immersive-shell .hd-board-card {
+    width: min(96vw, calc(100dvh - 112px));
+  }
+}

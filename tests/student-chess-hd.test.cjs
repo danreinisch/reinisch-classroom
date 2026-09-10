@@ -34,7 +34,7 @@ test('HD shell keeps the existing activity hooks while exposing the approved cus
   assert.equal(new Set(ids).size, ids.length, 'HTML contains duplicate ids');
 
   assert.match(html, /chess-hd\.css\?v=20260908-chess-hd-1/);
-  assert.match(html, /hd-ui\.js\?v=20260908-chess-hd-1/);
+  assert.match(html, /hd-ui\.js\?v=20260909-chess-levels-1/);
   assert.doesNotMatch(html, /<script[^>]+src="\.\/app\.js/);
 
   for (const theme of ['canyon-classic', 'desert-stone', 'tournament', 'modern-slate', 'high-contrast']) {
@@ -51,7 +51,7 @@ test('HD shell keeps the existing activity hooks while exposing the approved cus
 
 test('HD controller enhances rather than replaces the working chess controller', () => {
   const js = read('site/activities/chess/hd-ui.js');
-  assert.match(js, /import '\.\/app\.js\?v=20260906-chess-2'/);
+  assert.match(js, /import '\.\/app\.js\?v=20260909-chess-levels-1'/);
   assert.match(js, /new ChessStore\(storage, session\)/);
   assert.match(js, /new MutationObserver/);
   assert.match(js, /hdTheme/);
@@ -73,6 +73,84 @@ test('HD styling defines every approved board theme and accessibility motion fal
   assert.match(css, /rc-annotated-canyon-approved\.webp/);
 });
 
+test('Tabletop and Forged Metal stay additive, bounded, persistent, and presentation-only', () => {
+  const js = read('site/activities/chess/chess-hd-polish.js');
+  const css = read('site/activities/chess/chess-hd-tabletop.css');
+
+  assert.match(js, /chess-hd-tabletop\.css\?v=20260909-chess-tabletop-1/);
+  assert.match(js, /Forged Metal HD/);
+  assert.match(js, /ZOOM_MIN = 85/);
+  assert.match(js, /ZOOM_MAX = 125/);
+  assert.match(js, /hdView/);
+  assert.match(js, /hdZoom/);
+  assert.match(js, /hdMetalPieces/);
+  assert.match(js, /data-hd-board-view/);
+  assert.doesNotMatch(js, /from '\.\/engine\.js'|findMove\(|worker\.postMessage|new Worker\(/);
+
+  assert.match(css, /data-hd-view='tabletop'/);
+  assert.match(css, /rotateX\(13deg\)/);
+  assert.match(css, /--hd-board-zoom/);
+  assert.match(css, /data-hd-metal='on'/);
+  assert.match(css, /data-hd-theme='high-contrast'\]\[data-hd-metal='on'/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
+});
+
+test('Immersive HD Board is an isolated presentation layer over the existing board and controls', () => {
+  const html = read('site/activities/chess/index.html');
+  const js = read('site/activities/chess/chess-hd-immersive.js');
+  const css = read('site/activities/chess/chess-hd-immersive.css');
+
+  assert.match(html, /chess-hd-immersive\.js\?v=20260909-chess-immersive-/);
+  for (const hook of [
+    'hdImmersiveShell', 'hdImmersiveBoardMount', 'hdImmersivePanelMount',
+    'hdImmersiveToolbarMount', 'hdBackBtn', 'hdImmersiveFlipBtn', 'hdImmersivePanelToggle',
+  ]) assert.match(js, new RegExp(hook), hook);
+
+  assert.match(js, /append\(boardCard\)/);
+  assert.match(js, /append\(sideCard\)/);
+  assert.match(js, /append\(toolbar\)/);
+  assert.match(js, /append\(settings\)/);
+  assert.match(js, /hdTopDownBtn/);
+  assert.match(js, /hdTabletopBtn/);
+  assert.doesNotMatch(js, /from '\.\/engine\.js'|findMove\(|new Chess\(|new Worker\(|worker\.postMessage|localStorage\.clear\(/);
+
+  assert.match(css, /data-hd-immersive='on'/);
+  assert.match(css, /rc-annotated-canyon-approved\.webp/);
+  assert.match(css, /rotateX\(13deg\)/);
+  assert.match(css, /translateZ\(18px\) rotateX\(-13deg\)/);
+  assert.match(css, /data-hd-theme='high-contrast'\]\[data-hd-immersive='on'/);
+  assert.match(css, /hd-reduced-motion\[data-hd-immersive='on'/);
+  assert.doesNotMatch(css, /#(?:[0-9a-f]{3,8})\s*\/\*/);
+});
+
+test('Physical HD refinement remains immersive-only and gates reflections to suitable surfaces', () => {
+  const js = read('site/activities/chess/chess-hd-immersive.js');
+  const css = read('site/activities/chess/chess-hd-physical.css');
+
+  assert.match(js, /chess-hd-physical\.css\?v=20260909-chess-physical-1/);
+  assert.match(js, /REFLECTIVE_THEMES = new Set\(\['canyon-classic', 'tournament'\]\)/);
+  assert.match(js, /hdReflectionToggle/);
+  assert.match(js, /hdReflectiveSurface/);
+  assert.match(js, /hdPieceReflection/);
+  assert.match(js, /feSpecularLighting/);
+  assert.match(js, /hd-piece-reflection/);
+  assert.match(js, /cloneNode\(true\)/);
+  assert.doesNotMatch(js, /from '\.\/engine\.js'|findMove\(|new Chess\(|new Worker\(|worker\.postMessage|localStorage\.clear\(/);
+
+  assert.match(css, /body\[data-hd-immersive='on'\] \.hd-board-frame/);
+  assert.match(css, /clip-path: polygon/);
+  assert.match(css, /data-hd-theme='canyon-classic'/);
+  assert.match(css, /data-hd-theme='desert-stone'/);
+  assert.match(css, /data-hd-theme='tournament'/);
+  assert.match(css, /data-hd-theme='modern-slate'/);
+  assert.match(css, /data-hd-piece-reflection='on'\]\[data-hd-reflective-surface='on'/);
+  assert.match(css, /#hdReflectionRow\[data-surface='matte'\]/);
+  assert.match(css, /data-hd-theme='high-contrast'.*svg\.hd-piece-reflection/s);
+  assert.match(css, /display: none !important/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(css, /\.chess-hd-app\s*\{/);
+});
+
 test('existing browser-local metadata safely merges HD appearance fields with chess progress', async () => {
   const { ChessStore } = await import('../site/activities/chess/core.js');
   const store = new ChessStore(memoryStorage(), student());
@@ -85,6 +163,9 @@ test('existing browser-local metadata safely merges HD appearance fields with ch
     hdAnimate: false,
     hdReducedMotion: true,
     hdOrientation: 'black',
+    hdView: 'tabletop',
+    hdZoom: 115,
+    hdMetalPieces: true,
   });
   const meta = store.readMeta();
   assert.equal(meta.activeSlot, 2);
@@ -98,4 +179,7 @@ test('existing browser-local metadata safely merges HD appearance fields with ch
   assert.equal(meta.hdAnimate, false);
   assert.equal(meta.hdReducedMotion, true);
   assert.equal(meta.hdOrientation, 'black');
+  assert.equal(meta.hdView, 'tabletop');
+  assert.equal(meta.hdZoom, 115);
+  assert.equal(meta.hdMetalPieces, true);
 });

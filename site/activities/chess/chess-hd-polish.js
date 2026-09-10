@@ -10,6 +10,12 @@ const LABELS = Object.freeze({
   minimal: 'Minimal',
   academic: 'Accessibility / Academic',
 });
+const ZOOM_MIN = 85;
+const ZOOM_MAX = 125;
+const ZOOM_STEP = 5;
+const TABLETOP_STYLESHEET_ID = 'chessHdTabletopStyles';
+let metalGradientSerial = 0;
+let metalBaseSelectionGuard = false;
 
 const SHAPES = Object.freeze({
   staunton: Object.freeze({
@@ -64,9 +70,20 @@ try { if (storage && session) store = new ChessStore(storage, session); } catch 
 const meta = (() => {
   try { return store?.readMeta() || {}; } catch { return {}; }
 })();
+
+function clampZoom(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 100;
+  const stepped = Math.round(numeric / ZOOM_STEP) * ZOOM_STEP;
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, stepped));
+}
+
 const state = {
   layout: meta.hdLayout === 'focus' ? 'focus' : 'standard',
   boardDepth: meta.hdBoardDepth === true,
+  view: meta.hdView === 'tabletop' ? 'tabletop' : 'top-down',
+  zoom: clampZoom(meta.hdZoom),
+  metalPieces: meta.hdMetalPieces === true,
 };
 
 function writeMeta(change) {
@@ -78,6 +95,7 @@ function writeMeta(change) {
 }
 
 function activePieceSet() {
+  if (state.metalPieces) return 'staunton';
   const active = document.querySelector('[data-hd-piece-option][aria-pressed="true"]');
   if (!active || !SETS.has(active.dataset.hdPieceOption)) return null;
   return active.dataset.hdPieceOption;
@@ -89,17 +107,47 @@ function parseSquarePiece(square) {
   return { color: match[1] === 'White' ? 'w' : 'b', type: TYPES[match[2]] };
 }
 
-function createPieceSvg(type, color, set, accessibleLabel = null) {
+function metalGradientMarkup(color, serial) {
+  const bodyId = `rc-metal-body-${serial}`;
+  const baseId = `rc-metal-base-${serial}`;
+  const bodyStops = color === 'w'
+    ? [['0%', '#666f72'], ['14%', '#f1f5f6'], ['31%', '#aeb6b8'], ['49%', '#fbfcfc'], ['68%', '#858f92'], ['84%', '#e5eaeb'], ['100%', '#6d777a']]
+    : [['0%', '#080a0b'], ['16%', '#555e61'], ['34%', '#15191a'], ['52%', '#737d80'], ['70%', '#101314'], ['86%', '#424a4d'], ['100%', '#090b0c']];
+  const baseStops = color === 'w'
+    ? [['0%', '#4f585b'], ['24%', '#d7dddf'], ['48%', '#858f92'], ['70%', '#f1f4f5'], ['100%', '#596265']]
+    : [['0%', '#050607'], ['24%', '#3f4749'], ['48%', '#0d1011'], ['70%', '#5a6366'], ['100%', '#060708']];
+  const stops = values => values.map(([offset, stopColor]) => `<stop offset="${offset}" stop-color="${stopColor}"/>`).join('');
+  return {
+    bodyId,
+    baseId,
+    markup: `<defs><linearGradient id="${bodyId}" x1="0" y1="0" x2="1" y2=".15">${stops(bodyStops)}</linearGradient><linearGradient id="${baseId}" x1="0" y1="0" x2="1" y2="0">${stops(baseStops)}</linearGradient></defs>`,
+  };
+}
+
+function createPieceSvg(type, color, set, accessibleLabel = null, metal = state.metalPieces) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 64 64');
   svg.dataset.hdPieceSet = set;
   svg.dataset.hdPremiumPiece = 'true';
   svg.dataset.hdPieceType = type;
   svg.dataset.hdPieceColor = color;
+  svg.dataset.hdMetal = metal ? 'true' : 'false';
   svg.classList.add('hd-piece', 'hd-premium-piece', color === 'w' ? 'hd-piece-white' : 'hd-piece-black', `hd-piece-set-${set}`);
+  if (metal) svg.classList.add('hd-forged-metal-piece');
   if (accessibleLabel) svg.setAttribute('aria-label', accessibleLabel);
   else svg.setAttribute('aria-hidden', 'true');
-  svg.innerHTML = `<ellipse class="hd-piece-contact" cx="32" cy="57.5" rx="17" ry="2.7"/>${SHAPES[set][type]}`;
+
+  let defs = '';
+  let gradient = null;
+  if (metal) {
+    gradient = metalGradientMarkup(color, ++metalGradientSerial);
+    defs = gradient.markup;
+  }
+  svg.innerHTML = `${defs}<ellipse class="hd-piece-contact" cx="32" cy="57.5" rx="17" ry="2.7"/>${SHAPES[set][type]}`;
+  if (gradient) {
+    for (const node of svg.querySelectorAll('.hd-piece-body')) node.style.fill = `url(#${gradient.bodyId})`;
+    for (const node of svg.querySelectorAll('.hd-piece-base')) node.style.fill = `url(#${gradient.baseId})`;
+  }
   return svg;
 }
 
@@ -107,8 +155,9 @@ function premiumSquare(square, set) {
   const piece = parseSquarePiece(square);
   if (!piece) return;
   const current = square.querySelector('svg.hd-piece');
-  if (current?.dataset.hdPremiumPiece === 'true' && current.dataset.hdPieceSet === set && current.dataset.hdPieceType === piece.type && current.dataset.hdPieceColor === piece.color) return;
-  const svg = createPieceSvg(piece.type, piece.color, set);
+  const metal = state.metalPieces;
+  if (current?.dataset.hdPremiumPiece === 'true' && current.dataset.hdPieceSet === set && current.dataset.hdPieceType === piece.type && current.dataset.hdPieceColor === piece.color && current.dataset.hdMetal === String(metal)) return;
+  const svg = createPieceSvg(piece.type, piece.color, set, null, metal);
   if (current) current.replaceWith(svg);
   else square.prepend(svg);
 }
@@ -122,6 +171,7 @@ function premiumBoard() {
 function premiumCaptured() {
   const set = activePieceSet();
   if (!set) return;
+  const metal = state.metalPieces;
   for (const list of [$('hdWhiteCaptured'), $('hdBlackCaptured')]) {
     if (!list) continue;
     for (const current of [...list.querySelectorAll('svg')]) {
@@ -130,8 +180,8 @@ function premiumCaptured() {
       if (!match) continue;
       const color = match[1] === 'White' ? 'w' : 'b';
       const type = TYPES[match[2]];
-      if (current.dataset.hdPremiumPiece === 'true' && current.dataset.hdPieceSet === set) continue;
-      current.replaceWith(createPieceSvg(type, color, set, label));
+      if (current.dataset.hdPremiumPiece === 'true' && current.dataset.hdPieceSet === set && current.dataset.hdMetal === String(metal)) continue;
+      current.replaceWith(createPieceSvg(type, color, set, label, metal));
     }
   }
 }
@@ -140,7 +190,7 @@ function premiumPreviews() {
   for (const preview of document.querySelectorAll('[data-hd-piece-preview]')) {
     const set = preview.dataset.hdPiecePreview;
     if (!SETS.has(set)) continue;
-    preview.replaceChildren(createPieceSvg('n', 'w', set), createPieceSvg('p', 'b', set));
+    preview.replaceChildren(createPieceSvg('n', 'w', set, null, false), createPieceSvg('p', 'b', set, null, false));
   }
 }
 
@@ -173,6 +223,72 @@ function setBoardDepth(on, persist = true) {
   if (persist) writeMeta({ hdBoardDepth: state.boardDepth });
 }
 
+function setBoardView(view, persist = true) {
+  state.view = view === 'tabletop' ? 'tabletop' : 'top-down';
+  document.body.dataset.hdView = state.view;
+  for (const button of document.querySelectorAll('[data-hd-board-view]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.hdBoardView === state.view));
+  }
+  if (persist) writeMeta({ hdView: state.view });
+}
+
+function centerBoardScroll() {
+  const frame = document.querySelector('.hd-board-frame');
+  if (!frame) return;
+  frame.scrollLeft = state.zoom > 100 ? Math.max(0, (frame.scrollWidth - frame.clientWidth) / 2) : 0;
+}
+
+function setZoom(value, persist = true) {
+  state.zoom = clampZoom(value);
+  document.documentElement.style.setProperty('--hd-board-zoom', `${state.zoom}%`);
+  document.body.dataset.hdZoom = state.zoom === 100 ? 'fit' : 'custom';
+  if ($('hdZoomRange')) $('hdZoomRange').value = String(state.zoom);
+  if ($('hdZoomValue')) $('hdZoomValue').textContent = `${state.zoom}%`;
+  if ($('hdZoomOutBtn')) $('hdZoomOutBtn').disabled = state.zoom <= ZOOM_MIN;
+  if ($('hdZoomInBtn')) $('hdZoomInBtn').disabled = state.zoom >= ZOOM_MAX;
+  requestAnimationFrame(centerBoardScroll);
+  if (persist) writeMeta({ hdZoom: state.zoom });
+}
+
+function syncMetalSelection() {
+  document.body.dataset.hdMetal = state.metalPieces ? 'on' : 'off';
+  const metalButton = document.querySelector('[data-hd-metal-option]');
+  const desiredMetalState = String(state.metalPieces);
+  if (metalButton && metalButton.getAttribute('aria-pressed') !== desiredMetalState) {
+    metalButton.setAttribute('aria-pressed', desiredMetalState);
+  }
+  if (!state.metalPieces) return;
+  for (const button of document.querySelectorAll('[data-hd-piece-option]')) {
+    if (button.getAttribute('aria-pressed') !== 'false') button.setAttribute('aria-pressed', 'false');
+  }
+}
+
+function setMetalPieces(on, persist = true) {
+  const next = Boolean(on);
+  if (next) {
+    const staunton = document.querySelector('[data-hd-piece-option="staunton"]');
+    if (staunton && staunton.getAttribute('aria-pressed') !== 'true') {
+      metalBaseSelectionGuard = true;
+      staunton.click();
+      metalBaseSelectionGuard = false;
+    }
+  }
+  state.metalPieces = next;
+  syncMetalSelection();
+  premiumBoard();
+  premiumCaptured();
+  if (persist) writeMeta({ hdMetalPieces: state.metalPieces });
+}
+
+function installTabletopStyles() {
+  if (document.getElementById(TABLETOP_STYLESHEET_ID)) return;
+  const link = document.createElement('link');
+  link.id = TABLETOP_STYLESHEET_ID;
+  link.rel = 'stylesheet';
+  link.href = './chess-hd-tabletop.css?v=20260909-chess-tabletop-1';
+  document.head.append(link);
+}
+
 function installFocusButton() {
   const heading = document.querySelector('.hd-board-heading');
   if (!heading || $('focusBoardBtn')) return;
@@ -199,6 +315,62 @@ function installBoardDepthToggle() {
   $('boardDepthToggle')?.addEventListener('change', () => setBoardDepth($('boardDepthToggle').checked));
 }
 
+function installMetalPieceOption() {
+  if (document.querySelector('[data-hd-metal-option]')) return;
+  const grid = document.querySelector('#settingsDialog .hd-piece-grid');
+  if (!grid) return;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'hd-piece-card hd-metal-card';
+  button.dataset.hdMetalOption = 'forged';
+  button.setAttribute('aria-pressed', 'false');
+  button.innerHTML = '<span class="hd-piece-preview hd-metal-preview" aria-hidden="true"></span><span>Forged Metal HD</span>';
+  button.querySelector('.hd-metal-preview')?.replaceChildren(
+    createPieceSvg('n', 'w', 'staunton', null, true),
+    createPieceSvg('p', 'b', 'staunton', null, true),
+  );
+  button.addEventListener('click', () => setMetalPieces(true));
+  grid.append(button);
+}
+
+function installCameraToolbar() {
+  if ($('hdCameraToolbar')) return;
+  const heading = document.querySelector('.hd-board-heading');
+  if (!heading) return;
+  const toolbar = document.createElement('div');
+  toolbar.id = 'hdCameraToolbar';
+  toolbar.className = 'hd-camera-toolbar';
+  toolbar.setAttribute('aria-label', 'Board view and zoom');
+  toolbar.innerHTML = `
+    <div class="hd-camera-group" role="group" aria-label="Board view">
+      <span class="hd-camera-label">View</span>
+      <button id="hdTopDownBtn" class="quiet small hd-view-choice" type="button" data-hd-board-view="top-down">Top Down</button>
+      <button id="hdTabletopBtn" class="quiet small hd-view-choice" type="button" data-hd-board-view="tabletop">HD Tabletop</button>
+    </div>
+    <div class="hd-zoom-group" role="group" aria-label="Board zoom">
+      <span class="hd-zoom-label">Zoom</span>
+      <button id="hdZoomOutBtn" class="quiet small hd-zoom-step" type="button" aria-label="Zoom board out">−</button>
+      <input id="hdZoomRange" type="range" min="${ZOOM_MIN}" max="${ZOOM_MAX}" step="${ZOOM_STEP}" aria-label="Board zoom percentage">
+      <output id="hdZoomValue" for="hdZoomRange">100%</output>
+      <button id="hdZoomInBtn" class="quiet small hd-zoom-step" type="button" aria-label="Zoom board in">+</button>
+      <button id="hdZoomFitBtn" class="quiet small" type="button" aria-label="Fit the full board">Fit</button>
+    </div>`;
+  heading.insertAdjacentElement('afterend', toolbar);
+
+  const supportsPerspective = typeof CSS === 'undefined' || !CSS.supports || CSS.supports('transform', 'perspective(900px) rotateX(12deg)');
+  if (!supportsPerspective && $('hdTabletopBtn')) {
+    $('hdTabletopBtn').disabled = true;
+    $('hdTabletopBtn').title = 'This browser does not support the HD Tabletop view.';
+    state.view = 'top-down';
+  }
+  $('hdTopDownBtn')?.addEventListener('click', () => setBoardView('top-down'));
+  $('hdTabletopBtn')?.addEventListener('click', () => setBoardView('tabletop'));
+  $('hdZoomOutBtn')?.addEventListener('click', () => setZoom(state.zoom - ZOOM_STEP));
+  $('hdZoomInBtn')?.addEventListener('click', () => setZoom(state.zoom + ZOOM_STEP));
+  $('hdZoomFitBtn')?.addEventListener('click', () => setZoom(100));
+  $('hdZoomRange')?.addEventListener('input', event => setZoom(event.currentTarget.value));
+}
+
 function markEmbeddedViewer() {
   try {
     if (window.self !== window.top) document.body.classList.add('hd-embedded-view');
@@ -207,22 +379,36 @@ function markEmbeddedViewer() {
   }
 }
 
+installTabletopStyles();
 installFocusButton();
 installBoardDepthToggle();
+installMetalPieceOption();
+installCameraToolbar();
 renamePieceSets();
 markEmbeddedViewer();
 setLayout(state.layout, false);
 setBoardDepth(state.boardDepth, false);
+setBoardView(state.view, false);
+setZoom(state.zoom, false);
 premiumPreviews();
+setMetalPieces(state.metalPieces, false);
 premiumBoard();
 premiumCaptured();
 
 for (const button of document.querySelectorAll('[data-hd-piece-option]')) {
-  button.addEventListener('click', () => queueMicrotask(() => {
-    premiumBoard();
-    premiumCaptured();
-  }));
+  button.addEventListener('click', () => {
+    const preserveMetal = metalBaseSelectionGuard;
+    queueMicrotask(() => {
+      if (!preserveMetal && state.metalPieces) setMetalPieces(false);
+      premiumBoard();
+      premiumCaptured();
+    });
+  });
 }
+
+const pieceGrid = document.querySelector('#settingsDialog .hd-piece-grid');
+const metalSelectionObserver = new MutationObserver(() => queueMicrotask(syncMetalSelection));
+if (pieceGrid) metalSelectionObserver.observe(pieceGrid, { subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
 
 const boardObserver = new MutationObserver(() => queueMicrotask(premiumBoard));
 if ($('board')) boardObserver.observe($('board'), { childList: true, subtree: true });

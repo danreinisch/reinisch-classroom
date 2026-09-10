@@ -283,6 +283,73 @@ test('premium SVG sets are genuinely distinct and Board depth stays optional, pe
   await expect(page.locator('#boardDepthToggle')).toBeChecked();
 });
 
+test('HD Tabletop, bounded zoom, and Forged Metal persist without changing the game', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await setupLocalGame(page);
+  await move(page, 'e2', 'e4');
+  await move(page, 'e7', 'e5');
+  const before = await page.evaluate(k => JSON.parse(localStorage.getItem(k)).game.moves, key(0));
+
+  await expect(page.locator('#hdCameraToolbar')).toBeVisible();
+  await expect(page.locator('#hdTopDownBtn')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#hdZoomValue')).toHaveText('100%');
+  await page.locator('#hdTabletopBtn').click();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-view', 'tabletop');
+  const boardTransform = await page.locator('#board').evaluate(el => getComputedStyle(el).transform);
+  expect(boardTransform).not.toBe('none');
+
+  await page.locator('#hdZoomInBtn').click();
+  await page.locator('#hdZoomInBtn').click();
+  await expect(page.locator('#hdZoomValue')).toHaveText('110%');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-zoom', 'custom');
+  await expectNoHorizontalOverflow(page);
+
+  await page.locator('#settingsBtn').click();
+  await expect(page.locator('[data-hd-metal-option]')).toHaveCount(1);
+  await page.locator('[data-hd-metal-option]').click();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-metal', 'on');
+  await expect(page.locator('[data-hd-metal-option]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#board svg[data-hd-metal="true"]')).toHaveCount(32);
+  await expect(page.locator('#board linearGradient')).toHaveCount(64);
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+
+  const after = await page.evaluate(k => JSON.parse(localStorage.getItem(k)).game.moves, key(0));
+  expect(after).toEqual(before);
+  const meta = await page.evaluate(() => JSON.parse(localStorage.getItem(`rc_chess_v1:${sessionStorage.getItem('rc_user_code')}:meta`)));
+  expect(meta.hdView).toBe('tabletop');
+  expect(meta.hdZoom).toBe(110);
+  expect(meta.hdMetalPieces).toBe(true);
+
+  await page.reload();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-view', 'tabletop');
+  await expect(page.locator('#hdZoomValue')).toHaveText('110%');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-metal', 'on');
+  await expect(page.locator('#board svg[data-hd-metal="true"]')).toHaveCount(32);
+  await expect(page.locator('#moveList')).toContainText('e4');
+  await expect(page.locator('#moveList')).toContainText('e5');
+
+  await page.locator('#hdZoomFitBtn').click();
+  await expect(page.locator('#hdZoomValue')).toHaveText('100%');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-zoom', 'fit');
+});
+
+test('Forged Metal yields to High Contrast and Tabletop respects reduced motion', async ({ page }) => {
+  await setupLocalGame(page);
+  await page.locator('#hdTabletopBtn').click();
+  await page.locator('#settingsBtn').click();
+  await page.locator('[data-hd-metal-option]').click();
+  await page.locator('[data-hd-theme-option="high-contrast"]').click();
+  const fill = await page.locator('[data-square="b1"] .hd-piece-body').first().evaluate(el => getComputedStyle(el).fill);
+  expect(fill).not.toContain('url(');
+  const filter = await page.locator('[data-square="b1"] svg.hd-premium-piece').evaluate(el => getComputedStyle(el).filter);
+  expect(filter).toBe('none');
+  await page.locator('#reducedToggle').check();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  const boardTransition = await page.locator('#board').evaluate(el => getComputedStyle(el).transitionDuration);
+  expect(boardTransition.split(',').every(value => parseFloat(value) <= 0.001)).toBe(true);
+  await expectNoHorizontalOverflow(page);
+});
+
 test('Focus Board meaningfully enlarges the desktop board without resetting selection, moves, controls, or scroll position', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await setupLocalGame(page);
@@ -384,4 +451,186 @@ test('Viewer route keeps the polished board inside its iframe without lower ligh
   expect(await frame.locator('html').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   const iframeImage = await page.locator('#contentIframe').screenshot({ type: 'png' });
   expect(lowerLightPixelRatio(iframeImage)).toBeLessThan(0.4);
+});
+
+test('immersive HD Board opens over the existing game, uses the same controller, flips, and closes back to Standard', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await setupLocalGame(page);
+  await move(page, 'e2', 'e4');
+  await move(page, 'e7', 'e5');
+  const before = await page.evaluate(k => JSON.parse(localStorage.getItem(k)).game.moves, key(0));
+
+  await expect(page.locator('#hdTabletopBtn')).toHaveText('HD Board');
+  await page.locator('#hdTabletopBtn').click();
+
+  await expect(page.locator('#hdImmersiveShell')).toBeVisible();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-immersive', 'on');
+  await expect(page.locator('#hdImmersiveBoardMount .hd-board-card')).toHaveCount(1);
+  await expect(page.locator('#hdImmersivePanelMount .hd-side-card')).toHaveCount(1);
+  await expect(page.locator('#hdImmersiveToolbarMount #hdCameraToolbar')).toHaveCount(1);
+  await expect(page.locator('#board')).toHaveCount(1);
+  await expect(page.locator('#newGameBtn')).toBeVisible();
+
+  await move(page, 'g1', 'f3');
+  const afterMove = await page.evaluate(k => JSON.parse(localStorage.getItem(k)).game.moves, key(0));
+  expect(afterMove).toHaveLength(before.length + 1);
+  expect(afterMove.at(-1).to).toBe('f3');
+
+  const firstBeforeFlip = await page.locator('#board button').first().getAttribute('data-square');
+  await page.locator('#hdImmersiveFlipBtn').click();
+  const firstAfterFlip = await page.locator('#board button').first().getAttribute('data-square');
+  expect(firstAfterFlip).not.toBe(firstBeforeFlip);
+
+  await page.locator('#hdBackBtn').click();
+  await expect(page.locator('#hdImmersiveShell')).toBeHidden();
+  await expect(page.locator('body')).not.toHaveAttribute('data-hd-immersive', 'on');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-view', 'top-down');
+  await expect(page.locator('#workspace > .hd-board-card')).toHaveCount(1);
+  await expect(page.locator('#workspace > .hd-side-card')).toHaveCount(1);
+  await expect(page.locator('#moveList')).toContainText('Nf3');
+
+  await page.locator('#hdTabletopBtn').click();
+  await expect(page.locator('#hdImmersiveShell')).toBeVisible();
+  await expect(page.locator('#moveList')).toContainText('Nf3');
+});
+
+test('immersive HD Board keeps bounded zoom, Forged Metal, keyboard play, High Contrast, and Reduced Motion functional', async ({ page }) => {
+  await page.setViewportSize({ width: 1365, height: 900 });
+  await setupLocalGame(page);
+  await page.locator('#hdTabletopBtn').click();
+  await expect(page.locator('#hdImmersiveShell')).toBeVisible();
+
+  await page.locator('#hdZoomRange').fill('125');
+  await expect(page.locator('#hdZoomValue')).toHaveText('125%');
+  await expect(page.locator('#hdZoomInBtn')).toBeDisabled();
+  await page.locator('#hdZoomRange').fill('85');
+  await expect(page.locator('#hdZoomValue')).toHaveText('85%');
+  await expect(page.locator('#hdZoomOutBtn')).toBeDisabled();
+  await page.locator('#hdZoomFitBtn').click();
+  await expect(page.locator('#hdZoomValue')).toHaveText('100%');
+
+  await page.locator('#settingsBtn').click();
+  await page.locator('[data-hd-metal-option]').click();
+  await expect(page.locator('#board svg[data-hd-metal="true"]')).toHaveCount(32);
+  await page.locator('[data-hd-theme-option="high-contrast"]').click();
+  await page.locator('#reducedToggle').check();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+
+  await expect(page.locator('body')).toHaveClass(/hd-reduced-motion/);
+  const metalFilter = await page.locator('[data-square="b1"] svg.hd-premium-piece').evaluate(el => getComputedStyle(el).filter);
+  expect(metalFilter).toBe('none');
+  const frameTransition = await page.locator('.hd-immersive-shell .hd-board-frame').evaluate(el => getComputedStyle(el).transitionDuration);
+  expect(frameTransition.split(',').every(value => parseFloat(value) <= 0.001)).toBe(true);
+
+  await page.locator('[data-square="e2"]').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.square.legal')).toHaveCount(2);
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Enter');
+  const saved = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), key(0));
+  expect(saved.game.moves[0].to).toBe('e4');
+  await expectNoHorizontalOverflow(page);
+});
+
+test('immersive HD Board fits Chromebook, laptop, tablet, mobile, and Viewer without horizontal overflow', async ({ page }) => {
+  await setupLocalGame(page);
+  for (const viewport of [
+    { width: 1366, height: 768 },
+    { width: 1365, height: 900 },
+    { width: 768, height: 1024 },
+    { width: 390, height: 844 },
+  ]) {
+    if (!(await page.locator('#hdImmersiveShell').isHidden())) await page.locator('#hdBackBtn').click();
+    await page.setViewportSize(viewport);
+    await page.locator('#hdTabletopBtn').click();
+    await expect(page.locator('#hdImmersiveShell')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expect(page.locator('#board button')).toHaveCount(64);
+    const board = await page.locator('#board').boundingBox();
+    expect(board.width).toBeGreaterThan(260);
+    expect(board.width).toBeLessThanOrEqual(viewport.width + 1);
+    if (viewport.width < 900) {
+      await expect(page.locator('#hdImmersiveShell')).toHaveAttribute('data-panel', 'collapsed');
+    }
+  }
+
+  await page.goto('/viewer/?src=%2Factivities%2Fchess%2F&title=Classroom%20Chess');
+  const frame = page.frameLocator('#contentIframe');
+  await expect(frame.locator('#hdTabletopBtn')).toHaveText('HD Board');
+  await frame.locator('#hdTabletopBtn').click();
+  await expect(frame.locator('#hdImmersiveShell')).toBeVisible();
+  await expect(frame.locator('body')).toHaveAttribute('data-hd-immersive', 'on');
+  expect(await frame.locator('html').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+});
+
+test('subtle piece reflection is HD-only, satin-surface-only, state-safe, High Contrast safe, and Reduced Motion safe', async ({ page }) => {
+  await page.setViewportSize({ width: 1365, height: 900 });
+  await setupLocalGame(page);
+
+  await expect(page.locator('#hdReflectionToggle')).toHaveCount(1);
+  expect(await page.locator('#hdReflectionRow').evaluate(el => el.hidden)).toBe(true);
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(0);
+
+  await page.locator('#hdTabletopBtn').click();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-immersive', 'on');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-reflective-surface', 'on');
+  expect(await page.locator('#hdReflectionRow').evaluate(el => el.hidden)).toBe(false);
+
+  await page.locator('#settingsBtn').click();
+  await expect(page.locator('#hdReflectionToggle')).toBeEnabled();
+  await expect(page.locator('#hdReflectionHint')).toContainText('Satin HD finish');
+  await page.locator('[data-hd-metal-option]').click();
+  await expect(page.locator('#board svg.hd-forged-metal-piece[data-hd-physical-enhanced="true"]')).toHaveCount(32);
+  await expect(page.locator('#board .hd-metal-foot')).toHaveCount(32);
+  await expect(page.locator('#board filter[id^="rc-hd-metal-depth-"]')).toHaveCount(32);
+  await page.locator('#hdReflectionToggle').check();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+
+  await expect(page.locator('body')).toHaveAttribute('data-hd-piece-reflection', 'on');
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(32);
+  await move(page, 'e2', 'e4');
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(32);
+  const savedAfterMove = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), key(0));
+  expect(savedAfterMove.game.moves).toHaveLength(1);
+  expect(savedAfterMove.game.moves[0].to).toBe('e4');
+
+  await page.locator('#settingsBtn').click();
+  await page.locator('[data-hd-theme-option="desert-stone"]').click();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-reflective-surface', 'off');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-piece-reflection', 'off');
+  await expect(page.locator('#hdReflectionToggle')).toBeDisabled();
+  await expect(page.locator('#hdReflectionHint')).toContainText('matte finish');
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(0);
+
+  await page.locator('[data-hd-theme-option="tournament"]').click();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-reflective-surface', 'on');
+  await expect(page.locator('#hdReflectionToggle')).toBeEnabled();
+  await expect(page.locator('body')).toHaveAttribute('data-hd-piece-reflection', 'on');
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(32);
+
+  await page.locator('[data-hd-theme-option="high-contrast"]').click();
+  await expect(page.locator('#hdReflectionToggle')).toBeDisabled();
+  await expect(page.locator('#hdReflectionHint')).toContainText('High Contrast');
+  await expect(page.locator('body')).toHaveAttribute('data-hd-piece-reflection', 'off');
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(0);
+  const physicalFilter = await page.locator('[data-square="b1"] .hd-piece-body').first().evaluate(el => getComputedStyle(el).filter);
+  expect(physicalFilter).toBe('none');
+
+  await page.locator('[data-hd-theme-option="tournament"]').click();
+  await page.locator('#reducedToggle').check();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(page.locator('body')).toHaveClass(/hd-reduced-motion/);
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(32);
+  const reflectionTransition = await page.locator('#board > .square > svg.hd-piece-reflection').first().evaluate(el => getComputedStyle(el).transitionDuration);
+  const reflectionAnimation = await page.locator('#board > .square > svg.hd-piece-reflection').first().evaluate(el => getComputedStyle(el).animationName);
+  expect(reflectionTransition.split(',').every(value => parseFloat(value) <= 0.001)).toBe(true);
+  expect(reflectionAnimation).toBe('none');
+  await expectNoHorizontalOverflow(page);
+
+  await page.locator('#hdBackBtn').click();
+  expect(await page.locator('#hdReflectionRow').evaluate(el => el.hidden)).toBe(true);
+  await expect(page.locator('#board > .square > svg.hd-piece-reflection')).toHaveCount(0);
+  const savedAfterExit = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), key(0));
+  expect(savedAfterExit.game.moves).toEqual(savedAfterMove.game.moves);
 });

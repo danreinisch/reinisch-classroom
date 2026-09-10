@@ -1,4 +1,4 @@
-import { Chess, ChessStore, SLOT_COUNT, LEVELS, PIECE_NAMES, colorName, compactMove, gameStatus, makeSnapshot, parseGameCode } from './core.js';
+import { Chess, ChessStore, SLOT_COUNT, LEVELS, PIECE_NAMES, colorName, compactMove, gameStatus, makeSnapshot, parseGameCode } from './core.js?v=20260909-chess-levels-1';
 import { LESSONS, CHALLENGES, exerciseGame, exerciseSolved } from './lessons.js';
 
 const $ = id => document.getElementById(id);
@@ -17,7 +17,7 @@ const preferences = {
   legal: meta.legal !== false,
   rotate: meta.rotate === true,
 };
-let play = { chess: new Chess(), options: { mode: 'computer', level: 'friendly', human: 'w' }, slot: null, revision: null };
+let play = { chess: new Chess(), options: { mode: 'computer', level: 'casual', human: 'w' }, slot: null, revision: null };
 let view = 'play';
 let exercise = null;
 let exerciseChess = null;
@@ -185,7 +185,7 @@ function engineRequest(isHint = false) {
     renderBoard(); renderPlayPanel();
   };
   try {
-    worker = new Worker(new URL('./worker.js?v=20260906-chess-2', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./worker.js?v=20260909-chess-levels-1', import.meta.url), { type: 'module' });
     thinking = true;
     $('retryComputerBtn').hidden = true;
     worker.onerror = fail;
@@ -209,7 +209,7 @@ function engineRequest(isHint = false) {
       renderBoard(); renderPlayPanel();
     };
     workerTimer = setTimeout(fail, 6500);
-    worker.postMessage({ id, moves: history, level: isHint ? 'challenge' : play.options.level, budgetMs: isHint ? 700 : play.options.level === 'challenge' ? 900 : 400 });
+    worker.postMessage({ id, moves: history, level: isHint ? 'canyon-boss' : play.options.level, ...(isHint ? { budgetMs: 1000 } : {}) });
     renderBoard(); renderPlayPanel();
   } catch { fail(); }
 }
