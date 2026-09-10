@@ -46,7 +46,7 @@ if (
   typeof window !== "undefined" &&
   window.location.pathname.startsWith("/teacher/gradebook")
 ) {
-  import("/web/gradebook-roster-order.js?v=20260909-ic-order").catch((error) => {
+  import("/web/gradebook-roster-order.js?v=20260910-ic-roster-lock").catch((error) => {
     console.warn("[gradebook] Could not load roster-order helper:", error);
   });
   import("/web/tc-gradebook-header-tools.js?v=20260910-header-copy-readability").catch((error) => {
