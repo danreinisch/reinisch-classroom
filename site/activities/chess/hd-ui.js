@@ -1,5 +1,5 @@
-import { Chess, ChessStore } from './core.js';
-import './app.js?v=20260906-chess-2';
+import { Chess, ChessStore } from './core.js?v=20260909-chess-levels-1';
+import './app.js?v=20260909-chess-levels-1';
 
 const $ = id => document.getElementById(id);
 const THEMES = new Set(['canyon-classic', 'desert-stone', 'tournament', 'modern-slate', 'high-contrast']);
@@ -175,7 +175,7 @@ function updatePlayers() {
   if (computer) {
     const side = details.match(/You play (White|Black)/)?.[1] || 'White';
     const opponent = side === 'White' ? 'Black' : 'White';
-    const level = details.match(/^(Learning|Friendly|Challenge)/)?.[1] || 'Friendly';
+    const level = details.match(/^(.+?) level\b/)?.[1] || 'Casual';
     $('hdHumanLabel').textContent = `You — ${side}`;
     $('hdOpponentLabel').textContent = `Computer — ${opponent}`;
     $('hdHumanStatus').textContent = position.includes(`${side} to move`) ? 'Your move' : 'Waiting';

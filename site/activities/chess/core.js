@@ -4,7 +4,54 @@ export { Chess };
 export const SLOT_COUNT = 3;
 export const MAX_MOVES = 1600;
 export const PIECE_NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
-export const LEVELS = { starter: 'Learning', friendly: 'Friendly', challenge: 'Challenge' };
+
+export const COMPUTER_LEVELS = Object.freeze([
+  Object.freeze({ key: 'first-steps', label: 'First Steps' }),
+  Object.freeze({ key: 'beginner', label: 'Beginner' }),
+  Object.freeze({ key: 'learning', label: 'Learning' }),
+  Object.freeze({ key: 'casual', label: 'Casual' }),
+  Object.freeze({ key: 'developing', label: 'Developing' }),
+  Object.freeze({ key: 'club', label: 'Club' }),
+  Object.freeze({ key: 'skilled', label: 'Skilled' }),
+  Object.freeze({ key: 'advanced', label: 'Advanced' }),
+  Object.freeze({ key: 'expert', label: 'Expert' }),
+  Object.freeze({ key: 'master', label: 'Master' }),
+  Object.freeze({ key: 'ruthless', label: 'Ruthless' }),
+  Object.freeze({ key: 'canyon-boss', label: 'Canyon Boss' }),
+]);
+
+const CURRENT_LEVEL_KEYS = new Set(COMPUTER_LEVELS.map(level => level.key));
+export const LEGACY_LEVEL_ALIASES = Object.freeze({
+  starter: 'first-steps',
+  friendly: 'casual',
+  challenge: 'skilled',
+});
+
+// LEVELS remains a simple label lookup because the existing UI and save cards consume it.
+// Legacy keys stay readable while restoreSnapshot migrates them to current keys.
+export const LEVELS = Object.freeze({
+  'first-steps': 'First Steps',
+  beginner: 'Beginner',
+  learning: 'Learning',
+  casual: 'Casual',
+  developing: 'Developing',
+  club: 'Club',
+  skilled: 'Skilled',
+  advanced: 'Advanced',
+  expert: 'Expert',
+  master: 'Master',
+  ruthless: 'Ruthless',
+  'canyon-boss': 'Canyon Boss',
+  starter: 'First Steps',
+  friendly: 'Casual',
+  challenge: 'Skilled',
+});
+
+export function normalizeLevel(level) {
+  if (CURRENT_LEVEL_KEYS.has(level)) return level;
+  return LEGACY_LEVEL_ALIASES[level] || null;
+}
+
 export const colorName = color => color === 'w' ? 'White' : 'Black';
 
 // Casual classroom games automatically draw at three repetitions or 50 moves.
@@ -27,14 +74,15 @@ export function makeSnapshot(chess, options) {
     version: 1,
     moves: chess.history({ verbose: true }).map(compactMove),
     mode: options.mode,
-    level: options.level,
+    level: normalizeLevel(options.level) || options.level,
     human: options.human,
   };
 }
 
 export function restoreSnapshot(value) {
+  const level = normalizeLevel(value?.level);
   if (!value || value.version !== 1 || !Array.isArray(value.moves) || value.moves.length > MAX_MOVES ||
-      !['computer', 'local'].includes(value.mode) || !Object.hasOwn(LEVELS, value.level) || !['w', 'b'].includes(value.human)) {
+      !['computer', 'local'].includes(value.mode) || !level || !['w', 'b'].includes(value.human)) {
     throw new Error('This game code is not a supported Classroom Chess game.');
   }
   const chess = new Chess();
@@ -48,7 +96,7 @@ export function restoreSnapshot(value) {
     if (!legal) throw new Error('This saved game contains an illegal move. The existing game was kept.');
     chess.move(compactMove(legal));
   }
-  return { chess, options: { mode: value.mode, level: value.level, human: value.human } };
+  return { chess, options: { mode: value.mode, level, human: value.human } };
 }
 
 export function parseGameCode(text) {
