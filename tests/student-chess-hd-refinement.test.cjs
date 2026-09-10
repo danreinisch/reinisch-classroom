@@ -23,7 +23,7 @@ test('immersive refinement stays additive, presentation-only, and loads after th
   assert.match(css, /--hd-immersive-toolbar-clearance/);
   assert.match(css, /\.hd-immersive-board-stage\s*\{[^}]*background:\s*transparent !important/s);
   assert.match(css, /scrollbar-width:\s*none/);
-  assert.match(css, /\.hd-immersive-board-stage::\-webkit-scrollbar\s*\{[^}]*height:\s*0/s);
+  assert.match(css, /\.hd-immersive-board-stage::-webkit-scrollbar\s*\{[^}]*height:\s*0/s);
   assert.match(css, /--hd-immersive-panel-width:\s*clamp\(248px, 20vw, 292px\)/);
   assert.match(css, /\.hd-immersive-shell \.hd-game-summary > div\s*\{[^}]*display:\s*block/s);
   assert.match(css, /\.hd-immersive-shell \.hd-difficulty-shortcut\s*\{[^}]*display:\s*block/s);
