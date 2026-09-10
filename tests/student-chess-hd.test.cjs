@@ -34,7 +34,7 @@ test('HD shell keeps the existing activity hooks while exposing the approved cus
   assert.equal(new Set(ids).size, ids.length, 'HTML contains duplicate ids');
 
   assert.match(html, /chess-hd\.css\?v=20260908-chess-hd-1/);
-  assert.match(html, /hd-ui\.js\?v=20260908-chess-hd-1/);
+  assert.match(html, /hd-ui\.js\?v=20260909-chess-levels-1/);
   assert.doesNotMatch(html, /<script[^>]+src="\.\/app\.js/);
 
   for (const theme of ['canyon-classic', 'desert-stone', 'tournament', 'modern-slate', 'high-contrast']) {
@@ -51,7 +51,7 @@ test('HD shell keeps the existing activity hooks while exposing the approved cus
 
 test('HD controller enhances rather than replaces the working chess controller', () => {
   const js = read('site/activities/chess/hd-ui.js');
-  assert.match(js, /import '\.\/app\.js\?v=20260906-chess-2'/);
+  assert.match(js, /import '\.\/app\.js\?v=20260909-chess-levels-1'/);
   assert.match(js, /new ChessStore\(storage, session\)/);
   assert.match(js, /new MutationObserver/);
   assert.match(js, /hdTheme/);
