@@ -5,6 +5,9 @@
   if (window.__rcReviewFinalPolishLoaded) return;
   window.__rcReviewFinalPolishLoaded = true;
 
+  let pendingFocus = null;
+  let focusRepairStage = 0;
+
   function ensureStyle() {
     if (document.querySelector('link[data-rv-final-polish-style]')) return;
     const link = document.createElement('link');
@@ -12,6 +15,23 @@
     link.href = '/web/tc-review-final-polish.css?v=20260911-review-final-polish';
     link.dataset.rvFinalPolishStyle = 'true';
     document.head.appendChild(link);
+  }
+
+  function installResubmitLanguage() {
+    if (typeof window.rcConfirm !== 'function' || window.__rcReviewResubmitConfirmWrapped) return;
+    const originalConfirm = window.rcConfirm;
+    window.__rcReviewResubmitConfirmWrapped = true;
+    window.rcConfirm = function reviewConfirm(title, message, confirmLabel, options) {
+      if (title === 'Reopen Submission') {
+        return originalConfirm(
+          'Resubmit to Student',
+          'Send this finalized assignment back to the student? It will move back to In Progress so the student can revise and submit it again.',
+          'Resubmit',
+          options
+        );
+      }
+      return originalConfirm(title, message, confirmLabel, options);
+    };
   }
 
   function readNeedsReviewCount(root) {
@@ -66,15 +86,118 @@
     if (heading.textContent !== desired) heading.textContent = desired;
   }
 
+  function polishResubmitButton(root) {
+    const button = root?.querySelector('[data-rv-proxy="reopen"]');
+    if (!button) return;
+    if (button.textContent !== 'Resubmit to Student') button.textContent = 'Resubmit to Student';
+    button.setAttribute('aria-label', 'Resubmit this finalized assignment to the student');
+    button.title = 'Moves this assignment back to In Progress for the student.';
+
+    const selected = document.querySelector('#rvQueue .rv-submission-item.rv-qol-selected');
+    const legacyButton = selected?.querySelector('.rv-btn-reopen');
+    if (legacyButton) {
+      legacyButton.textContent = '↩ Resubmit to Student';
+      legacyButton.setAttribute('aria-label', 'Resubmit this finalized assignment to the student');
+    }
+  }
+
+  function captureFocusIntent(root) {
+    if (root.dataset.rvFinalFocusCapture === 'true') return;
+    root.dataset.rvFinalFocusCapture = 'true';
+    root.addEventListener('click', event => {
+      const button = event.target.closest('[data-rv-focus]');
+      if (!button) return;
+      const row = button.closest('tr');
+      pendingFocus = {
+        id: String(button.dataset.rvFocus || ''),
+        studentCode: row?.querySelector('td:first-child strong')?.textContent?.trim() || '',
+        assignmentTitle: root.querySelector('.rv-qol-assignment-head h1')?.textContent?.trim() || '',
+      };
+      focusRepairStage = 0;
+    }, true);
+  }
+
+  function normalizeAssignmentTitle(value, studentCode = '') {
+    let result = String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (studentCode) {
+      const escaped = studentCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result
+        .replace(new RegExp(`\\s+(?:for\\s+)?${escaped}(?:\\s*#\\d+)?\\s*$`, 'i'), '')
+        .replace(new RegExp(`\\s*[—–-]\\s*${escaped}(?:\\s*#\\d+)?\\s*$`, 'i'), '');
+    }
+    return result.replace(/[—–-]\s*$/g, '').trim();
+  }
+
+  function chooseTargetAssignmentOption() {
+    if (!pendingFocus) return false;
+    const select = document.getElementById('rvAssignmentFilter');
+    if (!select) return false;
+    const wanted = normalizeAssignmentTitle(pendingFocus.assignmentTitle, pendingFocus.studentCode);
+    const options = [...select.options].filter(option => option.value !== 'All Assignments');
+    const studentCode = pendingFocus.studentCode.toLowerCase();
+    const exactStudent = options.find(option => {
+      const text = option.textContent?.trim() || '';
+      return studentCode && text.toLowerCase().includes(studentCode) &&
+        normalizeAssignmentTitle(text, pendingFocus.studentCode) === wanted;
+    });
+    const logicalMatch = exactStudent || options.find(option =>
+      normalizeAssignmentTitle(option.textContent || '', pendingFocus.studentCode) === wanted
+    );
+    if (!logicalMatch || select.value === logicalMatch.value) return Boolean(logicalMatch);
+    select.value = logicalMatch.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  function repairReadOnlyFocus() {
+    if (!pendingFocus || !document.body.classList.contains('rv-qol-focus')) return;
+    const queue = document.getElementById('rvQueue');
+    if (!queue) return;
+
+    const target = queue.querySelector(
+      `.rv-submission-header[data-submission-id="${window.CSS?.escape ? CSS.escape(pendingFocus.id) : pendingFocus.id}"]`
+    );
+    if (target) {
+      const item = target.closest('.rv-submission-item');
+      if (target.getAttribute('aria-expanded') !== 'true') target.click();
+      if (item?.classList.contains('rv-qol-selected')) {
+        pendingFocus = null;
+        focusRepairStage = 0;
+      }
+      return;
+    }
+
+    if (!queue.querySelector('.rv-empty')) return;
+
+    if (focusRepairStage === 0) {
+      focusRepairStage = 1;
+      const allClasses = [...document.querySelectorAll('#rvClassFilters .rv-filter-btn')]
+        .find(button => button.dataset.class === 'All Classes');
+      if (allClasses && !allClasses.classList.contains('active')) {
+        allClasses.click();
+        return;
+      }
+    }
+
+    if (focusRepairStage <= 1) {
+      focusRepairStage = 2;
+      chooseTargetAssignmentOption();
+    }
+  }
+
   function attach(root, reviewLink) {
+    captureFocusIntent(root);
     let scheduled = false;
     const reconcile = () => {
       if (scheduled) return;
       scheduled = true;
       requestAnimationFrame(() => {
         scheduled = false;
+        installResubmitLanguage();
         syncReviewNavBadge(root, reviewLink);
         polishContextHeading(root);
+        polishResubmitButton(root);
+        repairReadOnlyFocus();
       });
     };
 
@@ -85,9 +208,6 @@
       characterData: true,
     });
 
-    // The shared Teacher Shell may append its legacy Submitted-instance badge
-    // after Review has already rendered. Watch only the Review link so this
-    // page can reconcile that badge to the actual Review lifecycle count.
     const navObserver = new MutationObserver(reconcile);
     navObserver.observe(reviewLink, {
       childList: true,
@@ -95,11 +215,18 @@
       characterData: true,
     });
 
+    const queue = document.getElementById('rvQueue');
+    if (queue) {
+      const queueObserver = new MutationObserver(reconcile);
+      queueObserver.observe(queue, { childList: true, subtree: true });
+    }
+
     reconcile();
   }
 
   function start() {
     ensureStyle();
+    installResubmitLanguage();
 
     const findAndAttach = () => {
       const root = document.querySelector('.rv-qol-command');
