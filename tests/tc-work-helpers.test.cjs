@@ -372,6 +372,34 @@ test('existing Work engine remains the action source', () => {
   assert.ok(!qol.includes('SUPABASE_SERVICE_ROLE_KEY'));
 });
 
+test('approved visual pass stacks status text and gives each lifecycle state a distinct treatment', () => {
+  assert.ok(qol.includes('.rc-work-status-title,'));
+  assert.ok(qol.includes('.rc-work-status-count,'));
+  assert.ok(qol.includes('display: block;'));
+  assert.ok(qol.includes('.rc-work-status-card[data-status="draft"]'));
+  assert.ok(qol.includes('.rc-work-status-card[data-status="scheduled"]'));
+  assert.ok(qol.includes('.rc-work-status-card[data-status="active"]'));
+  assert.ok(qol.includes('.rc-work-status-card[data-status="completed"]'));
+});
+
+test('individualized-assignment guidance is tucked into the hidden builder instead of the default workspace', () => {
+  assert.ok(qol.includes('function tuckIndividualizedInfo'));
+  assert.ok(qol.includes('rc-work-individualized-info'));
+  assert.ok(qol.includes('composer.insertBefore(card, form || null)'));
+  assert.ok(qol.includes('composer.hidden = true'));
+});
+
+test('legacy issued toggle and redundant workspace heading are retired from the polished surface', () => {
+  assert.ok(qol.includes('rc-work-legacy-issued-toggle'));
+  assert.ok(qol.includes('rc-work-workspace-heading'));
+  assert.ok(qol.includes('display: none !important;'));
+});
+
+test('filters appear before the empty state so the workspace keeps the approved table-first hierarchy', () => {
+  assert.ok(qol.includes('const emptyState = $("draftsEmpty")'));
+  assert.ok(qol.includes('draftSection.insertBefore(bar, emptyState || tableWrap || null)'));
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {
