@@ -57,3 +57,14 @@ if (
     console.warn("[gradebook] Could not load header-copy helper:", error);
   });
 }
+
+// Review-only presentation bootstrap. The command-center layer reads Review data
+// and delegates all scoring/finalization actions back to tc-review.js.
+if (
+  typeof window !== "undefined" &&
+  window.location.pathname.startsWith("/teacher/review")
+) {
+  import("/web/tc-review-qol.js?v=20260911-review-command-center").catch((error) => {
+    console.warn("[review] Could not load Review command-center presentation:", error);
+  });
+}
