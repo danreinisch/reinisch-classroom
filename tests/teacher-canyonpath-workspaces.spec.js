@@ -19,7 +19,9 @@ async function fixture(page, { admin = false } = {}) {
     const url = new URL(route.request().url());
     if (url.origin !== 'http://localhost:8888') return route.abort();
     if (url.pathname.startsWith('/.netlify/functions/')) {
-      if (route.request().method() !== 'GET') throw new Error('Presentation tests must not write to server endpoints: ' + url.pathname);
+      const method = route.request().method();
+      if (url.pathname.endsWith('/teacher-refresh') && method === 'POST') return route.fulfill({ json: { ok: true, role: admin ? 'admin' : 'teacher', session: { role: admin ? 'admin' : 'teacher' } } });
+      if (method !== 'GET') throw new Error('Presentation tests must not write to server endpoints: ' + url.pathname);
       if (url.pathname.endsWith('/teacher-session')) return route.fulfill({ json: { ok: true, role: admin ? 'admin' : 'teacher', raw_role: admin ? 'admin' : 'teacher', session: { code: 'teacher_local', role: admin ? 'admin' : 'teacher' } } });
       if (url.pathname.endsWith('/browser-supabase-config')) return route.fulfill({ status: 503, json: { ok: false } });
       if (url.pathname.endsWith('/teacher-roster-context')) return route.fulfill({ json: { ok: true, students: people, classes: [{ id: 'LA1', code: 'LA1', name: 'Language Arts 1 SC' }], goals: [] } });
