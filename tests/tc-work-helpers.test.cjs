@@ -1,10 +1,12 @@
 // Unit tests for tc-work.js helper logic
-// Tests: readDrafts() resilience, formatWhen() edge cases
+// Tests: readDrafts() resilience, formatWhen() edge cases, Work command-center lifecycle contract
 // Run with: node tests/tc-work-helpers.test.cjs
 
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 
 // ── readDrafts helpers (mirror logic from tc-work.js) ────────────────────────
 
@@ -42,6 +44,42 @@ function formatWhen(v) {
   } catch (_) {
     return s;
   }
+}
+
+// ── Work command-center lifecycle mirror ─────────────────────────────────────
+
+const TERMINAL_STATUSES = new Set(['Graded', 'Reviewed']);
+
+function dateMs(value) {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function deriveWorkStatus(draft, instances, lifecycleReady, now) {
+  if (!draft.issuedAt) {
+    const releaseMs = dateMs(draft.releaseAt);
+    const scheduled =
+      !!draft.autoRelease &&
+      releaseMs !== null &&
+      releaseMs > now;
+    return scheduled ? 'scheduled' : 'draft';
+  }
+
+  const assignmentId = String(draft.assignmentId || '');
+  const linked = assignmentId
+    ? instances.filter(instance => String(instance.assignment_id || '') === assignmentId)
+    : [];
+
+  if (
+    lifecycleReady &&
+    linked.length > 0 &&
+    linked.every(instance => TERMINAL_STATUSES.has(String(instance.status || '')))
+  ) {
+    return 'completed';
+  }
+
+  return 'active';
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -177,13 +215,11 @@ test('valid ISO date string returns formatted string', () => {
 
 test('invalid date string returns the raw input unchanged', () => {
   const result = formatWhen('not-a-date');
-  // Since Date('not-a-date') is invalid, it returns the raw string
   assert.strictEqual(result, 'not-a-date');
 });
 
 test('numeric timestamp string is handled', () => {
   const result = formatWhen('1749000000000');
-  // This may parse as a valid date depending on engine; should not throw
   assert.ok(typeof result === 'string');
   assert.ok(!result.includes('NaN'));
 });
@@ -192,6 +228,220 @@ test('date-only string "2025-01-01" is handled', () => {
   const result = formatWhen('2025-01-01');
   assert.ok(typeof result === 'string' && result.length > 0);
   assert.ok(result !== '—', 'should not return fallback for valid date');
+});
+
+// --- command-center lifecycle semantics ---
+console.log('\n--- Work command-center lifecycle semantics ---');
+
+const NOW = Date.parse('2026-09-10T12:00:00Z');
+
+test('unissued ordinary draft stays in Drafts', () => {
+  assert.strictEqual(
+    deriveWorkStatus({ issuedAt: null, autoRelease: false }, [], true, NOW),
+    'draft'
+  );
+});
+
+test('future auto-release draft is Scheduled', () => {
+  assert.strictEqual(
+    deriveWorkStatus(
+      {
+        issuedAt: null,
+        autoRelease: true,
+        releaseAt: '2026-09-15T12:00:00Z'
+      },
+      [],
+      true,
+      NOW
+    ),
+    'scheduled'
+  );
+});
+
+test('issued assignment with unfinished student work remains Active', () => {
+  assert.strictEqual(
+    deriveWorkStatus(
+      { issuedAt: '2026-09-09T12:00:00Z', assignmentId: 44 },
+      [
+        { assignment_id: 44, status: 'Reviewed' },
+        { assignment_id: 44, status: 'Submitted' }
+      ],
+      true,
+      NOW
+    ),
+    'active'
+  );
+});
+
+test('all Graded/Reviewed instances hand assignment off to Library', () => {
+  assert.strictEqual(
+    deriveWorkStatus(
+      { issuedAt: '2026-09-09T12:00:00Z', assignmentId: 44 },
+      [
+        { assignment_id: 44, status: 'Reviewed' },
+        { assignment_id: 44, status: 'Graded' }
+      ],
+      true,
+      NOW
+    ),
+    'completed'
+  );
+});
+
+test('failed lifecycle read fails open in Work instead of hiding assignment', () => {
+  assert.strictEqual(
+    deriveWorkStatus(
+      { issuedAt: '2026-09-09T12:00:00Z', assignmentId: 44 },
+      [
+        { assignment_id: 44, status: 'Reviewed' },
+        { assignment_id: 44, status: 'Graded' }
+      ],
+      false,
+      NOW
+    ),
+    'active'
+  );
+});
+
+test('no matching assignment instances never falsely marks work Completed', () => {
+  assert.strictEqual(
+    deriveWorkStatus(
+      { issuedAt: '2026-09-09T12:00:00Z', assignmentId: 44 },
+      [{ assignment_id: 45, status: 'Reviewed' }],
+      true,
+      NOW
+    ),
+    'active'
+  );
+});
+
+// --- command-center source contract ---
+console.log('\n--- Work command-center source contract ---');
+
+const qolCorePath = path.join(__dirname, '../site/web/tc-work-qol-core.js');
+const qol = fs.readFileSync(qolCorePath, 'utf8');
+const qolLoaderPath = path.join(__dirname, '../site/web/tc-work-qol.js');
+const qolLoader = fs.readFileSync(qolLoaderPath, 'utf8');
+
+test('approved Work command-center launch actions are present', () => {
+  assert.ok(qol.includes('New Assignment'));
+  assert.ok(qol.includes('Import Assignment'));
+  assert.ok(qol.includes('Build, prepare, schedule, and issue assignments.'));
+});
+
+test('Work exposes Drafts, Scheduled, Active, and completed Library handoff', () => {
+  assert.ok(qol.includes('Drafts'));
+  assert.ok(qol.includes('Scheduled'));
+  assert.ok(qol.includes('Active'));
+  assert.ok(qol.includes('Completed Assignments'));
+  assert.ok(qol.includes('/teacher/library/'));
+});
+
+test('completed lifecycle uses the same Graded/Reviewed terminal semantics as Library', () => {
+  assert.ok(qol.includes('new Set(["Graded", "Reviewed"])'));
+  assert.ok(qol.includes('instances.every'));
+  assert.ok(qol.includes('return "completed"'));
+});
+
+test('Work reads assignment-instance lifecycle through one existing adapter call', () => {
+  const matches = qol.match(/db\.listAssignmentInstances\(\)/g) || [];
+  assert.strictEqual(matches.length, 1);
+  assert.ok(qol.includes('await import("/web/data-adapter.js")'));
+});
+
+test('lifecycle read failure keeps work visible instead of falsely moving it', () => {
+  assert.ok(qol.includes('state.lifecycleReady = false'));
+  assert.ok(qol.includes('completed work will remain visible'));
+});
+
+test('batch-first rendering and compact filters are implemented', () => {
+  assert.ok(qol.includes('draft.batchId'));
+  assert.ok(qol.includes('Search assignments, students, classes'));
+  assert.ok(qol.includes('All Classes'));
+  assert.ok(qol.includes('All Statuses'));
+});
+
+test('secondary operations move behind Workspace Tools / row overflow menus', () => {
+  assert.ok(qol.includes('Workspace Tools'));
+  assert.ok(qol.includes('More assignment actions'));
+  assert.ok(qol.includes('View Progress'));
+  assert.ok(qol.includes('Issue Ready'));
+});
+
+test('existing Work engine remains the action source', () => {
+  assert.ok(qol.includes('window.__rcRenderTable'));
+  assert.ok(!qol.includes('supabase.from('));
+  assert.ok(!qol.includes('SUPABASE_SERVICE_ROLE_KEY'));
+});
+
+test('approved visual pass stacks status text and gives each lifecycle state a distinct treatment', () => {
+  assert.ok(qol.includes('.rc-work-status-title,'));
+  assert.ok(qol.includes('.rc-work-status-count,'));
+  assert.ok(qol.includes('display: block;'));
+  assert.ok(qol.includes('.rc-work-status-card[data-status="draft"]'));
+  assert.ok(qol.includes('.rc-work-status-card[data-status="scheduled"]'));
+  assert.ok(qol.includes('.rc-work-status-card[data-status="active"]'));
+  assert.ok(qol.includes('.rc-work-status-card[data-status="completed"]'));
+});
+
+test('individualized-assignment guidance is tucked into the hidden builder instead of the default workspace', () => {
+  assert.ok(qol.includes('function tuckIndividualizedInfo'));
+  assert.ok(qol.includes('rc-work-individualized-info'));
+  assert.ok(qol.includes('composer.insertBefore(card, form || null)'));
+  assert.ok(qol.includes('composer.hidden = true'));
+});
+
+test('legacy issued toggle and redundant workspace heading are retired from the polished surface', () => {
+  assert.ok(qol.includes('rc-work-legacy-issued-toggle'));
+  assert.ok(qol.includes('rc-work-workspace-heading'));
+  assert.ok(qol.includes('display: none !important;'));
+});
+
+test('filters appear before the empty state so the workspace keeps the approved table-first hierarchy', () => {
+  assert.ok(qol.includes('const emptyState = $("draftsEmpty")'));
+  assert.ok(qol.includes('draftSection.insertBefore(bar, emptyState || tableWrap || null)'));
+});
+
+test('expanded Assignment Builder keeps the command-center visual language inside Work', () => {
+  assert.ok(qol.includes('scroll-margin-top: calc(var(--tc-topbar-h) + 14px)'));
+  assert.ok(qol.includes('#rcWorkComposer #workDraftForm'));
+  assert.ok(qol.includes(':has(#assignmentFile)'));
+  assert.ok(qol.includes('#rcWorkComposer #assignmentFileName'));
+  assert.ok(qol.includes('#rcWorkComposer #mappingFileName'));
+  assert.ok(qol.includes('input[type="file"].tc-file-input::file-selector-button'));
+});
+
+test('final builder polish keeps create/import mode focused without changing Work logic', () => {
+  assert.ok(qol.includes('Final Assignment Builder polish — Work-only, presentation-only'));
+  assert.ok(qol.includes('main.tc-main:has(#rcWorkComposer:not([hidden])) .rc-work-workspace'));
+  assert.ok(qol.includes('position: sticky;'));
+  assert.ok(qol.includes('content: "Assignment details";'));
+  assert.ok(qol.includes('content: "Content & mapping";'));
+  assert.ok(qol.includes('font-size: 0 !important;'));
+  assert.ok(qol.includes('#rcWorkComposer #assignmentFileName'));
+  assert.ok(qol.includes('#rcWorkComposer #mappingFileName'));
+  assert.ok(qol.includes('min-height: 56px !important;'));
+});
+
+test('loader clears edit state before Import Assignment starts', () => {
+  assert.ok(qolLoader.includes('installImportResetGuard'));
+  assert.ok(qolLoader.includes('Import Assignment'));
+  assert.ok(qolLoader.includes('btnCancelEdit'));
+  assert.ok(qolLoader.includes('getComputedStyle(cancel).display !== "none"'));
+});
+
+test('loader narrows the Work tbody observer so decoration cannot self-loop', () => {
+  assert.ok(qolLoader.includes('WorkScopedMutationObserver'));
+  assert.ok(qolLoader.includes('target?.id === "draftsTbody"'));
+  assert.ok(qolLoader.includes('subtree: false'));
+  assert.ok(qolLoader.includes('observer.observe(tbody, { childList: true })'));
+});
+
+test('loader preserves full class membership for individualized batch filtering', () => {
+  assert.ok(qolLoader.includes('orderedBatches'));
+  assert.ok(qolLoader.includes('rcWorkClasses'));
+  assert.ok(qolLoader.includes('classes.includes(classFilter)'));
+  assert.ok(qolLoader.includes('correctMultiClassFiltering'));
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
