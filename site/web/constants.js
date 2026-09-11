@@ -64,7 +64,7 @@ if (
   typeof window !== "undefined" &&
   window.location.pathname.startsWith("/teacher/review")
 ) {
-  import("/web/tc-review-qol.js?v=20260911-review-command-center").catch((error) => {
+  import("/web/tc-review-qol.js?v=20260911-review-polish").catch((error) => {
     console.warn("[review] Could not load Review command-center presentation:", error);
   });
 }
