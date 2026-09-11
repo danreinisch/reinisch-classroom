@@ -59,12 +59,16 @@ if (
 }
 
 // Review-only presentation bootstrap. The command-center layer reads Review data
-// and delegates all scoring/finalization actions back to tc-review.js.
+// and delegates all scoring/finalization actions back to tc-review.js. The final
+// polish layer runs only after that command center exists so it can safely tighten
+// collapsed-sidebar geometry and reconcile the nav badge to Review's lifecycle.
 if (
   typeof window !== "undefined" &&
   window.location.pathname.startsWith("/teacher/review")
 ) {
-  import("/web/tc-review-qol.js?v=20260911-review-polish").catch((error) => {
-    console.warn("[review] Could not load Review command-center presentation:", error);
-  });
+  import("/web/tc-review-qol.js?v=20260911-review-polish")
+    .then(() => import("/web/tc-review-final-polish.js?v=20260911-review-final-polish"))
+    .catch((error) => {
+      console.warn("[review] Could not load Review command-center presentation:", error);
+    });
 }
