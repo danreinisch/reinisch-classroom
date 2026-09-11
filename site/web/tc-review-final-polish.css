@@ -1,0 +1,68 @@
+.rv-qol-enabled .tc-main{overflow-x:clip}
+
+@media (min-width:1180px){
+  html.tc-collapsed .rv-qol-command{
+    width:min(100%,1320px);
+    margin-inline:auto;
+  }
+
+  html.tc-collapsed .rv-qol-pagehead{
+    min-height:112px;
+    padding-inline:4px;
+  }
+
+  html.tc-collapsed .rv-qol-home-grid{
+    grid-template-columns:minmax(188px,218px) minmax(0,1fr);
+    gap:14px;
+  }
+
+  html.tc-collapsed .rv-qol-folders{
+    padding:9px;
+  }
+
+  html.tc-collapsed .rv-qol-folder-button,
+  html.tc-collapsed .rv-qol-class-button{
+    padding:8px 7px;
+  }
+
+  html.tc-collapsed .rv-qol-toolbar{
+    grid-template-columns:minmax(280px,1fr) minmax(145px,160px) minmax(130px,142px) auto;
+  }
+
+  html.tc-collapsed .rv-qol-assignment-card{
+    grid-template-columns:minmax(320px,1.45fr) minmax(175px,.8fr) 100px auto;
+    gap:12px;
+  }
+
+  html.tc-collapsed .rv-qol-assignment-view{
+    width:min(100%,1180px);
+    margin-inline:auto;
+  }
+}
+
+html.tc-collapsed .tc-nav a[data-href="/teacher/review/"]{
+  position:relative;
+}
+
+html.tc-collapsed .tc-nav a[data-href="/teacher/review/"] .tc-badge{
+  position:absolute;
+  top:5px;
+  right:5px;
+  min-width:17px;
+  height:17px;
+  padding:0 4px;
+  display:grid;
+  place-items:center;
+  line-height:1;
+  font-size:10px;
+  margin:0;
+}
+
+.rv-qol-empty.is-positive::after{
+  content:"🐾";
+  display:block;
+  margin-top:10px;
+  font-size:18px;
+  opacity:.28;
+  filter:saturate(.7);
+}
