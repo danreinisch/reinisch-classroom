@@ -222,7 +222,8 @@ test('stronger computer levels find a forced win in the tactical positions', () 
   for (const item of EXERCISES.filter(x => x.kind === 'fork')) {
     const game = replay(item.moves);
     for (const level of ['friendly','challenge']) {
-      const next = drop(game, chooseMove(game,level,800));
+      // Disable deliberate difficulty variance here; this test isolates search strength.
+      const next = drop(game, chooseMove(game,level,800,() => .9));
       for (const reply of legalColumns(next)) {
         const response = drop(next,reply);
         assert.equal(response.winner,0);
