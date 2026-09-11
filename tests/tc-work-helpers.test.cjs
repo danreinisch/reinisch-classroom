@@ -320,8 +320,6 @@ console.log('\n--- Work command-center source contract ---');
 
 const qolPath = path.join(__dirname, '../site/web/tc-work-qol.js');
 const qol = fs.readFileSync(qolPath, 'utf8');
-const teacherShellPath = path.join(__dirname, '../site/web/teacher-shell.css');
-const teacherShell = fs.readFileSync(teacherShellPath, 'utf8');
 
 test('approved Work command-center launch actions are present', () => {
   assert.ok(qol.includes('New Assignment'));
@@ -402,15 +400,13 @@ test('filters appear before the empty state so the workspace keeps the approved 
   assert.ok(qol.includes('draftSection.insertBefore(bar, emptyState || tableWrap || null)'));
 });
 
-test('expanded Assignment Builder keeps the command-center visual language without changing the engine', () => {
-  assert.ok(teacherShell.includes('Work: polished Assignment Builder'));
-  assert.ok(teacherShell.includes('#rcWorkComposer {'));
-  assert.ok(teacherShell.includes('scroll-margin-top: calc(var(--tc-topbar-h) + 14px)'));
-  assert.ok(teacherShell.includes('#rcWorkComposer #workDraftForm'));
-  assert.ok(teacherShell.includes(':has(#assignmentFile)'));
-  assert.ok(teacherShell.includes('#rcWorkComposer #assignmentFileName'));
-  assert.ok(teacherShell.includes('#rcWorkComposer #mappingFileName'));
-  assert.ok(teacherShell.includes('input[type="file"].tc-file-input::file-selector-button'));
+test('expanded Assignment Builder keeps the command-center visual language inside Work', () => {
+  assert.ok(qol.includes('scroll-margin-top: calc(var(--tc-topbar-h) + 14px)'));
+  assert.ok(qol.includes('#rcWorkComposer #workDraftForm'));
+  assert.ok(qol.includes(':has(#assignmentFile)'));
+  assert.ok(qol.includes('#rcWorkComposer #assignmentFileName'));
+  assert.ok(qol.includes('#rcWorkComposer #mappingFileName'));
+  assert.ok(qol.includes('input[type="file"].tc-file-input::file-selector-button'));
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
