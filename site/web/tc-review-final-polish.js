@@ -101,6 +101,33 @@
     }
   }
 
+  function targetHeader() {
+    if (!pendingFocus?.id) return null;
+    const safeId = window.CSS?.escape ? CSS.escape(pendingFocus.id) : pendingFocus.id;
+    return document.querySelector(
+      `#rvQueue .rv-submission-header[data-submission-id="${safeId}"]`
+    );
+  }
+
+  function forceLegacyAllClasses() {
+    const allClasses = [...document.querySelectorAll('#rvClassFilters .rv-filter-btn')]
+      .find(button => button.dataset.class === 'All Classes');
+    if (allClasses && !allClasses.classList.contains('active')) allClasses.click();
+  }
+
+  function primeReadOnlyFocus() {
+    setTimeout(() => {
+      if (!pendingFocus || targetHeader()) return;
+      forceLegacyAllClasses();
+    }, 140);
+
+    setTimeout(() => {
+      if (!pendingFocus || targetHeader()) return;
+      chooseTargetAssignmentOption();
+      forceLegacyAllClasses();
+    }, 280);
+  }
+
   function captureFocusIntent(root) {
     if (root.dataset.rvFinalFocusCapture === 'true') return;
     root.dataset.rvFinalFocusCapture = 'true';
@@ -114,6 +141,7 @@
         assignmentTitle: root.querySelector('.rv-qol-assignment-head h1')?.textContent?.trim() || '',
       };
       focusRepairStage = 0;
+      primeReadOnlyFocus();
     }, true);
   }
 
@@ -154,9 +182,7 @@
     const queue = document.getElementById('rvQueue');
     if (!queue) return;
 
-    const target = queue.querySelector(
-      `.rv-submission-header[data-submission-id="${window.CSS?.escape ? CSS.escape(pendingFocus.id) : pendingFocus.id}"]`
-    );
+    const target = targetHeader();
     if (target) {
       const item = target.closest('.rv-submission-item');
       if (target.getAttribute('aria-expanded') !== 'true') target.click();
@@ -171,17 +197,14 @@
 
     if (focusRepairStage === 0) {
       focusRepairStage = 1;
-      const allClasses = [...document.querySelectorAll('#rvClassFilters .rv-filter-btn')]
-        .find(button => button.dataset.class === 'All Classes');
-      if (allClasses && !allClasses.classList.contains('active')) {
-        allClasses.click();
-        return;
-      }
+      forceLegacyAllClasses();
+      if (targetHeader()) return;
     }
 
     if (focusRepairStage <= 1) {
       focusRepairStage = 2;
       chooseTargetAssignmentOption();
+      forceLegacyAllClasses();
     }
   }
 
