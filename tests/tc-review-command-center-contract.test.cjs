@@ -13,19 +13,23 @@ const qol = read('site/web/tc-review-qol.js');
 const css = read('site/web/tc-review-qol.css');
 const finalPolish = read('site/web/tc-review-final-polish.js');
 const finalCss = read('site/web/tc-review-final-polish.css');
+const readShare = read('site/web/tc-review-read-share.js');
 const core = read('site/web/tc-review.js');
 
 console.log('--- Review command-center presentation contract ---');
 
 assert.ok(
   constants.includes('window.location.pathname.startsWith("/teacher/review")') &&
+    constants.includes('/web/tc-review-read-share.js?v=20260911-review-read-share2') &&
     constants.includes('/web/tc-review-qol.js?v=20260911-review-polish') &&
-    constants.includes('/web/tc-review-final-polish.js?v=20260911-review-final-polish'),
-  'Review must load the versioned command-center and final-polish layers only on Review pages'
+    constants.includes('/web/tc-review-final-polish.js?v=20260911-review-final-polish3'),
+  'Review must load the versioned startup-sharing, command-center, and final-polish layers only on Review pages'
 );
 assert.ok(
-  constants.includes('.then(() => import("/web/tc-review-final-polish.js?v=20260911-review-final-polish"))'),
-  'final Review polish must load after the command-center layer exists'
+  constants.includes('setTimeout(() => {') &&
+    constants.indexOf('tc-review-read-share.js') < constants.indexOf('setTimeout(() => {') &&
+    constants.indexOf('tc-review-qol.js') > constants.indexOf('setTimeout(() => {'),
+  'Review startup sharing must install before the presentation layer is deferred one task'
 );
 assert.ok(
   qol.includes('/web/tc-review-command-model.js?v=20260911-review-polish'),
@@ -184,6 +188,39 @@ assert.ok(
   'Finalize & Next must advance even when finalized submissions remain readable in the all-history data set'
 );
 console.log('✓ Finalize & Next handles retained finalized history correctly');
+
+console.log('--- Startup sharing, read-only View, and wording contract ---');
+
+for (const method of [
+  'listStudents',
+  'listAssignments',
+  'listSubmissions',
+  'listAssignmentInstances',
+]) {
+  assert.ok(readShare.includes(`'${method}'`), `startup sharing must cover ${method}`);
+}
+assert.ok(readShare.includes('SHARE_WINDOW_MS = 5000'));
+assert.ok(readShare.includes('await import(\'/web/data-adapter.js?v=2026082401\')'));
+for (const forbidden of ['teacher-review-save', 'finalizeSubmission', 'setSubmissionInProgress', '.from(']) {
+  assert.ok(!readShare.includes(forbidden), `startup sharing must remain read-only: ${forbidden}`);
+}
+console.log('✓ legacy Review and command center share only their matching first read');
+
+for (const marker of [
+  'Resubmit to Student',
+  'Send this finalized assignment back to the student?',
+  'data-rv-focus',
+  'repairReadOnlyFocus',
+  "button.dataset.class === 'All Classes'",
+  "document.getElementById('rvAssignmentFilter')",
+]) {
+  assert.ok(finalPolish.includes(marker), `missing finalized-view safeguard: ${marker}`);
+}
+assert.ok(
+  !finalPolish.includes('teacher-review-save'),
+  'finalized View repair must delegate state changes to the existing Review engine'
+);
+console.log('✓ View stays read-only while Resubmit to Student is the explicit state-changing action');
 
 console.log('--- Collapsed-sidebar and badge reconciliation contract ---');
 
