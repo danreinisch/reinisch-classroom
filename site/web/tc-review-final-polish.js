@@ -86,12 +86,23 @@
     if (heading.textContent !== desired) heading.textContent = desired;
   }
 
+  function enforceFinalizedReadOnly() {
+    const selected = document.querySelector('#rvQueue .rv-submission-item.rv-qol-selected');
+    if (!selected || selected.dataset.rvQolStatus !== 'finalized') return;
+    selected.querySelectorAll('input, textarea, select, button').forEach(control => {
+      if (control.classList.contains('rv-btn-reopen')) return;
+      control.disabled = true;
+      control.setAttribute('aria-disabled', 'true');
+    });
+  }
+
   function polishResubmitButton(root) {
     const button = root?.querySelector('[data-rv-proxy="reopen"]');
-    if (!button) return;
-    if (button.textContent !== 'Resubmit to Student') button.textContent = 'Resubmit to Student';
-    button.setAttribute('aria-label', 'Resubmit this finalized assignment to the student');
-    button.title = 'Moves this assignment back to In Progress for the student.';
+    if (button) {
+      if (button.textContent !== 'Resubmit to Student') button.textContent = 'Resubmit to Student';
+      button.setAttribute('aria-label', 'Resubmit this finalized assignment to the student');
+      button.title = 'Moves this assignment back to In Progress for the student.';
+    }
 
     const selected = document.querySelector('#rvQueue .rv-submission-item.rv-qol-selected');
     const legacyButton = selected?.querySelector('.rv-btn-reopen');
@@ -99,6 +110,7 @@
       legacyButton.textContent = '↩ Resubmit to Student';
       legacyButton.setAttribute('aria-label', 'Resubmit this finalized assignment to the student');
     }
+    enforceFinalizedReadOnly();
   }
 
   function targetHeader() {
