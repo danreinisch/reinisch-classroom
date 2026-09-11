@@ -1,4 +1,4 @@
-/* BEGIN rc-tc-work-qol v2 */
+/* BEGIN rc-tc-work-qol v3 */
 (() => {
   "use strict";
 
@@ -8,14 +8,17 @@
   const DRAFT_STORAGE_KEY = "rc_tc_work_drafts_v1";
   const SHOW_ISSUED_KEY = "rc_tc_work_show_issued_v1";
   const TERMINAL_STATUSES = new Set(["Graded", "Reviewed"]);
-  const CLASS_LABELS = [
-    "Language Arts 1 SC",
-    "Language Arts 2 SC",
-    "Language Arts 3 SC",
-    "Language Arts 4 SC",
-    "Life Skills Language Arts SC",
-    "Transitional Skills",
-  ];
+
+  const ICONS = {
+    plus: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
+    upload: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
+    file: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="14" y2="17"></line></svg>',
+    clock: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>',
+    users: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+    archive: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>',
+    bulb: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M8.7 14.8A7 7 0 1 1 15.3 14.8c-.8.7-1.3 1.6-1.3 2.2h-4c0-.6-.5-1.5-1.3-2.2z"></path></svg>',
+    settings: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.1 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.14.36.35.69.62.96.28.28.63.48 1.01.57H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51.47z"></path></svg>',
+  };
 
   const state = {
     search: "",
@@ -166,12 +169,8 @@
       batchId,
       drafts: bDrafts,
     })).sort((a, b) => {
-      const latestA = Math.max(
-        ...a.drafts.map((draft) => dateMs(draft.createdAt) || 0)
-      );
-      const latestB = Math.max(
-        ...b.drafts.map((draft) => dateMs(draft.createdAt) || 0)
-      );
+      const latestA = Math.max(...a.drafts.map((draft) => dateMs(draft.createdAt) || 0));
+      const latestB = Math.max(...b.drafts.map((draft) => dateMs(draft.createdAt) || 0));
       return latestB - latestA;
     });
 
@@ -237,6 +236,13 @@
     if (className) el.className = className;
     if (text !== undefined) el.textContent = text;
     return el;
+  }
+
+  function makeIcon(name, className) {
+    const span = makeEl("span", className || "");
+    span.innerHTML = ICONS[name] || "";
+    span.setAttribute("aria-hidden", "true");
+    return span;
   }
 
   function findClassSelect() {
@@ -322,109 +328,164 @@
     const style = document.createElement("style");
     style.id = "rcWorkCommandCenterStyles";
     style.textContent = `
+      main.tc-main > h1 {
+        margin-bottom: 4px !important;
+        letter-spacing: -0.025em;
+      }
+      main.tc-main > h1 + p {
+        margin-top: 0 !important;
+      }
+
       .rc-work-command-center {
-        margin: 18px 0 14px;
+        margin: 14px 0 12px;
         display: grid;
-        gap: 14px;
+        gap: 10px;
       }
       .rc-work-launch-row {
         display: grid;
-        grid-template-columns: minmax(210px, 255px) minmax(210px, 255px) 1fr;
-        gap: 12px;
+        grid-template-columns: minmax(210px, .88fr) minmax(210px, .88fr) minmax(360px, 2.1fr);
+        gap: 10px;
         align-items: stretch;
       }
       .rc-work-launch-btn,
       .rc-work-tip,
       .rc-work-status-card {
-        border: 1px solid rgba(134, 239, 172, .2);
-        background: linear-gradient(180deg, rgba(5, 54, 44, .88), rgba(3, 38, 33, .9));
+        border: 1px solid rgba(134, 239, 172, .24);
+        background: linear-gradient(180deg, rgba(4, 52, 44, .95), rgba(3, 38, 33, .96));
         color: inherit;
-        border-radius: 12px;
-        box-shadow: 0 16px 35px rgba(0,0,0,.12);
+        border-radius: 10px;
+        box-shadow: 0 12px 28px rgba(0,0,0,.18);
+        backdrop-filter: blur(13px);
+        -webkit-backdrop-filter: blur(13px);
       }
       .rc-work-launch-btn {
-        min-height: 62px;
-        padding: 0 18px;
+        appearance: none;
+        -webkit-appearance: none;
+        min-height: 58px;
+        padding: 0 16px;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 11px;
         cursor: pointer;
         font: inherit;
-        font-weight: 700;
+        font-weight: 750;
         text-align: left;
         transition: transform .15s ease, border-color .15s ease, background .15s ease;
       }
       .rc-work-launch-btn:hover {
         transform: translateY(-1px);
-        border-color: rgba(110, 231, 183, .5);
-        background: linear-gradient(180deg, rgba(11, 87, 67, .94), rgba(5, 57, 46, .94));
+        border-color: rgba(110, 231, 183, .58);
+        background: linear-gradient(180deg, rgba(9, 72, 57, .98), rgba(4, 48, 41, .98));
       }
       .rc-work-launch-btn.primary {
-        background: linear-gradient(180deg, rgba(21, 122, 78, .96), rgba(10, 86, 60, .96));
-        border-color: rgba(134, 239, 172, .5);
+        background: linear-gradient(180deg, rgba(22, 126, 82, .98), rgba(9, 89, 60, .98));
+        border-color: rgba(134, 239, 172, .58);
       }
       .rc-work-launch-icon {
+        flex: 0 0 auto;
         width: 34px;
         height: 34px;
-        border-radius: 9px;
+        border-radius: 8px;
         display: grid;
         place-items: center;
         background: rgba(255,255,255,.08);
-        font-size: 21px;
-        line-height: 1;
       }
       .rc-work-tip {
-        min-height: 62px;
-        padding: 11px 14px;
+        min-width: 0;
+        min-height: 58px;
+        padding: 9px 13px;
         display: flex;
         align-items: center;
-        gap: 12px;
-        color: rgba(235, 255, 247, .88);
+        gap: 10px;
+        color: rgba(239, 255, 248, .9);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+      .rc-work-tip .rc-work-launch-icon {
+        color: #f6d96b;
+        background: rgba(245, 190, 52, .1);
+      }
+      .rc-work-tip-copy {
+        min-width: 0;
+        flex: 1 1 auto;
       }
       .rc-work-tip strong {
         color: #fde68a;
-        display: block;
-        margin-bottom: 2px;
+        font-weight: 800;
       }
       .rc-work-tip a {
-        color: #a7f3d0;
-        font-weight: 700;
+        flex: 0 0 auto;
+        color: #b7f7d7;
+        font-weight: 750;
         white-space: nowrap;
       }
+
       .rc-work-status-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 10px;
       }
       .rc-work-status-card {
-        min-height: 88px;
-        padding: 13px 15px;
+        appearance: none;
+        -webkit-appearance: none;
+        min-width: 0;
+        min-height: 86px;
+        padding: 12px 14px;
         display: grid;
-        grid-template-columns: 42px 1fr auto;
+        grid-template-columns: 46px minmax(0, 1fr) auto;
         align-items: center;
-        gap: 10px;
+        gap: 11px;
         text-decoration: none;
         cursor: pointer;
         text-align: left;
         font: inherit;
+        overflow: hidden;
       }
       .rc-work-status-card:hover,
       .rc-work-status-card[aria-pressed="true"] {
-        border-color: rgba(110, 231, 183, .55);
-        background: linear-gradient(180deg, rgba(9, 74, 59, .94), rgba(3, 47, 40, .94));
+        transform: translateY(-1px);
+        box-shadow: 0 16px 32px rgba(0,0,0,.22);
       }
-      .rc-work-status-card[data-status="draft"] { border-color: rgba(248, 113, 113, .35); }
-      .rc-work-status-card[data-status="scheduled"] { border-color: rgba(250, 204, 21, .32); }
-      .rc-work-status-card[data-status="active"] { border-color: rgba(34, 211, 238, .3); }
-      .rc-work-status-card[data-status="completed"] { border-color: rgba(74, 222, 128, .3); }
+      .rc-work-status-card[data-status="draft"] {
+        color: #fff4f4;
+        border-color: rgba(248, 113, 113, .7);
+        background: linear-gradient(105deg, rgba(94, 36, 38, .94), rgba(45, 38, 36, .95));
+      }
+      .rc-work-status-card[data-status="scheduled"] {
+        color: #fffbea;
+        border-color: rgba(250, 204, 21, .55);
+        background: linear-gradient(105deg, rgba(82, 66, 21, .94), rgba(45, 48, 32, .95));
+      }
+      .rc-work-status-card[data-status="active"] {
+        color: #ecfeff;
+        border-color: rgba(34, 211, 238, .55);
+        background: linear-gradient(105deg, rgba(13, 75, 76, .94), rgba(20, 54, 50, .96));
+      }
+      .rc-work-status-card[data-status="completed"] {
+        color: #edfff2;
+        border-color: rgba(74, 222, 128, .5);
+        background: linear-gradient(105deg, rgba(20, 78, 49, .94), rgba(18, 53, 40, .96));
+      }
       .rc-work-status-icon {
-        width: 40px;
-        height: 40px;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
         display: grid;
         place-items: center;
-        background: rgba(255,255,255,.06);
-        font-size: 20px;
+        background: rgba(255,255,255,.08);
+      }
+      .rc-work-status-card[data-status="draft"] .rc-work-status-icon { color: #ff9b9b; background: rgba(248,113,113,.12); }
+      .rc-work-status-card[data-status="scheduled"] .rc-work-status-icon { color: #ffe277; background: rgba(250,204,21,.11); }
+      .rc-work-status-card[data-status="active"] .rc-work-status-icon { color: #65e9f5; background: rgba(34,211,238,.11); }
+      .rc-work-status-card[data-status="completed"] .rc-work-status-icon { color: #78efa5; background: rgba(74,222,128,.11); }
+      .rc-work-status-copy {
+        min-width: 0;
+        display: block;
+      }
+      .rc-work-status-title,
+      .rc-work-status-count,
+      .rc-work-status-sub {
+        display: block;
       }
       .rc-work-status-title {
         font-size: 12px;
@@ -433,68 +494,74 @@
       }
       .rc-work-status-count {
         margin-top: 2px;
-        font-size: 24px;
+        font-size: 23px;
         line-height: 1;
-        font-weight: 800;
+        font-weight: 850;
       }
       .rc-work-status-sub {
         margin-top: 4px;
-        color: var(--rc-ink-dim, rgba(255,255,255,.65));
-        font-size: 11px;
+        color: rgba(239, 255, 248, .68);
+        font-size: 10.5px;
+        line-height: 1.25;
       }
       .rc-work-status-arrow {
         font-size: 18px;
-        color: rgba(255,255,255,.62);
+        color: rgba(255,255,255,.65);
       }
 
       #rcWorkComposer[hidden] { display: none !important; }
       #rcWorkComposer {
-        margin-top: 14px !important;
+        margin-top: 12px !important;
         border-color: rgba(110, 231, 183, .3);
-        box-shadow: 0 20px 48px rgba(0,0,0,.18);
+        background: rgba(3, 38, 33, .96) !important;
+        box-shadow: 0 20px 48px rgba(0,0,0,.22);
       }
-      .rc-work-composer-close {
-        margin-left: 4px;
+      .rc-work-composer-close { margin-left: 4px; }
+      .rc-work-individualized-info {
+        margin: 12px 0 14px !important;
+        padding: 11px 14px !important;
+        background: rgba(95, 69, 145, .1) !important;
+        border-color: rgba(167, 139, 250, .24) !important;
       }
 
       .rc-work-workspace {
         position: relative;
+        margin-top: 12px !important;
+        padding: 12px !important;
+        border-radius: 11px !important;
+        border-color: rgba(110, 231, 183, .3) !important;
+        background: linear-gradient(180deg, rgba(3, 50, 43, .96), rgba(2, 38, 34, .97)) !important;
+        box-shadow: 0 18px 44px rgba(0,0,0,.17);
       }
-      .rc-work-workspace > .work-row:first-child {
-        margin-bottom: 10px;
-      }
-      .rc-work-workspace-title {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .rc-work-workspace-title small {
-        font-size: 12px;
-        font-weight: 400;
-        color: var(--rc-ink-dim, rgba(255,255,255,.62));
+      .rc-work-workspace-heading,
+      .rc-work-legacy-issued-toggle {
+        display: none !important;
       }
       .rc-work-filterbar {
         display: grid;
-        grid-template-columns: minmax(240px, 1fr) minmax(150px, 190px) minmax(150px, 190px) auto;
-        gap: 10px;
+        grid-template-columns: minmax(300px, 1fr) minmax(145px, 180px) minmax(145px, 180px) auto;
+        gap: 9px;
         align-items: center;
-        margin: 4px 0 12px;
+        margin: 0 0 9px;
       }
       .rc-work-filterbar input,
       .rc-work-filterbar select {
         width: 100%;
-        min-height: 40px;
-        border-radius: 9px;
-        border: 1px solid rgba(167, 243, 208, .18);
-        background: rgba(2, 29, 26, .76);
+        min-height: 39px;
+        border-radius: 8px;
+        border: 1px solid rgba(167, 243, 208, .2);
+        background: rgba(2, 27, 25, .82);
         color: inherit;
-        padding: 9px 11px;
+        padding: 8px 10px;
         outline: none;
+        font: inherit;
+        font-size: 12px;
       }
+      .rc-work-filterbar input::placeholder { color: rgba(231,255,246,.48); }
       .rc-work-filterbar input:focus,
       .rc-work-filterbar select:focus {
-        border-color: rgba(110, 231, 183, .6);
-        box-shadow: 0 0 0 3px rgba(16,185,129,.12);
+        border-color: rgba(110, 231, 183, .62);
+        box-shadow: 0 0 0 3px rgba(16,185,129,.11);
       }
       .rc-work-tools {
         position: relative;
@@ -503,14 +570,16 @@
       .rc-work-tools > summary {
         list-style: none;
         cursor: pointer;
-        min-height: 40px;
+        min-height: 39px;
         display: inline-flex;
         align-items: center;
         gap: 7px;
-        padding: 8px 12px;
-        border-radius: 9px;
-        border: 1px solid rgba(167,243,208,.18);
-        background: rgba(2,29,26,.76);
+        padding: 8px 11px;
+        border-radius: 8px;
+        border: 1px solid rgba(167,243,208,.2);
+        background: rgba(2,27,25,.82);
+        font-size: 12px;
+        white-space: nowrap;
       }
       .rc-work-tools > summary::-webkit-details-marker { display: none; }
       .rc-work-tools-menu,
@@ -521,10 +590,10 @@
         z-index: 60;
         min-width: 210px;
         padding: 7px;
-        border-radius: 10px;
+        border-radius: 9px;
         border: 1px solid rgba(167,243,208,.22);
-        background: rgba(3, 31, 28, .98);
-        box-shadow: 0 18px 40px rgba(0,0,0,.35);
+        background: rgba(3, 31, 28, .99);
+        box-shadow: 0 18px 40px rgba(0,0,0,.38);
       }
       .rc-work-tools-menu .work-btn,
       .rc-work-row-menu .work-btn {
@@ -537,9 +606,8 @@
         padding: 9px 10px;
       }
       .rc-work-tools-menu .work-btn:hover,
-      .rc-work-row-menu .work-btn:hover {
-        background: rgba(255,255,255,.08);
-      }
+      .rc-work-row-menu .work-btn:hover { background: rgba(255,255,255,.08); }
+
       .rc-work-row-menu-wrap {
         position: relative;
         display: inline-block;
@@ -570,71 +638,83 @@
       .rc-work-action-cell .work-btn {
         margin-left: 0 !important;
         padding: 7px 10px;
-        font-size: 12px;
+        border-radius: 8px;
+        font-size: 11.5px;
       }
+
+      .rc-work-workspace .work-tablewrap {
+        margin-top: 0 !important;
+        border-radius: 9px;
+        border-color: rgba(167,243,208,.16);
+        background: rgba(1, 24, 23, .18);
+      }
+      #draftsTable { min-width: 900px; }
+      #draftsTable th,
+      #draftsTable td {
+        padding: 9px 10px;
+      }
+      #draftsTable th {
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 11px;
+        font-weight: 750;
+        color: rgba(236, 253, 245, .78);
+        background: rgba(1, 24, 23, .36);
+      }
+      #draftsTable tbody tr:hover td { background: rgba(255,255,255,.045); }
       .rc-work-status-cell,
-      .rc-work-students-cell {
-        white-space: nowrap;
-      }
+      .rc-work-students-cell { white-space: nowrap; }
       .rc-work-status-pill {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 72px;
+        min-width: 70px;
         padding: 4px 9px;
         border-radius: 999px;
-        font-size: 11px;
+        font-size: 10.5px;
         font-weight: 800;
         border: 1px solid rgba(255,255,255,.12);
       }
-      .rc-work-status-pill.draft { color: #fca5a5; background: rgba(239,68,68,.12); }
-      .rc-work-status-pill.scheduled { color: #fde68a; background: rgba(245,158,11,.12); }
-      .rc-work-status-pill.active { color: #a7f3d0; background: rgba(16,185,129,.14); }
+      .rc-work-status-pill.draft { color: #ffb4b4; background: rgba(239,68,68,.13); }
+      .rc-work-status-pill.scheduled { color: #ffe58a; background: rgba(245,158,11,.14); }
+      .rc-work-status-pill.active { color: #9df4d4; background: rgba(16,185,129,.14); }
       .rc-work-status-pill.completed { color: #d1d5db; background: rgba(107,114,128,.16); }
       .rc-work-students-main {
-        font-weight: 700;
-        font-size: 12px;
+        font-weight: 750;
+        font-size: 11.5px;
       }
       .rc-work-students-sub {
         margin-top: 2px;
-        font-size: 10px;
-        color: var(--rc-ink-dim, rgba(255,255,255,.62));
+        font-size: 9.5px;
+        color: rgba(236,253,245,.56);
       }
-      .rc-work-batch-row td {
-        background: rgba(10, 77, 62, .17) !important;
-      }
-      .rc-work-child-row td {
-        background: rgba(0,0,0,.06);
-      }
-      .rc-work-completed-note {
-        padding: 10px 12px;
-        margin-top: 8px;
-        border-top: 1px solid rgba(255,255,255,.08);
-        color: var(--rc-ink-dim, rgba(255,255,255,.62));
-        font-size: 12px;
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        align-items: center;
-      }
-      .rc-work-completed-note a {
-        color: #a7f3d0;
-        font-weight: 700;
-      }
+      .rc-work-batch-row td { background: rgba(8, 67, 56, .17) !important; }
+      .rc-work-child-row td { background: rgba(0,0,0,.055); }
       .rc-work-filter-empty {
-        margin: 14px 0 2px;
-        padding: 18px;
-        border: 1px dashed rgba(167,243,208,.2);
-        border-radius: 10px;
+        margin: 0 0 8px;
+        padding: 16px;
+        border: 1px dashed rgba(167,243,208,.18);
+        border-radius: 8px;
         text-align: center;
-        color: var(--rc-ink-dim, rgba(255,255,255,.62));
+        color: rgba(236,253,245,.58);
+        font-size: 12px;
       }
+      .rc-work-filter-empty[hidden] { display: none !important; }
+      #draftsEmpty {
+        margin: 0 !important;
+        padding: 28px 16px 24px !important;
+        min-height: 0 !important;
+        border-top: 1px solid rgba(167,243,208,.08);
+        color: rgba(236,253,245,.58);
+      }
+      #draftsEmpty svg { width: 28px; height: 28px; }
+      .rc-work-completed-note[hidden] { display: none !important; }
 
-      @media (max-width: 1100px) {
+      @media (max-width: 1180px) {
         .rc-work-launch-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .rc-work-tip { grid-column: 1 / -1; }
         .rc-work-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .rc-work-filterbar { grid-template-columns: 1fr 1fr; }
+        .rc-work-filterbar { grid-template-columns: minmax(240px, 1fr) 1fr; }
         .rc-work-tools { justify-self: stretch; }
         .rc-work-tools > summary { justify-content: center; width: 100%; }
       }
@@ -642,7 +722,9 @@
         .rc-work-launch-row,
         .rc-work-status-grid,
         .rc-work-filterbar { grid-template-columns: 1fr; }
-        .rc-work-status-card { min-height: 72px; }
+        .rc-work-tip { align-items: flex-start; flex-wrap: wrap; }
+        .rc-work-tip a { margin-left: 44px; }
+        .rc-work-status-card { min-height: 76px; }
         .rc-work-tools { justify-self: stretch; }
         .rc-work-status-cell,
         .rc-work-students-cell { display: none; }
@@ -650,6 +732,20 @@
       }
     `;
     document.head.appendChild(style);
+  }
+
+  function tuckIndividualizedInfo(main, composer) {
+    const card = Array.from(main.children).find(
+      (node) =>
+        node !== composer &&
+        node.classList?.contains("work-card") &&
+        String(node.textContent || "").includes("SPED / Individualized Assignments")
+    );
+    if (!card) return;
+
+    card.classList.add("rc-work-individualized-info");
+    const form = composer.querySelector("form");
+    composer.insertBefore(card, form || null);
   }
 
   function openComposer(mode = "new") {
@@ -744,11 +840,11 @@
     if (!cell) return;
     cell.replaceChildren();
     const main = makeEl("div", "", timing.release || "—");
-    main.style.fontSize = "12px";
+    main.style.fontSize = "11.5px";
     cell.appendChild(main);
     if (timing.due) {
       const sub = makeEl("div", "work-subtle", timing.due);
-      sub.style.fontSize = "10px";
+      sub.style.fontSize = "9.5px";
       sub.style.marginTop = "2px";
       cell.appendChild(sub);
     }
@@ -758,13 +854,10 @@
     if (!cell) return;
     cell.replaceChildren();
 
-    let total = progress.total || draftCount || 0;
-    const main = makeEl(
-      "div",
-      "rc-work-students-main",
-      total > 0 ? String(total) : "—"
+    const total = progress.total || draftCount || 0;
+    cell.appendChild(
+      makeEl("div", "rc-work-students-main", total > 0 ? String(total) : "—")
     );
-    cell.appendChild(main);
 
     let detail = "";
     if (status === "active" || status === "completed") {
@@ -775,8 +868,7 @@
             : `${progress.reviewed} reviewed`;
       }
     } else if (draftCount > 1) {
-      const statuses = status === "scheduled" ? "scheduled" : "student drafts";
-      detail = `${draftCount} ${statuses}`;
+      detail = `${draftCount} ${status === "scheduled" ? "scheduled" : "student drafts"}`;
     }
 
     if (detail) cell.appendChild(makeEl("div", "rc-work-students-sub", detail));
@@ -809,7 +901,6 @@
     for (const button of buttons) {
       const label = norm(button.textContent);
       button.style.marginLeft = "0";
-
       let isPrimary = false;
 
       if (kind === "batch") {
@@ -833,11 +924,9 @@
         } else if (label === "issue") {
           setButtonLabel(button, "Issue Now");
         }
-      } else if (status === "active") {
-        if (label === "manage") {
-          setButtonLabel(button, "View Progress");
-          isPrimary = true;
-        }
+      } else if (status === "active" && label === "manage") {
+        setButtonLabel(button, "View Progress");
+        isPrimary = true;
       }
 
       if (isPrimary) primary.appendChild(button);
@@ -896,7 +985,6 @@
       row.insertBefore(statusCell, actionCell);
       row.insertBefore(timingCell, actionCell);
       row.insertBefore(studentsCell, actionCell);
-
       row.dataset.rcWorkStructure = "1";
     }
 
@@ -942,7 +1030,6 @@
 
       const releaseCell = cells[3];
       const actionCell = cells[4];
-
       const statusCell = makeEl("td", "rc-work-status-cell rc-work-added-col");
       const studentsCell = makeEl("td", "rc-work-students-cell rc-work-added-col");
 
@@ -1111,13 +1198,6 @@
       if (count) count.textContent = String(counts[status]);
     }
 
-    const completedNote = $("rcWorkCompletedNote");
-    if (completedNote) {
-      completedNote.hidden = counts.completed === 0;
-      const count = completedNote.querySelector("[data-completed-count]");
-      if (count) count.textContent = String(counts.completed);
-    }
-
     document
       .querySelectorAll("[data-work-summary-filter]")
       .forEach((button) => {
@@ -1146,9 +1226,7 @@
     clearTimeout(state.refreshTimer);
     state.refreshTimer = setTimeout(() => {
       refreshWorkspace();
-      if (Date.now() - state.lastLifecycleRefresh > 2000) {
-        refreshLifecycle();
-      }
+      if (Date.now() - state.lastLifecycleRefresh > 2000) refreshLifecycle();
     }, 80);
   }
 
@@ -1173,7 +1251,7 @@
     details.className = "rc-work-tools";
 
     const summary = document.createElement("summary");
-    summary.textContent = "⚙ Workspace Tools";
+    summary.innerHTML = `${ICONS.settings}<span>Workspace Tools</span>`;
     details.appendChild(summary);
 
     const menu = makeEl("div", "rc-work-tools-menu");
@@ -1232,9 +1310,7 @@
     });
     statusFilter.addEventListener("change", () => {
       state.statusFilter = statusFilter.value;
-      document
-        .querySelectorAll("[data-work-summary-filter]")
-        .forEach((button) => button.setAttribute("aria-pressed", "false"));
+      updateSummary();
       applyFilters();
     });
 
@@ -1242,10 +1318,14 @@
 
     const showIssued = $("showIssuedToggle");
     const showIssuedLabel = showIssued?.closest("label");
-    if (showIssuedLabel) showIssuedLabel.hidden = true;
+    if (showIssuedLabel) {
+      showIssuedLabel.classList.add("rc-work-legacy-issued-toggle");
+      showIssuedLabel.hidden = true;
+    }
 
     const tableWrap = draftSection.querySelector(".work-tablewrap");
-    draftSection.insertBefore(bar, tableWrap || null);
+    const emptyState = $("draftsEmpty");
+    draftSection.insertBefore(bar, emptyState || tableWrap || null);
 
     const filterEmpty = makeEl(
       "div",
@@ -1254,7 +1334,33 @@
     );
     filterEmpty.id = "rcWorkFilterEmpty";
     filterEmpty.hidden = true;
-    draftSection.insertBefore(filterEmpty, tableWrap || null);
+    draftSection.insertBefore(filterEmpty, emptyState || tableWrap || null);
+  }
+
+  function buildStatusCard(status, iconName, title, sub) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "rc-work-status-card";
+    card.dataset.status = status;
+    card.dataset.workSummaryFilter = status;
+    card.setAttribute("aria-pressed", "false");
+
+    const copy = makeEl("span", "rc-work-status-copy");
+    copy.appendChild(makeEl("span", "rc-work-status-title", title));
+    const count = makeEl("span", "rc-work-status-count", "0");
+    count.id = `rcWorkCount-${status}`;
+    copy.appendChild(count);
+    copy.appendChild(makeEl("span", "rc-work-status-sub", sub));
+
+    card.append(makeIcon(iconName, "rc-work-status-icon"), copy);
+    card.addEventListener("click", () => {
+      state.statusFilter = state.statusFilter === status ? "all" : status;
+      const select = $("rcWorkStatusFilter");
+      if (select) select.value = state.statusFilter;
+      updateSummary();
+      applyFilters();
+    });
+    return card;
   }
 
   function buildCommandCenter(main, subtitle, composer, draftSection) {
@@ -1269,6 +1375,7 @@
 
     composer.id = "rcWorkComposer";
     composer.hidden = true;
+    tuckIndividualizedInfo(main, composer);
 
     const composerHeader = composer.querySelector(".work-row");
     if (composerHeader) {
@@ -1291,92 +1398,58 @@
     const newButton = document.createElement("button");
     newButton.type = "button";
     newButton.className = "rc-work-launch-btn primary";
-    newButton.innerHTML =
-      '<span class="rc-work-launch-icon" aria-hidden="true">＋</span><span>New Assignment</span>';
+    newButton.append(makeIcon("plus", "rc-work-launch-icon"), document.createTextNode("New Assignment"));
     newButton.addEventListener("click", () => openComposer("new"));
 
     const importButton = document.createElement("button");
     importButton.type = "button";
     importButton.className = "rc-work-launch-btn";
-    importButton.innerHTML =
-      '<span class="rc-work-launch-icon" aria-hidden="true">⇧</span><span>Import Assignment</span>';
+    importButton.append(makeIcon("upload", "rc-work-launch-icon"), document.createTextNode("Import Assignment"));
     importButton.addEventListener("click", () => openComposer("import"));
 
     const tip = makeEl("div", "rc-work-tip");
-    tip.innerHTML =
-      '<span class="rc-work-launch-icon" aria-hidden="true">💡</span><span><strong>Completed work clears the runway.</strong>Once every student result is reviewed, the assignment leaves Work and remains available in Library.</span><a href="/teacher/library/">Open Library →</a>';
+    const tipCopy = makeEl("span", "rc-work-tip-copy");
+    tipCopy.innerHTML =
+      '<strong>Tip:</strong> Completed assignments move to Library once all student work has been reviewed.';
+    const libraryLink = makeEl("a", "", "Open Library →");
+    libraryLink.href = "/teacher/library/";
+    tip.append(makeIcon("bulb", "rc-work-launch-icon"), tipCopy, libraryLink);
 
     launchRow.append(newButton, importButton, tip);
 
     const statusGrid = makeEl("div", "rc-work-status-grid");
-    const cards = [
-      ["draft", "▤", "Drafts", "Not yet issued"],
-      ["scheduled", "◷", "Scheduled", "Waiting for automatic release"],
-      ["active", "◎", "Active", "Issued · student work in progress"],
-    ];
-
-    for (const [status, icon, title, sub] of cards) {
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "rc-work-status-card";
-      card.dataset.status = status;
-      card.dataset.workSummaryFilter = status;
-      card.setAttribute("aria-pressed", "false");
-
-      const iconEl = makeEl("span", "rc-work-status-icon", icon);
-      iconEl.setAttribute("aria-hidden", "true");
-
-      const text = makeEl("span", "");
-      text.appendChild(makeEl("span", "rc-work-status-title", title));
-      const count = makeEl("span", "rc-work-status-count", "0");
-      count.id = `rcWorkCount-${status}`;
-      text.appendChild(count);
-      text.appendChild(makeEl("span", "rc-work-status-sub", sub));
-
-      card.append(iconEl, text);
-      card.addEventListener("click", () => {
-        state.statusFilter = state.statusFilter === status ? "all" : status;
-        const select = $("rcWorkStatusFilter");
-        if (select) select.value = state.statusFilter;
-        updateSummary();
-        applyFilters();
-      });
-      statusGrid.appendChild(card);
-    }
+    statusGrid.append(
+      buildStatusCard("draft", "file", "Drafts", "Not yet issued"),
+      buildStatusCard("scheduled", "clock", "Scheduled", "Will release automatically"),
+      buildStatusCard("active", "users", "Active", "Issued · student work in progress")
+    );
 
     const completedCard = document.createElement("a");
     completedCard.className = "rc-work-status-card";
     completedCard.dataset.status = "completed";
     completedCard.href = "/teacher/library/";
-    completedCard.innerHTML =
-      '<span class="rc-work-status-icon" aria-hidden="true">▣</span><span><span class="rc-work-status-title">Completed Assignments</span><span class="rc-work-status-count" id="rcWorkCount-completed">0</span><span class="rc-work-status-sub">Automatically available in Library</span></span><span class="rc-work-status-arrow" aria-hidden="true">→</span>';
+    const completedCopy = makeEl("span", "rc-work-status-copy");
+    completedCopy.appendChild(makeEl("span", "rc-work-status-title", "Completed Assignments"));
+    const completedCount = makeEl("span", "rc-work-status-count", "0");
+    completedCount.id = "rcWorkCount-completed";
+    completedCopy.appendChild(completedCount);
+    completedCopy.appendChild(makeEl("span", "rc-work-status-sub", "Available in Library"));
+    completedCard.append(
+      makeIcon("archive", "rc-work-status-icon"),
+      completedCopy,
+      makeEl("span", "rc-work-status-arrow", "→")
+    );
     statusGrid.appendChild(completedCard);
 
     command.append(launchRow, statusGrid);
     subtitle.insertAdjacentElement("afterend", command);
 
     const headingRow = draftSection.querySelector(".work-row");
-    const heading = headingRow?.querySelector("h2");
     const originalActions = headingRow?.querySelector(".work-actions");
-
-    if (heading) {
-      heading.textContent = "";
-      heading.classList.add("rc-work-workspace-title");
-      heading.appendChild(document.createTextNode("Assignment Workspace"));
-      heading.appendChild(
-        makeEl("small", "", "Unfinished work stays here. Completed work lives in Library.")
-      );
-    }
+    if (headingRow) headingRow.classList.add("rc-work-workspace-heading");
 
     draftSection.classList.add("rc-work-workspace");
     buildFilterBar(draftSection, originalActions);
-
-    const completedNote = makeEl("div", "rc-work-completed-note");
-    completedNote.id = "rcWorkCompletedNote";
-    completedNote.hidden = true;
-    completedNote.innerHTML =
-      '<span><strong data-completed-count>0</strong> completed assignment(s) are hidden here to keep Work focused.</span><a href="/teacher/library/">View completed work in Library →</a>';
-    draftSection.appendChild(completedNote);
   }
 
   function installActionCapture(draftSection) {
@@ -1406,15 +1479,13 @@
     try {
       localStorage.setItem(SHOW_ISSUED_KEY, "true");
     } catch (_) {
-      // Rendering can still continue; core behavior will simply retain its prior preference.
+      // Rendering can still continue; core behavior simply retains its prior preference.
     }
 
     const toggle = $("showIssuedToggle");
     if (toggle) toggle.checked = true;
 
-    if (typeof window.__rcRenderTable === "function") {
-      window.__rcRenderTable();
-    }
+    if (typeof window.__rcRenderTable === "function") window.__rcRenderTable();
   }
 
   function installRefreshHooks() {
@@ -1458,10 +1529,10 @@
       refreshWorkspace();
       refreshLifecycle();
 
-      log("Loaded ✓ (command center + lifecycle handoff + existing Work engine preserved)");
+      log("Loaded ✓ (approved command-center polish + lifecycle handoff + existing Work engine preserved)");
     } catch (error) {
       console.error(TAG, "Error:", error);
     }
   });
 })();
- /* END rc-tc-work-qol v2 */
+/* END rc-tc-work-qol v3 */
