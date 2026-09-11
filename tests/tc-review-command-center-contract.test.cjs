@@ -11,14 +11,21 @@ const constants = read('site/web/constants.js');
 const model = read('site/web/tc-review-command-model.js');
 const qol = read('site/web/tc-review-qol.js');
 const css = read('site/web/tc-review-qol.css');
+const finalPolish = read('site/web/tc-review-final-polish.js');
+const finalCss = read('site/web/tc-review-final-polish.css');
 const core = read('site/web/tc-review.js');
 
 console.log('--- Review command-center presentation contract ---');
 
 assert.ok(
   constants.includes('window.location.pathname.startsWith("/teacher/review")') &&
-    constants.includes('/web/tc-review-qol.js?v=20260911-review-polish'),
-  'Review must load the versioned command-center layer only on Review pages'
+    constants.includes('/web/tc-review-qol.js?v=20260911-review-polish') &&
+    constants.includes('/web/tc-review-final-polish.js?v=20260911-review-final-polish'),
+  'Review must load the versioned command-center and final-polish layers only on Review pages'
+);
+assert.ok(
+  constants.includes('.then(() => import("/web/tc-review-final-polish.js?v=20260911-review-final-polish"))'),
+  'final Review polish must load after the command-center layer exists'
 );
 assert.ok(
   qol.includes('/web/tc-review-command-model.js?v=20260911-review-polish'),
@@ -177,5 +184,42 @@ assert.ok(
   'Finalize & Next must advance even when finalized submissions remain readable in the all-history data set'
 );
 console.log('✓ Finalize & Next handles retained finalized history correctly');
+
+console.log('--- Collapsed-sidebar and badge reconciliation contract ---');
+
+assert.ok(
+  finalPolish.includes('[data-rv-status-card="needs-review"] .rv-qol-status-count'),
+  'Review nav badge must derive from the command-center Needs Review count'
+);
+assert.ok(
+  finalPolish.includes('badge?.remove()'),
+  'zero Needs Review must remove a stale legacy nav badge'
+);
+assert.ok(
+  finalPolish.includes("'.tc-nav a[data-href=\"/teacher/review/\"]'"),
+  'badge reconciliation must be scoped to the Review navigation link'
+);
+for (const forbidden of ['fetch(', 'db.', '.from(', 'teacher-review-save']) {
+  assert.ok(
+    !finalPolish.includes(forbidden),
+    `final presentation polish must not add data or write paths: ${forbidden}`
+  );
+}
+console.log('✓ Review badge reconciles to the actual Review lifecycle without a new data/write path');
+
+for (const selector of [
+  'html.tc-collapsed .rv-qol-command',
+  'html.tc-collapsed .rv-qol-home-grid',
+  'html.tc-collapsed .rv-qol-toolbar',
+  'html.tc-collapsed .rv-qol-assignment-card',
+  'html.tc-collapsed .rv-qol-assignment-view',
+]) {
+  assert.ok(finalCss.includes(selector), `collapsed Review geometry must be explicitly polished: ${selector}`);
+}
+assert.ok(
+  finalCss.includes('content:"🐾"'),
+  'caught-up Review state keeps the approved subtle classroom Easter egg'
+);
+console.log('✓ collapsed sidebar has dedicated Review geometry and a tiny caught-up Easter egg');
 
 console.log('Review command-center contract PASS');
