@@ -123,7 +123,7 @@ test('undefined raw value returns empty array', () => {
   assert.deepStrictEqual(result, []);
 });
 
-test('empty string returns empty array', () => {
+test('empty string raw value returns empty array', () => {
   const result = readDrafts('');
   assert.deepStrictEqual(result, []);
 });
