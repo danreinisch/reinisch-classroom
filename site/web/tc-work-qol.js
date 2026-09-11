@@ -779,6 +779,139 @@
         font-size: 10px;
       }
 
+      /* Final Assignment Builder polish — Work-only, presentation-only */
+      main.tc-main:has(#rcWorkComposer:not([hidden])) .rc-work-workspace {
+        display: none !important;
+      }
+      main.tc-main:has(#rcWorkComposer:not([hidden])) .rc-work-command-center {
+        margin-bottom: 10px !important;
+      }
+      main.tc-main:has(#rcWorkComposer:not([hidden])) .rc-work-status-grid {
+        opacity: .88;
+      }
+      #rcWorkComposer {
+        overflow: visible !important;
+        border-radius: 18px !important;
+        border-color: rgba(110,231,183,.4) !important;
+        box-shadow: 0 26px 72px rgba(0,0,0,.32) !important;
+      }
+      #rcWorkComposer > .work-row:first-child {
+        position: sticky;
+        top: calc(var(--tc-topbar-h) + 8px);
+        z-index: 32;
+        min-height: 66px;
+        padding: 13px 16px !important;
+        border-radius: 17px 17px 0 0;
+        border-bottom-color: rgba(167,243,208,.2) !important;
+        background: linear-gradient(90deg, rgba(7,73,56,.99), rgba(3,45,38,.99)) !important;
+        box-shadow: 0 12px 30px rgba(0,0,0,.24);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+      }
+      #rcWorkComposer > .work-row:first-child h2 { font-size: 21px !important; }
+      #rcWorkComposer > .work-row:first-child .work-actions { gap: 8px !important; }
+      #rcWorkComposer > .work-row:first-child .work-btn {
+        min-height: 38px;
+        padding: 8px 12px;
+        border-radius: 9px;
+      }
+      #rcWorkComposer #btnSaveDraft {
+        padding-inline: 16px;
+        border-color: rgba(134,239,172,.7) !important;
+        background: linear-gradient(180deg, rgba(30,145,92,.99), rgba(11,98,65,.99)) !important;
+        box-shadow: 0 8px 22px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.08) !important;
+        font-weight: 800;
+      }
+      #rcWorkComposer > .rc-work-individualized-info {
+        margin: 11px 16px 0 !important;
+        padding: 8px 10px !important;
+        border-color: rgba(167,139,250,.2) !important;
+        background: linear-gradient(90deg, rgba(83,61,135,.12), rgba(5,45,39,.05)) !important;
+      }
+      #rcWorkComposer > .rc-work-individualized-info > span:first-child {
+        width: 31px;
+        height: 31px;
+        flex-basis: 31px;
+      }
+      #rcWorkComposer #workDraftForm {
+        margin: 10px 16px 16px !important;
+        grid-template-columns: minmax(250px,.86fr) minmax(0,2.14fr);
+        gap: 10px;
+      }
+      #rcWorkComposer #workDraftForm > .work-grid:first-child,
+      #rcWorkComposer #workDraftForm > .work-grid:has(#assignmentFile) {
+        padding: 12px !important;
+        gap: 9px;
+        border-color: rgba(167,243,208,.11) !important;
+        background: rgba(0,19,18,.17) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+      }
+      #rcWorkComposer #workDraftForm > .work-grid:first-child::before,
+      #rcWorkComposer #workDraftForm > .work-grid:has(#assignmentFile)::before {
+        grid-column: 1 / -1;
+        margin-bottom: 1px;
+        color: rgba(167,243,208,.62);
+        font-size: 9px;
+        line-height: 1;
+        font-weight: 850;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+      }
+      #rcWorkComposer #workDraftForm > .work-grid:first-child::before { content: "Assignment details"; }
+      #rcWorkComposer #workDraftForm > .work-grid:has(#assignmentFile)::before { content: "Content & mapping"; }
+      #rcWorkComposer #workDraftForm > .work-grid:has(#assignmentFile) > .work-field {
+        padding: 10px;
+        border-color: rgba(167,243,208,.08);
+        background: rgba(255,255,255,.016);
+      }
+      #rcWorkComposer .work-field label {
+        color: rgba(220,252,231,.82);
+        font-size: 11px;
+      }
+      #rcWorkComposer .work-field input:not([type="checkbox"]),
+      #rcWorkComposer .work-field select,
+      #rcWorkComposer .work-field textarea {
+        min-height: 41px;
+        border-color: rgba(167,243,208,.2);
+        background: rgba(0,16,15,.56);
+      }
+      #rcWorkComposer input[type="file"].tc-file-input {
+        min-height: 46px !important;
+        padding: 5px !important;
+        border-color: rgba(110,231,183,.28) !important;
+        background: rgba(0,23,20,.42) !important;
+        color: transparent !important;
+        font-size: 0 !important;
+      }
+      #rcWorkComposer input[type="file"].tc-file-input::file-selector-button {
+        margin-right: 0;
+        padding: 8px 12px;
+        border: 1px solid rgba(110,231,183,.16);
+        border-radius: 8px;
+        background: linear-gradient(180deg, rgba(34,197,94,.15), rgba(16,120,78,.11));
+        color: rgba(236,253,245,.94);
+        font-size: 11px;
+        font-weight: 800;
+      }
+      #rcWorkComposer #assignmentFileName,
+      #rcWorkComposer #mappingFileName {
+        display: block;
+        margin-top: 6px;
+        color: rgba(226,232,240,.52);
+        font-size: 10px;
+      }
+      #rcWorkComposer #workDraftForm > .work-field:has(#draftParagraphCount),
+      #rcWorkComposer #workDraftForm > .work-field:has(#scoringMcq),
+      #rcWorkComposer #workDraftForm > .work-field:has(#draftNotes) {
+        padding: 11px !important;
+        border-color: rgba(167,243,208,.1) !important;
+        background: rgba(0,19,18,.16) !important;
+      }
+      #rcWorkComposer #draftNotes {
+        min-height: 56px !important;
+        max-height: 150px;
+      }
+
       .rc-work-workspace {
         position: relative;
         margin-top: 12px !important;
@@ -979,7 +1112,10 @@
         #rcWorkComposer #workDraftForm > .work-grid:has(#assignmentFile) { grid-template-columns: 1fr; }
       }
       @media (max-width: 820px) {
-        #rcWorkComposer > .work-row:first-child { align-items: flex-start; }
+        #rcWorkComposer > .work-row:first-child {
+          position: static;
+          align-items: flex-start;
+        }
         #rcWorkComposer > .work-row:first-child .work-actions {
           width: 100%;
           justify-content: flex-start;
