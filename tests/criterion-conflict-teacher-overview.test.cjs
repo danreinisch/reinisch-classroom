@@ -34,9 +34,12 @@ function occurrences(source, needle) {
 }
 
 async function run() {
+  // The Overview presentation layer now bootstraps the unchanged dashboard
+  // implementation from tc-overview-core.js. Keep this semantic regression
+  // test aimed at the code that owns the criterion calculations.
   const overview =
     read(
-      'site/web/tc-overview.js'
+      'site/web/tc-overview-core.js'
     );
 
   const packageJson =
