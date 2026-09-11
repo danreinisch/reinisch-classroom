@@ -6,7 +6,7 @@
   window.__rcReviewQolLoaded = true;
 
   const { db } = await import('/web/data-adapter.js?v=2026082401');
-  const model = await import('/web/tc-review-command-model.js?v=20260911-review-command-center');
+  const model = await import('/web/tc-review-command-model.js?v=20260911-review-polish');
   const {
     STATUS_LABELS,
     statusOf,
@@ -88,7 +88,7 @@
     if (document.querySelector('link[data-rv-qol-style]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/web/tc-review-qol.css?v=20260911-review-command-center';
+    link.href = '/web/tc-review-qol.css?v=20260911-review-polish';
     link.dataset.rvQolStyle = 'true';
     document.head.appendChild(link);
   }
@@ -232,15 +232,40 @@
     ).join('');
   }
 
+  function emptyState() {
+    const filtered = state.search.trim() || state.className !== 'All Classes';
+    if (filtered) {
+      return '<div class="rv-qol-empty"><strong>No matches in this view.</strong><span>Try clearing the search or class filter.</span></div>';
+    }
+    if (state.status === 'needs-review') {
+      return '<div class="rv-qol-empty is-positive"><strong>You’re caught up.</strong><span>No submissions need review right now.</span></div>';
+    }
+    if (state.status === 'reviewed') {
+      return '<div class="rv-qol-empty"><strong>Nothing is waiting to be finalized.</strong><span>Scored submissions will appear here after review.</span></div>';
+    }
+    if (state.status === 'finalized') {
+      return '<div class="rv-qol-empty"><strong>No finalized history in this view.</strong><span>Finalized student work will appear here.</span></div>';
+    }
+    return '<div class="rv-qol-empty"><strong>No student work is available.</strong><span>Submitted work will appear here when it reaches Review.</span></div>';
+  }
+
+  function assignmentStatusText(group) {
+    if (group.status === 'finalized') return 'Finalized';
+    if (group.status === 'reviewed') return 'Ready to finalize';
+    if (group.status === 'needs-review') return `${group.needs} left`;
+    if (group.status === 'returned') return 'Returned';
+    return 'Complete';
+  }
+
   function assignmentCards() {
     const visibleRows = filterHomeRows(state.rows, state);
     const groups = groupAssignments(visibleRows, state.rows, state);
-    if (!groups.length) return '<div class="rv-qol-empty">No assignments match this folder or filter.</div>';
+    if (!groups.length) return emptyState();
     return `<div class="rv-qol-assignment-list">${groups.map(group => `
       <article class="rv-qol-assignment-card" data-rv-assignment-card="${esc(group.assignmentId)}">
-        <div><div class="rv-qol-assignment-title">${esc(group.title)}</div><div class="rv-qol-assignment-meta">${esc(classLabel(group.className))}${group.dueAt ? ` · Due ${esc(formatDue(group.dueAt))}` : ''}</div><div class="rv-qol-assignment-stats"><span>◉ ${group.submitted} submitted</span><span>✓ ${group.reviewed} reviewed</span><span>◷ ${group.needs} need review</span></div></div>
+        <div><div class="rv-qol-assignment-title">${esc(group.title)}</div><div class="rv-qol-assignment-meta">${esc(classLabel(group.className))}${group.dueAt ? ` · Due ${esc(formatDue(group.dueAt))}` : ''}</div><div class="rv-qol-assignment-stats"><span>◉ ${group.submitted} student result${group.submitted === 1 ? '' : 's'}</span><span>✓ ${group.reviewed} reviewed</span><span>◷ ${group.needs} need review</span></div></div>
         <div class="rv-qol-progress"><div class="rv-qol-progress-head"><span>${group.reviewed}/${group.submitted} reviewed</span><strong>${group.progress}%</strong></div><div class="rv-qol-progress-track"><span class="rv-qol-progress-fill" style="width:${group.progress}%"></span></div></div>
-        <div><span class="rv-qol-status-pill ${group.needs ? 'needs-review' : 'reviewed'}">${group.needs ? `${group.needs} left` : 'Complete'}</span></div>
+        <div><span class="rv-qol-status-pill ${esc(group.status)}">${esc(assignmentStatusText(group))}</span></div>
         <button class="rv-qol-open" type="button" data-rv-open-assignment="${esc(group.assignmentId)}">Open →</button>
       </article>`).join('')}</div>`;
   }
@@ -251,7 +276,7 @@
       ${statusCards()}
       <div class="rv-qol-home-grid">${folders()}<section class="rv-qol-panel rv-qol-main">
         <div class="rv-qol-toolbar"><input class="rv-qol-input" type="search" data-rv-home-search value="${esc(state.search)}" placeholder="Search assignments, students, or classes…" aria-label="Search Review assignments"><select class="rv-qol-select" data-rv-home-class aria-label="Filter Review by class">${classOptions()}</select><select class="rv-qol-select" data-rv-home-sort aria-label="Sort Review assignments"><option value="recent" ${state.sort === 'recent' ? 'selected' : ''}>Recent First</option><option value="assignment" ${state.sort === 'assignment' ? 'selected' : ''}>Assignment A–Z</option></select>${tools()}</div>
-        <div class="rv-qol-section-title"><h2>${esc(STATUS_LABELS[state.status])}</h2><span>${visible} submission${visible === 1 ? '' : 's'}</span></div>${assignmentCards()}</section></div><div class="rv-qol-live" data-rv-qol-live role="status" aria-live="polite"></div>`;
+        <div class="rv-qol-section-title"><h2>${esc(STATUS_LABELS[state.status])}</h2><span>${visible} student result${visible === 1 ? '' : 's'}</span></div>${assignmentCards()}</section></div><div class="rv-qol-live" data-rv-qol-live role="status" aria-live="polite"></div>`;
   }
 
   function assignmentView() {
@@ -267,13 +292,13 @@
     });
     const options = [['all', 'All Statuses'], ['needs-review', 'Needs Review'], ['reviewed', 'Reviewed'], ['finalized', 'Finalized']];
     return `<section class="rv-qol-panel rv-qol-assignment-view"><button class="rv-qol-back" type="button" data-rv-back-home>← Back to Review</button>
-      <div class="rv-qol-assignment-head"><div><h1>${esc(summary.title)}</h1><p>${esc(classLabel(summary.className))}</p></div><div class="rv-qol-progress"><div class="rv-qol-progress-head"><span>${summary.submitted} submitted · ${summary.reviewed} reviewed · ${summary.needs} need review</span><strong>${summary.progress}%</strong></div><div class="rv-qol-progress-track"><span class="rv-qol-progress-fill" style="width:${summary.progress}%"></span></div>${summary.dueAt ? `<div class="rv-qol-assignment-meta">Due ${esc(formatDue(summary.dueAt))}</div>` : ''}</div></div>
+      <div class="rv-qol-assignment-head"><div><h1>${esc(summary.title)}</h1><p>${esc(classLabel(summary.className))}</p></div><div class="rv-qol-progress"><div class="rv-qol-progress-head"><span>${summary.submitted} student result${summary.submitted === 1 ? '' : 's'} · ${summary.reviewed} reviewed · ${summary.needs} need review</span><strong>${summary.progress}%</strong></div><div class="rv-qol-progress-track"><span class="rv-qol-progress-fill" style="width:${summary.progress}%"></span></div>${summary.dueAt ? `<div class="rv-qol-assignment-meta">Due ${esc(formatDue(summary.dueAt))}</div>` : ''}</div></div>
       <div class="rv-qol-toolbar"><input class="rv-qol-input" type="search" data-rv-assignment-search value="${esc(state.assignmentSearch)}" placeholder="Search students…" aria-label="Search students in this assignment"><select class="rv-qol-select" data-rv-assignment-status aria-label="Filter students by status">${options.map(([value, label]) => `<option value="${value}" ${state.assignmentStatus === value ? 'selected' : ''}>${label}</option>`).join('')}</select><div></div>${tools()}</div>
-      ${rows.length ? `<div style="overflow-x:auto"><table class="rv-qol-student-table"><thead><tr><th>Student</th><th>Status</th><th>Submitted</th><th>Score</th><th>Actions</th></tr></thead><tbody>${rows.map(row => {
+      ${rows.length ? `<div class="rv-qol-table-wrap"><table class="rv-qol-student-table"><thead><tr><th>Student</th><th>Status</th><th>Submitted</th><th>Score</th><th>Actions</th></tr></thead><tbody>${rows.map(row => {
         const status = statusOf(row);
         const score = row.score_total == null ? '—' : `${Number(row.score_total)}%`;
-        return `<tr data-needs="${status === 'needs-review'}"><td data-label="Student"><strong>${esc(row.studentCode)}</strong>${row.studentName !== row.studentCode ? `<span style="display:block;font-size:11px;opacity:.62">${esc(row.studentName)}</span>` : ''}</td><td data-label="Status"><span class="rv-qol-status-pill ${esc(status)}">${esc(statusLabel(row))}</span></td><td data-label="Submitted">${esc(formatSubmitted(row.submitted_at))}</td><td data-label="Score">${esc(score)}</td><td data-label="Actions"><button class="rv-qol-review-button" type="button" data-rv-focus="${esc(row.id)}">${status === 'needs-review' ? 'Review →' : 'View'}</button></td></tr>`;
-      }).join('')}</tbody></table></div>` : '<div class="rv-qol-empty">No students match this status or search.</div>'}
+        return `<tr data-needs="${status === 'needs-review'}"><td data-label="Student"><strong>${esc(row.studentCode)}</strong>${row.studentName !== row.studentCode ? `<span class="rv-qol-student-name">${esc(row.studentName)}</span>` : ''}</td><td data-label="Status"><span class="rv-qol-status-pill ${esc(status)}">${esc(statusLabel(row))}</span></td><td data-label="Submitted">${esc(formatSubmitted(row.submitted_at))}</td><td data-label="Score">${esc(score)}</td><td data-label="Actions"><button class="rv-qol-review-button" type="button" data-rv-focus="${esc(row.id)}">${status === 'needs-review' ? 'Review →' : 'View'}</button></td></tr>`;
+      }).join('')}</tbody></table></div>` : '<div class="rv-qol-empty"><strong>No students match this view.</strong><span>Try changing the status filter or search.</span></div>'}
       <div class="rv-qol-assignment-footer"><button class="rv-qol-next" type="button" data-rv-review-next ${summary.needs ? '' : 'disabled'}>Review Next →</button></div></section>`;
   }
 
@@ -328,7 +353,7 @@
     state.assignmentSearch = '';
     state.focusSubmissionId = null;
     state.advanceAfterAction = false;
-    await syncLegacyFilters({ status: 'all', className: state.className, assignmentId: state.assignmentId });
+    await syncLegacyFilters({ status: 'all', className: state.className, assignmentId: null });
     renderShell();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -342,7 +367,7 @@
     state.advanceAfterAction = false;
     const status = statusOf(row);
     const legacyStatus = ['reviewed', 'finalized'].includes(status) ? status : status === 'needs-review' ? 'needs-review' : 'all';
-    await syncLegacyFilters({ status: legacyStatus, className: state.className, assignmentId: row.assignmentId });
+    await syncLegacyFilters({ status: legacyStatus, className: state.className, assignmentId: row.sourceAssignmentId || null });
     const header = await waitForLegacyHeader(row.id);
     if (header && header.getAttribute('aria-expanded') !== 'true') header.click();
     await nextFrame();
@@ -359,6 +384,21 @@
       proxy.disabled = !source || source.disabled;
       proxy.hidden = !source;
     }
+  }
+
+  function polishLegacyFocus(selected) {
+    const row = focusRow();
+    selected.dataset.rvQolStatus = row ? statusOf(row) : '';
+    selected.querySelectorAll('details').forEach(details => {
+      const summary = details.querySelector(':scope > summary');
+      if (/^\s*debug\b/i.test(summary?.textContent || '')) details.classList.add('rv-qol-debug');
+    });
+    selected.querySelectorAll('.rv-summary-row').forEach(summaryRow => {
+      const label = summaryRow.querySelector('span:first-child')?.textContent?.trim();
+      if (label === 'Manual:' && /\(0\/0 scored\)/.test(summaryRow.textContent || '')) {
+        summaryRow.classList.add('rv-qol-zero-manual');
+      }
+    });
   }
 
   function syncFocusDom() {
@@ -378,6 +418,7 @@
       header.click();
       return;
     }
+    polishLegacyFocus(selected);
     syncFocusProxyState(selected);
   }
 
@@ -421,7 +462,24 @@
       const shouldAdvance = state.advanceAfterAction;
       await refreshData({ render: false });
       if (state.mode !== 'focus') return;
-      if (state.rows.some(row => row.id === String(previousId))) {
+      const updated = state.rows.find(row => row.id === String(previousId));
+      if (shouldAdvance && updated && statusOf(updated) === 'finalized') {
+        const next = assignmentRows(state.rows, assignmentId, {
+          className: state.className,
+          status: 'needs-review',
+          search: '',
+        })[0];
+        if (next) {
+          await enterFocus(next.id);
+          return;
+        }
+        state.mode = 'assignment';
+        state.focusSubmissionId = null;
+        state.advanceAfterAction = false;
+        renderShell();
+        return;
+      }
+      if (updated) {
         renderShell();
         return;
       }
@@ -522,7 +580,7 @@
         state.focusSubmissionId = null;
         state.advanceAfterAction = false;
         await refreshData({ render: false });
-        await syncLegacyFilters({ status: 'all', className: state.className, assignmentId: state.assignmentId });
+        await syncLegacyFilters({ status: 'all', className: state.className, assignmentId: null });
         renderShell();
         return;
       }
