@@ -320,6 +320,8 @@ console.log('\n--- Work command-center source contract ---');
 
 const qolPath = path.join(__dirname, '../site/web/tc-work-qol.js');
 const qol = fs.readFileSync(qolPath, 'utf8');
+const teacherShellPath = path.join(__dirname, '../site/web/teacher-shell.css');
+const teacherShell = fs.readFileSync(teacherShellPath, 'utf8');
 
 test('approved Work command-center launch actions are present', () => {
   assert.ok(qol.includes('New Assignment'));
@@ -398,6 +400,17 @@ test('legacy issued toggle and redundant workspace heading are retired from the 
 test('filters appear before the empty state so the workspace keeps the approved table-first hierarchy', () => {
   assert.ok(qol.includes('const emptyState = $("draftsEmpty")'));
   assert.ok(qol.includes('draftSection.insertBefore(bar, emptyState || tableWrap || null)'));
+});
+
+test('expanded Assignment Builder keeps the command-center visual language without changing the engine', () => {
+  assert.ok(teacherShell.includes('Work: polished Assignment Builder'));
+  assert.ok(teacherShell.includes('#rcWorkComposer {'));
+  assert.ok(teacherShell.includes('scroll-margin-top: calc(var(--tc-topbar-h) + 14px)'));
+  assert.ok(teacherShell.includes('#rcWorkComposer #workDraftForm'));
+  assert.ok(teacherShell.includes(':has(#assignmentFile)'));
+  assert.ok(teacherShell.includes('#rcWorkComposer #assignmentFileName'));
+  assert.ok(teacherShell.includes('#rcWorkComposer #mappingFileName'));
+  assert.ok(teacherShell.includes('input[type="file"].tc-file-input::file-selector-button'));
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
