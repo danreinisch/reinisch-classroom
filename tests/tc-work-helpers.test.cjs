@@ -123,7 +123,7 @@ test('undefined raw value returns empty array', () => {
   assert.deepStrictEqual(result, []);
 });
 
-test('empty string raw value returns empty array', () => {
+test('empty string returns empty array', () => {
   const result = readDrafts('');
   assert.deepStrictEqual(result, []);
 });
@@ -320,6 +320,8 @@ console.log('\n--- Work command-center source contract ---');
 
 const qolPath = path.join(__dirname, '../site/web/tc-work-qol.js');
 const qol = fs.readFileSync(qolPath, 'utf8');
+const workPagePath = path.join(__dirname, '../site/teacher/work/index.html');
+const workPage = fs.readFileSync(workPagePath, 'utf8');
 
 test('approved Work command-center launch actions are present', () => {
   assert.ok(qol.includes('New Assignment'));
@@ -407,6 +409,18 @@ test('expanded Assignment Builder keeps the command-center visual language insid
   assert.ok(qol.includes('#rcWorkComposer #assignmentFileName'));
   assert.ok(qol.includes('#rcWorkComposer #mappingFileName'));
   assert.ok(qol.includes('input[type="file"].tc-file-input::file-selector-button'));
+});
+
+test('final builder polish keeps create/import mode focused without changing Work logic', () => {
+  assert.ok(workPage.includes('Final Assignment Builder polish — Work-only, presentation-only'));
+  assert.ok(workPage.includes('main.tc-main:has(#rcWorkComposer:not([hidden])) .rc-work-workspace'));
+  assert.ok(workPage.includes('position: sticky !important;'));
+  assert.ok(workPage.includes('content: "Assignment details";'));
+  assert.ok(workPage.includes('content: "Content & mapping";'));
+  assert.ok(workPage.includes('font-size: 0 !important;'));
+  assert.ok(workPage.includes('#assignmentFileName'));
+  assert.ok(workPage.includes('#mappingFileName'));
+  assert.ok(workPage.includes('min-height: 56px !important;'));
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
