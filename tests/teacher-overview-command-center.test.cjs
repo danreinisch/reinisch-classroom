@@ -40,7 +40,7 @@ for (const route of [
 }
 
 // Student-alert and pulse drill-down destinations stay in teacher-owned routes.
-assert.match(ui, /href=\"\/teacher\/students\/\"/);
-assert.match(ui, /href=\"\/teacher\/calendar\/\"/);
+assert.ok(ui.includes('href="/teacher/students/"'));
+assert.ok(ui.includes('href="/teacher/calendar/"'));
 
 console.log('teacher overview command-center contract: ok');
