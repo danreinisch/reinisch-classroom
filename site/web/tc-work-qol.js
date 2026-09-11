@@ -18,8 +18,8 @@
     }
   }
 
-  // The command-center core creates its observer during initialization. Narrow only
-  // the Work tbody observer so its own cell decoration cannot recursively retrigger it.
+  // Keep this page-local guard active for the lifetime of Work. It changes only
+  // observers attached to the drafts tbody, leaving every other observer alone.
   window.MutationObserver = WorkScopedMutationObserver;
 
   const norm = (value) => String(value || "").trim().toLowerCase();
@@ -160,7 +160,6 @@
 
   import(CORE_SRC)
     .then(() => {
-      window.MutationObserver = NativeMutationObserver;
       installImportResetGuard();
       installFilterCorrection();
       console.log(TAG, "Loaded ✓ (edit/import guard + observer guard + multi-class filter guard)");
