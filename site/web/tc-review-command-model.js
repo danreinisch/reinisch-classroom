@@ -90,6 +90,32 @@ export function formatDue(value) {
   });
 }
 
+export function normalizeAssignmentTitle(value, studentCode = '') {
+  const raw = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!raw) return 'Untitled Assignment';
+  const safeCode = String(studentCode || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const codePattern = safeCode || 'S\\d{3}';
+  return raw
+    .replace(new RegExp(`\\s+(?:for\\s+)?${codePattern}(?:\\s*#\\d+)?\\s*$`, 'i'), '')
+    .replace(new RegExp(`\\s*[—–-]\\s*${codePattern}(?:\\s*#\\d+)?\\s*$`, 'i'), '')
+    .replace(/\s+/g, ' ')
+    .trim() || raw;
+}
+
+function dateKey(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).trim().toLowerCase();
+  return date.toISOString().slice(0, 10);
+}
+
+export function logicalAssignmentKey({ explicitId = '', title = '', className = '', date = '' } = {}) {
+  if (explicitId) return `logical:${String(explicitId)}`;
+  const cleanTitle = String(title || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const cleanClass = normalizeClassName(className).toLowerCase();
+  return `logical:${cleanClass}::${cleanTitle}::${dateKey(date)}`;
+}
+
 export function dedupeSubmissions(raw) {
   const byInstance = new Map();
   for (const submission of raw || []) {
@@ -134,6 +160,16 @@ function resolveClassName(instance, assignment, student) {
   return 'Unassigned';
 }
 
+function explicitLogicalId(assignment, instance) {
+  return assignment?.logical_assignment_id ||
+    assignment?.batch_id ||
+    assignment?.meta?.logical_assignment_id ||
+    assignment?.meta?.batch_id ||
+    instance?.settings?.logical_assignment_id ||
+    instance?.settings?.batch_id ||
+    '';
+}
+
 export function makeRows(submissions, instances, assignments, students) {
   const instanceById = new Map((instances || []).map(item => [String(item.id), item]));
   const assignmentById = new Map((assignments || []).map(item => [String(item.id), item]));
@@ -141,22 +177,35 @@ export function makeRows(submissions, instances, assignments, students) {
 
   return dedupeSubmissions(submissions).map(submission => {
     const instance = instanceById.get(String(submission.instance_id)) || submission.instance || null;
-    const assignmentId = submission.assignment_id || instance?.assignment_id || null;
-    const assignment = assignmentById.get(String(assignmentId)) || submission.assignment || null;
+    const sourceAssignmentId = submission.assignment_id || instance?.assignment_id || null;
+    const assignment = assignmentById.get(String(sourceAssignmentId)) || submission.assignment || null;
     const studentCode = submission.student_code || instance?.student_code || '';
     const student = studentByCode.get(String(studentCode)) || submission.student || null;
+    const className = resolveClassName(instance, assignment, student);
+    const dueAt = instance?.due_at || assignment?.due_at || assignment?.due || assignment?.due_date || '';
+    const sourceAssignmentTitle = assignment?.title || instance?.settings?.title || 'Untitled Assignment';
+    const assignmentTitle = normalizeAssignmentTitle(sourceAssignmentTitle, studentCode);
+    const identityDate = dueAt || assignment?.created_at || instance?.created_at || submission.submitted_at || '';
+    const assignmentId = logicalAssignmentKey({
+      explicitId: explicitLogicalId(assignment, instance),
+      title: assignmentTitle,
+      className,
+      date: identityDate,
+    });
     return {
       ...submission,
       id: String(submission.id),
-      assignmentId: assignmentId == null ? '' : String(assignmentId),
-      assignmentTitle: assignment?.title || instance?.settings?.title || 'Untitled Assignment',
+      assignmentId,
+      sourceAssignmentId: sourceAssignmentId == null ? '' : String(sourceAssignmentId),
+      assignmentTitle,
+      sourceAssignmentTitle,
       assignment,
       instance,
       student,
       studentCode: studentCode || 'Unknown',
       studentName: student?.name || studentCode || 'Unknown Student',
-      className: resolveClassName(instance, assignment, student),
-      dueAt: instance?.due_at || assignment?.due_at || assignment?.due || assignment?.due_date || '',
+      className,
+      dueAt,
     };
   });
 }
@@ -177,8 +226,13 @@ export function filterHomeRows(rows, { status, className, search }) {
   if (className !== 'All Classes') result = result.filter(row => row.className === className);
   const query = String(search || '').trim().toLowerCase();
   if (query) {
-    result = result.filter(row => [row.assignmentTitle, row.studentName, row.studentCode, row.className]
-      .some(value => String(value || '').toLowerCase().includes(query)));
+    result = result.filter(row => [
+      row.assignmentTitle,
+      row.sourceAssignmentTitle,
+      row.studentName,
+      row.studentCode,
+      row.className,
+    ].some(value => String(value || '').toLowerCase().includes(query)));
   }
   return result;
 }
@@ -188,6 +242,16 @@ function lifecycleRows(rows, assignmentId, className) {
     row.assignmentId === String(assignmentId) &&
     (className === 'All Classes' || row.className === className)
   );
+}
+
+function assignmentLifecycle(rows) {
+  const needs = rows.some(row => statusOf(row) === 'needs-review');
+  const allFinalized = rows.length > 0 && rows.every(row => statusOf(row) === 'finalized');
+  const anyReviewed = rows.some(row => statusOf(row) === 'reviewed');
+  if (needs) return 'needs-review';
+  if (allFinalized) return 'finalized';
+  if (anyReviewed) return 'reviewed';
+  return rows[0] ? statusOf(rows[0]) : 'reviewed';
 }
 
 export function groupAssignments(visibleRows, allRows, { className, sort }) {
@@ -211,6 +275,7 @@ export function groupAssignments(visibleRows, allRows, { className, sort }) {
       submitted: rows.length,
       reviewed,
       needs,
+      status: assignmentLifecycle(rows),
       progress: rows.length ? Math.round((reviewed / rows.length) * 100) : 0,
       recent: Math.max(...rows.map(row => dateValue(row.submitted_at)), 0),
       dueAt: due[0] || '',
@@ -247,6 +312,7 @@ export function assignmentSummary(rows, assignmentId, className) {
     submitted: result.length,
     reviewed,
     needs,
+    status: assignmentLifecycle(result),
     progress: result.length ? Math.round((reviewed / result.length) * 100) : 0,
     dueAt: due[0] || '',
   };
