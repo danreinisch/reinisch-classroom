@@ -96,9 +96,13 @@ test('AI Builder Create/Manage and Review status tabs preserve selection', async
 test('Work form and real draft preview preserve Student/Teacher/Mapping panes', async ({ page }, testInfo) => {
   await fixture(page);
   await page.goto('/teacher/work/');
+  await page.getByRole('button', { name: 'New Assignment' }).click();
+  await expect(page.locator('#rcWorkComposer')).toBeVisible();
   await page.locator('#draftTitle').fill('Synthetic presentation check');
   await page.locator('#draftClass').selectOption({ label: 'Language Arts 1 SC' });
   await page.locator('#draftNotes').fill('Synthetic note; no classroom records.');
+  await page.locator('.rc-work-composer-close').click();
+  await expect(page.locator('#rcWorkComposer')).toBeHidden();
   await page.locator('#draftsTbody button[title="Preview"]').first().click();
   await expect(page.locator('#draftOverlay')).toBeVisible();
   for (const tab of ['student', 'teacher', 'mapping']) {
@@ -110,6 +114,55 @@ test('Work form and real draft preview preserve Student/Teacher/Mapping panes', 
   await page.locator('#btnClosePreview').click();
   await expect(page.locator('#draftOverlay')).toBeHidden();
   await expect(page.locator('#draftTitle')).toHaveValue('Synthetic presentation check');
+});
+
+test('Work Import Assignment exits edit mode before opening the file chooser', async ({ page }) => {
+  await fixture(page);
+  await page.goto('/teacher/work/');
+  const continueButton = page.getByRole('button', { name: /Continue|Edit/ }).first();
+  await continueButton.click();
+  await expect(page.locator('#rcWorkComposer')).toBeVisible();
+  await expect(page.locator('#btnCancelEdit')).toBeVisible();
+  await page.locator('.rc-work-composer-close').click();
+  await expect(page.locator('#rcWorkComposer')).toBeHidden();
+
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Import Assignment' }).click();
+  await chooserPromise;
+
+  await expect(page.locator('#rcWorkComposer')).toBeVisible();
+  await expect(page.locator('#btnCancelEdit')).toBeHidden();
+  await expect(page.locator('#draftTitle')).toHaveValue('');
+});
+
+test('Work class filter keeps a multi-class individualized batch visible', async ({ page }) => {
+  await fixture(page);
+  await page.goto('/teacher/work/');
+  await page.evaluate(() => {
+    const batch = [
+      {
+        id: 'multi-1', title: 'Cross-class packet — S01', batchId: 'cross-batch', batchTitle: 'Cross-class packet',
+        class: 'Language Arts 1 SC', className: 'Language Arts 1 SC', studentCode: 'SYN-01', studentCodes: ['SYN-01'],
+        status: 'draft', issuedAt: null, autoRelease: false, releaseAt: null, dueAt: '2026-09-12T23:59:00',
+        createdAt: '2026-09-08T08:00:00Z', created_at: '2026-09-08T08:00:00Z',
+        assignment: { kind: 'text', name: 'synthetic.txt', text: 'Synthetic classroom practice.' }, mapping: { kind: 'json', text: '{}' }
+      },
+      {
+        id: 'multi-2', title: 'Cross-class packet — S02', batchId: 'cross-batch', batchTitle: 'Cross-class packet',
+        class: 'Language Arts 2 SC', className: 'Language Arts 2 SC', studentCode: 'SYN-02', studentCodes: ['SYN-02'],
+        status: 'draft', issuedAt: null, autoRelease: false, releaseAt: null, dueAt: '2026-09-12T23:59:00',
+        createdAt: '2026-09-08T08:00:00Z', created_at: '2026-09-08T08:00:00Z',
+        assignment: { kind: 'text', name: 'synthetic.txt', text: 'Synthetic classroom practice.' }, mapping: { kind: 'json', text: '{}' }
+      }
+    ];
+    localStorage.setItem('rc_tc_work_drafts_v1', JSON.stringify(batch));
+  });
+  await page.reload();
+
+  const classFilter = page.locator('#rcWorkClassFilter');
+  await expect(classFilter).toContainText('Language Arts 2 SC');
+  await classFilter.selectOption({ label: 'Language Arts 2 SC' });
+  await expect(page.locator('#draftsTbody tr[data-rc-work-kind="batch"]').first()).toBeVisible();
 });
 
 test('Students: six dynamic detail tabs remain usable', async ({ page }, testInfo) => {

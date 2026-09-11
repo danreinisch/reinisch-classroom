@@ -318,8 +318,10 @@ test('no matching assignment instances never falsely marks work Completed', () =
 // --- command-center source contract ---
 console.log('\n--- Work command-center source contract ---');
 
-const qolPath = path.join(__dirname, '../site/web/tc-work-qol.js');
-const qol = fs.readFileSync(qolPath, 'utf8');
+const qolCorePath = path.join(__dirname, '../site/web/tc-work-qol-core.js');
+const qol = fs.readFileSync(qolCorePath, 'utf8');
+const qolLoaderPath = path.join(__dirname, '../site/web/tc-work-qol.js');
+const qolLoader = fs.readFileSync(qolLoaderPath, 'utf8');
 
 test('approved Work command-center launch actions are present', () => {
   assert.ok(qol.includes('New Assignment'));
@@ -419,6 +421,27 @@ test('final builder polish keeps create/import mode focused without changing Wor
   assert.ok(qol.includes('#rcWorkComposer #assignmentFileName'));
   assert.ok(qol.includes('#rcWorkComposer #mappingFileName'));
   assert.ok(qol.includes('min-height: 56px !important;'));
+});
+
+test('loader clears edit state before Import Assignment starts', () => {
+  assert.ok(qolLoader.includes('installImportResetGuard'));
+  assert.ok(qolLoader.includes('Import Assignment'));
+  assert.ok(qolLoader.includes('btnCancelEdit'));
+  assert.ok(qolLoader.includes('getComputedStyle(cancel).display !== "none"'));
+});
+
+test('loader narrows the Work tbody observer so decoration cannot self-loop', () => {
+  assert.ok(qolLoader.includes('WorkScopedMutationObserver'));
+  assert.ok(qolLoader.includes('target?.id === "draftsTbody"'));
+  assert.ok(qolLoader.includes('subtree: false'));
+  assert.ok(qolLoader.includes('observer.observe(tbody, { childList: true })'));
+});
+
+test('loader preserves full class membership for individualized batch filtering', () => {
+  assert.ok(qolLoader.includes('orderedBatches'));
+  assert.ok(qolLoader.includes('rcWorkClasses'));
+  assert.ok(qolLoader.includes('classes.includes(classFilter)'));
+  assert.ok(qolLoader.includes('correctMultiClassFiltering'));
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
