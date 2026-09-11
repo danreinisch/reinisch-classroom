@@ -1,50 +1,54 @@
-(() => {
-  'use strict';
+'use strict';
 
-  if (!location.pathname.startsWith('/teacher/review')) return;
-  if (window.__rcReviewReadShareLoaded) return;
+if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewReadShareLoaded) {
   window.__rcReviewReadShareLoaded = true;
 
+  const { db } = await import('/web/data-adapter.js?v=2026082401');
   const SHARED_METHODS = [
     'listStudents',
     'listAssignments',
     'listSubmissions',
     'listAssignmentInstances',
   ];
+  const SHARE_WINDOW_MS = 5000;
 
-  import('/web/data-adapter.js?v=2026082401')
-    .then(({ db }) => {
-      for (const methodName of SHARED_METHODS) {
-        const original = db?.[methodName];
-        if (typeof original !== 'function') continue;
+  for (const methodName of SHARED_METHODS) {
+    const original = db?.[methodName];
+    if (typeof original !== 'function') continue;
 
-        let firstKey = null;
-        let firstPromise = null;
-        let oneShareAvailable = false;
+    let firstKey = null;
+    let firstPromise = null;
+    let shareAvailable = false;
+    let expiresAt = 0;
 
-        db[methodName] = function reviewSharedInitialRead(...args) {
-          const key = JSON.stringify(args || []);
+    db[methodName] = function reviewSharedInitialRead(...args) {
+      const key = JSON.stringify(args || []);
+      const now = Date.now();
 
-          if (!firstPromise) {
-            firstKey = key;
-            oneShareAvailable = true;
-            firstPromise = Promise.resolve().then(() => original.apply(this, args));
-            return firstPromise;
-          }
-
-          if (oneShareAvailable && key === firstKey) {
-            oneShareAvailable = false;
-            const shared = firstPromise;
-            firstPromise = null;
-            firstKey = null;
-            return shared;
-          }
-
-          return original.apply(this, args);
-        };
+      if (firstPromise && now > expiresAt) {
+        firstPromise = null;
+        firstKey = null;
+        shareAvailable = false;
       }
-    })
-    .catch(error => {
-      console.warn('[review] Could not install shared initial reads:', error);
-    });
-})();
+
+      if (!firstPromise) {
+        firstKey = key;
+        shareAvailable = true;
+        expiresAt = now + SHARE_WINDOW_MS;
+        firstPromise = Promise.resolve().then(() => original.apply(this, args));
+        return firstPromise;
+      }
+
+      if (shareAvailable && key === firstKey) {
+        shareAvailable = false;
+        const shared = firstPromise;
+        firstPromise = null;
+        firstKey = null;
+        expiresAt = 0;
+        return shared;
+      }
+
+      return original.apply(this, args);
+    };
+  }
+}
