@@ -6,7 +6,7 @@
   window.__rcReviewQuestionEvidenceLoaded = true;
 
   const { db } = await import('/web/data-adapter.js?v=2026082401');
-  const model = await import('/web/tc-review-question-evidence-model.js?v=20260911-question-evidence2');
+  const model = await import('/web/tc-review-question-evidence-model.js?v=20260911-question-evidence4');
   const {
     buildQuestionLookup,
     choicesForQuestion,
@@ -18,13 +18,14 @@
   let assignmentsPromise = null;
   let scheduled = false;
   let decorating = false;
+  let decorateAgain = false;
   const filterState = new Map();
 
   function ensureStyle() {
     if (document.querySelector('link[data-rv-question-evidence-style]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/web/tc-review-question-evidence.css?v=20260911-question-evidence2';
+    link.href = '/web/tc-review-question-evidence.css?v=20260911-question-evidence4';
     link.dataset.rvQuestionEvidenceStyle = 'true';
     document.head.appendChild(link);
   }
@@ -124,12 +125,16 @@
 
   function displayAnswer(question, answerType, value) {
     const choices = choicesForQuestion(question, answerType);
-    const matchedIndex = choices.findIndex((choice, index) => choiceMatches(value, choice, index));
-    if (matchedIndex >= 0) {
-      const choice = choices[matchedIndex];
-      const key = choice.key || String.fromCharCode(65 + matchedIndex);
-      const text = choice.text || choice.value || '';
-      return text ? `${key} — ${text}` : String(key);
+    const matched = choices
+      .map((choice, index) => ({ choice, index }))
+      .filter(entry => choiceMatches(value, entry.choice, entry.index));
+
+    if (matched.length) {
+      return matched.map(({ choice, index }) => {
+        const key = choice.key || String.fromCharCode(65 + index);
+        const text = choice.text || choice.value || '';
+        return text ? `${key} — ${text}` : String(key);
+      }).join(', ');
     }
     return formatAnswer(value);
   }
@@ -148,7 +153,7 @@
   function choiceList(question, answerType, studentAnswer, correctAnswer) {
     const choices = choicesForQuestion(question, answerType);
     if (!choices.length) {
-      if (['mcq', 'multiple_choice', 'multi', 'boolean'].includes(String(answerType || '').toLowerCase())) {
+      if (['mcq', 'multiple_choice', 'multiple-choice', 'multi', 'boolean'].includes(String(answerType || '').toLowerCase())) {
         return '<div class="rv-question-evidence-no-options">Answer choices were not stored with this legacy item.</div>';
       }
       return '';
@@ -303,7 +308,10 @@
   }
 
   async function decorateCurrent() {
-    if (decorating) return;
+    if (decorating) {
+      decorateAgain = true;
+      return;
+    }
     const selected = selectedSubmission();
     if (!selected) return;
     const submissionId = selectedSubmissionId(selected);
@@ -317,11 +325,22 @@
       } catch (error) {
         console.warn('[review-question-evidence] Assignment metadata read failed; keeping legacy Review detail.', error);
       }
+
+      const currentSelected = selectedSubmission();
+      if (currentSelected !== selected || selectedSubmissionId(currentSelected) !== submissionId) {
+        decorateAgain = true;
+        return;
+      }
+
       const lookup = buildQuestionLookup(assignment || {});
       decorateAutoSection(selected, lookup, normalizeId(assignment?.id), submissionId);
       decorateWrittenSection(selected, lookup);
     } finally {
       decorating = false;
+      if (decorateAgain) {
+        decorateAgain = false;
+        scheduleDecorate();
+      }
     }
   }
 
@@ -338,6 +357,8 @@
 
   function start() {
     ensureStyle();
+    window.addEventListener('rc-review-question-evidence-rescan', scheduleDecorate);
+
     const attach = () => {
       const queue = document.getElementById('rvQueue');
       if (!queue) return false;
