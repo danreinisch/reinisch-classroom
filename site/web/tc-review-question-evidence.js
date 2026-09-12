@@ -6,7 +6,7 @@
   window.__rcReviewQuestionEvidenceLoaded = true;
 
   const { db } = await import('/web/data-adapter.js?v=2026082401');
-  const model = await import('/web/tc-review-question-evidence-model.js?v=20260911-question-evidence');
+  const model = await import('/web/tc-review-question-evidence-model.js?v=20260911-question-evidence2');
   const {
     buildQuestionLookup,
     choicesForQuestion,
@@ -24,7 +24,7 @@
     if (document.querySelector('link[data-rv-question-evidence-style]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/web/tc-review-question-evidence.css?v=20260911-question-evidence';
+    link.href = '/web/tc-review-question-evidence.css?v=20260911-question-evidence2';
     link.dataset.rvQuestionEvidenceStyle = 'true';
     document.head.appendChild(link);
   }
@@ -111,6 +111,29 @@
     return 'Scored';
   }
 
+  function displayRef(ref) {
+    const raw = String(ref || '').trim();
+    const dayQuestion = raw.match(/^(\d+)_(\d+)$/);
+    if (dayQuestion) return `Day ${dayQuestion[1]} · Question ${dayQuestion[2]}`;
+    const written = raw.match(/^WP_(\d+)$/i);
+    if (written) return `Day ${written[1]} · Written Response`;
+    const question = raw.match(/^Q(\d+)$/i);
+    if (question) return `Question ${question[1]}`;
+    return raw || 'Item';
+  }
+
+  function displayAnswer(question, answerType, value) {
+    const choices = choicesForQuestion(question, answerType);
+    const matchedIndex = choices.findIndex((choice, index) => choiceMatches(value, choice, index));
+    if (matchedIndex >= 0) {
+      const choice = choices[matchedIndex];
+      const key = choice.key || String.fromCharCode(65 + matchedIndex);
+      const text = choice.text || choice.value || '';
+      return text ? `${key} — ${text}` : String(key);
+    }
+    return formatAnswer(value);
+  }
+
   function metadataChips(question) {
     const chips = [];
     for (const code of question?.goalCodes || []) {
@@ -148,8 +171,8 @@
     }).join('')}</div>`;
   }
 
-  function answerComparison(studentAnswer, correctAnswer) {
-    return `<div class="rv-question-evidence-answers"><div><span>Student response</span><strong>${escapeHtml(formatAnswer(studentAnswer))}</strong></div><div><span>Correct answer</span><strong>${escapeHtml(formatAnswer(correctAnswer))}</strong></div></div>`;
+  function answerComparison(question, answerType, studentAnswer, correctAnswer) {
+    return `<div class="rv-question-evidence-answers"><div><span>Student response</span><strong>${escapeHtml(displayAnswer(question, answerType, studentAnswer))}</strong></div><div><span>Correct answer</span><strong>${escapeHtml(displayAnswer(question, answerType, correctAnswer))}</strong></div></div>`;
   }
 
   function autoCard(row, lookup) {
@@ -167,12 +190,13 @@
       : (question?.correct ?? '—');
     const outcome = classifyOutcome(points);
     const prompt = question?.text || 'Question text is unavailable for this legacy item.';
+    const resolvedType = answerType || question?.type || 'Item';
 
     return `<article class="rv-question-evidence-card is-${escapeHtml(outcome)}" data-rv-question-outcome="${escapeHtml(outcome)}" data-rv-question-ref="${escapeHtml(ref)}">
-      <div class="rv-question-evidence-card-head"><div><span class="rv-question-evidence-ref">${escapeHtml(ref)}</span><span class="rv-question-evidence-type">${escapeHtml(answerType || question?.type || 'Item')}</span></div><div><span class="rv-question-evidence-outcome">${escapeHtml(outcomeLabel(outcome))}</span><strong>${escapeHtml(points)}</strong></div></div>
+      <div class="rv-question-evidence-card-head"><div><span class="rv-question-evidence-ref">${escapeHtml(displayRef(ref))}</span><span class="rv-question-evidence-type">${escapeHtml(resolvedType)}</span></div><div><span class="rv-question-evidence-outcome">${escapeHtml(outcomeLabel(outcome))}</span><strong>${escapeHtml(points)}</strong></div></div>
       <div class="rv-question-evidence-prompt">${escapeHtml(prompt)}</div>
-      ${choiceList(question, answerType || question?.type, studentAnswer, correctAnswer)}
-      ${answerComparison(studentAnswer, correctAnswer)}
+      ${choiceList(question, resolvedType, studentAnswer, correctAnswer)}
+      ${answerComparison(question, resolvedType, studentAnswer, correctAnswer)}
       ${metadataChips(question)}
     </article>`;
   }
@@ -244,6 +268,7 @@
     const panel = questionPanel(cards.join(''), counts, submissionId);
     table.insertAdjacentElement('beforebegin', panel);
     details.classList.add('rv-question-evidence-ready');
+    details.classList.remove('rv-question-evidence-pending');
     details.dataset.rvQuestionEvidenceFingerprint = fingerprint;
 
     const title = details.querySelector(':scope > summary .rv-section-header > span:first-child')
