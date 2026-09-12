@@ -347,12 +347,18 @@
   function scheduleDecorate() {
     if (scheduled) return;
     scheduled = true;
-    requestAnimationFrame(() => {
+    let settled = false;
+    const runDecorate = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(fallback);
       scheduled = false;
       decorateCurrent().catch(error => {
         console.warn('[review-question-evidence] Could not decorate Review detail:', error);
       });
-    });
+    };
+    const fallback = setTimeout(runDecorate, 160);
+    requestAnimationFrame(runDecorate);
   }
 
   function start() {
