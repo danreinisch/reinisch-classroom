@@ -68,6 +68,7 @@ assert.ok(
   'Review queue observer must watch direct child replacements only'
 );
 assert.ok(model.includes("if (value === 'pending' || value === 'in_progress') return 'needs-review';"));
+assert.ok(model.includes("['assigned', 'in progress'].includes(instanceStatus)"));
 assert.ok(model.includes("status === 'reviewed'"));
 assert.ok(model.includes("status === 'finalized'"));
 console.log('✓ Review lifecycle grouping and direct-child observer guard are present');
@@ -114,7 +115,7 @@ console.log('--- Review polish regression contract ---');
 const runtimeSource = model
   .replace(/export\s+const\s+/g, 'const ')
   .replace(/export\s+function\s+/g, 'function ');
-const runtime = new Function(`${runtimeSource}\nreturn { normalizeAssignmentTitle, logicalAssignmentKey, makeRows, groupAssignments, assignmentRows, assignmentSummary };`)();
+const runtime = new Function(`${runtimeSource}\nreturn { statusOf, countStatus, normalizeAssignmentTitle, logicalAssignmentKey, makeRows, groupAssignments, assignmentRows, assignmentSummary };`)();
 
 assert.strictEqual(
   runtime.normalizeAssignmentTitle('WEEK 2 — Seeker — Chapters 4–6 — S003', 'S003'),
@@ -152,6 +153,26 @@ assert.strictEqual(groups[0].status, 'finalized');
 assert.strictEqual(runtime.assignmentRows(rows, rows[0].assignmentId, { className: 'All Classes' }).length, 2);
 assert.strictEqual(runtime.assignmentSummary(rows, rows[0].assignmentId, 'All Classes').title, 'WEEK 2 — Seeker — Chapters 4–6');
 console.log('✓ individualized physical assignments collapse into assignment → student hierarchy without losing source IDs');
+
+const resubmittedRows = runtime.makeRows(
+  [
+    { id: 'sub-returned', instance_id: 'inst-returned', assignment_id: 'asg-returned', student_code: 'S016', review_status: 'pending', submitted_at: '2026-09-11T15:00:00Z', answers: { q1: 'A' } },
+    { id: 'sub-waiting', instance_id: 'inst-waiting', assignment_id: 'asg-waiting', student_code: 'S023', review_status: 'pending', submitted_at: '2026-09-11T15:05:00Z', answers: { q1: 'B' } },
+  ],
+  [
+    { id: 'inst-returned', assignment_id: 'asg-returned', student_code: 'S016', status: 'In Progress' },
+    { id: 'inst-waiting', assignment_id: 'asg-waiting', student_code: 'S023', status: 'Submitted' },
+  ],
+  [
+    { id: 'asg-returned', title: 'Resubmitted Assignment', class_name: 'Language Arts 3 SC' },
+    { id: 'asg-waiting', title: 'Waiting Assignment', class_name: 'Language Arts 3 SC' },
+  ],
+  [{ code: 'S016' }, { code: 'S023' }]
+);
+assert.strictEqual(runtime.statusOf(resubmittedRows[0]), 'returned', 'Resubmit to Student must leave the row with the student, not in Needs Review');
+assert.strictEqual(runtime.statusOf(resubmittedRows[1]), 'needs-review', 'a genuinely Submitted pending result must still require teacher review');
+assert.strictEqual(runtime.countStatus(resubmittedRows, 'needs-review'), 1, 'Review attention count must exclude work currently back with a student');
+console.log('✓ Resubmit to Student clears the false Needs Review count while preserving real submitted work');
 
 for (const marker of [
   'You’re caught up.',
@@ -242,7 +263,7 @@ for (const forbidden of ['fetch(', 'db.', '.from(', 'teacher-review-save']) {
     `final presentation polish must not add data or write paths: ${forbidden}`
   );
 }
-console.log('✓ Review badge reconciles to the actual Review lifecycle without a new data/write path');
+console.log('✓ Review badge reconciles to submitted teacher work and drops the stale count after resubmission');
 
 for (const selector of [
   'html.tc-collapsed .rv-qol-command',
