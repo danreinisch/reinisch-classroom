@@ -47,14 +47,24 @@ const submissions = students.map((student, index) => ({
   answers: { Q1: index === 0 ? 'A' : 'B' },
 }));
 
-const assignmentItems = [{
-  id: 'item-q1',
-  assignment_id: 'assignment-html',
-  item_ref: 'Q1',
-  answer_type: 'mcq',
-  points: 1,
-  meta: { correct: 'b) Second choice' },
-}];
+const assignmentItems = [
+  {
+    id: 'item-q1',
+    assignment_id: 'assignment-html',
+    item_ref: 'Q1',
+    answer_type: 'mcq',
+    points: 1,
+    meta: { correct: 'b) Second choice' },
+  },
+  {
+    id: 'item-writing',
+    assignment_id: 'assignment-html',
+    item_ref: 'WP_1',
+    answer_type: 'written_response',
+    points: 3,
+    meta: {},
+  },
+];
 
 const submissionAnswers = [
   {
@@ -62,8 +72,16 @@ const submissionAnswers = [
     raw_answer: 'A', is_correct: false, earned_points: 0, teacher_note: null,
   },
   {
+    id: 'writing-a', submission_id: 'submission-1', assignment_item_id: 'item-writing', item_id: 'item-writing',
+    raw_answer: 'Synthetic written response A', is_correct: null, earned_points: null, teacher_note: null,
+  },
+  {
     id: 'answer-b', submission_id: 'submission-2', assignment_item_id: 'item-q1', item_id: 'item-q1',
     raw_answer: 'B', is_correct: true, earned_points: 1, teacher_note: null,
+  },
+  {
+    id: 'writing-b', submission_id: 'submission-2', assignment_item_id: 'item-writing', item_id: 'item-writing',
+    raw_answer: 'Synthetic written response B', is_correct: null, earned_points: null, teacher_note: null,
   },
 ];
 
