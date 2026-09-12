@@ -1,3 +1,8 @@
+html.rv-review-first-paint-pending .rv-header,
+html.rv-review-first-paint-pending .rv-filters,
+html.rv-review-first-paint-pending .rv-status-tabs,
+html.rv-review-first-paint-pending #rvBatchBar,
+html.rv-review-first-paint-pending #rvQueue{visibility:hidden!important}
 .rv-question-evidence-pending .rv-auto-table{visibility:hidden!important}
 .rv-question-evidence-ready .rv-auto-table{display:none!important}
 .rv-question-evidence-panel{display:grid;gap:9px;padding:9px 0 3px}
