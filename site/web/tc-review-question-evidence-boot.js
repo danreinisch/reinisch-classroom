@@ -7,22 +7,22 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewQuestio
   const FALLBACK_MS = 2200;
   const fallbackTimers = new WeakMap();
 
-  function ensureStyle() {
+  const ensureStyle = () => {
     if (document.querySelector(STYLE_SELECTOR)) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = '/web/tc-review-question-evidence.css?v=20260911-question-evidence2';
     link.dataset.rvQuestionEvidenceStyle = 'true';
     document.head.appendChild(link);
-  }
+  };
 
-  function clearFallback(details) {
+  const clearFallback = details => {
     const timer = fallbackTimers.get(details);
     if (timer) clearTimeout(timer);
     fallbackTimers.delete(details);
-  }
+  };
 
-  function guardLegacyTable(table) {
+  const guardLegacyTable = table => {
     const details = table.closest('details.rv-details') || table.closest('details');
     if (!details) return;
 
@@ -43,16 +43,16 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewQuestio
       }
     }, FALLBACK_MS);
     fallbackTimers.set(details, timer);
-  }
+  };
 
-  function scan() {
+  const scan = () => {
     document
       .querySelectorAll([
         '#rvQueue .rv-submission-item.expanded .rv-auto-table',
         '#rvQueue .rv-submission-item.rv-qol-selected .rv-auto-table',
       ].join(','))
       .forEach(guardLegacyTable);
-  }
+  };
 
   ensureStyle();
 
