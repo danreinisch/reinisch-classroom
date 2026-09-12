@@ -58,21 +58,21 @@ if (
   });
 }
 
-// Review-only presentation bootstrap. Install the one-flight startup reader
-// synchronously with tc-review's constants import, then defer the presentation
-// layer one task so the legacy Review engine starts the authoritative first read.
-// The command center reuses that same in-flight result instead of repeating the
-// initial roster/submission/assignment fetches.
+// Review-only presentation bootstrap. Install the one-flight startup reader and
+// the evidence first-paint guard synchronously with tc-review's constants import.
+// Then defer the heavier command-center presentation one task so the legacy Review
+// engine starts the authoritative first read without duplicate startup fan-out.
 if (
   typeof window !== "undefined" &&
   window.location.pathname.startsWith("/teacher/review")
 ) {
   try {
-    await import("/web/tc-review-read-share.js?v=20260911-review-read-share3");
+    await import("/web/tc-review-read-share.js?v=20260911-review-read-share4");
+    await import("/web/tc-review-question-evidence-boot.js?v=20260911-question-evidence2");
     setTimeout(() => {
       import("/web/tc-review-qol.js?v=20260911-review-polish")
         .then(() => import("/web/tc-review-final-polish.js?v=20260911-review-final-polish3"))
-        .then(() => import("/web/tc-review-question-evidence.js?v=20260911-question-evidence"))
+        .then(() => import("/web/tc-review-question-evidence.js?v=20260911-question-evidence2"))
         .catch((error) => {
           console.warn("[review] Could not load Review presentation:", error);
         });
