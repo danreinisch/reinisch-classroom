@@ -12,6 +12,7 @@
   let root = null;
   let queue = null;
   let focusedSubmissionId = null;
+  let lastReviewNextSubmissionId = null;
   let intentPending = false;
   let intentStartedAt = 0;
   let stabilizeUntil = 0;
@@ -70,6 +71,14 @@
     if (selectedId) focusedSubmissionId = String(selectedId);
   }
 
+  function rememberReviewNextSubmissionId() {
+    const submissionId = root
+      ?.querySelector('.rv-qol-student-table tr[data-needs="true"] [data-rv-focus]')
+      ?.dataset.rvFocus;
+    if (submissionId) lastReviewNextSubmissionId = String(submissionId);
+    return lastReviewNextSubmissionId;
+  }
+
   function setFocusIntent(submissionId) {
     if (!submissionId) return;
     focusedSubmissionId = String(submissionId);
@@ -80,9 +89,7 @@
   }
 
   function reviewNextSubmissionId() {
-    return root
-      ?.querySelector('.rv-qol-student-table tr[data-needs="true"] [data-rv-focus]')
-      ?.dataset.rvFocus || null;
+    return rememberReviewNextSubmissionId();
   }
 
   function handleFocusIntent(event) {
@@ -108,9 +115,15 @@
   }
 
   function restoreFocusSelection() {
-    if (!root || !queue) return;
+    root = document.getElementById('rvReviewCommandCenter') || root;
+    queue = document.getElementById('rvQueue') || queue;
+    if (!root || !queue) {
+      scheduleRetry();
+      return;
+    }
 
     if (!document.body.classList.contains('rv-qol-focus')) {
+      rememberReviewNextSubmissionId();
       if (pendingIntentIsFresh()) {
         retryPendingIntent();
         return;
@@ -144,23 +157,19 @@
       changed = true;
     }
 
-    if (header.getAttribute('aria-expanded') !== 'true') {
-      header.click();
-      changed = true;
-    }
-
     if (intentPending) {
       intentPending = false;
       intentStartedAt = 0;
     }
 
+    const expanded = header.getAttribute('aria-expanded') === 'true';
     const autoTable = item.querySelector('.rv-auto-table');
-    const evidenceReady = !autoTable || Boolean(item.querySelector('.rv-question-evidence-panel'));
-    if (changed || !evidenceReady) {
+    const evidenceReady = Boolean(item.querySelector('.rv-question-evidence-panel'));
+    if (changed || expanded || autoTable) {
       window.dispatchEvent(new Event('rc-review-question-evidence-rescan'));
     }
 
-    if (stabilizationActive() && (changed || !evidenceReady)) {
+    if (stabilizationActive() && (changed || !expanded || (autoTable && !evidenceReady))) {
       scheduleRetry();
     }
   }
@@ -174,12 +183,14 @@
     }, 0);
   }
 
+  document.addEventListener('click', handleFocusIntent, true);
+
   function attach() {
     root = document.getElementById('rvReviewCommandCenter');
     queue = document.getElementById('rvQueue');
     if (!root || !queue) return false;
 
-    root.addEventListener('click', handleFocusIntent, true);
+    rememberReviewNextSubmissionId();
 
     const queueObserver = new MutationObserver(() => {
       rememberCurrentSelection();
@@ -193,6 +204,7 @@
     });
 
     const rootObserver = new MutationObserver(() => {
+      rememberReviewNextSubmissionId();
       rememberCurrentSelection();
       scheduleRestore();
     });
