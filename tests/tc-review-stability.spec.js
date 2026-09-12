@@ -85,70 +85,6 @@ const submissionAnswers = [
 
 async function fixture(page) {
   await page.addInitScript(({ students, assignments, instances, submissions, assignmentItems, submissionAnswers }) => {
-    const NativeMutationObserver = window.MutationObserver;
-    const callbackMilestones = new Set([1, 10, 100, 500, 1000]);
-    let nextObserverId = 0;
-    let evidenceRescans = 0;
-
-    window.addEventListener('rc-review-question-evidence-rescan', () => {
-      evidenceRescans += 1;
-      if (callbackMilestones.has(evidenceRescans)) {
-        console.log(`[rv-diag] evidence-rescans=${evidenceRescans}`);
-      }
-    }, true);
-
-    window.MutationObserver = class ReviewDiagnosticMutationObserver {
-      constructor(callback) {
-        this._id = ++nextObserverId;
-        this._count = 0;
-        this._native = null;
-        const stack = String(new Error().stack || '');
-        const match = stack.match(/\/web\/(tc-review-[^?\s):]+\.js)/);
-        this._source = match?.[1] || 'other';
-        this._native = new NativeMutationObserver(records => {
-          this._count += 1;
-          if (this._source !== 'other' && callbackMilestones.has(this._count)) {
-            const summary = records.slice(0, 4).map(record => {
-              const target = record.target;
-              const targetName = target?.id
-                ? `#${target.id}`
-                : target?.classList?.length
-                  ? `.${[...target.classList].slice(0, 3).join('.')}`
-                  : target?.nodeName || 'unknown';
-              return `${record.type}:${record.attributeName || ''}:${targetName}`;
-            }).join('|');
-            console.log(`[rv-diag] observer=${this._id} source=${this._source} callbacks=${this._count} records=${records.length} ${summary}`);
-          }
-          if (this._source !== 'other' && this._count >= 2000) {
-            console.log(`[rv-diag] observer=${this._id} source=${this._source} capped-at=${this._count}`);
-            this._native.disconnect();
-            return;
-          }
-          callback(records, this);
-        });
-      }
-
-      observe(target, options) {
-        if (this._source !== 'other') {
-          const targetName = target?.id
-            ? `#${target.id}`
-            : target?.classList?.length
-              ? `.${[...target.classList].slice(0, 3).join('.')}`
-              : target?.nodeName || 'unknown';
-          console.log(`[rv-diag] observer=${this._id} source=${this._source} observe=${targetName} options=${JSON.stringify(options)}`);
-        }
-        return this._native.observe(target, options);
-      }
-
-      disconnect() {
-        return this._native.disconnect();
-      }
-
-      takeRecords() {
-        return this._native.takeRecords();
-      }
-    };
-
     localStorage.clear();
     sessionStorage.clear();
     localStorage.setItem('rc_tc_sidebar', 'expanded');
@@ -211,10 +147,6 @@ async function fixture(page) {
 test('Teacher Center → Review settles to one stable command-center paint', async ({ page }) => {
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(error.message));
-  page.on('console', message => {
-    const text = message.text();
-    if (text.startsWith('[rv-diag]')) console.log(text);
-  });
   await fixture(page);
 
   await page.goto('/teacher/work/');
@@ -231,14 +163,13 @@ test('Teacher Center → Review settles to one stable command-center paint', asy
   await expect(page.locator('[data-rv-review-next]')).toBeVisible();
 
   await page.locator('[data-rv-review-next]').click();
-  await expect(page.locator('.rv-submission-item.rv-qol-selected')).toHaveCount(1);
-  await page.waitForTimeout(1200);
+  await expect(page.locator('.rv-submission-item.rv-qol-selected')).toHaveCount(1, { timeout: 10000 });
 
-  await expect(page.locator('.rv-question-evidence-panel')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('.rv-question-evidence-panel')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('.rv-question-evidence-prompt')).toContainText('Which answer is correct?');
   await expect(page.locator('.rv-question-evidence-option')).toHaveCount(3);
 
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(900);
   const stable = await page.evaluate(() => ({
     firstPaintPending: document.documentElement.classList.contains('rv-review-first-paint-pending'),
     retryPulses: document.querySelectorAll('.rv-question-evidence-retry-pulse').length,

@@ -100,7 +100,9 @@
     if (!details) return;
 
     if (details.classList.contains('rv-question-evidence-ready')) {
-      details.classList.remove('rv-question-evidence-pending');
+      if (details.classList.contains('rv-question-evidence-pending')) {
+        details.classList.remove('rv-question-evidence-pending');
+      }
       clearEvidenceTimers(details);
       return;
     }
@@ -116,7 +118,10 @@
         const retry = retryTimers.get(details);
         if (retry) clearTimeout(retry);
         retryTimers.delete(details);
-        if (!details.classList.contains('rv-question-evidence-ready')) {
+        if (
+          !details.classList.contains('rv-question-evidence-ready') &&
+          details.classList.contains('rv-question-evidence-pending')
+        ) {
           details.classList.remove('rv-question-evidence-pending');
         }
       }, EVIDENCE_FALLBACK_MS);

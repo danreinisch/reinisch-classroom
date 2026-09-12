@@ -20,7 +20,7 @@ const reviewSave = read('netlify/functions/teacher-review-save.js');
 console.log('--- Review question evidence detail contract ---');
 
 assert.ok(
-  constants.includes('/web/tc-review-question-evidence-boot.js?v=20260911-question-evidence4'),
+  constants.includes('/web/tc-review-question-evidence-boot.js?v=20260911-question-evidence5'),
   'Question Evidence first-paint guard must load through the Review bootstrap'
 );
 assert.ok(
@@ -114,6 +114,11 @@ assert.ok(
   !boot.includes('rv-question-evidence-retry-pulse') &&
   !boot.includes('setInterval('),
   'evidence retry must not create a class-mutation feedback loop'
+);
+assert.ok(
+  boot.includes("if (details.classList.contains('rv-question-evidence-ready')) {\n      if (details.classList.contains('rv-question-evidence-pending')) {\n        details.classList.remove('rv-question-evidence-pending');\n      }") &&
+  boot.includes("!details.classList.contains('rv-question-evidence-ready') &&\n          details.classList.contains('rv-question-evidence-pending')"),
+  'evidence guard must never rewrite the class attribute merely to remove an already-absent pending marker'
 );
 assert.ok(
   boot.includes('const queue = document.getElementById(\'rvQueue\')') &&
