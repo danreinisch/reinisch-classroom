@@ -185,7 +185,12 @@
       rememberCurrentSelection();
       scheduleRestore();
     });
-    queueObserver.observe(queue, { childList: true });
+    queueObserver.observe(queue, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'aria-expanded'],
+    });
 
     const rootObserver = new MutationObserver(() => {
       rememberCurrentSelection();
