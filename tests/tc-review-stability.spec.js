@@ -142,6 +142,9 @@ test('Teacher Center → Review settles to one stable command-center paint', asy
 
   await expect(page.locator('#rvReviewCommandCenter')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('html')).not.toHaveClass(/rv-review-first-paint-pending/, { timeout: 10000 });
+
+  await expect(page.locator('[data-rv-open-assignment]')).toBeVisible();
+  await page.locator('[data-rv-open-assignment]').click();
   await expect(page.locator('[data-rv-review-next]')).toBeVisible();
 
   await page.locator('[data-rv-review-next]').click();
