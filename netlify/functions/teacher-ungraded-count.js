@@ -1,7 +1,7 @@
-// Teacher ungraded count endpoint
+// Teacher Review badge count endpoint
 // GET /.netlify/functions/teacher-ungraded-count
 // Auth: Requires teacher session cookie
-// Returns: Count of assignment instances with status 'Submitted' (awaiting grading)
+// Returns: Count of current-year assignment instances that need teacher Review.
 const {
   generateRequestId,
   jsonResponse,
@@ -40,18 +40,18 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Count only current operational-year instances awaiting grading.
-    // Historical and legacy NULL-year records remain preserved but do not
-    // inflate the active Teacher Center count.
     const operationalYear = getOperationalSchoolYear();
 
-    // Count only instructional Submitted instances in the active operational year.
-    // Missing non_instructional keys remain instructional; explicit true is excluded.
+    // Review actions already move assignment_instances through the authoritative
+    // lifecycle: Submitted = teacher action; Reviewed/Graded = complete;
+    // Assigned/In Progress = back with the student. Counting Submitted instances
+    // therefore matches the actionable Needs Review queue without downloading
+    // submission rows or creating a second lifecycle interpretation here.
     const url =
       `${SUPABASE_URL}/rest/v1/assignment_instances` +
       `?select=id` +
       `&status=eq.Submitted` +
-      `&school_year=eq.${operationalYear}` +
+      `&school_year=eq.${encodeURIComponent(operationalYear)}` +
       `&or=(settings->>non_instructional.is.null,settings->>non_instructional.neq.true)`;
 
     const resp = await fetch(url, {
@@ -65,8 +65,8 @@ exports.handler = async (event) => {
       },
     });
 
-    if (resp.ok === false) {
-      throw new Error(`Ungraded instances query failed: ${resp.status}`);
+    if (!resp.ok) {
+      throw new Error(`Review badge instances query failed: ${resp.status}`);
     }
 
     let count = 0;

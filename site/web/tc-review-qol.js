@@ -101,7 +101,17 @@
   }
 
   function nextFrame() {
-    return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return new Promise(resolve => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(fallback);
+        resolve();
+      };
+      const fallback = setTimeout(finish, 180);
+      requestAnimationFrame(() => requestAnimationFrame(finish));
+    });
   }
 
   async function refreshData({ render = true } = {}) {
@@ -365,6 +375,7 @@
     state.assignmentId = row.assignmentId;
     state.focusSubmissionId = row.id;
     state.advanceAfterAction = false;
+    renderShell();
     const status = statusOf(row);
     const legacyStatus = ['reviewed', 'finalized'].includes(status) ? status : status === 'needs-review' ? 'needs-review' : 'all';
     await syncLegacyFilters({ status: legacyStatus, className: state.className, assignmentId: row.sourceAssignmentId || null });

@@ -11,6 +11,14 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewReadSha
     'listAssignmentInstances',
   ];
   const SHARE_WINDOW_MS = 5000;
+  const initialResults = new Map();
+
+  // Presentation-only consumers may reuse the already-loaded initial snapshot
+  // instead of issuing another full read. The returned arrays are never mutated
+  // by this helper and later Review refreshes still use the ordinary adapter path.
+  window.__rcReviewInitialReadSnapshot = function reviewInitialReadSnapshot(methodName) {
+    return initialResults.get(methodName) ?? null;
+  };
 
   for (const methodName of SHARED_METHODS) {
     const original = db?.[methodName];
@@ -40,7 +48,12 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewReadSha
         firstKey = key;
         shareAvailable = true;
         expiresAt = now + SHARE_WINDOW_MS;
-        firstPromise = Promise.resolve().then(() => original.apply(this, args));
+        firstPromise = Promise.resolve()
+          .then(() => original.apply(this, args))
+          .then(value => {
+            if (!initialResults.has(methodName)) initialResults.set(methodName, value);
+            return value;
+          });
         return firstPromise;
       }
 
@@ -60,6 +73,29 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewReadSha
       shareAvailable = false;
       expiresAt = 0;
       return original.apply(this, args);
+    };
+  }
+
+  // Expanded Review rows can be asked to render more than once while the command
+  // center is settling. Share only identical in-flight answer reads; do not retain
+  // a result cache here. tc-review.js remains authoritative for resolved caching.
+  const originalListSubmissionAnswers = db?.listSubmissionAnswers;
+  if (typeof originalListSubmissionAnswers === 'function') {
+    const pendingSubmissionReads = new Map();
+    db.listSubmissionAnswers = function reviewSharedSubmissionAnswers(...args) {
+      const key = JSON.stringify(args || []);
+      const existing = pendingSubmissionReads.get(key);
+      if (existing) return existing;
+
+      const pending = Promise.resolve()
+        .then(() => originalListSubmissionAnswers.apply(this, args))
+        .finally(() => {
+          if (pendingSubmissionReads.get(key) === pending) {
+            pendingSubmissionReads.delete(key);
+          }
+        });
+      pendingSubmissionReads.set(key, pending);
+      return pending;
     };
   }
 }
