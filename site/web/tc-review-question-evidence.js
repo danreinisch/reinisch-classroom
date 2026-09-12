@@ -257,7 +257,7 @@
   function decorateAutoSection(selected, lookup, assignmentId, submissionId) {
     const table = selected.querySelector('.rv-auto-table');
     if (!table) return;
-    const details = table.closest('details.rv-details') || table.closest('details');
+    const details = table.closest('.rv-section') || table.closest('details.rv-details') || table.closest('details');
     if (!details) return;
 
     const rows = [...table.querySelectorAll('tbody > tr')];
@@ -284,11 +284,12 @@
     details.classList.remove('rv-question-evidence-pending');
     details.dataset.rvQuestionEvidenceFingerprint = fingerprint;
 
-    const title = details.querySelector(':scope > summary .rv-section-header > span:first-child')
+    const title = details.querySelector(':scope > .rv-section-header > span:first-child')
+      || details.querySelector(':scope > summary .rv-section-header > span:first-child')
       || details.querySelector(':scope > summary span:first-child');
     if (title) title.textContent = `Question Review (${cards.length} auto-graded item${cards.length === 1 ? '' : 's'})`;
 
-    if (!details.dataset.rvQuestionEvidenceOpened) {
+    if (details.tagName === 'DETAILS' && !details.dataset.rvQuestionEvidenceOpened) {
       details.open = true;
       details.dataset.rvQuestionEvidenceOpened = 'true';
     }

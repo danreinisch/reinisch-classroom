@@ -96,7 +96,7 @@
   }
 
   function guardLegacyTable(table) {
-    const details = table.closest('details.rv-details') || table.closest('details');
+    const details = table.closest('.rv-section') || table.closest('details.rv-details') || table.closest('details');
     if (!details) return;
 
     if (details.classList.contains('rv-question-evidence-ready')) {
