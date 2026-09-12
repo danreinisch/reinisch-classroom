@@ -14,15 +14,16 @@ const css = read('site/web/tc-review-question-evidence.css');
 const readShare = read('site/web/tc-review-read-share.js');
 const boot = read('site/web/tc-review-question-evidence-boot.js');
 const badgeEndpoint = read('netlify/functions/teacher-ungraded-count.js');
+const reviewSave = read('netlify/functions/teacher-review-save.js');
 
 console.log('--- Review question evidence detail contract ---');
 
 assert.ok(
-  constants.includes('/web/tc-review-question-evidence-boot.js?v=20260911-question-evidence3'),
+  constants.includes('/web/tc-review-question-evidence-boot.js?v=20260911-question-evidence4'),
   'Question Evidence first-paint guard must load through the Review bootstrap'
 );
 assert.ok(
-  constants.includes('/web/tc-review-question-evidence.js?v=20260911-question-evidence2'),
+  constants.includes('/web/tc-review-question-evidence.js?v=20260911-question-evidence4'),
   'Question Evidence must load only through the Review presentation bootstrap'
 );
 assert.ok(
@@ -83,9 +84,20 @@ assert.ok(
   'legacy Review chrome must stay hidden during the command-center first-paint handoff'
 );
 assert.ok(
-  boot.includes('rv-question-evidence-retry-pulse') &&
-  boot.includes('startEvidenceRetry'),
-  'evidence guard must retry a decoration request that raced an async legacy rerender'
+  boot.includes("RESCAN_EVENT = 'rc-review-question-evidence-rescan'") &&
+  boot.includes('EVIDENCE_RETRY_ATTEMPTS') &&
+  boot.includes('requestEvidenceRescan'),
+  'evidence guard must use a bounded explicit rescan instead of mutation pulses'
+);
+assert.ok(
+  !boot.includes('rv-question-evidence-retry-pulse') &&
+  !boot.includes('setInterval('),
+  'evidence retry must not create a class-mutation feedback loop'
+);
+assert.ok(
+  boot.includes('const queue = document.getElementById(\'rvQueue\')') &&
+  boot.includes('evidenceObserver.observe(queue'),
+  'persistent evidence observation must be scoped to the Review queue'
 );
 assert.ok(
   css.includes('.rv-question-evidence-pending .rv-auto-table{visibility:hidden!important}'),
@@ -95,7 +107,15 @@ assert.ok(
   evidence.includes("details.classList.remove('rv-question-evidence-pending')"),
   'successful evidence decoration must clear the first-paint pending guard'
 );
-console.log('✓ command-center and question-evidence handoffs are guarded against visible swap flicker');
+console.log('✓ command-center and question-evidence handoffs avoid self-triggering mutation churn');
+
+assert.ok(
+  evidence.includes('decorateAgain = true') &&
+  evidence.includes('currentSelected !== selected') &&
+  evidence.includes("window.addEventListener('rc-review-question-evidence-rescan', scheduleDecorate)"),
+  'rapid Review selection changes must re-run decoration for the current submission'
+);
+console.log('✓ async evidence decoration cannot strand a newer student selection');
 
 for (const forbidden of [
   'teacher-review-save',
@@ -113,7 +133,7 @@ console.log('✓ evidence layer owns no Review mutation path');
 const runtimeSource = modelSource
   .replace(/export\s+const\s+/g, 'const ')
   .replace(/export\s+function\s+/g, 'function ');
-const runtime = new Function(`${runtimeSource}\nreturn { parseAssignmentMeta, normalizeChoices, buildQuestionLookup, formatAnswer, answerTokens, choiceMatches, choicesForQuestion, classifyOutcome };`)();
+const runtime = new Function(`${runtimeSource}\nreturn { parseAssignmentMeta, normalizeChoices, buildHtmlSourceLookup, buildQuestionLookup, formatAnswer, answerTokens, choiceMatches, choicesForQuestion, classifyOutcome };`)();
 
 const assignment = {
   meta: {
@@ -163,7 +183,34 @@ assert.strictEqual(htmlLookup.get('Q7').text, 'Choose the best transition.');
 assert.strictEqual(htmlLookup.get('Q7').choices[1].text, 'Therefore');
 console.log('✓ HTML-manifest question metadata remains supported');
 
-const choices = runtime.normalizeChoices(['Alpha', 'Beta']);
+const storedHtmlLookup = runtime.buildQuestionLookup({
+  meta: {
+    questions: [{
+      q_ref: 'D2Q1',
+      label: 'D2Q1',
+      answer_type: 'mcq',
+      correct: 'b) Making a sandwich',
+    }],
+    html_src: `
+      <div class="q-card" data-qref="D2Q1" data-goal="S015.11.1-2" data-dese="RL.9-10.1" data-answer-type="multiple-choice">
+        <div class="q-prompt">What is the person doing? <button class="tts-btn">Read</button></div>
+        <button class="opt-btn" type="button">a) Pouring milk</button>
+        <button class="opt-btn" type="button" data-correct>b) Making a sandwich</button>
+        <button class="opt-btn" type="button">c) Washing fruit</button>
+      </div>
+    `,
+  },
+});
+assert.strictEqual(storedHtmlLookup.get('D2Q1').text, 'What is the person doing?');
+assert.deepStrictEqual(storedHtmlLookup.get('D2Q1').choices.map(choice => choice.text), [
+  'Pouring milk', 'Making a sandwich', 'Washing fruit',
+]);
+assert.deepStrictEqual(storedHtmlLookup.get('D2Q1').goalCodes, ['S015.11.1-2']);
+assert.deepStrictEqual(storedHtmlLookup.get('D2Q1').deseCodes, ['RL.9-10.1']);
+assert.strictEqual(storedHtmlLookup.get('D2Q1').correct, 'b) Making a sandwich');
+console.log('✓ stored HTML source restores the prompt and choices omitted from issued metadata');
+
+const choices = runtime.normalizeChoices(['Alpha', 'Beta', 'Gamma']);
 assert.strictEqual(runtime.choiceMatches('A', choices[0], 0), true);
 assert.strictEqual(runtime.choiceMatches('Beta', choices[1], 1), true);
 assert.strictEqual(runtime.choiceMatches('B', choices[0], 0), false);
@@ -172,7 +219,11 @@ assert.strictEqual(runtime.formatAnswer({ value: 'student writing' }), 'student 
 assert.strictEqual(runtime.formatAnswer('{"value":"B"}'), 'B');
 assert.strictEqual(runtime.choiceMatches('{"value":"B"}', choices[1], 1), true);
 assert.deepStrictEqual(runtime.answerTokens('["A","B"]'), ['a', 'b']);
-console.log('✓ choice matching humanizes object values and JSON-wrapped legacy answers');
+assert.deepStrictEqual(runtime.answerTokens('A,B'), ['a,b', 'a', 'b']);
+assert.strictEqual(runtime.choiceMatches('A,B', choices[0], 0), true);
+assert.strictEqual(runtime.choiceMatches('A,B', choices[1], 1), true);
+assert.deepStrictEqual(runtime.answerTokens('Fruit, honey and oats'), ['fruit, honey and oats']);
+console.log('✓ choice matching supports wrapped, JSON-array, and compact comma-separated answers');
 
 assert.strictEqual(runtime.classifyOutcome('1/1'), 'correct');
 assert.strictEqual(runtime.classifyOutcome('1/2'), 'partial');
@@ -191,19 +242,24 @@ assert.ok(!/\.rv-question-evidence-prompt[^}]*background\s*:\s*(?:#fff|white)/i.
 console.log('✓ evidence surface is tighter, less boxy, and keeps the approved Review visual language');
 
 for (const marker of [
-  'select=id,status',
-  'select=id,instance_id,review_status,submitted_at,answers',
-  'dedupeSubmissionsByInstance',
-  'needsTeacherReview',
-  "instanceStatus === 'assigned'",
-  "instanceStatus === 'in progress'",
+  'select=id',
+  '&status=eq.Submitted',
+  "'Prefer': 'count=exact'",
+  "'Range': '0-0'",
+  'or=(settings->>non_instructional.is.null,settings->>non_instructional.neq.true)',
 ]) {
   assert.ok(badgeEndpoint.includes(marker), `Review badge endpoint missing lifecycle marker: ${marker}`);
 }
 assert.ok(
-  !badgeEndpoint.includes('&status=eq.Submitted'),
-  'Teacher shell badge must not count Submitted instances independently of Review status'
+  !badgeEndpoint.includes('/rest/v1/submissions'),
+  'Teacher shell badge should use the canonical assignment-instance lifecycle instead of downloading submissions'
 );
-console.log('✓ Teacher Center Review badge now follows actionable Review lifecycle semantics');
+assert.ok(
+  reviewSave.includes("body: JSON.stringify({ status: 'Assigned' })") &&
+  reviewSave.includes("body: JSON.stringify({ status: 'Reviewed' })") &&
+  reviewSave.includes("status: 'Graded'"),
+  'Review mutations must preserve the Submitted → Assigned/Reviewed/Graded lifecycle used by the badge'
+);
+console.log('✓ Teacher Center Review badge follows the existing actionable instance lifecycle with an exact lightweight count');
 
 console.log('REVIEW QUESTION EVIDENCE DETAIL: PASS');
