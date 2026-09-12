@@ -161,7 +161,7 @@ function choicesFromHtml(content) {
     if (!rawText) continue;
 
     const fallbackKey = String.fromCharCode(65 + choices.length);
-    const prefix = rawText.match(/^\s*([A-Z0-9]+)\s*[).:\-]\s*(.+)$/i);
+    const prefix = rawText.match(/^\s*([A-Z0-9]+)\s*[).:-]\s*(.+)$/i);
     const key = firstText(
       attrValue(`<button ${attrs}>`, 'data-value'),
       attrValue(`<button ${attrs}>`, 'value'),
