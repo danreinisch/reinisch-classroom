@@ -1,10 +1,18 @@
 // Unit tests for tc-review.js helper logic
-// Tests: date validation in queue sorting, escapeHtml XSS vectors
+// Tests: date validation in queue sorting, escapeHtml XSS vectors,
+// submission deduplication, and Review auto/manual score classification.
 // Run with: node tests/tc-review-helpers.test.cjs
 
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const reviewSource = fs.readFileSync(
+  path.join(__dirname, '..', 'site', 'web', 'tc-review.js'),
+  'utf8'
+);
 
 // ── Inline helpers (mirror site/web/tc-review.js) ────────────────────────────
 
@@ -27,6 +35,69 @@ function sortBySubmittedAt(items) {
     const tB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
     return tB - tA;
   });
+}
+
+function isFillInBlankConstructed(item) {
+  if (item.answer_type !== 'constructed') return false;
+  const c = item.meta?.correct;
+  if (c == null) return false;
+  if (Array.isArray(c)) return false;
+  return typeof c === 'string' || typeof c === 'number' || typeof c === 'boolean';
+}
+
+function isKeywordAutoScoredConstructed(item) {
+  if (item.answer_type !== 'constructed') return false;
+  const scoringKeywords = item.meta?.scoring?.keywords;
+  const correctKeywords = item.meta?.correct;
+  return (
+    (Array.isArray(scoringKeywords) && scoringKeywords.length > 0) ||
+    (Array.isArray(correctKeywords) && correctKeywords.length > 0)
+  );
+}
+
+function isManualGradeItem(item) {
+  if (item.answer_type === 'written_response') return true;
+  return item.answer_type === 'constructed' && !isFillInBlankConstructed(item);
+}
+
+function findItemAnswer(item, answers) {
+  return (answers || []).find(
+    answer =>
+      String(answer?.item_id ?? answer?.assignment_item_id ?? '') ===
+      String(item?.id ?? '')
+  );
+}
+
+function hasScoredAnswer(item, answers) {
+  const answer = findItemAnswer(item, answers);
+  return answer != null && answer.earned_points != null;
+}
+
+function isAutoScoredItem(item, answers) {
+  if (
+    item.answer_type === 'mcq' ||
+    item.answer_type === 'boolean' ||
+    item.answer_type === 'multi'
+  ) {
+    return true;
+  }
+
+  if (
+    item.answer_type === 'constructed' &&
+    (
+      isFillInBlankConstructed(item) ||
+      isKeywordAutoScoredConstructed(item)
+    )
+  ) {
+    return hasScoredAnswer(item, answers);
+  }
+
+  return false;
+}
+
+function isScoredItem(item, answers) {
+  if (isAutoScoredItem(item, answers)) return true;
+  return isManualGradeItem(item) && hasScoredAnswer(item, answers);
 }
 
 // ── Date validation in queue sorting ─────────────────────────────────────────
@@ -265,6 +336,97 @@ function deduplicateSubmissions(rawSubmissions) {
   const result = deduplicateSubmissions([]);
   assert.deepStrictEqual(result, [], 'empty input returns empty array');
   console.log('✓ empty input returns empty array');
+}
+
+// ── Review score provenance: auto-scored vs teacher-scored ───────────────────
+
+console.log('\n--- Review score provenance ---');
+
+{
+  const item = { id: 1, answer_type: 'mcq', meta: { correct: 'A' } };
+  assert.strictEqual(isAutoScoredItem(item, []), true, 'MCQ remains auto-scored');
+  assert.strictEqual(isScoredItem(item, []), true, 'MCQ is a complete auto-scored item');
+  console.log('✓ MCQ remains in the auto bucket');
+}
+
+{
+  const item = { id: 2, answer_type: 'constructed', meta: { correct: 'apple' } };
+  const answers = [{ item_id: 2, earned_points: 1 }];
+  assert.strictEqual(isAutoScoredItem(item, answers), true, 'primitive-answer fill-in remains auto-scored');
+  assert.strictEqual(isScoredItem(item, answers), true);
+  console.log('✓ primitive fill-in remains in the auto bucket');
+}
+
+{
+  const item = {
+    id: 3,
+    answer_type: 'constructed',
+    meta: { scoring: { keywords: ['alpha', 'beta'], min_keywords: 1 } },
+  };
+  const answers = [{ assignment_item_id: 3, earned_points: 0 }];
+  assert.strictEqual(isAutoScoredItem(item, answers), true, 'keyword-scored constructed item remains auto even at zero points');
+  assert.strictEqual(isScoredItem(item, answers), true, 'zero is still a scored result');
+  console.log('✓ keyword-scored constructed item remains auto, including 0 points');
+}
+
+{
+  const item = {
+    id: 4,
+    answer_type: 'constructed',
+    meta: { correct: ['alpha', 'beta'] },
+  };
+  const answers = [{ item_id: 4, earned_points: 2 }];
+  assert.strictEqual(isAutoScoredItem(item, answers), true, 'legacy keyword-list constructed item remains auto-scored');
+  assert.strictEqual(isScoredItem(item, answers), true);
+  console.log('✓ legacy keyword-list constructed scoring stays auto');
+}
+
+{
+  const item = {
+    id: 5,
+    answer_type: 'constructed',
+    meta: { type: 'writing_prompt', prompt: 'Write a paragraph.' },
+  };
+  const answers = [{ item_id: 5, earned_points: 4 }];
+  assert.strictEqual(isAutoScoredItem(item, answers), false, 'teacher-scored constructed writing must not become auto-scored');
+  assert.strictEqual(isScoredItem(item, answers), true, 'teacher-scored constructed writing is still complete');
+  console.log('✓ teacher-scored constructed writing stays manual after scoring');
+}
+
+{
+  const item = {
+    id: 6,
+    answer_type: 'written_response',
+    meta: { prompt: 'Explain your reasoning.' },
+  };
+  const answers = [{ item_id: 6, earned_points: 0 }];
+  assert.strictEqual(isAutoScoredItem(item, answers), false, 'written response with a teacher score must stay manual even at 0 points');
+  assert.strictEqual(isScoredItem(item, answers), true, '0-point teacher score is still complete');
+  console.log('✓ explicit written response stays manual, including a 0-point score');
+}
+
+{
+  const item = {
+    id: 7,
+    answer_type: 'constructed',
+    meta: { type: 'writing_prompt' },
+  };
+  const answers = [{ item_id: 7, earned_points: null }];
+  assert.strictEqual(isAutoScoredItem(item, answers), false);
+  assert.strictEqual(isScoredItem(item, answers), false, 'unscored writing must remain incomplete');
+  console.log('✓ unscored writing remains incomplete');
+}
+
+{
+  const autoStart = reviewSource.indexOf('function isAutoScoredItem(');
+  const autoEnd = reviewSource.indexOf('function isFillInBlankConstructed(', autoStart);
+  const autoBlock = reviewSource.slice(autoStart, autoEnd);
+
+  assert.ok(autoStart >= 0 && autoEnd > autoStart, 'Review source must expose the score-classification helpers');
+  assert.ok(reviewSource.includes('function isScoredItem('), 'Review must separate score completeness from auto/manual provenance');
+  assert.ok(reviewSource.includes('function isKeywordAutoScoredConstructed('), 'Review must preserve keyword auto-scoring semantics');
+  assert.ok(!autoBlock.includes("item.answer_type === 'written_response'"), 'written responses must never become auto-scored merely because earned_points exists');
+  console.log('✓ source keeps auto/manual provenance separate from score completeness');
 }
 
 console.log('\n✓ All tc-review-helpers tests passed!');
