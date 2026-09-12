@@ -327,14 +327,14 @@
       }
 
       const currentSelected = selectedSubmission();
-      if (currentSelected !== selected || selectedSubmissionId(currentSelected) !== submissionId) {
+      if (!currentSelected || selectedSubmissionId(currentSelected) !== submissionId) {
         decorateAgain = true;
         return;
       }
 
       const lookup = buildQuestionLookup(assignment || {});
-      decorateAutoSection(selected, lookup, normalizeId(assignment?.id), submissionId);
-      decorateWrittenSection(selected, lookup);
+      decorateAutoSection(currentSelected, lookup, normalizeId(assignment?.id), submissionId);
+      decorateWrittenSection(currentSelected, lookup);
     } finally {
       decorating = false;
       if (decorateAgain) {
