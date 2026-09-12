@@ -375,6 +375,7 @@
     state.assignmentId = row.assignmentId;
     state.focusSubmissionId = row.id;
     state.advanceAfterAction = false;
+    renderShell();
     const status = statusOf(row);
     const legacyStatus = ['reviewed', 'finalized'].includes(status) ? status : status === 'needs-review' ? 'needs-review' : 'all';
     await syncLegacyFilters({ status: legacyStatus, className: state.className, assignmentId: row.sourceAssignmentId || null });
