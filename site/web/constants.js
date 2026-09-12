@@ -68,7 +68,7 @@ if (
 ) {
   try {
     await import("/web/tc-review-read-share.js?v=20260911-review-read-share4");
-    await import("/web/tc-review-question-evidence-boot.js?v=20260911-question-evidence2");
+    await import("/web/tc-review-question-evidence-boot.js?v=20260911-question-evidence3");
     setTimeout(() => {
       import("/web/tc-review-qol.js?v=20260911-review-polish")
         .then(() => import("/web/tc-review-final-polish.js?v=20260911-review-final-polish3"))
