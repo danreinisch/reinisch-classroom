@@ -35,8 +35,14 @@ const CLASS_SHORT = {
 
 export function statusOf(row) {
   const value = row?.review_status || 'pending';
+  const instanceStatus = String(row?.instance?.status || '').trim().toLowerCase();
   if (value === 'reviewed') return 'reviewed';
   if (value === 'finalized') return 'finalized';
+  if (value === 'returned') return 'returned';
+  // Reopening a finalized submission intentionally sets review_status back to
+  // pending while the assignment instance returns to the student's workflow.
+  // That is student work in progress, not teacher work waiting in Review.
+  if (value === 'pending' && ['assigned', 'in progress'].includes(instanceStatus)) return 'returned';
   if (value === 'pending' || value === 'in_progress') return 'needs-review';
   return value;
 }
