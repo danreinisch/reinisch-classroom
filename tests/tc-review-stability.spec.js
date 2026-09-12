@@ -18,7 +18,6 @@ const assignments = [{
   title: 'Synthetic HTML Review',
   class: 'Language Arts 1 SC',
   class_name: 'Language Arts 1 SC',
-  school_year: 2026,
   meta: {
     class_name: 'Language Arts 1 SC',
     html_src: htmlSource,
@@ -33,7 +32,6 @@ const instances = students.map((student, index) => ({
   assigned_at: '2026-09-11T13:00:00Z',
   due_at: '2026-09-11T23:59:00Z',
   status: 'Submitted',
-  school_year: 2026,
 }));
 
 const submissions = students.map((student, index) => ({
@@ -86,7 +84,6 @@ const submissionAnswers = [
 ];
 
 async function fixture(page) {
-  await page.clock.install({ time: new Date('2026-09-11T14:30:00-05:00') });
   await page.addInitScript(({ students, assignments, instances, submissions, assignmentItems, submissionAnswers }) => {
     localStorage.clear();
     sessionStorage.clear();
