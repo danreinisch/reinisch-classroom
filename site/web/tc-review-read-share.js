@@ -75,4 +75,27 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewReadSha
       return original.apply(this, args);
     };
   }
+
+  // Expanded Review rows can be asked to render more than once while the command
+  // center is settling. Share only identical in-flight answer reads; do not retain
+  // a result cache here. tc-review.js remains authoritative for resolved caching.
+  const originalListSubmissionAnswers = db?.listSubmissionAnswers;
+  if (typeof originalListSubmissionAnswers === 'function') {
+    const pendingSubmissionReads = new Map();
+    db.listSubmissionAnswers = function reviewSharedSubmissionAnswers(...args) {
+      const key = JSON.stringify(args || []);
+      const existing = pendingSubmissionReads.get(key);
+      if (existing) return existing;
+
+      const pending = Promise.resolve()
+        .then(() => originalListSubmissionAnswers.apply(this, args))
+        .finally(() => {
+          if (pendingSubmissionReads.get(key) === pending) {
+            pendingSubmissionReads.delete(key);
+          }
+        });
+      pendingSubmissionReads.set(key, pending);
+      return pending;
+    };
+  }
 }
