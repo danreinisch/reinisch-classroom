@@ -21,6 +21,50 @@ function arrayValue(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function decodeHtmlEntities(value) {
+  return String(value ?? '')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&nbsp;/gi, ' ');
+}
+
+function stripHtml(value) {
+  return decodeHtmlEntities(
+    String(value ?? '')
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, ' ')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, ' ')
+      .replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, ' ')
+      .replace(/<button\b[^>]*\btts-btn\b[^>]*>[\s\S]*?<\/button\s*>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+  ).replace(/\s+/g, ' ').trim();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function attrValue(tag, name) {
+  const match = String(tag || '').match(
+    new RegExp(`\\b${escapeRegExp(name)}\\s*=\\s*(["'])([\\s\\S]*?)\\1`, 'i')
+  );
+  return match ? decodeHtmlEntities(match[2]).trim() : '';
+}
+
+function hasBareAttribute(tag, name) {
+  return new RegExp(`\\b${escapeRegExp(name)}\\b(?!\\s*=)`, 'i').test(String(tag || ''));
+}
+
+function normalizeAnswerType(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'multiple-choice' || raw === 'multiple_choice') return 'mcq';
+  if (raw === 'constructed-response') return 'constructed';
+  return raw;
+}
+
 export function normalizeChoices(rawChoices) {
   if (Array.isArray(rawChoices)) {
     return rawChoices.map((entry, index) => {
@@ -72,9 +116,168 @@ function makeQuestionRecord(ref, question = {}, extras = {}) {
       question.choices ?? question.options ?? question.answers ?? extras.choices
     ),
     correct: question.correct ?? question.answer ?? extras.correct ?? null,
-    type: firstText(question.type, question.answer_type, extras.type),
+    type: normalizeAnswerType(firstText(question.type, question.answer_type, extras.type)),
     goalCodes: arrayValue(question.goal_codes ?? question.default_goal_codes ?? extras.goalCodes),
     deseCodes: arrayValue(question.dese_codes ?? question.default_dese_codes ?? extras.deseCodes),
+  };
+}
+
+function questionTextFromHtml(content, openingTag = '') {
+  const classNames = [
+    'q-prompt',
+    'question-prompt',
+    'question-text',
+    'prompt',
+  ];
+
+  for (const className of classNames) {
+    const pattern = new RegExp(
+      `<([a-z][a-z0-9:-]*)\\b[^>]*class=["'][^"']*\\b${escapeRegExp(className)}\\b[^"']*["'][^>]*>([\\s\\S]*?)<\\/\\1\\s*>`,
+      'i'
+    );
+    const match = pattern.exec(content);
+    const text = match ? stripHtml(match[2]) : '';
+    if (text) return text;
+  }
+
+  return firstText(
+    attrValue(openingTag, 'data-question'),
+    attrValue(openingTag, 'data-prompt'),
+    attrValue(openingTag, 'aria-label')
+  );
+}
+
+function choicesFromHtml(content) {
+  const choices = [];
+  const buttonPattern = /<button\b([^>]*)>([\s\S]*?)<\/button\s*>/gi;
+  let match;
+
+  while ((match = buttonPattern.exec(content)) !== null) {
+    const attrs = match[1] || '';
+    const className = attrValue(`<button ${attrs}>`, 'class');
+    if (!/(?:^|\s)(?:opt-btn|option-btn|choice-btn|answer-option)(?:\s|$)/i.test(className)) continue;
+
+    const rawText = stripHtml(match[2]);
+    if (!rawText) continue;
+
+    const fallbackKey = String.fromCharCode(65 + choices.length);
+    const prefix = rawText.match(/^\s*([A-Z0-9]+)\s*[).:\-]\s*(.+)$/i);
+    const key = firstText(
+      attrValue(`<button ${attrs}>`, 'data-value'),
+      attrValue(`<button ${attrs}>`, 'value'),
+      prefix?.[1],
+      fallbackKey
+    );
+    const text = prefix?.[2]?.trim() || rawText;
+    const correct = hasBareAttribute(attrs, 'data-correct')
+      || /^(?:true|1|yes)$/i.test(attrValue(`<button ${attrs}>`, 'data-correct'));
+
+    choices.push({ key, value: key, text, rawText, correct });
+  }
+
+  return choices;
+}
+
+function manifestQuestionsFromHtml(html) {
+  const scriptPattern = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+  let match;
+
+  while ((match = scriptPattern.exec(html)) !== null) {
+    const attrs = match[1] || '';
+    if (!/\btype\s*=\s*["']application\/json["']/i.test(attrs)) continue;
+    if (!/\bid\s*=\s*["']assignment-manifest["']/i.test(attrs)) continue;
+    try {
+      const manifest = JSON.parse(match[2]);
+      return Array.isArray(manifest?.questions) ? manifest.questions : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+export function buildHtmlSourceLookup(rawHtml) {
+  const html = typeof rawHtml === 'string' ? rawHtml : '';
+  const lookup = new Map();
+  if (!html.trim()) return lookup;
+
+  manifestQuestionsFromHtml(html).forEach((question, index) => {
+    const ref = question?.ref || question?.q_ref || question?.item_ref || `Q${index + 1}`;
+    lookup.set(String(ref), makeQuestionRecord(ref, question));
+  });
+
+  const matches = [];
+  const seen = new Set();
+  const qrefPattern = /<[a-z][a-z0-9:-]*\b([^>]*\bdata-qref\s*=\s*(["'])(.*?)\2[^>]*)>/gi;
+  let tagMatch;
+
+  while ((tagMatch = qrefPattern.exec(html)) !== null) {
+    const ref = decodeHtmlEntities(tagMatch[3]).trim();
+    if (!ref || seen.has(ref)) continue;
+    seen.add(ref);
+    matches.push({
+      ref,
+      openingTag: tagMatch[0],
+      start: tagMatch.index,
+      end: tagMatch.index + tagMatch[0].length,
+    });
+  }
+
+  matches.forEach((entry, index) => {
+    const nextStart = matches[index + 1]?.start ?? html.length;
+    const content = html.slice(entry.end, nextStart);
+    const choices = choicesFromHtml(content);
+    const openingCorrect = attrValue(entry.openingTag, 'data-correct');
+    const correctChoice = choices.find(choice => choice.correct);
+    const nestedCorrect = content.match(/\bdata-correct\s*=\s*(["'])(.*?)\1/i)?.[2] || '';
+    const goalRaw = firstText(
+      attrValue(entry.openingTag, 'data-goal'),
+      attrValue(entry.openingTag, 'data-iep')
+    );
+    const deseRaw = attrValue(entry.openingTag, 'data-dese');
+    const sourceRecord = makeQuestionRecord(entry.ref, {
+      text: questionTextFromHtml(content, entry.openingTag),
+      choices: choices.map(choice => ({ key: choice.key, value: choice.value, text: choice.text })),
+      correct: openingCorrect || correctChoice?.rawText || decodeHtmlEntities(nestedCorrect) || null,
+      answer_type: normalizeAnswerType(attrValue(entry.openingTag, 'data-answer-type')),
+      goal_codes: goalRaw ? goalRaw.split(/[;,]/).map(value => value.trim()).filter(Boolean) : [],
+      dese_codes: deseRaw ? deseRaw.split(/[;,]/).map(value => value.trim()).filter(Boolean) : [],
+    });
+
+    const existing = lookup.get(entry.ref);
+    if (!existing) {
+      lookup.set(entry.ref, sourceRecord);
+      return;
+    }
+
+    const existingTextIsPlaceholder = !existing.text || existing.text === entry.ref;
+    lookup.set(entry.ref, {
+      ...existing,
+      text: existingTextIsPlaceholder ? sourceRecord.text : existing.text,
+      choices: existing.choices.length ? existing.choices : sourceRecord.choices,
+      correct: existing.correct ?? sourceRecord.correct,
+      type: existing.type || sourceRecord.type,
+      goalCodes: existing.goalCodes.length ? existing.goalCodes : sourceRecord.goalCodes,
+      deseCodes: existing.deseCodes.length ? existing.deseCodes : sourceRecord.deseCodes,
+    });
+  });
+
+  return lookup;
+}
+
+function mergeSourceQuestion(existing, source, ref) {
+  if (!existing) return source;
+  if (!source) return existing;
+  const existingTextIsPlaceholder = !existing.text || existing.text === ref;
+  return {
+    ...existing,
+    text: existingTextIsPlaceholder ? source.text : existing.text,
+    choices: existing.choices.length ? existing.choices : source.choices,
+    correct: existing.correct ?? source.correct,
+    type: existing.type || source.type,
+    goalCodes: existing.goalCodes.length ? existing.goalCodes : source.goalCodes,
+    deseCodes: existing.deseCodes.length ? existing.deseCodes : source.deseCodes,
   };
 }
 
@@ -117,6 +320,11 @@ export function buildQuestionLookup(assignment) {
         lookup.set(String(ref), makeQuestionRecord(ref, question));
       }
     });
+  }
+
+  const htmlLookup = buildHtmlSourceLookup(meta.html_src);
+  for (const [ref, source] of htmlLookup.entries()) {
+    lookup.set(ref, mergeSourceQuestion(lookup.get(ref), source, ref));
   }
 
   return lookup;
@@ -172,6 +380,12 @@ function normalizedToken(value) {
     .replace(/^\s*[([]?([a-z0-9]+)[\]).:-]?\s*$/i, '$1');
 }
 
+function looksLikeCompactChoiceList(parts) {
+  return parts.length > 1 && parts.every(part =>
+    /^\s*[([]?[a-z0-9]+[\]).:-]?\s*$/i.test(part)
+  );
+}
+
 export function answerTokens(value) {
   const unwrapped = unwrapAnswer(value);
   if (unwrapped == null) return [];
@@ -184,6 +398,10 @@ export function answerTokens(value) {
   if (!raw) return [];
   const tokens = [raw];
   if (/[;|]/.test(raw)) tokens.push(...raw.split(/[;|]/g));
+  if (raw.includes(',')) {
+    const commaParts = raw.split(',');
+    if (looksLikeCompactChoiceList(commaParts)) tokens.push(...commaParts);
+  }
   return [...new Set(tokens.map(normalizedToken).filter(Boolean))];
 }
 
