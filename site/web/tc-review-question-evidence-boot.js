@@ -47,7 +47,10 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewQuestio
 
   function scan() {
     document
-      .querySelectorAll('#rvQueue .rv-submission-item.rv-qol-selected .rv-auto-table')
+      .querySelectorAll([
+        '#rvQueue .rv-submission-item.expanded .rv-auto-table',
+        '#rvQueue .rv-submission-item.rv-qol-selected .rv-auto-table',
+      ].join(','))
       .forEach(guardLegacyTable);
   }
 
