@@ -44,12 +44,16 @@
     return value == null ? '' : String(value).trim();
   }
 
+  function assignmentSnapshot() {
+    if (typeof window.__rcReviewInitialReadSnapshot !== 'function') return null;
+    const snapshot = window.__rcReviewInitialReadSnapshot('listAssignments');
+    return Array.isArray(snapshot) ? snapshot : null;
+  }
+
   async function loadAssignments() {
     if (!assignmentsPromise) {
-      const snapshot = typeof window.__rcReviewInitialReadSnapshot === 'function'
-        ? window.__rcReviewInitialReadSnapshot('listAssignments')
-        : null;
-      if (Array.isArray(snapshot)) {
+      const snapshot = assignmentSnapshot();
+      if (snapshot) {
         assignmentsPromise = Promise.resolve(snapshot);
       } else {
         assignmentsPromise = Promise.resolve()
@@ -84,17 +88,17 @@
     return normalizeId(value);
   }
 
-  async function resolveAssignment(selected) {
-    const assignments = await loadAssignments();
+  function findAssignment(selected, assignments) {
+    const rows = Array.isArray(assignments) ? assignments : [];
     const physicalId = currentPhysicalAssignmentId();
     if (physicalId) {
-      const byId = assignments.find(row => normalizeId(row?.id) === physicalId);
+      const byId = rows.find(row => normalizeId(row?.id) === physicalId);
       if (byId) return byId;
     }
 
     const title = selectedPhysicalTitle(selected);
     if (!title) return null;
-    const exact = assignments.filter(row => String(row?.title || '').trim() === title);
+    const exact = rows.filter(row => String(row?.title || '').trim() === title);
     if (exact.length === 1) return exact[0];
 
     const studentCode = document.querySelector('.rv-qol-focus-title strong')?.textContent?.trim() || '';
@@ -103,6 +107,10 @@
       if (withStudent) return withStudent;
     }
     return exact[0] || null;
+  }
+
+  async function resolveAssignment(selected) {
+    return findAssignment(selected, await loadAssignments());
   }
 
   function outcomeLabel(outcome) {
@@ -319,6 +327,18 @@
 
     decorating = true;
     try {
+      const snapshot = assignmentSnapshot();
+      const snapshotAssignment = snapshot ? findAssignment(selected, snapshot) : null;
+      if (snapshotAssignment) {
+        const lookup = buildQuestionLookup(snapshotAssignment);
+        decorateAutoSection(selected, lookup, normalizeId(snapshotAssignment?.id), submissionId);
+        decorateWrittenSection(selected, lookup);
+        return;
+      }
+
+      const provisionalLookup = buildQuestionLookup({});
+      decorateAutoSection(selected, provisionalLookup, '', submissionId);
+
       let assignment = null;
       try {
         assignment = await resolveAssignment(selected);
