@@ -144,6 +144,29 @@ async function fixture(page) {
   });
 }
 
+async function captureEvidenceState(page, label) {
+  const state = await page.evaluate(() => {
+    const selected = document.querySelector('#rvQueue .rv-submission-item.rv-qol-selected');
+    const table = selected?.querySelector('.rv-auto-table') || null;
+    const details = table?.closest('details.rv-details') || table?.closest('details') || null;
+    return {
+      evidenceLoaded: Boolean(window.__rcReviewQuestionEvidenceLoaded),
+      snapshotReader: typeof window.__rcReviewInitialReadSnapshot,
+      selectedSubmissions: document.querySelectorAll('#rvQueue .rv-submission-item.rv-qol-selected').length,
+      selectedSubmissionId: selected?.querySelector('.rv-submission-header[data-submission-id]')?.dataset.submissionId || '',
+      autoTables: selected?.querySelectorAll('.rv-auto-table').length || 0,
+      autoRows: table?.querySelectorAll('tbody > tr').length || 0,
+      evidencePanels: selected?.querySelectorAll('.rv-question-evidence-panel').length || 0,
+      evidencePending: Boolean(details?.classList.contains('rv-question-evidence-pending')),
+      evidenceReady: Boolean(details?.classList.contains('rv-question-evidence-ready')),
+      evidenceFingerprint: details?.dataset.rvQuestionEvidenceFingerprint || '',
+      assignmentFilter: document.getElementById('rvAssignmentFilter')?.value || '',
+    };
+  });
+  console.log(`[review-evidence:${label}] ${JSON.stringify(state)}`);
+  return state;
+}
+
 test('Teacher Center → Review settles to one stable command-center paint', async ({ page }) => {
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(error.message));
@@ -164,6 +187,14 @@ test('Teacher Center → Review settles to one stable command-center paint', asy
 
   await page.locator('[data-rv-review-next]').click();
   await expect(page.locator('.rv-submission-item.rv-qol-selected')).toHaveCount(1);
+
+  await page.waitForTimeout(700);
+  const beforeRescan = await captureEvidenceState(page, 'before-rescan');
+  await page.evaluate(() => window.dispatchEvent(new Event('rc-review-question-evidence-rescan')));
+  await page.waitForTimeout(700);
+  const afterRescan = await captureEvidenceState(page, 'after-rescan');
+  console.log(`[review-evidence:manual-rescan-result] ${beforeRescan.evidencePanels === 0 && afterRescan.evidencePanels > 0 ? 'woke-evidence' : 'no-change'}`);
+
   await expect(page.locator('.rv-question-evidence-panel')).toBeVisible({ timeout: 5000 });
   await expect(page.locator('.rv-question-evidence-prompt')).toContainText('Which answer is correct?');
   await expect(page.locator('.rv-question-evidence-option')).toHaveCount(3);
