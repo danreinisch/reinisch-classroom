@@ -59,6 +59,10 @@
     return true;
   }
 
+  function retryPendingIntent() {
+    return scheduleRetry();
+  }
+
   function rememberCurrentSelection() {
     if (intentPending) return;
     if (focusedSubmissionId && document.body.classList.contains('rv-qol-focus')) return;
@@ -108,7 +112,7 @@
 
     if (!document.body.classList.contains('rv-qol-focus')) {
       if (pendingIntentIsFresh()) {
-        scheduleRetry();
+        retryPendingIntent();
         return;
       }
       clearFocusIntent();
