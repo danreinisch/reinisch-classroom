@@ -101,7 +101,17 @@
   }
 
   function nextFrame() {
-    return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return new Promise(resolve => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(fallback);
+        resolve();
+      };
+      const fallback = setTimeout(finish, 180);
+      requestAnimationFrame(() => requestAnimationFrame(finish));
+    });
   }
 
   async function refreshData({ render = true } = {}) {
