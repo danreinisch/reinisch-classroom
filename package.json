@@ -4,7 +4,7 @@
   "description": "Automated tests for Reinisch Classroom",
   "type": "module",
   "scripts": {
-    "pretest:smoke": "playwright test tests/student-chess-hd-refinement.spec.js",
+    "pretest:smoke": "playwright test tests/student-chess-hd-refinement.spec.js tests/tc-review-stability.spec.js",
     "pretest:unit": "node --test tests/student-chess-hd-refinement.test.cjs && node tests/tc-review-question-evidence-contract.test.cjs",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
