@@ -9,6 +9,7 @@ const read = relativePath => fs.readFileSync(path.join(root, relativePath), 'utf
 
 const constants = read('site/web/constants.js');
 const evidence = read('site/web/tc-review-question-evidence.js');
+const focusPersistence = read('site/web/tc-review-focus-persistence.js');
 const modelSource = read('site/web/tc-review-question-evidence-model.js');
 const css = read('site/web/tc-review-question-evidence.css');
 const readShare = read('site/web/tc-review-read-share.js');
@@ -23,8 +24,9 @@ assert.ok(
   'Question Evidence first-paint guard must load through the Review bootstrap'
 );
 assert.ok(
-  constants.includes('/web/tc-review-question-evidence.js?v=20260911-question-evidence6'),
-  'Question Evidence must load only through the Review presentation bootstrap'
+  constants.includes('/web/tc-review-focus-persistence.js?v=20260911-review-focus-persistence2') &&
+  constants.includes('/web/tc-review-question-evidence.js?v=20260911-question-evidence7'),
+  'Review focus persistence and Question Evidence must load with the current cache keys'
 );
 assert.ok(
   constants.indexOf('tc-review-question-evidence-boot.js') < constants.indexOf('tc-review-qol.js'),
@@ -54,8 +56,10 @@ for (const marker of [
 console.log('✓ focused Review exposes question, choices, student answer, correct answer, and filters');
 
 assert.ok(
-  evidence.includes("window.__rcReviewInitialReadSnapshot('listAssignments')"),
-  'Question Evidence should reuse the initial Review assignment snapshot before reading again'
+  evidence.includes("window.__rcReviewInitialReadSnapshot('listAssignments')") &&
+  evidence.includes('const snapshotAssignment = snapshot ? findAssignment(selected, snapshot) : null') &&
+  evidence.includes('decorateAutoSection(selected, lookup'),
+  'Question Evidence should render synchronously from the already-captured assignment snapshot when available'
 );
 assert.ok(
   readShare.includes('window.__rcReviewInitialReadSnapshot'),
@@ -71,6 +75,20 @@ assert.ok(
   'identical in-flight submission-answer reads must collapse to one request while Review settles'
 );
 console.log('✓ evidence metadata and answer reads avoid duplicate Review fan-out');
+
+assert.ok(
+  focusPersistence.includes('INTENT_WAIT_MS = 4000') &&
+  focusPersistence.includes('pendingIntentIsFresh()') &&
+  focusPersistence.includes('retryPendingIntent()') &&
+  focusPersistence.includes("document.body.classList.contains('rv-qol-focus')"),
+  'Focus intent must survive the brief legacy redraw window before command-center Focus mode is applied'
+);
+assert.ok(
+  focusPersistence.includes("queueObserver.observe(queue, { childList: true });") &&
+  focusPersistence.includes("window.dispatchEvent(new Event('rc-review-question-evidence-rescan'))"),
+  'Focus persistence must stay scoped to direct queue replacement and explicitly rescan evidence after restoration'
+);
+console.log('✓ Review focus selection survives pre-focus and later legacy queue redraws');
 
 assert.ok(
   boot.includes("PRESENTATION_CLASS = 'rv-review-first-paint-pending'") &&
