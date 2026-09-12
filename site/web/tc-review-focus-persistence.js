@@ -5,10 +5,14 @@
   if (window.__rcReviewFocusPersistenceLoaded) return;
   window.__rcReviewFocusPersistenceLoaded = true;
 
+  const INTENT_WAIT_MS = 4000;
+  const INTENT_RETRY_MS = 40;
+
   let root = null;
   let queue = null;
   let focusedSubmissionId = null;
   let intentPending = false;
+  let intentStartedAt = 0;
   let scheduled = false;
 
   function cssEscape(value) {
@@ -23,6 +27,23 @@
       ?.dataset.submissionId || null;
   }
 
+  function clearFocusIntent() {
+    focusedSubmissionId = null;
+    intentPending = false;
+    intentStartedAt = 0;
+  }
+
+  function pendingIntentIsFresh() {
+    return intentPending && focusedSubmissionId &&
+      Date.now() - intentStartedAt < INTENT_WAIT_MS;
+  }
+
+  function retryPendingIntent() {
+    if (!pendingIntentIsFresh()) return false;
+    setTimeout(scheduleRestore, INTENT_RETRY_MS);
+    return true;
+  }
+
   function rememberCurrentSelection() {
     if (intentPending) return;
     const selectedId = selectedSubmissionId();
@@ -33,6 +54,7 @@
     if (!submissionId) return;
     focusedSubmissionId = String(submissionId);
     intentPending = true;
+    intentStartedAt = Date.now();
     scheduleRestore();
   }
 
@@ -55,14 +77,12 @@
     }
 
     if (event.target.closest('[data-rv-back-home], [data-rv-back-assignment]')) {
-      focusedSubmissionId = null;
-      intentPending = false;
+      clearFocusIntent();
       return;
     }
 
     if (event.target.closest('[data-rv-focus-prev], [data-rv-focus-next]')) {
-      focusedSubmissionId = null;
-      intentPending = false;
+      clearFocusIntent();
     }
   }
 
@@ -70,8 +90,8 @@
     if (!root || !queue) return;
 
     if (!document.body.classList.contains('rv-qol-focus')) {
-      focusedSubmissionId = null;
-      intentPending = false;
+      if (retryPendingIntent()) return;
+      clearFocusIntent();
       return;
     }
 
@@ -82,7 +102,10 @@
       `.rv-submission-header[data-submission-id="${cssEscape(focusedSubmissionId)}"]`
     );
     const item = header?.closest('.rv-submission-item');
-    if (!item) return;
+    if (!item) {
+      retryPendingIntent();
+      return;
+    }
 
     queue.querySelectorAll('.rv-submission-item.rv-qol-selected').forEach(candidate => {
       if (candidate !== item) candidate.classList.remove('rv-qol-selected');
@@ -97,6 +120,7 @@
     }
 
     intentPending = false;
+    intentStartedAt = 0;
     window.dispatchEvent(new Event('rc-review-question-evidence-rescan'));
   }
 
