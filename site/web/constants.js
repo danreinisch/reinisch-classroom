@@ -57,3 +57,26 @@ if (
     console.warn("[gradebook] Could not load header-copy helper:", error);
   });
 }
+
+// Review-only presentation bootstrap. Install the one-flight startup reader
+// synchronously with tc-review's constants import, then defer the presentation
+// layer one task so the legacy Review engine starts the authoritative first read.
+// The command center reuses that same in-flight result instead of repeating the
+// initial roster/submission/assignment fetches.
+if (
+  typeof window !== "undefined" &&
+  window.location.pathname.startsWith("/teacher/review")
+) {
+  try {
+    await import("/web/tc-review-read-share.js?v=20260911-review-read-share2");
+    setTimeout(() => {
+      import("/web/tc-review-qol.js?v=20260911-review-polish")
+        .then(() => import("/web/tc-review-final-polish.js?v=20260911-review-final-polish3"))
+        .catch((error) => {
+          console.warn("[review] Could not load Review command-center presentation:", error);
+        });
+    }, 0);
+  } catch (error) {
+    console.warn("[review] Could not prepare Review command-center presentation:", error);
+  }
+}
