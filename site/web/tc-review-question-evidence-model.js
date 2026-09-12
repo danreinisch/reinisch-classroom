@@ -122,14 +122,32 @@ export function buildQuestionLookup(assignment) {
   return lookup;
 }
 
+function parseWrappedAnswerString(value) {
+  if (typeof value !== 'string') return value;
+  const raw = value.trim();
+  if (!raw) return value;
+  const looksLikeObject = raw.startsWith('{') && raw.endsWith('}');
+  const looksLikeArray = raw.startsWith('[') && raw.endsWith(']');
+  if (!looksLikeObject && !looksLikeArray) return value;
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return value;
+  }
+}
+
 function unwrapAnswer(value) {
   if (value == null) return value;
+  if (typeof value === 'string') {
+    const parsed = parseWrappedAnswerString(value);
+    return parsed === value ? value : unwrapAnswer(parsed);
+  }
   if (Array.isArray(value)) return value;
   if (typeof value !== 'object') return value;
-  if (value.value !== undefined) return value.value;
-  if (value.answer !== undefined) return value.answer;
-  if (value.selected !== undefined) return value.selected;
-  if (value.raw_answer !== undefined) return value.raw_answer;
+  if (value.value !== undefined) return unwrapAnswer(value.value);
+  if (value.answer !== undefined) return unwrapAnswer(value.answer);
+  if (value.selected !== undefined) return unwrapAnswer(value.selected);
+  if (value.raw_answer !== undefined) return unwrapAnswer(value.raw_answer);
   return value;
 }
 
