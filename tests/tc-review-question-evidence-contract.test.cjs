@@ -24,7 +24,7 @@ assert.ok(
   'Question Evidence first-paint guard must load through the Review bootstrap'
 );
 assert.ok(
-  constants.includes('/web/tc-review-focus-persistence.js?v=20260911-review-focus-persistence2') &&
+  constants.includes('/web/tc-review-focus-persistence.js?v=20260911-review-focus-persistence3') &&
   constants.includes('/web/tc-review-question-evidence.js?v=20260911-question-evidence7'),
   'Review focus persistence and Question Evidence must load with the current cache keys'
 );
@@ -84,9 +84,12 @@ assert.ok(
   'Focus intent must survive the brief legacy redraw window before command-center Focus mode is applied'
 );
 assert.ok(
-  focusPersistence.includes("queueObserver.observe(queue, { childList: true });") &&
+  focusPersistence.includes('queueObserver.observe(queue, {') &&
+  focusPersistence.includes('subtree: true') &&
+  focusPersistence.includes('attributes: true') &&
+  focusPersistence.includes("attributeFilter: ['class', 'aria-expanded']") &&
   focusPersistence.includes("window.dispatchEvent(new Event('rc-review-question-evidence-rescan'))"),
-  'Focus persistence must stay scoped to direct queue replacement and explicitly rescan evidence after restoration'
+  'Focus persistence must stay queue-scoped, follow Focus class/expansion transitions, and explicitly rescan evidence'
 );
 console.log('✓ Review focus selection survives pre-focus and later legacy queue redraws');
 
