@@ -13,11 +13,12 @@ const modelSource = read('site/web/tc-review-question-evidence-model.js');
 const css = read('site/web/tc-review-question-evidence.css');
 const readShare = read('site/web/tc-review-read-share.js');
 const boot = read('site/web/tc-review-question-evidence-boot.js');
+const badgeEndpoint = read('netlify/functions/teacher-ungraded-count.js');
 
 console.log('--- Review question evidence detail contract ---');
 
 assert.ok(
-  constants.includes('/web/tc-review-question-evidence-boot.js?v=20260911-question-evidence2'),
+  constants.includes('/web/tc-review-question-evidence-boot.js?v=20260911-question-evidence3'),
   'Question Evidence first-paint guard must load through the Review bootstrap'
 );
 assert.ok(
@@ -71,10 +72,20 @@ assert.ok(
 console.log('✓ evidence metadata and answer reads avoid duplicate Review fan-out');
 
 assert.ok(
-  boot.includes('rv-question-evidence-pending') &&
-  boot.includes('rv-question-evidence-ready') &&
-  boot.includes('FALLBACK_MS'),
-  'first-paint guard must hide the legacy table only while evidence enhancement is pending and fail open'
+  boot.includes("PRESENTATION_CLASS = 'rv-review-first-paint-pending'") &&
+  boot.includes('commandCenterReady') &&
+  boot.includes('PRESENTATION_FALLBACK_MS'),
+  'Review first paint must suppress legacy chrome until the command center has rendered and fail open'
+);
+assert.ok(
+  css.includes('html.rv-review-first-paint-pending .rv-header') &&
+  css.includes('html.rv-review-first-paint-pending #rvQueue'),
+  'legacy Review chrome must stay hidden during the command-center first-paint handoff'
+);
+assert.ok(
+  boot.includes('rv-question-evidence-retry-pulse') &&
+  boot.includes('startEvidenceRetry'),
+  'evidence guard must retry a decoration request that raced an async legacy rerender'
 );
 assert.ok(
   css.includes('.rv-question-evidence-pending .rv-auto-table{visibility:hidden!important}'),
@@ -84,7 +95,7 @@ assert.ok(
   evidence.includes("details.classList.remove('rv-question-evidence-pending')"),
   'successful evidence decoration must clear the first-paint pending guard'
 );
-console.log('✓ legacy auto-grade table is guarded before paint to prevent the evidence swap flicker');
+console.log('✓ command-center and question-evidence handoffs are guarded against visible swap flicker');
 
 for (const forbidden of [
   'teacher-review-save',
@@ -178,5 +189,21 @@ assert.ok(css.includes('.rv-question-evidence-answers>div:first-child'));
 assert.ok(css.includes('.rv-question-evidence-answers>div:last-child'));
 assert.ok(!/\.rv-question-evidence-prompt[^}]*background\s*:\s*(?:#fff|white)/i.test(css));
 console.log('✓ evidence surface is tighter, less boxy, and keeps the approved Review visual language');
+
+for (const marker of [
+  'select=id,status',
+  'select=id,instance_id,review_status,submitted_at,answers',
+  'dedupeSubmissionsByInstance',
+  'needsTeacherReview',
+  "instanceStatus === 'assigned'",
+  "instanceStatus === 'in progress'",
+]) {
+  assert.ok(badgeEndpoint.includes(marker), `Review badge endpoint missing lifecycle marker: ${marker}`);
+}
+assert.ok(
+  !badgeEndpoint.includes('&status=eq.Submitted'),
+  'Teacher shell badge must not count Submitted instances independently of Review status'
+);
+console.log('✓ Teacher Center Review badge now follows actionable Review lifecycle semantics');
 
 console.log('REVIEW QUESTION EVIDENCE DETAIL: PASS');
