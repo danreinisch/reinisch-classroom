@@ -58,11 +58,10 @@ if (
   });
 }
 
-// Review-only presentation bootstrap. Install the one-flight startup reader,
-// first-paint guard, focus-persistence guard, and Question Evidence observer
-// before the command center can become interactive. Then defer the heavier
-// command-center presentation one task so the legacy Review engine still starts
-// the authoritative first read without duplicate startup fan-out.
+// Review-only presentation bootstrap. Install the one-flight startup reader and
+// the evidence first-paint guard synchronously with tc-review's constants import.
+// Then defer the heavier command-center presentation one task so the legacy Review
+// engine starts the authoritative first read without duplicate startup fan-out.
 if (
   typeof window !== "undefined" &&
   window.location.pathname.startsWith("/teacher/review")
@@ -70,11 +69,11 @@ if (
   try {
     await import("/web/tc-review-read-share.js?v=20260911-review-read-share4");
     await import("/web/tc-review-question-evidence-boot.js?v=20260911-question-evidence4");
-    await import("/web/tc-review-focus-persistence.js?v=20260911-review-focus-persistence2");
-    await import("/web/tc-review-question-evidence.js?v=20260911-question-evidence7");
     setTimeout(() => {
       import("/web/tc-review-qol.js?v=20260911-review-focus-stability")
         .then(() => import("/web/tc-review-final-polish.js?v=20260911-review-final-polish3"))
+        .then(() => import("/web/tc-review-focus-persistence.js?v=20260911-review-focus-persistence2"))
+        .then(() => import("/web/tc-review-question-evidence.js?v=20260911-question-evidence7"))
         .catch((error) => {
           console.warn("[review] Could not load Review presentation:", error);
         });
