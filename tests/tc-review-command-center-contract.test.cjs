@@ -20,8 +20,8 @@ console.log('--- Review command-center presentation contract ---');
 
 assert.ok(
   constants.includes('window.location.pathname.startsWith("/teacher/review")') &&
-    constants.includes('/web/tc-review-read-share.js?v=20260911-review-read-share3') &&
-    constants.includes('/web/tc-review-qol.js?v=20260911-review-polish') &&
+    constants.includes('/web/tc-review-read-share.js?v=20260911-review-read-share4') &&
+    constants.includes('/web/tc-review-qol.js?v=20260911-review-focus-stability') &&
     constants.includes('/web/tc-review-final-polish.js?v=20260911-review-final-polish3'),
   'Review must load the versioned startup-sharing, command-center, and final-polish layers only on Review pages'
 );
@@ -34,6 +34,11 @@ assert.ok(
 assert.ok(
   qol.includes('/web/tc-review-command-model.js?v=20260911-review-polish'),
   'Review command center must use its isolated read-only presentation model'
+);
+assert.ok(
+  qol.includes('const fallback = setTimeout(finish, 180);') &&
+    qol.includes('requestAnimationFrame(() => requestAnimationFrame(finish));'),
+  'Review focus handoff must prefer two paints but remain bounded when animation frames are delayed'
 );
 
 for (const marker of [
