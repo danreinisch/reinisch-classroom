@@ -20,7 +20,7 @@ console.log('--- Review command-center presentation contract ---');
 
 assert.ok(
   constants.includes('window.location.pathname.startsWith("/teacher/review")') &&
-    constants.includes('/web/tc-review-read-share.js?v=20260911-review-read-share2') &&
+    constants.includes('/web/tc-review-read-share.js?v=20260911-review-read-share3') &&
     constants.includes('/web/tc-review-qol.js?v=20260911-review-polish') &&
     constants.includes('/web/tc-review-final-polish.js?v=20260911-review-final-polish3'),
   'Review must load the versioned startup-sharing, command-center, and final-polish layers only on Review pages'
