@@ -23,7 +23,7 @@ assert.ok(
   'Question Evidence first-paint guard must load through the Review bootstrap'
 );
 assert.ok(
-  constants.includes('/web/tc-review-question-evidence.js?v=20260911-question-evidence4'),
+  constants.includes('/web/tc-review-question-evidence.js?v=20260911-question-evidence5'),
   'Question Evidence must load only through the Review presentation bootstrap'
 );
 assert.ok(
@@ -116,6 +116,14 @@ assert.ok(
   'rapid Review selection changes must re-run decoration for the current submission'
 );
 console.log('✓ async evidence decoration cannot strand a newer student selection');
+
+assert.ok(
+  evidence.includes('const fallback = setTimeout(runDecorate, 160);') &&
+  evidence.includes('requestAnimationFrame(runDecorate);') &&
+  evidence.includes('clearTimeout(fallback);'),
+  'Question Evidence scheduling must prefer the next paint but fail open if animation frames are delayed'
+);
+console.log('✓ evidence scheduling cannot remain locked behind a delayed animation frame');
 
 for (const forbidden of [
   'teacher-review-save',
