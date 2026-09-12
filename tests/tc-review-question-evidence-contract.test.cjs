@@ -23,7 +23,7 @@ assert.ok(
   'Question Evidence first-paint guard must load through the Review bootstrap'
 );
 assert.ok(
-  constants.includes('/web/tc-review-question-evidence.js?v=20260911-question-evidence5'),
+  constants.includes('/web/tc-review-question-evidence.js?v=20260911-question-evidence6'),
   'Question Evidence must load only through the Review presentation bootstrap'
 );
 assert.ok(
@@ -111,11 +111,12 @@ console.log('✓ command-center and question-evidence handoffs avoid self-trigge
 
 assert.ok(
   evidence.includes('decorateAgain = true') &&
-  evidence.includes('currentSelected !== selected') &&
+  evidence.includes('!currentSelected || selectedSubmissionId(currentSelected) !== submissionId') &&
+  evidence.includes('decorateAutoSection(currentSelected') &&
   evidence.includes("window.addEventListener('rc-review-question-evidence-rescan', scheduleDecorate)"),
-  'rapid Review selection changes must re-run decoration for the current submission'
+  'async Review redraws may replace the DOM row, but only a changed submission ID should abort evidence decoration'
 );
-console.log('✓ async evidence decoration cannot strand a newer student selection');
+console.log('✓ async evidence decoration follows same-submission row replacements without decorating a stale student');
 
 assert.ok(
   evidence.includes('const fallback = setTimeout(runDecorate, 160);') &&
