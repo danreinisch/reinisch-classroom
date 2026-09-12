@@ -6,14 +6,17 @@
   window.__rcReviewFocusPersistenceLoaded = true;
 
   const INTENT_WAIT_MS = 4000;
-  const INTENT_RETRY_MS = 40;
+  const FOCUS_STABILIZE_MS = 3000;
+  const INTENT_RETRY_MS = 50;
 
   let root = null;
   let queue = null;
   let focusedSubmissionId = null;
   let intentPending = false;
   let intentStartedAt = 0;
+  let stabilizeUntil = 0;
   let scheduled = false;
+  let retryTimer = null;
 
   function cssEscape(value) {
     return window.CSS?.escape
@@ -31,6 +34,11 @@
     focusedSubmissionId = null;
     intentPending = false;
     intentStartedAt = 0;
+    stabilizeUntil = 0;
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
   }
 
   function pendingIntentIsFresh() {
@@ -38,14 +46,22 @@
       Date.now() - intentStartedAt < INTENT_WAIT_MS;
   }
 
-  function retryPendingIntent() {
-    if (!pendingIntentIsFresh()) return false;
-    setTimeout(scheduleRestore, INTENT_RETRY_MS);
+  function stabilizationActive() {
+    return Boolean(focusedSubmissionId) && Date.now() < stabilizeUntil;
+  }
+
+  function scheduleRetry() {
+    if (retryTimer || (!pendingIntentIsFresh() && !stabilizationActive())) return false;
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      scheduleRestore();
+    }, INTENT_RETRY_MS);
     return true;
   }
 
   function rememberCurrentSelection() {
     if (intentPending) return;
+    if (focusedSubmissionId && document.body.classList.contains('rv-qol-focus')) return;
     const selectedId = selectedSubmissionId();
     if (selectedId) focusedSubmissionId = String(selectedId);
   }
@@ -55,6 +71,7 @@
     focusedSubmissionId = String(submissionId);
     intentPending = true;
     intentStartedAt = Date.now();
+    stabilizeUntil = Date.now() + FOCUS_STABILIZE_MS;
     scheduleRestore();
   }
 
@@ -90,7 +107,10 @@
     if (!root || !queue) return;
 
     if (!document.body.classList.contains('rv-qol-focus')) {
-      if (retryPendingIntent()) return;
+      if (pendingIntentIsFresh()) {
+        scheduleRetry();
+        return;
+      }
       clearFocusIntent();
       return;
     }
@@ -103,25 +123,42 @@
     );
     const item = header?.closest('.rv-submission-item');
     if (!item) {
-      retryPendingIntent();
+      scheduleRetry();
       return;
     }
 
+    let changed = false;
     queue.querySelectorAll('.rv-submission-item.rv-qol-selected').forEach(candidate => {
-      if (candidate !== item) candidate.classList.remove('rv-qol-selected');
+      if (candidate !== item) {
+        candidate.classList.remove('rv-qol-selected');
+        changed = true;
+      }
     });
 
     if (!item.classList.contains('rv-qol-selected')) {
       item.classList.add('rv-qol-selected');
+      changed = true;
     }
 
     if (header.getAttribute('aria-expanded') !== 'true') {
       header.click();
+      changed = true;
     }
 
-    intentPending = false;
-    intentStartedAt = 0;
-    window.dispatchEvent(new Event('rc-review-question-evidence-rescan'));
+    if (intentPending) {
+      intentPending = false;
+      intentStartedAt = 0;
+    }
+
+    const autoTable = item.querySelector('.rv-auto-table');
+    const evidenceReady = !autoTable || Boolean(item.querySelector('.rv-question-evidence-panel'));
+    if (changed || !evidenceReady) {
+      window.dispatchEvent(new Event('rc-review-question-evidence-rescan'));
+    }
+
+    if (stabilizationActive() && (changed || !evidenceReady)) {
+      scheduleRetry();
+    }
   }
 
   function scheduleRestore() {
