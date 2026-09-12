@@ -72,11 +72,12 @@ if (
     setTimeout(() => {
       import("/web/tc-review-qol.js?v=20260911-review-polish")
         .then(() => import("/web/tc-review-final-polish.js?v=20260911-review-final-polish3"))
+        .then(() => import("/web/tc-review-question-evidence.js?v=20260911-question-evidence"))
         .catch((error) => {
-          console.warn("[review] Could not load Review command-center presentation:", error);
+          console.warn("[review] Could not load Review presentation:", error);
         });
     }, 0);
   } catch (error) {
-    console.warn("[review] Could not prepare Review command-center presentation:", error);
+    console.warn("[review] Could not prepare Review presentation:", error);
   }
 }
