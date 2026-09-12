@@ -45,13 +45,20 @@
 
   async function loadAssignments() {
     if (!assignmentsPromise) {
-      assignmentsPromise = Promise.resolve()
-        .then(() => db.listAssignments())
-        .then(rows => Array.isArray(rows) ? rows : [])
-        .catch(error => {
-          assignmentsPromise = null;
-          throw error;
-        });
+      const snapshot = typeof window.__rcReviewInitialReadSnapshot === 'function'
+        ? window.__rcReviewInitialReadSnapshot('listAssignments')
+        : null;
+      if (Array.isArray(snapshot)) {
+        assignmentsPromise = Promise.resolve(snapshot);
+      } else {
+        assignmentsPromise = Promise.resolve()
+          .then(() => db.listAssignments())
+          .then(rows => Array.isArray(rows) ? rows : [])
+          .catch(error => {
+            assignmentsPromise = null;
+            throw error;
+          });
+      }
     }
     return assignmentsPromise;
   }
