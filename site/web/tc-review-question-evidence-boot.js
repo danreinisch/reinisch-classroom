@@ -1,22 +1,29 @@
-'use strict';
+(() => {
+  'use strict';
 
-if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewQuestionEvidenceBootLoaded) {
+  if (!location.pathname.startsWith('/teacher/review')) return;
+  if (window.__rcReviewQuestionEvidenceBootLoaded) return;
   window.__rcReviewQuestionEvidenceBootLoaded = true;
 
   const STYLE_SELECTOR = 'link[data-rv-question-evidence-style]';
   const PRESENTATION_CLASS = 'rv-review-first-paint-pending';
+  const RESCAN_EVENT = 'rc-review-question-evidence-rescan';
   const PRESENTATION_FALLBACK_MS = 6000;
   const EVIDENCE_FALLBACK_MS = 2200;
+  const EVIDENCE_RETRY_MS = 120;
+  const EVIDENCE_RETRY_ATTEMPTS = 12;
   const fallbackTimers = new WeakMap();
   const retryTimers = new WeakMap();
   let presentationObserver = null;
   let presentationFallback = null;
+  let evidenceObserver = null;
+  let queueBootstrapObserver = null;
 
   function ensureStyle() {
     if (document.querySelector(STYLE_SELECTOR)) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/web/tc-review-question-evidence.css?v=20260911-question-evidence3';
+    link.href = '/web/tc-review-question-evidence.css?v=20260911-question-evidence4';
     link.dataset.rvQuestionEvidenceStyle = 'true';
     document.head.appendChild(link);
   }
@@ -64,27 +71,27 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewQuestio
     fallbackTimers.delete(details);
 
     const retry = retryTimers.get(details);
-    if (retry) clearInterval(retry);
+    if (retry) clearTimeout(retry);
     retryTimers.delete(details);
   }
 
-  function startEvidenceRetry(details) {
+  function requestEvidenceRescan() {
+    window.dispatchEvent(new Event(RESCAN_EVENT));
+  }
+
+  function startEvidenceRetry(details, attempt = 0) {
     if (retryTimers.has(details)) return;
-    let attempts = 0;
-    const timer = setInterval(() => {
-      attempts += 1;
+    if (attempt >= EVIDENCE_RETRY_ATTEMPTS) return;
+
+    const timer = setTimeout(() => {
+      retryTimers.delete(details);
       if (!details.isConnected || details.classList.contains('rv-question-evidence-ready')) {
         clearEvidenceTimers(details);
         return;
       }
-      if (attempts > 20) {
-        const existing = retryTimers.get(details);
-        if (existing) clearInterval(existing);
-        retryTimers.delete(details);
-        return;
-      }
-      details.classList.toggle('rv-question-evidence-retry-pulse');
-    }, 90);
+      requestEvidenceRescan();
+      startEvidenceRetry(details, attempt + 1);
+    }, EVIDENCE_RETRY_MS);
     retryTimers.set(details, timer);
   }
 
@@ -93,7 +100,7 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewQuestio
     if (!details) return;
 
     if (details.classList.contains('rv-question-evidence-ready')) {
-      details.classList.remove('rv-question-evidence-pending', 'rv-question-evidence-retry-pulse');
+      details.classList.remove('rv-question-evidence-pending');
       clearEvidenceTimers(details);
       return;
     }
@@ -106,8 +113,11 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewQuestio
     if (!fallbackTimers.has(details)) {
       const timer = setTimeout(() => {
         fallbackTimers.delete(details);
+        const retry = retryTimers.get(details);
+        if (retry) clearTimeout(retry);
+        retryTimers.delete(details);
         if (!details.classList.contains('rv-question-evidence-ready')) {
-          details.classList.remove('rv-question-evidence-pending', 'rv-question-evidence-retry-pulse');
+          details.classList.remove('rv-question-evidence-pending');
         }
       }, EVIDENCE_FALLBACK_MS);
       fallbackTimers.set(details, timer);
@@ -123,16 +133,36 @@ if (location.pathname.startsWith('/teacher/review') && !window.__rcReviewQuestio
       .forEach(guardLegacyTable);
   }
 
+  function attachEvidenceObserver() {
+    const queue = document.getElementById('rvQueue');
+    if (!queue) return false;
+    if (evidenceObserver) return true;
+
+    evidenceObserver = new MutationObserver(scan);
+    evidenceObserver.observe(queue, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'aria-expanded'],
+    });
+    scan();
+    return true;
+  }
+
+  function waitForQueue() {
+    if (attachEvidenceObserver()) return;
+    queueBootstrapObserver = new MutationObserver(() => {
+      if (!attachEvidenceObserver()) return;
+      queueBootstrapObserver.disconnect();
+      queueBootstrapObserver = null;
+    });
+    queueBootstrapObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
   ensureStyle();
   watchCommandCenterFirstPaint();
-
-  const observer = new MutationObserver(scan);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['class', 'aria-expanded'],
-  });
-
-  scan();
-}
+  waitForQueue();
+})();
